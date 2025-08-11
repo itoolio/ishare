@@ -67,6 +67,8 @@
 		3AB38D082A62C49C00184E0D /* Upload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AB38D072A62C49C00184E0D /* Upload.swift */; };
 		3AB38D0B2A62F28700184E0D /* UploaderSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AB38D0A2A62F28700184E0D /* UploaderSettings.swift */; };
 		3AC23D082DF85AED005B317D /* NSPanelExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AC23D062DF85AED005B317D /* NSPanelExtensions.swift */; };
+		3AC651512E4A87F300D637BF /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3AC651502E4A87F300D637BF /* AppIcon.icon */; };
+		3AC651522E4A87F300D637BF /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3AC651502E4A87F300D637BF /* AppIcon.icon */; };
 		3AD9788D2C412F94002EA1EA /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 3AD9788C2C412F94002EA1EA /* Localizable.xcstrings */; };
 		3ADDAEDA2A659A0B00C42406 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3ADDAED92A659A0B00C42406 /* Assets.xcassets */; };
 		3ADDAEE32A65D00F00C42406 /* Zip in Frameworks */ = {isa = PBXBuildFile; productRef = 3ADDAEE22A65D00F00C42406 /* Zip */; };
@@ -146,6 +148,7 @@
 		3AB38D072A62C49C00184E0D /* Upload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Upload.swift; sourceTree = "<group>"; };
 		3AB38D0A2A62F28700184E0D /* UploaderSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploaderSettings.swift; sourceTree = "<group>"; };
 		3AC23D062DF85AED005B317D /* NSPanelExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NSPanelExtensions.swift; sourceTree = "<group>"; };
+		3AC651502E4A87F300D637BF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		3AD9788C2C412F94002EA1EA /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		3ADDAED92A659A0B00C42406 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Util/Assets.xcassets; sourceTree = "<group>"; };
 		3AE731292B47052E006F10F7 /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
@@ -241,6 +244,7 @@
 		3A9A9FCB2A5C84B4007BA5C9 = {
 			isa = PBXGroup;
 			children = (
+				3AC651502E4A87F300D637BF /* AppIcon.icon */,
 				3A9A9FD62A5C84B5007BA5C9 /* ishare */,
 				3AF9A8062C4B011A0094B78B /* sharemenuext */,
 				3A9A9FD52A5C84B5007BA5C9 /* Products */,
@@ -467,6 +471,7 @@
 			files = (
 				3A2994972CFF79CB0079CBB8 /* Localizable.xcstrings in Resources */,
 				3A2994982CFF79CB0079CBB8 /* Assets.xcassets in Resources */,
+				3AC651512E4A87F300D637BF /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -476,6 +481,7 @@
 			files = (
 				3AD9788D2C412F94002EA1EA /* Localizable.xcstrings in Resources */,
 				3ADDAEDA2A659A0B00C42406 /* Assets.xcassets in Resources */,
+				3AC651522E4A87F300D637BF /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -575,6 +581,8 @@
 		3A29949C2CFF79CB0079CBB8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=*]" = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ishare/ishare.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -603,6 +611,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.adrian.ishare;
 				PRODUCT_NAME = ishare;
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[arch=*]" = GITHUB_RELEASE;
@@ -624,6 +633,8 @@
 		3A29949D2CFF79CB0079CBB8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=*]" = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ishare/ishare.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -653,6 +664,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.adrian.ishare;
 				PRODUCT_NAME = ishare;
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[arch=*]" = GITHUB_RELEASE;
@@ -840,6 +852,8 @@
 		3A9A9FFA2A5C84B5007BA5C9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=*]" = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ishare/ishare.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -891,6 +905,8 @@
 		3A9A9FFB2A5C84B5007BA5C9 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=*]" = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ishare/ishare.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
