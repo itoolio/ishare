@@ -1,6 +1,6 @@
 <p align="center">
   <h1>
-    ishare <img src="/ishare/Util/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" alt="ishare logo" height="25" style="vertical-align: middle;">
+    ishare
   </h1>
   <p>The definitive screen capture utility for macOS, designed with simplicity and efficiency in mind.</p>
 </p>
