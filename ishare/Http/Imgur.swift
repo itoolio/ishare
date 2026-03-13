@@ -40,9 +40,11 @@ import SwiftyJSON
                     if let link = json["data"]["link"].string {
                         print("Image uploaded successfully. Link: \(link)")
 
-                        let pasteboard = NSPasteboard.general
-                        pasteboard.clearContents()
-                        pasteboard.setString(link, forType: .string)
+                        if !Defaults[.copyImageToClipboard] {
+                            let pasteboard = NSPasteboard.general
+                            pasteboard.clearContents()
+                            pasteboard.setString(link, forType: .string)
+                        }
 
                         let historyItem = HistoryItem(fileUrl: link)
                         addToUploadHistory(historyItem)

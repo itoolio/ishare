@@ -65,7 +65,11 @@ func captureScreen(type: CaptureType, display: Int = 1) async {
     if copyToClipboard {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(fileURL.absoluteString, forType: .fileURL)
+        if Defaults[.copyImageToClipboard], let image = NSImage(contentsOf: fileURL) {
+            pasteboard.writeObjects([image])
+        } else {
+            pasteboard.setString(fileURL.absoluteString, forType: .fileURL)
+        }
     }
 
     if openInFinder {
