@@ -41,6 +41,7 @@ extension KeyboardShortcuts.Name {
 extension Defaults.Keys {
     static let showMainMenu = Key<Bool>("showMainMenu", default: false, iCloud: true)
     static let copyToClipboard = Key<Bool>("copyToClipboard", default: true, iCloud: true)
+    static let copyImageToClipboard = Key<Bool>("copyImageToClipboard", default: false, iCloud: true)
     static let openInFinder = Key<Bool>("openInFinder", default: false, iCloud: true)
     static let saveToDisk = Key<Bool>("saveToDisk", default: true, iCloud: true)
     static let uploadMedia = Key<Bool>("uploadMedia", default: false, iCloud: true)

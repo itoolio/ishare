@@ -39,7 +39,9 @@
 </p>
 
 ---
-
+```bash
+brew install --cask ishare
+```
 <p align="center">
    <a href="https://apps.apple.com/app/ishare-screen-capture/id6499066314" download>
     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Download_on_the_App_Store_Badge.svg/640px-Download_on_the_App_Store_Badge.svg.png" alt="Download ishare" width="200">

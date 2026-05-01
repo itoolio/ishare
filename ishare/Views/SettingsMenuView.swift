@@ -103,6 +103,7 @@ struct GeneralSettingsView: View {
     @Default(.toastTimeout) var toastTimeout
     @Default(.aussieMode) var aussieMode
     @Default(.uploadHistory) var uploadHistory
+    @Default(.copyImageToClipboard) var copyImageToClipboard
 
     let appImage = NSImage(named: "AppIcon") ?? AppIcon
 
@@ -145,6 +146,7 @@ struct GeneralSettingsView: View {
                             Text("Launch at login".localized())
                         }
                         Toggle("Land down under".localized(), isOn: $aussieMode)
+                        Toggle("Copy image to clipboard instead of URL".localized(), isOn: $copyImageToClipboard)
                     }
 
                 VStack(alignment: .leading) {

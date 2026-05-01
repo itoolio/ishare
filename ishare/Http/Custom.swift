@@ -148,9 +148,11 @@ private func handleResponse(
         let historyItem = HistoryItem(fileUrl: fileUrl.absoluteString, deletionUrl: deletionUrl)
         addToUploadHistory(historyItem)
 
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(fileUrl.absoluteString, forType: .string)
+        if !Defaults[.copyImageToClipboard] {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(fileUrl.absoluteString, forType: .string)
+        }
         callback?(nil, fileUrl)
     } else {
         callback?(CustomUploadError.responseParsing, nil)
