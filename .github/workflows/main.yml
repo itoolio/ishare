@@ -32,7 +32,7 @@ jobs:
       - name: Xcode Select Version
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '26.0-beta'
+          xcode-version: '26.3.0'
 
       - name: Setup Certificate
         uses: apple-actions/import-codesign-certs@v2
