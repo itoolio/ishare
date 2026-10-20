@@ -4,12 +4,17 @@ import Defaults
 
 @MainActor
 final class EditorDocument: ObservableObject {
-    struct Snapshot: Equatable {
+    struct Snapshot {
+        var base: CGImage
         var annotations: [Annotation]
         var crop: CGRect?
+
+        func matches(_ other: Snapshot) -> Bool {
+            base === other.base && annotations == other.annotations && crop == other.crop
+        }
     }
 
-    let base: CGImage
+    @Published private(set) var base: CGImage
     let fileURL: URL?
     @Published private(set) var annotations: [Annotation] = []
     @Published private(set) var crop: CGRect?
@@ -18,6 +23,8 @@ final class EditorDocument: ObservableObject {
     @Published var color: RGBAColor = .red
     @Published var lineWidth: CGFloat = 6
     @Published var fontSize: CGFloat = 36
+    @Published var filled = false
+    @Published var textBackground = false
     @Published var selectedID: UUID?
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
@@ -52,26 +59,52 @@ final class EditorDocument: ObservableObject {
         }.max() ?? 0) + 1
     }
 
-    private var snapshot: Snapshot { Snapshot(annotations: annotations, crop: crop) }
+    private var snapshot: Snapshot { Snapshot(base: base, annotations: annotations, crop: crop) }
 
     private func commit(_ change: () -> Void) {
         let before = snapshot
         let effectsBefore = annotations.filter(\.isEffect)
         change()
-        guard snapshot != before else { return }
+        guard !snapshot.matches(before) else { return }
         undoStack.append(before)
         redoStack.removeAll()
-        if annotations.filter(\.isEffect) != effectsBefore {
+        if annotations.filter(\.isEffect) != effectsBefore || base !== before.base {
             refreshEffects()
         }
     }
 
     private func restore(_ snapshot: Snapshot) {
         let effectsBefore = annotations.filter(\.isEffect)
+        let baseChanged = base !== snapshot.base
+        base = snapshot.base
         annotations = snapshot.annotations
         crop = snapshot.crop
-        if annotations.filter(\.isEffect) != effectsBefore {
+        if annotations.filter(\.isEffect) != effectsBefore || baseChanged {
             refreshEffects()
+        }
+        selectedID = nil
+    }
+
+    enum Transform {
+        case rotateLeft
+        case rotateRight
+        case flipHorizontal
+        case flipVertical
+    }
+
+    func apply(_ transform: Transform) {
+        commitText()
+        guard let flattened = AnnotationRenderer.render(base: base, annotations: annotations, crop: crop) else { return }
+        let transformed: CGImage = switch transform {
+        case .rotateLeft: ImageProcessing.rotated(flattened, clockwise: false)
+        case .rotateRight: ImageProcessing.rotated(flattened, clockwise: true)
+        case .flipHorizontal: ImageProcessing.flipped(flattened, horizontally: true)
+        case .flipVertical: ImageProcessing.flipped(flattened, horizontally: false)
+        }
+        commit {
+            base = transformed
+            annotations = []
+            crop = nil
         }
         selectedID = nil
     }
@@ -146,6 +179,11 @@ final class EditorDocument: ObservableObject {
         editingText = nil
         let trimmed = edit.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if let replacing = edit.replacing, var existing = annotations.first(where: { $0.id == replacing }) {
+            if case let .callout(tail, rect, _) = existing.shape {
+                existing.shape = .callout(tail, rect, trimmed)
+                replace(existing)
+                return
+            }
             if trimmed.isEmpty {
                 commit { annotations.removeAll { $0.id == replacing } }
             } else {
@@ -155,7 +193,7 @@ final class EditorDocument: ObservableObject {
             return
         }
         guard !trimmed.isEmpty else { return }
-        add(Annotation(shape: .text(edit.origin, trimmed), color: color, lineWidth: lineWidth, fontSize: fontSize))
+        add(Annotation(shape: .text(edit.origin, trimmed), color: color, lineWidth: lineWidth, fontSize: fontSize, textBackground: textBackground))
     }
 
     func makeAnnotation(tool: EditorTool, from start: CGPoint, to end: CGPoint, points: [CGPoint]) -> Annotation? {
@@ -170,9 +208,13 @@ final class EditorDocument: ObservableObject {
         case .marker: .marker(points)
         case .blur: .blur(rect)
         case .pixelate: .pixelate(rect)
-        case .select, .text, .step, .crop: nil
+        case .eraser: .eraser(rect)
+        case .spotlight: .spotlight(rect)
+        case .magnify: .magnify(ScreenGeometry.squareRect(from: start, to: end))
+        case .callout: .callout(start, CGRect(x: end.x, y: end.y, width: max(fontSize * 5, 160), height: fontSize * 1.9), "")
+        case .select, .text, .step, .crop, .cursor: nil
         }
-        return shape.map { Annotation(shape: $0, color: color, lineWidth: lineWidth, fontSize: fontSize) }
+        return shape.map { Annotation(shape: $0, color: color, lineWidth: lineWidth, fontSize: fontSize, filled: filled && tool.supportsFill) }
     }
 
     func isSubstantial(_ annotation: Annotation) -> Bool {
@@ -181,6 +223,8 @@ final class EditorDocument: ObservableObject {
             hypot(end.x - start.x, end.y - start.y) > 3
         case let .pen(points), let .marker(points):
             !points.isEmpty
+        case let .callout(tail, rect, _):
+            hypot(rect.minX - tail.x, rect.minY - tail.y) > 10
         default:
             ScreenGeometry.isMeaningfulSelection(annotation.bounds, minimum: 3)
         }

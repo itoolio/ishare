@@ -56,12 +56,25 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
     case pen
     case marker
     case text
+    case callout
     case step
+    case magnify
+    case spotlight
     case blur
     case pixelate
+    case eraser
+    case cursor
     case crop
 
     var id: Self { self }
+
+    var supportsFill: Bool {
+        self == .rectangle || self == .ellipse
+    }
+
+    var usesFont: Bool {
+        self == .text || self == .callout || self == .step
+    }
 
     var symbol: String {
         switch self {
@@ -74,9 +87,14 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .pen: "scribble"
         case .marker: "highlighter"
         case .text: "textformat"
+        case .callout: "bubble.left"
         case .step: "1.circle"
+        case .magnify: "plus.magnifyingglass"
+        case .spotlight: "light.max"
         case .blur: "drop"
         case .pixelate: "squareshape.split.3x3"
+        case .eraser: "eraser"
+        case .cursor: "cursorarrow.rays"
         case .crop: "crop"
         }
     }
@@ -92,9 +110,14 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .pen: "Pen"
         case .marker: "Marker"
         case .text: "Text"
+        case .callout: "Speech Balloon"
         case .step: "Step"
+        case .magnify: "Magnify"
+        case .spotlight: "Spotlight"
         case .blur: "Blur"
         case .pixelate: "Pixelate"
+        case .eraser: "Smart Eraser"
+        case .cursor: "Cursor"
         case .crop: "Crop"
         }
     }
@@ -110,9 +133,14 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .pen: "p"
         case .marker: "m"
         case .text: "t"
+        case .callout: "s"
         case .step: "n"
+        case .magnify: "g"
+        case .spotlight: "f"
         case .blur: "b"
         case .pixelate: "x"
+        case .eraser: "e"
+        case .cursor: "u"
         case .crop: "c"
         }
     }
@@ -128,9 +156,14 @@ struct Annotation: Identifiable, Hashable, Sendable {
         case pen([CGPoint])
         case marker([CGPoint])
         case text(CGPoint, String)
+        case callout(CGPoint, CGRect, String)
         case step(CGPoint, Int)
+        case magnify(CGRect)
+        case spotlight(CGRect)
         case blur(CGRect)
         case pixelate(CGRect)
+        case eraser(CGRect)
+        case cursor(CGPoint)
     }
 
     var id = UUID()
@@ -138,20 +171,37 @@ struct Annotation: Identifiable, Hashable, Sendable {
     var color: RGBAColor
     var lineWidth: CGFloat
     var fontSize: CGFloat = 32
+    var filled = false
+    var textBackground = false
 
     var isEffect: Bool {
         switch shape {
-        case .blur, .pixelate: true
+        case .blur, .pixelate, .eraser: true
         default: false
         }
+    }
+
+    var isMagnifier: Bool {
+        if case .magnify = shape { return true }
+        return false
+    }
+
+    var isSpotlight: Bool {
+        if case .spotlight = shape { return true }
+        return false
     }
 
     var bounds: CGRect {
         switch shape {
         case let .arrow(start, end), let .line(start, end):
             ScreenGeometry.rect(from: start, to: end).insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
-        case let .rectangle(rect), let .ellipse(rect), let .highlight(rect), let .blur(rect), let .pixelate(rect):
+        case let .rectangle(rect), let .ellipse(rect), let .highlight(rect), let .blur(rect), let .pixelate(rect),
+             let .magnify(rect), let .spotlight(rect), let .eraser(rect):
             rect
+        case let .callout(tail, rect, _):
+            rect.union(CGRect(origin: tail, size: .zero))
+        case let .cursor(point):
+            CGRect(x: point.x, y: point.y, width: AnnotationRenderer.cursorSize(for: fontSize).width, height: AnnotationRenderer.cursorSize(for: fontSize).height)
         case let .pen(points), let .marker(points):
             Annotation.boundingRect(of: points).insetBy(dx: -lineWidth, dy: -lineWidth)
         case let .text(origin, string):
@@ -189,9 +239,14 @@ struct Annotation: Identifiable, Hashable, Sendable {
         case let .pen(points): .pen(points.map(move))
         case let .marker(points): .marker(points.map(move))
         case let .text(origin, string): .text(move(origin), string)
+        case let .callout(tail, rect, string): .callout(move(tail), move(rect), string)
         case let .step(center, number): .step(move(center), number)
+        case let .magnify(rect): .magnify(move(rect))
+        case let .spotlight(rect): .spotlight(move(rect))
         case let .blur(rect): .blur(move(rect))
         case let .pixelate(rect): .pixelate(move(rect))
+        case let .eraser(rect): .eraser(move(rect))
+        case let .cursor(point): .cursor(move(point))
         }
         return copy
     }

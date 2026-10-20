@@ -37,6 +37,52 @@ enum ImageProcessing {
         return render(output.composited(over: input), extent: input.extent, colorSpace: image.colorSpace) ?? image
     }
 
+    static func borderColor(of image: CGImage, around region: CGRect) -> CIColor {
+        let input = CIImage(cgImage: image)
+        let rect = ciRect(fromTopLeft: region, imageHeight: CGFloat(image.height))
+        let ring = rect.insetBy(dx: -3, dy: -3).intersection(input.extent)
+        guard !ring.isNull else { return CIColor(red: 1, green: 1, blue: 1) }
+        let strips = [
+            CGRect(x: ring.minX, y: ring.minY, width: ring.width, height: 3),
+            CGRect(x: ring.minX, y: ring.maxY - 3, width: ring.width, height: 3),
+            CGRect(x: ring.minX, y: ring.minY, width: 3, height: ring.height),
+            CGRect(x: ring.maxX - 3, y: ring.minY, width: 3, height: ring.height),
+        ]
+        var totals = [Double](repeating: 0, count: 4)
+        for strip in strips {
+            let filter = CIFilter.areaAverage()
+            filter.inputImage = input
+            filter.extent = strip
+            guard let output = filter.outputImage else { continue }
+            var pixel = [UInt8](repeating: 0, count: 4)
+            context.render(output, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+            for index in 0 ..< 4 {
+                totals[index] += Double(pixel[index]) / 255
+            }
+        }
+        return CIColor(red: totals[0] / 4, green: totals[1] / 4, blue: totals[2] / 4, alpha: 1, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!) ?? CIColor(red: 1, green: 1, blue: 1)
+    }
+
+    static func erase(_ image: CGImage, region: CGRect) -> CGImage {
+        let input = CIImage(cgImage: image)
+        let rect = ciRect(fromTopLeft: region, imageHeight: CGFloat(image.height)).intersection(input.extent)
+        guard !rect.isNull, rect.width >= 1, rect.height >= 1 else { return image }
+        let fill = CIImage(color: borderColor(of: image, around: region)).cropped(to: rect)
+        return render(fill.composited(over: input), extent: input.extent, colorSpace: image.colorSpace) ?? image
+    }
+
+    static func rotated(_ image: CGImage, clockwise: Bool) -> CGImage {
+        let input = CIImage(cgImage: image)
+        let output = input.oriented(clockwise ? .right : .left)
+        return render(output.transformed(by: CGAffineTransform(translationX: -output.extent.minX, y: -output.extent.minY)), colorSpace: image.colorSpace) ?? image
+    }
+
+    static func flipped(_ image: CGImage, horizontally: Bool) -> CGImage {
+        let input = CIImage(cgImage: image)
+        let output = input.oriented(horizontally ? .upMirrored : .downMirrored)
+        return render(output.transformed(by: CGAffineTransform(translationX: -output.extent.minX, y: -output.extent.minY)), colorSpace: image.colorSpace) ?? image
+    }
+
     static func resized(_ image: CGImage, maxPixelSize: CGFloat) -> CGImage {
         let longest = CGFloat(max(image.width, image.height))
         guard longest > maxPixelSize else { return image }

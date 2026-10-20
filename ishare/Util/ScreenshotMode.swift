@@ -201,13 +201,15 @@ enum ScreenshotMode {
     @MainActor private static func document(for scene: ScreenshotScene) -> EditorDocument? {
         guard scene == .editor, let image = sampleImage(size: CGSize(width: 1800, height: 1120), hue: 0.6, title: "Release checklist") else { return nil }
         let document = EditorDocument(image: image, fileURL: nil)
-        document.add(Annotation(shape: .rectangle(CGRect(x: 260, y: 300, width: 900, height: 140)), color: .red, lineWidth: 8))
-        document.add(Annotation(shape: .arrow(CGPoint(x: 1500, y: 860), CGPoint(x: 1190, y: 420)), color: .red, lineWidth: 10))
-        document.add(Annotation(shape: .step(CGPoint(x: 205, y: 370), 1), color: .blue, lineWidth: 6, fontSize: 48))
-        document.add(Annotation(shape: .step(CGPoint(x: 205, y: 690), 2), color: .blue, lineWidth: 6, fontSize: 48))
-        document.add(Annotation(shape: .text(CGPoint(x: 1240, y: 880), "Ship it!"), color: .red, lineWidth: 6, fontSize: 72))
-        document.add(Annotation(shape: .blur(CGRect(x: 150, y: 440, width: 930, height: 170)), color: .red, lineWidth: 6))
-        document.add(Annotation(shape: .highlight(CGRect(x: 300, y: 780, width: 600, height: 50)), color: .yellow, lineWidth: 6))
+        document.add(Annotation(shape: .rectangle(CGRect(x: 236, y: 258, width: 860, height: 62)), color: .red, lineWidth: 8))
+        document.add(Annotation(shape: .step(CGPoint(x: 200, y: 289), 1), color: .blue, lineWidth: 6, fontSize: 44))
+        document.add(Annotation(shape: .blur(CGRect(x: 150, y: 382, width: 960, height: 124)), color: .red, lineWidth: 6))
+        document.add(Annotation(shape: .step(CGPoint(x: 200, y: 537), 2), color: .blue, lineWidth: 6, fontSize: 44))
+        document.add(Annotation(shape: .highlight(CGRect(x: 236, y: 522, width: 720, height: 32)), color: .yellow, lineWidth: 6))
+        document.add(Annotation(shape: .magnify(CGRect(x: 250, y: 40, width: 300, height: 300)), color: .white, lineWidth: 8))
+        document.add(Annotation(shape: .arrow(CGPoint(x: 1520, y: 720), CGPoint(x: 1130, y: 330)), color: .red, lineWidth: 10))
+        document.add(Annotation(shape: .callout(CGPoint(x: 1060, y: 640), CGRect(x: 1140, y: 830, width: 420, height: 120), "Ship it!"), color: .red, lineWidth: 6, fontSize: 64))
+        document.add(Annotation(shape: .cursor(CGPoint(x: 1040, y: 300)), color: .white, lineWidth: 6, fontSize: 80))
         document.tool = .arrow
         editorDocument = document
         return document
@@ -226,11 +228,11 @@ struct ScreenshotCanvas: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(red: 0.06, green: 0.04, blue: 0.16), Color(red: 0.2, green: 0.08, blue: 0.4), Color(red: 0.47, green: 0.2, blue: 0.72)],
+                colors: [Color(red: 0.04, green: 0.09, blue: 0.24), Color(red: 0.07, green: 0.27, blue: 0.47), Color(red: 0.1, green: 0.52, blue: 0.58)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
             Circle().fill(.white.opacity(0.12)).frame(width: 700).offset(x: -520, y: 360).blur(radius: 40)
-            Circle().fill(Color(red: 0.75, green: 0.45, blue: 1).opacity(0.22)).frame(width: 520).offset(x: 560, y: -340).blur(radius: 50)
+            Circle().fill(.cyan.opacity(0.18)).frame(width: 520).offset(x: 560, y: -340).blur(radius: 50)
             content
         }
         .frame(width: ScreenshotMode.canvasSize.width, height: ScreenshotMode.canvasSize.height)

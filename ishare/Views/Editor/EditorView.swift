@@ -97,7 +97,21 @@ struct EditorView: View {
                 .frame(width: 28)
             }
             Divider().frame(height: 20)
-            if document.tool == .text || document.tool == .step {
+            if document.tool.supportsFill {
+                Toggle(isOn: $document.filled) {
+                    Image(systemName: "paintbrush.pointed.fill")
+                }
+                .toggleStyle(.button)
+                .help("Fill".localized())
+            }
+            if document.tool == .text {
+                Toggle(isOn: $document.textBackground) {
+                    Image(systemName: "character.textbox")
+                }
+                .toggleStyle(.button)
+                .help("Text background".localized())
+            }
+            if document.tool.usesFont || document.tool == .cursor {
                 Label("Size".localized(), systemImage: "textformat.size")
                     .labelStyle(.iconOnly)
                 Slider(value: $document.fontSize, in: 12 ... 160)
@@ -117,9 +131,22 @@ struct EditorView: View {
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(!document.canRedo)
                 .help("Redo".localized())
-            if document.crop != nil {
-                Button("Reset Crop".localized()) { document.resetCrop() }
+            Menu {
+                Button("Rotate Left".localized()) { document.apply(.rotateLeft) }
+                Button("Rotate Right".localized()) { document.apply(.rotateRight) }
+                Divider()
+                Button("Flip Horizontally".localized()) { document.apply(.flipHorizontal) }
+                Button("Flip Vertically".localized()) { document.apply(.flipVertical) }
+                if document.crop != nil {
+                    Divider()
+                    Button("Reset Crop".localized()) { document.resetCrop() }
+                }
+            } label: {
+                Image(systemName: "rotate.right")
             }
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Transform".localized())
             Spacer()
             Button(role: .destructive, action: onDiscard) {
                 Label("Discard".localized(), systemImage: "trash")
@@ -167,9 +194,19 @@ struct EditorView: View {
         return ZStack(alignment: .topLeading) {
             Canvas { context, size in
                 context.draw(Image(decorative: document.effectedBase, scale: 1), in: CGRect(origin: .zero, size: size))
+                let annotations = visibleAnnotations
+                for annotation in annotations where annotation.isSpotlight || annotation.isMagnifier {
+                    guard annotation.isMagnifier, case let .magnify(rect) = annotation.shape,
+                          let crop = AnnotationRenderer.magnifiedSource(for: rect, in: document.effectedBase)
+                    else { continue }
+                    let scaled = CGRect(x: rect.minX * scale, y: rect.minY * scale, width: rect.width * scale, height: rect.height * scale)
+                    var lens = context
+                    lens.clip(to: Path(ellipseIn: scaled))
+                    lens.draw(Image(decorative: crop, scale: 1), in: scaled)
+                }
                 context.withCGContext { cg in
                     cg.scaleBy(x: scale, y: scale)
-                    AnnotationRenderer.draw(visibleAnnotations, in: cg)
+                    AnnotationRenderer.draw(annotations, in: cg, source: nil, canvasSize: document.imageSize)
                     if let selected = selectedAnnotation {
                         cg.setStrokeColor(NSColor.controlAccentColor.cgColor)
                         cg.setLineWidth(2 / scale)
@@ -198,7 +235,7 @@ struct EditorView: View {
                 ), axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(.system(size: max(10, document.fontSize * scale), weight: .semibold))
-                    .foregroundStyle(Color(nsColor: document.color.nsColor))
+                    .foregroundStyle(Color(nsColor: editingTextColor.nsColor))
                     .frame(minWidth: 120, alignment: .leading)
                     .fixedSize()
                     .padding(4)
@@ -211,6 +248,16 @@ struct EditorView: View {
         }
         .frame(width: fit.width, height: fit.height, alignment: .topLeading)
         .position(x: fit.midX, y: fit.midY)
+    }
+
+    private var editingTextColor: RGBAColor {
+        guard let id = document.editingText?.replacing, let annotation = document.annotations.first(where: { $0.id == id }) else {
+            return document.textBackground ? document.color.contrastingText : document.color
+        }
+        if case .callout = annotation.shape {
+            return annotation.color.contrastingText
+        }
+        return annotation.textBackground ? annotation.color.contrastingText : annotation.color
     }
 
     private func cursor(for tool: EditorTool) -> NSCursor {
@@ -235,6 +282,11 @@ struct EditorView: View {
                 return false
             }
             return true
+        }.map { annotation -> Annotation in
+            guard document.editingText?.replacing == annotation.id, case let .callout(tail, rect, _) = annotation.shape else { return annotation }
+            var hidden = annotation
+            hidden.shape = .callout(tail, rect, "")
+            return hidden
         }
         if let movingID, let index = list.firstIndex(where: { $0.id == movingID }) {
             list[index] = list[index].offset(by: moveOffset)
@@ -298,7 +350,7 @@ struct EditorView: View {
             }
         case .crop:
             document.draftCrop = ScreenGeometry.clamp(ScreenGeometry.rect(from: start, to: current), to: CGRect(origin: .zero, size: document.imageSize))
-        case .text, .step:
+        case .text, .step, .cursor:
             break
         default:
             document.draft = document.makeAnnotation(tool: document.tool, from: start, to: current, points: dragPoints)
@@ -319,11 +371,23 @@ struct EditorView: View {
         case .text:
             if let existing = document.annotation(at: end), case let .text(origin, text) = existing.shape {
                 document.editingText = .init(origin: origin, text: text, replacing: existing.id)
+            } else if let existing = document.annotation(at: end), case let .callout(_, rect, text) = existing.shape {
+                document.editingText = .init(origin: AnnotationRenderer.calloutTextOrigin(for: rect, fontSize: existing.fontSize), text: text, replacing: existing.id)
             } else {
                 document.beginText(at: end)
             }
         case .step:
             document.add(Annotation(shape: .step(end, document.nextStepNumber), color: document.color, lineWidth: document.lineWidth, fontSize: document.fontSize))
+        case .cursor:
+            document.add(Annotation(shape: .cursor(end), color: document.color, lineWidth: document.lineWidth, fontSize: document.fontSize))
+        case .callout:
+            if let draft = document.makeAnnotation(tool: .callout, from: start, to: end, points: []), document.isSubstantial(draft),
+               case let .callout(_, rect, _) = draft.shape
+            {
+                document.add(draft)
+                document.editingText = .init(origin: AnnotationRenderer.calloutTextOrigin(for: rect, fontSize: draft.fontSize), text: "", replacing: draft.id)
+            }
+            document.draft = nil
         default:
             if let draft = document.makeAnnotation(tool: document.tool, from: start, to: end, points: dragPoints), document.isSubstantial(draft) {
                 document.add(draft)
