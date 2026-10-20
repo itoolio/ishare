@@ -93,13 +93,19 @@ struct UploaderSettingsView: View {
                 .frame(width: 380, height: 300)
         }
         .sheet(isPresented: $isAssistantPresented) {
-            UploaderAssistantSheet { generated in
+            UploaderAssistantSheet { outcome in
                 isAssistantPresented = false
-                if let generated {
-                    editor = .edit(generated)
+                switch outcome {
+                case let .save(uploader):
+                    save(uploader)
+                    activate(uploader)
+                case let .edit(uploader):
+                    editor = .edit(uploader)
+                case nil:
+                    break
                 }
             }
-            .frame(width: 580, height: 620)
+            .frame(width: 560, height: 640)
         }
         .confirmationDialog("Remove all uploaders?".localized(), isPresented: $confirmClear) {
             Button("Clear All".localized(), role: .destructive) { clearAllUploaders() }

@@ -259,14 +259,13 @@ struct CaptureSettingsView: View {
                 Toggle("Scroll automatically".localized(), isOn: $scrollingAutoScroll)
                 if scrollingAutoScroll {
                     PermissionRow(title: "Scrolling permission", granted: eventAccess) {
-                        eventAccess = CGRequestPostEventAccess()
+                        PermissionGuide.show(.accessibility)
                     }
                 }
             }
             Section("Permissions".localized()) {
                 PermissionRow(title: "Screen recording", granted: screenAccess) {
-                    CGRequestScreenCaptureAccess()
-                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
+                    PermissionGuide.show(.screenRecording)
                 }
             }
         }

@@ -49,7 +49,7 @@ enum ScreenshotEngine {
         if CGPreflightScreenCaptureAccess() {
             return true
         }
-        CGRequestScreenCaptureAccess()
+        PermissionGuide.show(.screenRecording)
         return false
     }
 
