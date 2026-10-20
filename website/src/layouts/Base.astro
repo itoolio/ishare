@@ -1,0 +1,101 @@
+---
+import { links } from "../site.js";
+
+const { title = "ishare", description = "The definitive screen capture utility for macOS." } = Astro.props;
+const pageTitle = title === "ishare" ? "ishare — screen capture for macOS" : `${title} — ishare`;
+const path = Astro.url.pathname;
+const nav = [
+  { href: "/", label: "Home" },
+  { href: "/docs/iscu/", label: "Custom uploaders" },
+  { href: "/uploaders/", label: "Examples" },
+  { href: "/changelog/", label: "Changelog" },
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL("/screenshots/01_menu.jpg", Astro.site)} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="alternate" type="application/rss+xml" title="ishare updates" href="/appcast.xml" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="/"><img src="/icon.png" alt="" width="34" height="34" /> ishare</a>
+      <nav>
+        {nav.map((item) => <a href={item.href} class={path === item.href ? "active" : ""}>{item.label}</a>)}
+        <a href={links.github}>GitHub</a>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      <p>
+        © {new Date().getFullYear()} Adrian Castro · GPL-3.0 ·
+        <a href="/privacy/">Privacy</a> ·
+        <a href={links.crowdin}>Translate</a> ·
+        <a href={links.discord}>Discord</a> ·
+        <a href={links.sponsor}>Sponsor</a>
+      </p>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --accent: #8b5cf6;
+    --accent-strong: #7c3aed;
+    --bg: #0b0a14;
+    --panel: rgba(255, 255, 255, 0.06);
+    --border: rgba(255, 255, 255, 0.12);
+    --text: #f4f2ff;
+    --muted: #b6b0d0;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, rgba(139, 92, 246, 0.25), transparent), var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  a { color: #c4b5fd; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .top {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    backdrop-filter: blur(18px) saturate(1.6);
+    background: rgba(11, 10, 20, 0.6);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); }
+  nav { display: flex; gap: 18px; flex-wrap: wrap; }
+  nav a { color: var(--muted); font-size: 14px; }
+  nav a.active, nav a:hover { color: var(--text); text-decoration: none; }
+  main { max-width: 1120px; margin: 0 auto; padding: 0 24px 80px; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 20px 50px; border-top: 1px solid var(--border); }
+  h1, h2, h3 { line-height: 1.2; letter-spacing: -0.02em; }
+  code, pre { font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+  pre { background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border); border-radius: 14px; padding: 18px; overflow-x: auto; font-size: 13px; }
+  :not(pre) > code { background: rgba(139, 92, 246, 0.16); padding: 2px 6px; border-radius: 6px; font-size: 0.9em; }
+  .button {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; border-radius: 999px; font-weight: 600;
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  }
+  .button.primary { background: linear-gradient(135deg, #a78bfa, var(--accent-strong)); border: none; color: white; }
+  .button:hover { text-decoration: none; filter: brightness(1.08); }
+  .glass { background: var(--panel); border: 1px solid var(--border); border-radius: 22px; backdrop-filter: blur(20px); }
+  .prose { max-width: 820px; }
+  .prose h2 { margin-top: 2.2em; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+</style>

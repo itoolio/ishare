@@ -74,7 +74,7 @@ struct SettingsView: View {
                     Text("v" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Link("isharemac.app", destination: URL(string: "https://isharemac.app")!)
+                    Link("ishare.itoolio.dev", destination: URL(string: "https://ishare.itoolio.dev")!)
                         .font(.caption)
                 }
                 .padding(.bottom, 10)

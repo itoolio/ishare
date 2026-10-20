@@ -1,0 +1,21 @@
+---
+import { marked } from "marked";
+import Base from "../layouts/Base.astro";
+import { links } from "../site.js";
+
+const files = import.meta.glob("../../../CHANGELOG.md", { query: "?raw", import: "default", eager: true });
+const markdown = Object.values(files)[0];
+const html = markdown ? marked.parse(String(markdown).replace(/^# .*\n/, "")) : "";
+---
+<Base title="Changelog" description="What's new in each version of ishare.">
+  <article class="prose log">
+    <h1>Changelog</h1>
+    {html ? <div set:html={html} /> : <p>See the <a href={links.releases}>releases on GitHub</a>.</p>}
+    <p class="older">Older versions are listed on <a href={links.releases}>GitHub</a>.</p>
+  </article>
+</Base>
+
+<style>
+  .log { padding-top: 50px; }
+  .older { color: var(--muted); margin-top: 3em; }
+</style>

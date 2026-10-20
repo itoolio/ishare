@@ -39,7 +39,7 @@
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://isharemac.app/appcast.xml</string>
+	<string>https://ishare.itoolio.dev/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>iehPcJsCkc5hgiz6Ehb3X4USID60fQbIAFLNfWhA+44=</string>
 	<key>UTExportedTypeDeclarations</key>

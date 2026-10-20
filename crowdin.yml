@@ -1,4 +1,4 @@
 files:
-  - source: ishare/Localizable.xcstrings
-    translation: ishare/Localizable.xcstrings
+  - source: /ishare/Localizable.xcstrings
+    translation: /ishare/Localizable.xcstrings
     multilingual: 1

@@ -98,3 +98,4 @@ fastlane/screenshots/raw
 website/node_modules
 website/dist
 website/.astro
+fastlane/README.md
