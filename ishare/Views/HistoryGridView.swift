@@ -62,40 +62,14 @@ struct HistoryGridView: View {
     }
     
     private func deleteItem(_ item: HistoryItem) {
-        guard let deletionUrl = item.deletionUrl else { return }
-        
-        Task {
+        Task { @MainActor in
             do {
-                let message = try await performDeletionAsync(deletionUrl)
-                print(message)
-                Task { @MainActor in
-                    if let index = uploadHistory.firstIndex(of: item) {
-                        uploadHistory.remove(at: index)
-                        BezelNotification.show(messageText: "Deleted".localized(), icon: ToastIcon)
-                    }
-                }
+                try await UploadCoordinator.delete(item)
             } catch {
-                print("Deletion error: \(error.localizedDescription)")
-                Task { @MainActor in
-                    if let index = uploadHistory.firstIndex(of: item) {
-                        uploadHistory.remove(at: index)
-                        BezelNotification.show(messageText: "Deleted".localized(), icon: ToastIcon)
-                    }
-                }
+                NSLog("Deletion error: %@", error.localizedDescription)
             }
-        }
-    }
-    
-    private func performDeletionAsync(_ deletionUrl: String) async throws -> String {
-        return try await withCheckedThrowingContinuation { continuation in
-            performDeletionRequest(deletionUrl: deletionUrl) { result in
-                switch result {
-                case .success(let message):
-                    continuation.resume(returning: message)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                }
-            }
+            uploadHistory.removeAll { $0 == item }
+            BezelNotification.show(messageText: "Deleted".localized(), icon: ToastIcon)
         }
     }
 }

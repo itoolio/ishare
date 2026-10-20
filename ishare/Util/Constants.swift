@@ -187,8 +187,7 @@ func importIscu(_ url: URL) {
                     
                     do {
                         let data = try Data(contentsOf: url)
-                        let decoder = JSONDecoder()
-                        let uploader = try decoder.decode(CustomUploader.self, from: data)
+                        let uploader = try CustomUploader.fromJSON(data)
 
                         @Default(.savedCustomUploaders) var savedCustomUploaders
                         @Default(.activeCustomUploader) var activeCustomUploader
@@ -318,6 +317,10 @@ enum MenuBarIcon: Codable, CaseIterable, Identifiable, Defaults.Serializable {
 struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var fileUrl: String?
     var deletionUrl: String?
+    var uploaderId: UUID?
+    var s3Key: String?
+    var localPath: String?
+    var date: Date?
     var id: Self { self }
 }
 

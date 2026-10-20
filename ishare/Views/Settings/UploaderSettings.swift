@@ -166,34 +166,20 @@ struct UploaderSettingsView: View {
             return
         }
 
-        let callback = { @Sendable (error: (any Error)?, finalURL: URL?) -> Void in
-            Task { @MainActor in
-                if let error {
-                    print("Upload error: \(error)")
-                    let alert = NSAlert()
-                    alert.alertStyle = .critical
-                    alert.messageText = "Upload Error".localized()
-                    alert.informativeText = "An error occurred during the upload process.".localized()
-                    alert.runModal()
-                } else if let url = finalURL {
-                    print("Final URL: \(url)")
-                    let alert = NSAlert()
-                    alert.alertStyle = .informational
-                    alert.messageText = "Upload Successful".localized()
-                    alert.informativeText = "The file was uploaded successfully.".localized()
-                    alert.runModal()
-                }
-            }
-        }
-
-        customUpload(fileURL: fileURL, specification: uploader, callback: callback) {}
-
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
+        Task { @MainActor in
+            let alert = NSAlert()
             do {
-                try FileManager.default.removeItem(at: fileURL)
+                let outcome = try await UploadService.upload(fileURL: fileURL, to: .custom(uploader))
+                alert.alertStyle = .informational
+                alert.messageText = "Upload Successful".localized()
+                alert.informativeText = outcome.url.absoluteString
             } catch {
-                print("Failed to delete temporary file: \(error)")
+                alert.alertStyle = .critical
+                alert.messageText = "Upload Error".localized()
+                alert.informativeText = error.localizedDescription
             }
+            try? FileManager.default.removeItem(at: fileURL)
+            alert.runModal()
         }
     }
 
@@ -532,8 +518,7 @@ struct ImportCustomUploaderView: View {
 
         do {
             let data = try Data(contentsOf: fileURL)
-            let decoder = JSONDecoder()
-            let uploader = try decoder.decode(CustomUploader.self, from: data)
+            let uploader = try CustomUploader.fromJSON(data)
 
             if var uploaders = savedCustomUploaders {
                 uploaders.remove(uploader)

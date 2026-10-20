@@ -156,14 +156,13 @@ targets:
     sources:
       - path: ishareTests
     dependencies:
-      - target: ishare
+      - target: ishare - GitHub
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.tests
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/ishare.app/Contents/MacOS/ishare
         BUNDLE_LOADER: $(TEST_HOST)
-        ISHARE_SOURCE_ROOT: $(SRCROOT)
   ishareUITests:
     type: bundle.ui-testing
     platform: macOS
@@ -181,6 +180,14 @@ schemes:
     build:
       targets:
         ishare: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+  GitHub:
+    build:
+      targets:
+        ishare - GitHub: all
         ishareTests: [test]
     run:
       config: Debug
@@ -189,14 +196,6 @@ schemes:
       gatherCoverageData: true
       targets:
         - ishareTests
-    archive:
-      config: Release
-  GitHub:
-    build:
-      targets:
-        ishare - GitHub: all
-    run:
-      config: Debug
     archive:
       config: Release
   Screenshots:
