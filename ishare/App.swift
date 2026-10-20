@@ -34,10 +34,12 @@ struct ishare: App {
             }
         }
         .menuBarExtraAccess(isPresented: $showMainMenu)
+        .menuBarExtraStyle(.window)
         Settings {
-            SettingsMenuView()
+            SettingsView()
                 .environmentObject(LocalizableManager.shared)
         }
+        .windowResizability(.contentSize)
     }
 }
 

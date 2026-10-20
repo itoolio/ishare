@@ -11,7 +11,9 @@ final class AppState: ObservableObject {
     @Default(.uploadHistory) var uploadHistory
 
     init() {
-        setupKeyboardShortcuts()
+        if !ScreenshotMode.isActive {
+            setupKeyboardShortcuts()
+        }
     }
 
     private func onCapture(_ name: KeyboardShortcuts.Name, _ type: CaptureType, forceUpload: Bool = false) {
