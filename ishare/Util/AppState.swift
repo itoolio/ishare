@@ -1,10 +1,3 @@
-//
-//  AppState.swift
-//  ishare
-//
-//  Created by Adrian Castro on 12.07.23.
-//
-
 import Defaults
 import KeyboardShortcuts
 import SwiftUI
@@ -12,153 +5,98 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class AppState: ObservableObject {
-	static let shared = AppState()
+    static let shared = AppState()
 
-	@Default(.showMainMenu) var showMainMenu
-	@Default(.uploadHistory) var uploadHistory
+    @Default(.showMainMenu) var showMainMenu
+    @Default(.uploadHistory) var uploadHistory
 
-	init() {
-		setupKeyboardShortcuts()
-	}
+    init() {
+        if !ScreenshotMode.isActive {
+            setupKeyboardShortcuts()
+        }
+    }
 
-	func setupKeyboardShortcuts() {
-		// Regular shortcuts
-		KeyboardShortcuts.onKeyUp(for: .captureRegion) {
-			NSLog("Capture region shortcut triggered")
-			Task { @MainActor in
-				await captureScreen(type: .REGION)
-			}
-		}
+    private func onCapture(_ name: KeyboardShortcuts.Name, _ type: CaptureType, forceUpload: Bool = false) {
+        KeyboardShortcuts.onKeyUp(for: name) {
+            Task { @MainActor in
+                await captureScreen(type: type, forceUpload: forceUpload)
+            }
+        }
+    }
 
-		KeyboardShortcuts.onKeyUp(for: .captureWindow) {
-			Task { @MainActor in
-				await captureScreen(type: .WINDOW)
-			}
-		}
+    private func onRecord(_ name: KeyboardShortcuts.Name, gif: Bool, region: Bool = false, forceUpload: Bool = false) {
+        KeyboardShortcuts.onKeyUp(for: name) {
+            Task { @MainActor in
+                recordScreen(gif: gif, region: region, forceUpload: forceUpload)
+            }
+        }
+    }
 
-		KeyboardShortcuts.onKeyUp(for: .captureScreen) {
-			Task { @MainActor in
-				await captureScreen(type: .SCREEN)
-			}
-		}
+    func setupKeyboardShortcuts() {
+        onCapture(.captureRegion, .REGION)
+        onCapture(.captureWindow, .WINDOW)
+        onCapture(.captureScreen, .SCREEN)
+        onCapture(.captureScrolling, .SCROLLING)
+        onCapture(.captureRegionForceUpload, .REGION, forceUpload: true)
+        onCapture(.captureWindowForceUpload, .WINDOW, forceUpload: true)
+        onCapture(.captureScreenForceUpload, .SCREEN, forceUpload: true)
 
-		KeyboardShortcuts.onKeyUp(for: .recordScreen) {
-			let screenRecorder = AppDelegate.shared.screenRecorder
-			if screenRecorder.isRunning {
-				let pickerManager = ContentSharingPickerManager.shared
-				pickerManager.deactivatePicker()
-				AppDelegate.shared.stopRecording()
-			} else {
-				recordScreen()
-			}
-		}
+        onRecord(.recordScreen, gif: false)
+        onRecord(.recordGif, gif: true)
+        onRecord(.recordRegion, gif: false, region: true)
+        onRecord(.recordRegionGif, gif: true, region: true)
+        onRecord(.recordScreenForceUpload, gif: false, forceUpload: true)
+        onRecord(.recordGifForceUpload, gif: true, forceUpload: true)
 
-		KeyboardShortcuts.onKeyUp(for: .recordGif) {
-			let screenRecorder = AppDelegate.shared.screenRecorder
-			if screenRecorder.isRunning {
-				let pickerManager = ContentSharingPickerManager.shared
-				pickerManager.deactivatePicker()
-				AppDelegate.shared.stopRecording()
-			} else {
-				recordScreen(gif: true)
-			}
-		}
+        KeyboardShortcuts.onKeyUp(for: .toggleMainMenu) {
+            Task { @MainActor in
+                NSApp.activate(ignoringOtherApps: true)
+                Defaults[.showMainMenu].toggle()
+            }
+        }
 
-		KeyboardShortcuts.onKeyUp(for: .openMostRecentItem) {
-			guard let mostRecentItem = AppState.shared.uploadHistory.last,
-				let fileUrlString = mostRecentItem.fileUrl,
-				let fileURL = URL(string: fileUrlString)
-			else {
-				return
-			}
-			NSWorkspace.shared.open(fileURL)
-		}
+        KeyboardShortcuts.onKeyUp(for: .openHistoryWindow) {
+            Task { @MainActor in
+                openHistoryWindow(uploadHistory: Defaults[.uploadHistory])
+            }
+        }
 
-		KeyboardShortcuts.onKeyUp(for: .uploadPasteBoardItem) {
-			let pasteboard = NSPasteboard.general
-			
-			// First check for media file URL
-			if let mediaURL = pasteboard.mediaURL {
-				uploadFile(fileURL: mediaURL, uploadType: Defaults[.uploadType]) {
-					Task { @MainActor in
-						showToast(fileURL: mediaURL) {
-							NSSound.beep()
-						}
-					}
-				}
-				return
-			}
-			
-			// Then check for raw image data
-			if let image = pasteboard.imageFromData,
-			   let tiffData = image.tiffRepresentation,
-			   let bitmapImage = NSBitmapImageRep(data: tiffData),
-			   let data = bitmapImage.representation(using: .png, properties: [:]) {
-				
-				let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("pasteboard_image.png")
-				try? data.write(to: tempURL)
-				
-				uploadFile(fileURL: tempURL, uploadType: Defaults[.uploadType]) {
-					Task { @MainActor in
-						showToast(fileURL: tempURL) {
-							NSSound.beep()
-							try? FileManager.default.removeItem(at: tempURL)
-						}
-					}
-				 }
-			}
-		}
+        KeyboardShortcuts.onKeyUp(for: .openEditor) {
+            Task { @MainActor in
+                ImageEditor.chooseAndEdit()
+            }
+        }
 
-		// Force upload shortcuts
-		KeyboardShortcuts.onKeyUp(for: .captureRegionForceUpload) {
-			NSLog("Force upload capture region shortcut triggered")
-			Task { @MainActor in
-				Defaults[.uploadMedia] = true
-				await captureScreen(type: .REGION)
-				Defaults[.uploadMedia] = false
-			}
-		}
+        KeyboardShortcuts.onKeyUp(for: .openMostRecentItem) {
+            Task { @MainActor in
+                guard let item = Defaults[.uploadHistory].first, let string = item.fileUrl, let url = URL(string: string) else { return }
+                NSWorkspace.shared.open(url)
+            }
+        }
 
-		KeyboardShortcuts.onKeyUp(for: .captureWindowForceUpload) {
-			Task { @MainActor in
-				Defaults[.uploadMedia] = true
-				await captureScreen(type: .WINDOW)
-				Defaults[.uploadMedia] = false
-			}
-		}
+        KeyboardShortcuts.onKeyUp(for: .uploadPasteBoardItem) {
+            Task { @MainActor in
+                await AppState.uploadPasteboard()
+            }
+        }
+    }
 
-		KeyboardShortcuts.onKeyUp(for: .captureScreenForceUpload) {
-			Task { @MainActor in
-				Defaults[.uploadMedia] = true
-				await captureScreen(type: .SCREEN)
-				Defaults[.uploadMedia] = false
-			}
-		}
-
-		KeyboardShortcuts.onKeyUp(for: .recordScreenForceUpload) {
-			let screenRecorder = AppDelegate.shared.screenRecorder
-			if screenRecorder.isRunning {
-				let pickerManager = ContentSharingPickerManager.shared
-				pickerManager.deactivatePicker()
-				AppDelegate.shared.stopRecording()
-			} else {
-				Defaults[.uploadMedia] = true
-				recordScreen()
-				Defaults[.uploadMedia] = false
-			}
-		}
-
-		KeyboardShortcuts.onKeyUp(for: .recordGifForceUpload) {
-			let screenRecorder = AppDelegate.shared.screenRecorder
-			if screenRecorder.isRunning {
-				let pickerManager = ContentSharingPickerManager.shared
-				pickerManager.deactivatePicker()
-				AppDelegate.shared.stopRecording()
-			} else {
-				Defaults[.uploadMedia] = true
-				recordScreen(gif: true)
-				Defaults[.uploadMedia] = false
-			}
-		}
-	}
+    static func uploadPasteboard() async {
+        let pasteboard = NSPasteboard.general
+        if let mediaURL = pasteboard.mediaURL {
+            await UploadCoordinator.upload(fileURL: mediaURL, localFileURL: mediaURL)
+            await showToast(fileURL: mediaURL)
+            return
+        }
+        guard let image = pasteboard.imageFromData,
+              let tiff = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff),
+              let data = bitmap.representation(using: .png, properties: [:])
+        else { return }
+        let url = FileManager.default.temporaryDirectory.appending(path: CaptureFileName.make(prefix: Defaults[.captureFileName], suffix: "pasteboard", ext: "png"))
+        try? data.write(to: url)
+        await UploadCoordinator.upload(fileURL: url)
+        await showToast(fileURL: url)
+        try? FileManager.default.removeItem(at: url)
+    }
 }

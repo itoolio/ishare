@@ -1,0 +1,50 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches: [dev]
+    workflow_call:
+
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    tools:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
+            - run: go vet ./tools/...
+            - run: go test ./tools/...
+
+    app:
+        runs-on: macos-26
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - run: xcodegen generate
+            - name: Build the App Store target
+              run: |
+                  xcodebuild build \
+                    -project ishare.xcodeproj \
+                    -scheme ishare \
+                    -configuration Release \
+                    -destination "generic/platform=macOS" \
+                    CODE_SIGNING_ALLOWED=NO | xcbeautify
+            - name: Run unit tests
+              run: |
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS" \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify

@@ -1,19 +1,25 @@
-//
-//  CustomUploader.swift
-//  ishare
-//
-//  Created by Adrian Castro on 15.07.23.
-//
-
 import Defaults
 import Foundation
 
-enum RequestBodyType: String, Codable {
+enum RequestBodyType: String, Codable, CaseIterable, Sendable {
     case multipartFormData = "multipartformdata"
     case binary
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self).lowercased()
+        switch rawValue {
+        case "multipartformdata", "multipart", "multipart/form-data", "formdata":
+            self = .multipartFormData
+        case "binary", "raw":
+            self = .binary
+        default:
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid request body type: \(rawValue)")
+        }
+    }
 }
 
-enum DeleteRequestType: String, Codable {
+enum DeleteRequestType: String, Codable, CaseIterable, Sendable {
     case get = "GET"
     case delete = "DELETE"
 
@@ -33,9 +39,21 @@ enum DeleteRequestType: String, Codable {
     }
 }
 
-struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable, Defaults
-    .Serializable
-{
+enum UploaderKind: String, Codable, CaseIterable, Sendable {
+    case custom
+    case s3
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self).lowercased()
+        guard let kind = UploaderKind(rawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid uploader type: \(rawValue)")
+        }
+        self = kind
+    }
+}
+
+struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable, Sendable, Defaults.Serializable {
     var id: UUID
     let name: String
     let requestURL: String
@@ -46,11 +64,14 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
     let responseURL: String
     let deletionURL: String?
     let deleteRequestType: DeleteRequestType?
+    let uploaderType: UploaderKind?
+    let s3: S3Configuration?
 
     init(
         id: UUID = UUID(), name: String, requestURL: String, headers: [String: String]?,
         formData: [String: String]?, fileFormName: String?, requestBodyType: RequestBodyType? = nil,
-        responseURL: String, deletionURL: String? = nil, deleteRequestType: DeleteRequestType? = nil
+        responseURL: String, deletionURL: String? = nil, deleteRequestType: DeleteRequestType? = nil,
+        uploaderType: UploaderKind? = nil, s3: S3Configuration? = nil
     ) {
         self.id = id
         self.name = name
@@ -62,6 +83,15 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         self.responseURL = responseURL
         self.deletionURL = deletionURL
         self.deleteRequestType = deleteRequestType
+        self.uploaderType = uploaderType
+        self.s3 = s3
+    }
+
+    static func s3(id: UUID = UUID(), name: String, configuration: S3Configuration) -> CustomUploader {
+        CustomUploader(
+            id: id, name: name, requestURL: "", headers: nil, formData: nil, fileFormName: nil,
+            responseURL: "", uploaderType: .s3, s3: configuration
+        )
     }
 
     enum CodingKeys: String, CodingKey {
@@ -75,46 +105,37 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         case responseURL = "responseurl"
         case deletionURL = "deletionurl"
         case deleteRequestType = "deleterequesttype"
+        case uploaderType = "uploadertype"
+        case s3
     }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: DynamicCodingKey.self)
-
-        id =
-            try container.decodeDynamicIfPresent(
-                UUID.self, forKey: DynamicCodingKey(stringValue: "id")!
-            ) ?? UUID()
-        name = try container.decodeDynamic(
-            String.self, forKey: DynamicCodingKey(stringValue: "name")!
-        )
-        requestURL = try container.decodeDynamic(
-            String.self, forKey: DynamicCodingKey(stringValue: "requesturl")!
-        )
-        headers = try container.decodeDynamicIfPresent(
-            [String: String].self, forKey: DynamicCodingKey(stringValue: "headers")!
-        )
-        formData = try container.decodeDynamicIfPresent(
-            [String: String].self, forKey: DynamicCodingKey(stringValue: "formdata")!
-        )
-        fileFormName = try container.decodeDynamicIfPresent(
-            String.self, forKey: DynamicCodingKey(stringValue: "fileformname")!
-        )
-        requestBodyType = try container.decodeDynamicIfPresent(
-            RequestBodyType.self, forKey: DynamicCodingKey(stringValue: "requestbodytype")!
-        )
-        responseURL = try container.decodeDynamic(
-            String.self, forKey: DynamicCodingKey(stringValue: "responseurl")!
-        )
-        deletionURL = try container.decodeDynamicIfPresent(
-            String.self, forKey: DynamicCodingKey(stringValue: "deletionurl")!
-        )
-        deleteRequestType = try container.decodeDynamicIfPresent(
-            DeleteRequestType.self, forKey: DynamicCodingKey(stringValue: "deleterequesttype")!
-        )
+        id = try container.decodeDynamicIfPresent(UUID.self, forKey: .key(named: "id")) ?? UUID()
+        name = try container.decodeDynamic(String.self, forKey: .key(named: "name"))
+        s3 = try container.decodeDynamicIfPresent(S3Configuration.self, forKey: .key(named: "s3"))
+        let declaredKind = try container.decodeDynamicIfPresent(UploaderKind.self, forKey: .key(named: "uploadertype"))
+        uploaderType = declaredKind ?? (s3 == nil ? nil : .s3)
+        let isS3 = uploaderType == .s3
+        if isS3 {
+            requestURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "requesturl")) ?? ""
+            responseURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "responseurl")) ?? ""
+        } else {
+            requestURL = try container.decodeDynamic(String.self, forKey: .key(named: "requesturl"))
+            responseURL = try container.decodeDynamic(String.self, forKey: .key(named: "responseurl"))
+        }
+        headers = try container.decodeDynamicIfPresent([String: String].self, forKey: .key(named: "headers"))
+        formData = try container.decodeDynamicIfPresent([String: String].self, forKey: .key(named: "formdata"))
+        fileFormName = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "fileformname"))
+        requestBodyType = try container.decodeDynamicIfPresent(RequestBodyType.self, forKey: .key(named: "requestbodytype"))
+        deletionURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "deletionurl"))
+        deleteRequestType = try container.decodeDynamicIfPresent(DeleteRequestType.self, forKey: .key(named: "deleterequesttype"))
     }
 
+    var kind: UploaderKind { uploaderType ?? .custom }
+
     static var allCases: [CustomUploader] {
-        Defaults[.savedCustomUploaders]?.sorted(by: { $0.name < $1.name }) ?? []
+        Defaults[.savedCustomUploaders]?.sorted(by: { $0.name.localizedStandardCompare($1.name) == .orderedAscending }) ?? []
     }
 
     static func == (lhs: CustomUploader, rhs: CustomUploader) -> Bool {
@@ -126,59 +147,25 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
     }
 
     static func fromJSON(_ json: Data) throws -> CustomUploader {
-        // Convert JSON data to a dictionary
-        guard
-            let jsonObject = try JSONSerialization.jsonObject(with: json, options: [])
-            as? [String: Any]
-        else {
-            throw DecodingError.dataCorrupted(
-                DecodingError.Context(codingPath: [], debugDescription: "Invalid JSON structure"))
-        }
-
-        // Convert all keys in the dictionary to lowercase
-        let lowercasedKeysJsonObject = jsonObject.reduce(into: [String: Any]()) { result, element in
-            result[element.key.lowercased()] = element.value
-        }
-
-        // Encode the modified dictionary back to Data
-        let modifiedJsonData = try JSONSerialization.data(
-            withJSONObject: lowercasedKeysJsonObject, options: []
-        )
-
-        // Decode using the modified JSON data
         let decoder = JSONDecoder()
-        return try decoder.decode(CustomUploader.self, from: modifiedJsonData)
+        decoder.allowsJSON5 = true
+        return try decoder.decode(CustomUploader.self, from: json)
     }
 
     func toJSON() throws -> Data {
         let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try encoder.encode(self)
     }
 
     func isValid() -> Bool {
-        guard !requestURL.isEmpty, !responseURL.isEmpty else {
-            return false
-        }
+        UploaderValidator.issues(for: self).isEmpty
+    }
 
-        if let headers {
-            guard headers as (any Codable) is [String: String] else {
-                return false
-            }
-        }
-
-        if let formData {
-            guard formData as (any Codable) is [String: String] else {
-                return false
-            }
-        }
-
-        if let fileFormName {
-            guard !fileFormName.isEmpty else {
-                return false
-            }
-        }
-
-        return true
+    func withID(_ newID: UUID) -> CustomUploader {
+        var copy = self
+        copy.id = newID
+        return copy
     }
 }
 
@@ -200,17 +187,13 @@ struct DynamicCodingKey: CodingKey {
     }
 }
 
-extension KeyedDecodingContainer {
+extension KeyedDecodingContainer where Key == DynamicCodingKey {
     func decodeDynamic<T: Decodable>(_: T.Type, forKey key: DynamicCodingKey) throws -> T {
         let keyString = key.stringValue.lowercased()
-        guard let dynamicKey = allKeys.first(where: { $0.stringValue.lowercased() == keyString })
-        else {
+        guard let dynamicKey = allKeys.first(where: { $0.stringValue.lowercased() == keyString }) else {
             throw DecodingError.keyNotFound(
                 key,
-                DecodingError.Context(
-                    codingPath: codingPath,
-                    debugDescription: "No value associated with key \(keyString)"
-                )
+                DecodingError.Context(codingPath: codingPath, debugDescription: "No value associated with key \(keyString)")
             )
         }
         return try decode(T.self, forKey: dynamicKey)
@@ -218,8 +201,7 @@ extension KeyedDecodingContainer {
 
     func decodeDynamicIfPresent<T: Decodable>(_: T.Type, forKey key: DynamicCodingKey) throws -> T? {
         let keyString = key.stringValue.lowercased()
-        guard let dynamicKey = allKeys.first(where: { $0.stringValue.lowercased() == keyString })
-        else {
+        guard let dynamicKey = allKeys.first(where: { $0.stringValue.lowercased() == keyString }) else {
             return nil
         }
         return try decodeIfPresent(T.self, forKey: dynamicKey)

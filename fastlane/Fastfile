@@ -1,0 +1,74 @@
+default_platform(:mac)
+
+platform :mac do
+  def api_key
+    app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_PRIVATE_KEY_BASE64"),
+      is_key_content_base64: true,
+      in_house: false
+    )
+  end
+
+  def wait_for_processed_build(version:, build:, timeout: 3600)
+    app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
+    UI.user_error!("App not found in App Store Connect") unless app
+    deadline = Time.now + timeout
+    loop do
+      found = Spaceship::ConnectAPI::Build.all(
+        app_id: app.id, version: version, build_number: build.to_s, platform: Spaceship::ConnectAPI::Platform::MAC_OS
+      ).first
+      state = found&.processing_state
+      UI.message("Build #{version} (#{build}): #{state || 'not visible yet'}")
+      return found if state == Spaceship::ConnectAPI::Build::ProcessingState::VALID
+      UI.user_error!("Build #{build} failed processing: #{state}") if %w[FAILED INVALID].include?(state)
+      UI.user_error!("Timed out waiting for build #{build}") if Time.now > deadline
+      sleep(30)
+    end
+  end
+
+  desc "Upload metadata, screenshots and release notes and submit a processed build for review"
+  lane :release do |options|
+    version = options.fetch(:version)
+    build = options.fetch(:build)
+    submit = options.fetch(:submit, "true").to_s == "true"
+    key = api_key
+    wait_for_processed_build(version: version, build: build)
+    deliver(
+      api_key: key,
+      platform: "osx",
+      app_version: version,
+      build_number: build.to_s,
+      skip_binary_upload: true,
+      skip_metadata: false,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      metadata_path: "./fastlane/metadata",
+      screenshots_path: "./fastlane/screenshots",
+      force: true,
+      submit_for_review: submit,
+      automatic_release: true,
+      reject_if_possible: true,
+      run_precheck_before_submit: false,
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: false
+      }
+    )
+  end
+
+  desc "Check that the App Store Connect credentials and app record work"
+  lane :verify do
+    key = api_key
+    app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
+    UI.user_error!("App not found in App Store Connect") unless app
+    UI.success("Found #{app.name} (#{app.id})")
+    latest = Spaceship::ConnectAPI::Build.all(app_id: app.id, platform: Spaceship::ConnectAPI::Platform::MAC_OS, sort: "-uploadedDate", limit: 1).first
+    UI.success("Latest build: #{latest&.app_version} (#{latest&.version}) #{latest&.processing_state}")
+    probe = Spaceship::ConnectAPI::Build.all(app_id: app.id, version: latest&.app_version, build_number: latest&.version, platform: Spaceship::ConnectAPI::Platform::MAC_OS).first
+    UI.success("Lookup by version and build: #{probe&.processing_state}")
+  end
+end

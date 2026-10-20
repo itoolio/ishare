@@ -1,9 +1,0 @@
-//
-//  Config.xcconfig
-//  ishare
-//
-//  Created by Adrian Castro on 06.08.23.
-//
-
-BUILD_NUMBER = 67
-VERSION = 4.2.6

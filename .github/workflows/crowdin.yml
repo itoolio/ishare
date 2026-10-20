@@ -1,0 +1,49 @@
+name: Merge Crowdin translations
+
+on:
+    pull_request_target:
+        types: [opened, synchronize, reopened, ready_for_review]
+        branches: [main]
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    merge:
+        if: >-
+            github.event.pull_request.head.ref == 'l10n_main' &&
+            github.event.pull_request.head.repo.full_name == github.repository
+        runs-on: ubuntu-latest
+        steps:
+            - name: Validate changed files
+              id: validate
+              env:
+                  GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  REPOSITORY: ${{ github.repository }}
+              run: |
+                  files=$(gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[] | "\(.filename) \(.changes)"')
+                  test -n "$files"
+                  changes=0
+                  while read -r file count; do
+                    [ "$file" = "ishare/Localizable.xcstrings" ] || { echo "Unexpected file: $file"; exit 1; }
+                    changes=$((changes + count))
+                  done <<< "$files"
+                  echo "has_translations=$([ "$changes" -gt 0 ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
+            - name: Close empty Crowdin pull request
+              if: steps.validate.outputs.has_translations != '1'
+              env:
+                  GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+              run: >-
+                  gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --delete-branch
+                  --comment "Crowdin exported no translated values, so this no-op pull request was closed. It reopens when a translation is submitted."
+            - name: Merge automatically
+              if: steps.validate.outputs.has_translations == '1'
+              env:
+                  GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+              run: >-
+                  gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --auto --delete-branch
+                  --subject "fix(i18n): update translations from Crowdin"
