@@ -43,6 +43,7 @@ struct LocalizationTests {
         keys.formUnion(EditorTool.allCases.map(\.title))
         keys.formUnion(ScreenshotScene.allCases.flatMap { [$0.title, $0.subtitle] })
         keys.insert(RecordingResolution.native.title)
+        keys.formUnion([PermissionKind.screenRecording, .accessibility].flatMap { [$0.title, $0.instructions] })
         keys.insert(CompressionPreset.medium.title)
         let issues: [UploaderIssue] = [
             .missingName, .invalidRequestURL, .missingResponseURL, .malformedTemplate(field: "response URL"),

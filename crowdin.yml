@@ -2,3 +2,4 @@ files:
   - source: /ishare/Localizable.xcstrings
     translation: /ishare/Localizable.xcstrings
     multilingual: 1
+    skip_untranslated_strings: true

@@ -107,202 +107,111 @@ enum AssistantError: LocalizedError {
     }
 }
 
-#if canImport(FoundationModels)
-    @available(macOS 26.0, *)
-    @Generable(description: "A configuration for uploading files to a web service with an HTTP request")
-    struct GenerableUploader {
-        @Guide(description: "A short name for the uploader, usually the service name in lowercase")
-        var name: String
-        @Guide(description: "The full https URL the file is POSTed to")
-        var requestURL: String
-        @Guide(description: "Either multipart or binary. Use multipart unless the service expects the raw file as the request body")
-        var bodyType: String
-        @Guide(description: "The multipart form field name that carries the file, for example file or image")
-        var fileFormName: String
-        @Guide(description: "Names of extra HTTP headers the service requires, excluding Content-Type")
-        var headerNames: [String]
-        @Guide(description: "Values of the extra HTTP headers, in the same order as headerNames. Use placeholders like YOUR_API_KEY for secrets")
-        var headerValues: [String]
-        @Guide(description: "Names of extra multipart text fields, if any")
-        var formFieldNames: [String]
-        @Guide(description: "Values of the extra multipart text fields, in the same order as formFieldNames")
-        var formFieldValues: [String]
-        @Guide(description: "Template for the public file URL. Wrap JSON paths from the response in double braces, for example {{data.url}} or {{files[0].url}}")
-        var responseURL: String
-        @Guide(description: "Template for the deletion URL using the same placeholder syntax, or an empty string if the service has none")
-        var deletionURL: String
-        @Guide(description: "GET or DELETE, the HTTP method used for the deletion URL")
-        var deletionMethod: String
 
-        var spec: GeneratedUploaderSpec {
-            GeneratedUploaderSpec(
-                name: name, requestURL: requestURL, bodyType: bodyType, fileFormName: fileFormName,
-                headerNames: headerNames, headerValues: headerValues, formFieldNames: formFieldNames,
-                formFieldValues: formFieldValues, responseURL: responseURL, deletionURL: deletionURL, deletionMethod: deletionMethod
-            )
-        }
-    }
-
-    @available(macOS 26.0, *)
-    @MainActor
-    final class FoundationModelsUploaderGenerator {
-        static let instructions = """
-        You help people configure ishare, a macOS screenshot tool, to upload files to their own web service.
-        ishare sends one HTTP POST per file, either as multipart/form-data or as the raw file body, and reads the public URL from the JSON response.
-        Response templates use double braces around JSON paths, such as {{url}}, {{data.link}} or {{files[0].url}}.
-        Use {{response}} when the service answers with the URL as plain text.
-        Never invent secrets; use placeholders such as YOUR_API_KEY when a value is unknown.
-        """
-
-        private let session = LanguageModelSession(instructions: instructions)
-
-        func generate(_ prompt: String) async throws -> GeneratedUploaderSpec {
-            try await session.respond(to: prompt, generating: GenerableUploader.self).content.spec
-        }
-    }
-#endif
-
-@MainActor
-final class UploaderAssistantModel: ObservableObject {
-    @Published var answers = AssistantAnswers()
-    @Published var refinement = ""
-    @Published var result: CustomUploader?
-    @Published var isGenerating = false
-    @Published var errorMessage: String?
-    private var generator: AnyObject?
-
-    var issues: [UploaderIssue] {
-        result.map(UploaderValidator.issues(for:)) ?? []
-    }
-
-    func generate(refining: Bool = false) {
-        let prompt = refining && !refinement.isEmpty
-            ? "Update the previous uploader. \(refinement)"
-            : answers.prompt
-        isGenerating = true
-        errorMessage = nil
-        Task { @MainActor in
-            defer { isGenerating = false }
-            do {
-                let spec = try await run(prompt)
-                result = UploaderAssistantMapper.uploader(from: spec, answers: answers)
-                refinement = ""
-            } catch {
-                errorMessage = error.localizedDescription
+enum AssistantRefinement {
+    static func jsonObjects(in text: String) -> [Any] {
+        var results: [Any] = []
+        var depth = 0
+        var start: String.Index?
+        var inString = false
+        var escaped = false
+        for index in text.indices {
+            let character = text[index]
+            if inString {
+                if escaped {
+                    escaped = false
+                } else if character == "\\" {
+                    escaped = true
+                } else if character == "\"" {
+                    inString = false
+                }
+                continue
             }
-        }
-    }
-
-    private func run(_ prompt: String) async throws -> GeneratedUploaderSpec {
-        if ScreenshotMode.isActive {
-            return ScreenshotMode.sampleAssistantSpec
-        }
-        #if canImport(FoundationModels)
-            if #available(macOS 26.0, *) {
-                let generator = (self.generator as? FoundationModelsUploaderGenerator) ?? FoundationModelsUploaderGenerator()
-                self.generator = generator
-                return try await generator.generate(prompt)
-            }
-        #endif
-        throw AssistantError.unavailable
-    }
-}
-
-struct UploaderAssistantSheet: View {
-    @StateObject private var model = UploaderAssistantModel()
-    let onFinish: (CustomUploader?) -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(LinearGradient(colors: [.purple, .pink, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Uploader Assistant".localized())
-                        .font(.headline)
-                    Text("Answer a few questions and Apple Intelligence builds the uploader on your Mac.".localized())
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            .padding(16)
-            Form {
-                Section("Service".localized()) {
-                    TextField("Which service do you upload to?".localized(), text: $model.answers.service, prompt: Text("Zipline, Chibisafe, my own server…"))
-                        .accessibilityIdentifier("assistant.service")
-                    TextField("Upload endpoint".localized(), text: $model.answers.endpoint, prompt: Text("https://example.com/api/upload"))
-                }
-                Section("Authentication".localized()) {
-                    TextField("Header name".localized(), text: $model.answers.authHeaderName, prompt: Text("Authorization"))
-                    SecureField("Header value".localized(), text: $model.answers.authHeaderValue)
-                    TextField("File field name".localized(), text: $model.answers.fileFieldName, prompt: Text("file"))
-                }
-                if !ScreenshotMode.isActive || model.result == nil {
-                Section("Response".localized()) {
-                    TextEditor(text: $model.answers.exampleResponse)
-                        .font(.system(.caption, design: .monospaced))
-                        .frame(height: 70)
-                    Text("Paste an example JSON response, API documentation or a curl command.".localized())
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    TextField("Anything else?".localized(), text: $model.answers.notes, axis: .vertical)
-                }
-                }
-                if let result = model.result {
-                    Section("Result".localized()) {
-                        LabeledContent("Name".localized(), value: result.name)
-                        LabeledContent("Request URL*".localized(), value: result.requestURL)
-                        LabeledContent("Response URL*".localized(), value: result.responseURL)
-                        if let deletion = result.deletionURL {
-                            LabeledContent("Deletion URL".localized(), value: deletion)
-                        }
-                        ForEach(model.issues, id: \.message) { issue in
-                            Label(issue.localizedMessage, systemImage: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                                .font(.footnote)
-                        }
-                        HStack {
-                            TextField("Ask for a change…".localized(), text: $model.refinement)
-                                .onSubmit { model.generate(refining: true) }
-                            Button("Refine".localized()) { model.generate(refining: true) }
-                                .disabled(model.refinement.isEmpty || model.isGenerating)
-                        }
+            switch character {
+            case "\"":
+                inString = depth > 0
+            case "{", "[":
+                if depth == 0 { start = index }
+                depth += 1
+            case "}", "]":
+                guard depth > 0 else { continue }
+                depth -= 1
+                if depth == 0, let begin = start {
+                    let candidate = String(text[begin ... index])
+                    if let object = try? JSONSerialization.jsonObject(with: Data(candidate.utf8)) {
+                        results.append(object)
                     }
+                    start = nil
                 }
-                if let error = model.errorMessage {
-                    Section {
-                        Label(error, systemImage: "xmark.octagon.fill")
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            Divider()
-            HStack {
-                Button("Cancel".localized(), role: .cancel) { onFinish(nil) }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                if model.isGenerating {
-                    ProgressView().controlSize(.small)
-                }
-                Button(model.result == nil ? "Generate".localized() : "Regenerate".localized()) { model.generate() }
-                    .disabled(model.isGenerating || (model.answers.service.isEmpty && model.answers.endpoint.isEmpty))
-                    .accessibilityIdentifier("assistant.generate")
-                Button("Review and Save".localized()) { onFinish(model.result) }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(model.result == nil || model.isGenerating)
-            }
-            .padding(14)
-        }
-        .onAppear {
-            if ScreenshotMode.isActive {
-                model.answers = ScreenshotMode.sampleAssistantAnswers
-                model.result = UploaderAssistantMapper.uploader(from: ScreenshotMode.sampleAssistantSpec, answers: ScreenshotMode.sampleAssistantAnswers)
+            default:
+                break
             }
         }
+        return results
+    }
+
+    static func urlPath(in object: Any, prefix: String = "") -> String? {
+        if let dictionary = object as? [String: Any] {
+            let preferred = ["url", "link", "src", "href", "fileurl", "file_url", "image"]
+            let keys = dictionary.keys.sorted { lhs, rhs in
+                let left = preferred.firstIndex(of: lhs.lowercased()) ?? preferred.count
+                let right = preferred.firstIndex(of: rhs.lowercased()) ?? preferred.count
+                return left == right ? lhs < rhs : left < right
+            }
+            for key in keys where !key.lowercased().contains("delet") {
+                let path = prefix.isEmpty ? key : "\(prefix).\(key)"
+                if let value = dictionary[key] as? String, value.lowercased().hasPrefix("http") {
+                    return path
+                }
+                if let nested = dictionary[key], !(nested is String), let found = urlPath(in: nested, prefix: path) {
+                    return found
+                }
+            }
+        }
+        if let array = object as? [Any] {
+            for (index, element) in array.enumerated() {
+                if let value = element as? String, value.lowercased().hasPrefix("http") {
+                    return "\(prefix)[\(index)]"
+                }
+                if let found = urlPath(in: element, prefix: "\(prefix)[\(index)]") {
+                    return found
+                }
+            }
+        }
+        return nil
+    }
+
+    static func isUsableDeletionTemplate(_ template: String, examples: [Any]) -> Bool {
+        let placeholders = ResponseTemplate.placeholders(in: template)
+        guard placeholders.allSatisfy({ $0.wholeMatch(of: /[A-Za-z0-9_\-.\[\]]+/) != nil }) else { return false }
+        if template.lowercased().hasPrefix("http") {
+            return true
+        }
+        guard template.hasPrefix("{{") else { return false }
+        guard let example = examples.last, let data = try? JSONSerialization.data(withJSONObject: example) else { return true }
+        return (try? ResponseTemplate.render(template, data: data)).map { $0.lowercased().hasPrefix("http") } ?? false
+    }
+
+    static func refine(_ uploader: CustomUploader, conversation: String) -> CustomUploader {
+        var responseURL = uploader.responseURL
+        let examples = jsonObjects(in: conversation)
+        if let example = examples.last, let data = try? JSONSerialization.data(withJSONObject: example) {
+            let resolves = (try? ResponseTemplate.render(responseURL, data: data)).map { $0.lowercased().hasPrefix("http") } ?? false
+            if !resolves, let path = urlPath(in: example) {
+                responseURL = "{{\(path)}}"
+            }
+        }
+        var deletionURL = uploader.deletionURL
+        if let deletion = deletionURL, !isUsableDeletionTemplate(deletion, examples: examples) {
+            deletionURL = nil
+        }
+        let headerValues = Set((uploader.headers ?? [:]).values)
+        let formData = uploader.formData?.filter { !headerValues.contains($0.value) }
+        return CustomUploader(
+            id: uploader.id, name: uploader.name, requestURL: uploader.requestURL, headers: uploader.headers,
+            formData: (formData?.isEmpty ?? true) ? nil : formData, fileFormName: uploader.fileFormName,
+            requestBodyType: uploader.requestBodyType, responseURL: responseURL, deletionURL: deletionURL,
+            deleteRequestType: deletionURL == nil ? nil : uploader.deleteRequestType
+        )
     }
 }
