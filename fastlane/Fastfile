@@ -11,6 +11,18 @@ platform :mac do
     )
   end
 
+  def review_contact
+    {
+      first_name: ENV.fetch("REVIEW_CONTACT_FIRST_NAME"),
+      last_name: ENV.fetch("REVIEW_CONTACT_LAST_NAME"),
+      email_address: ENV.fetch("REVIEW_CONTACT_EMAIL"),
+      phone_number: ENV.fetch("REVIEW_CONTACT_PHONE"),
+      demo_user: "",
+      demo_password: "",
+      notes: "ishare is a menu bar app. Click the ishare icon in the menu bar to open the capture menu. Uploading requires a custom uploader, which can be added in Settings > Uploaders."
+    }
+  end
+
   def wait_for_processed_build(version:, build:, timeout: 3600)
     app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
     UI.user_error!("App not found in App Store Connect") unless app
@@ -46,6 +58,8 @@ platform :mac do
       overwrite_screenshots: true,
       metadata_path: "./fastlane/metadata",
       screenshots_path: "./fastlane/screenshots",
+      app_review_information: review_contact,
+      app_rating_config_path: "./fastlane/metadata/age_rating.json",
       force: true,
       submit_for_review: submit,
       automatic_release: true,

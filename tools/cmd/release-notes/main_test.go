@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -23,14 +24,28 @@ const sample = `## [5.0.0](https://github.com/itoolio/ishare/compare/v4.2.6...v5
 
 func TestConvertProducesPlainText(t *testing.T) {
 	got := Convert(sample)
-	want := "⚠ BREAKING CHANGES:\n• The custom screencapture binary setting was removed\n\nFeatures:\n• Capture with ScreenCaptureKit and on-screen selectors\n• Async upload service with S3 support\n\nBug Fixes:\n• Correct German typos and capitalization"
+	want := "Breaking Changes:\n• The custom screencapture binary setting was removed\n\nFeatures:\n• Capture with ScreenCaptureKit and on-screen selectors\n• Async upload service with S3 support\n\nBug Fixes:\n• Correct German typos and capitalization"
+	if got != want {
+		t.Fatalf("unexpected notes:\n%s", got)
+	}
+}
+
+func TestConvertDropsTrailersDuplicatesAndUnknownSections(t *testing.T) {
+	input := "### ⚠ BREAKING CHANGES\n\n* the menu changed\nCo-Authored-By: Someone <someone@example.com>\n* the menu changed\n\n### release\n\n* ishare 5.0\n\n### Features\n\n* **ui:** add <b>bold</b> option 🎉 (#146)\n* add bold option (#147)\n"
+	got := Convert(input)
+	want := "Breaking Changes:\n• The menu changed\n\nFeatures:\n• Add bold option"
 	if got != want {
 		t.Fatalf("unexpected notes:\n%s", got)
 	}
 }
 
 func TestConvertTruncatesLongNotes(t *testing.T) {
-	long := "### Features\n" + strings.Repeat("* a feature that is fairly long to describe here\n", 200)
+	var builder strings.Builder
+	builder.WriteString("### Features\n")
+	for index := range 200 {
+		fmt.Fprintf(&builder, "* feature number %d that is fairly long to describe here\n", index)
+	}
+	long := builder.String()
 	got := Convert(long)
 	if len([]rune(got)) > appStoreLimit {
 		t.Fatalf("notes are %d characters long", len([]rune(got)))

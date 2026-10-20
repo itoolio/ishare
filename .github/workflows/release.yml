@@ -356,6 +356,10 @@ jobs:
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+                  REVIEW_CONTACT_FIRST_NAME: ${{ secrets.REVIEW_CONTACT_FIRST_NAME }}
+                  REVIEW_CONTACT_LAST_NAME: ${{ secrets.REVIEW_CONTACT_LAST_NAME }}
+                  REVIEW_CONTACT_EMAIL: ${{ secrets.REVIEW_CONTACT_EMAIL }}
+                  REVIEW_CONTACT_PHONE: ${{ secrets.REVIEW_CONTACT_PHONE }}
                   LC_ALL: en_US.UTF-8
                   LANG: en_US.UTF-8
               run: bundle exec fastlane mac release version:${{ needs.version.outputs.version }} build:${{ needs.version.outputs.build-number }}

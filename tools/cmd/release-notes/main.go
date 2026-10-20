@@ -22,7 +22,19 @@ var (
 	issueRefs      = regexp.MustCompile(`,?\s*(closes|fixes|resolves)\s+\[#\d+\]\([^)]*\)((,\s*|\s+)\[#\d+\]\([^)]*\))*`)
 	markdownLink   = regexp.MustCompile(`\[([^\]]+)\]\([^)]*\)`)
 	emphasis       = regexp.MustCompile("[*_`]+")
+	prNumber       = regexp.MustCompile(`\s*\(#\d+\)$`)
+	trailer        = regexp.MustCompile(`^(Co-Authored-By|Signed-off-by|Reviewed-by|Refs?|Closes|Fixes):`)
+	angleBracketed = regexp.MustCompile(`<[^>]*>`)
+	disallowed     = regexp.MustCompile(`[^\p{L}\p{N}\p{P}\p{Zs}•…+=$€£%]`)
 )
+
+var sectionTitles = map[string]string{
+	"breaking changes":         "Breaking Changes",
+	"features":                 "Features",
+	"bug fixes":                "Bug Fixes",
+	"performance improvements": "Performance Improvements",
+	"reverts":                  "Reverts",
+}
 
 func main() {
 	input, err := io.ReadAll(os.Stdin)
@@ -44,6 +56,8 @@ func main() {
 
 func Convert(markdown string) string {
 	var lines []string
+	seen := map[string]bool{}
+	include := false
 	scanner := bufio.NewScanner(strings.NewReader(markdown))
 	for scanner.Scan() {
 		line := strings.TrimRight(scanner.Text(), " ")
@@ -51,23 +65,37 @@ func Convert(markdown string) string {
 		case strings.TrimSpace(line) == "", versionHeading.MatchString(line):
 			continue
 		case sectionHeading.MatchString(line):
-			title := sectionHeading.FindStringSubmatch(line)[1]
+			title, known := sectionTitle(sectionHeading.FindStringSubmatch(line)[1])
+			include = known
+			if !include {
+				continue
+			}
 			if len(lines) > 0 {
 				lines = append(lines, "")
 			}
-			lines = append(lines, strings.TrimSpace(clean(title))+":")
+			lines = append(lines, title+":")
+		case !include, trailer.MatchString(strings.TrimSpace(line)):
+			continue
 		case bullet.MatchString(line):
 			text := bullet.FindStringSubmatch(line)[1]
-			text = scope.ReplaceAllString(text, "")
-			text = clean(text)
-			if text != "" {
-				lines = append(lines, "• "+upperFirst(text))
+			text = upperFirst(clean(scope.ReplaceAllString(text, "")))
+			if text != "" && !seen[text] {
+				seen[text] = true
+				lines = append(lines, "• "+text)
 			}
 		default:
-			lines = append(lines, clean(line))
+			if text := clean(line); text != "" {
+				lines = append(lines, text)
+			}
 		}
 	}
 	return truncate(strings.TrimSpace(strings.Join(lines, "\n")), appStoreLimit)
+}
+
+func sectionTitle(heading string) (string, bool) {
+	key := strings.ToLower(strings.TrimSpace(disallowed.ReplaceAllString(clean(heading), "")))
+	title, known := sectionTitles[key]
+	return title, known
 }
 
 func clean(text string) string {
@@ -75,6 +103,9 @@ func clean(text string) string {
 	text = issueRefs.ReplaceAllString(text, "")
 	text = markdownLink.ReplaceAllString(text, "$1")
 	text = emphasis.ReplaceAllString(text, "")
+	text = angleBracketed.ReplaceAllString(text, "")
+	text = disallowed.ReplaceAllString(text, "")
+	text = prNumber.ReplaceAllString(strings.TrimSpace(text), "")
 	return strings.TrimSpace(text)
 }
 

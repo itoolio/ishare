@@ -1,1 +1,1 @@
-ishare 5 brings a redesigned Liquid Glass menu, a built-in annotation editor, scrolling capture, region recording, S3 uploads and an Apple Intelligence uploader assistant.
+ishare 5 brings a Liquid Glass menu, an annotation editor, scrolling capture, region recording, S3 uploads and an Apple Intelligence uploader assistant.
