@@ -399,7 +399,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aufnhemen"
+            "value" : "Aufnehmen"
           }
         },
         "es" : {
@@ -527,7 +527,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Region Aufnehmen"
+            "value" : "Region aufnehmen"
           }
         },
         "es" : {
@@ -591,7 +591,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Region Aufnehmen:"
+            "value" : "Region aufnehmen:"
           }
         },
         "es" : {
@@ -655,7 +655,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bildschirm Aufnhemen:"
+            "value" : "Bildschirm aufnehmen:"
           }
         },
         "es" : {
@@ -719,7 +719,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fenster Aufnehmen"
+            "value" : "Fenster aufnehmen"
           }
         },
         "es" : {
@@ -783,7 +783,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fenster Aufnehmen:"
+            "value" : "Fenster aufnehmen:"
           }
         },
         "es" : {
@@ -911,7 +911,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle Entfernen"
+            "value" : "Alle entfernen"
           }
         },
         "es" : {
@@ -975,7 +975,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schliessen"
+            "value" : "Schließen"
           }
         },
         "es" : {
@@ -1039,7 +1039,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In die Zwischenablage Kopieren"
+            "value" : "In die Zwischenablage kopieren"
           }
         },
         "es" : {
@@ -1103,7 +1103,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "URL Kopieren"
+            "value" : "URL kopieren"
           }
         },
         "es" : {
@@ -1231,7 +1231,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigenen Uploader Erstellen"
+            "value" : "Eigenen Uploader erstellen"
           }
         },
         "es" : {
@@ -1359,7 +1359,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uploader Löschen"
+            "value" : "Uploader löschen"
           }
         },
         "es" : {
@@ -1487,7 +1487,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ".iscu Dateien hier Ablegen oder für Auswahl clicken "
+            "value" : ".iscu Dateien hier ablegen oder für Auswahl klicken "
           }
         },
         "es" : {
@@ -1551,7 +1551,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigenen Uploader Bearbeiten"
+            "value" : "Eigenen Uploader bearbeiten"
           }
         },
         "es" : {
@@ -1615,7 +1615,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uploader Bearbeiten"
+            "value" : "Uploader bearbeiten"
           }
         },
         "es" : {
@@ -1807,7 +1807,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uploader Exportieren"
+            "value" : "Uploader exportieren"
           }
         },
         "es" : {
@@ -1999,7 +1999,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fortmat:"
+            "value" : "Format:"
           }
         },
         "es" : {
@@ -2063,7 +2063,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generell"
+            "value" : "Allgemein"
           }
         },
         "es" : {
@@ -2575,7 +2575,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Importiere Eigenen Uploader"
+            "value" : "Importiere eigenen Uploader"
           }
         },
         "es" : {
@@ -3806,7 +3806,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GIF Aufzeichnen"
+            "value" : "GIF aufzeichnen"
           }
         },
         "es" : {
@@ -3870,7 +3870,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GIF Aufzeichnen:"
+            "value" : "GIF aufzeichnen:"
           }
         },
         "es" : {
@@ -3940,7 +3940,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bildschirm Aufzeichnen:"
+            "value" : "Bildschirm aufzeichnen:"
           }
         },
         "es" : {
@@ -4004,7 +4004,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tastenkürzel Zurücksetzen"
+            "value" : "Tastenkürzel zurücksetzen"
           }
         },
         "es" : {
@@ -4135,7 +4135,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf Festplatte Speichern"
+            "value" : "Auf Festplatte speichern"
           }
         },
         "es" : {
@@ -4263,7 +4263,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähle zu ignorierende Anwendungen "
+            "value" : "Wähle zu ignorierende Anwendungen"
           }
         },
         "es" : {
@@ -4519,7 +4519,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uploader Testen"
+            "value" : "Uploader testen"
           }
         },
         "es" : {
@@ -4714,7 +4714,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Medien Uploaden"
+            "value" : "Medien uploaden"
           }
         },
         "es" : {
@@ -4842,7 +4842,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "HDR Verwenden"
+            "value" : "HDR verwenden"
           }
         },
         "es" : {
@@ -4906,7 +4906,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "HEVC Verwenden"
+            "value" : "HEVC verwenden"
           }
         },
         "es" : {
@@ -5162,7 +5162,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Achtung! Ändere diese Einstellungen nur wenn du weisst was du da tust!"
+            "value" : "Achtung! Ändere diese Einstellungen nur, wenn du weißt, was du da tust!"
           }
         },
         "es" : {
@@ -5226,7 +5226,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du hast keine gespeciherten Uploader"
+            "value" : "Du hast keine gespeicherten Uploader"
           }
         },
         "es" : {
