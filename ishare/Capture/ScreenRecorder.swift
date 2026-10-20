@@ -1,43 +1,65 @@
-//
-//  ScreenRecorder.swift
-//  ishare
-//
-//  Created by Adrian Castro on 29.07.23.
-//
-
 import Combine
 import Defaults
 import Foundation
 @preconcurrency import ScreenCaptureKit
 import SwiftUI
-import AVFoundation
 
-class AudioLevelsProvider: ObservableObject {
+final class AudioLevelsProvider: ObservableObject {
     @Published var audioLevels = AudioLevels.zero
 }
 
-@MainActor
-class ScreenRecorder: ObservableObject {
-    @Default(.recordMic) var recordMic
+enum RecordingTarget {
+    case picker
+    case region(NSScreen, CGRect)
+}
 
+@MainActor
+final class RecordingHUDModel: ObservableObject {
+    @Published var startDate = Date()
+}
+
+struct RecordingHUD: View {
+    @ObservedObject var model: RecordingHUDModel
+    var onStop: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(.red)
+                .frame(width: 9, height: 9)
+            TimelineView(.periodic(from: model.startDate, by: 1)) { context in
+                Text(Duration.seconds(context.date.timeIntervalSince(model.startDate)).formatted(.time(pattern: .minuteSecond)))
+                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+            }
+            Button(action: onStop) {
+                Label("Stop".localized(), systemImage: "stop.fill")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .adaptiveGlassButtonStyle(prominent: true)
+            .tint(.red)
+            .accessibilityIdentifier("recording.stop")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .adaptiveGlassCapsule()
+    }
+}
+
+@MainActor
+final class ScreenRecorder: ObservableObject {
     @Published var isRunning = false
-    @Published var isAppAudioExcluded = false
+    @Published var startDate: Date?
     @Published private(set) var audioLevelsProvider = AudioLevelsProvider()
 
-    private var scaleFactor: Int { Int(NSScreen.main?.backingScaleFactor ?? 2) }
     private var audioMeterCancellable: AnyCancellable?
     private let captureEngine = CaptureEngine()
+    private var overlayWindows: [NSWindow] = []
 
     var canRecord: Bool {
         get async {
+            guard ScreenshotEngine.ensurePermission() else { return false }
             do {
-                NSLog("Checking screen recording permissions")
-                try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-                NSLog("Screen recording permissions granted")
-                
-                if recordMic {
-                }
-                
+                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
                 return true
             } catch {
                 NSLog("Screen recording permissions denied: %@", error.localizedDescription)
@@ -46,63 +68,96 @@ class ScreenRecorder: ObservableObject {
         }
     }
 
-    func start(_ fileURL: URL) async {
-        guard !isRunning else { 
-            NSLog("Recording already in progress")
-            return 
+    func start(_ fileURL: URL, target: RecordingTarget = .picker) async {
+        guard !isRunning else { return }
+        switch target {
+        case .picker:
+            startWithPicker(fileURL)
+        case let .region(screen, rect):
+            await startRegion(fileURL, screen: screen, rect: rect)
         }
-        NSLog("Starting screen recording to: %@", fileURL.path)
-        isRunning = true
-
-        let pickerManager = ContentSharingPickerManager.shared
-        let localFileURL = fileURL
-        
-        await pickerManager.setContentSelectedCallback { [weak self] filter, _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                await self.startCapture(with: filter, fileURL: localFileURL)
-            }
-        }
-
-        await pickerManager.setContentSelectionCancelledCallback { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.isRunning = false
-                self.stop { _ in }
-            }
-        }
-
-        await pickerManager.setContentSelectionFailedCallback { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.isRunning = false
-            }
-        }
-
-        let config = SCStreamConfiguration()
-        let dummyFilter = SCContentFilter()
-        let stream = SCStream(filter: dummyFilter, configuration: config, delegate: nil)
-
-        pickerManager.setupPicker(stream: stream)
-        pickerManager.showPicker()
     }
 
-    func stop(completion: @escaping @Sendable (Result<URL, any Error>) -> Void) {
+    private func startWithPicker(_ fileURL: URL) {
+        isRunning = true
+        let pickerManager = ContentSharingPickerManager.shared
         Task {
-            let stopClosure = await captureEngine.stopCapture()
-            stopClosure { result in
-                Task { @MainActor in
-                    switch result {
-                    case let .success(url):
-                        completion(.success(url))
-                    case let .failure(error):
-                        completion(.failure(error))
-                    }
+            await pickerManager.setContentSelectedCallback { [weak self] filter, _ in
+                Task { @MainActor [weak self] in
+                    await self?.startCapture(with: filter, fileURL: fileURL)
                 }
             }
-            stopAudioMetering()
+            await pickerManager.setContentSelectionCancelledCallback { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.isRunning = false
+                    self?.startDate = nil
+                }
+            }
+            await pickerManager.setContentSelectionFailedCallback { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.isRunning = false
+                    self?.startDate = nil
+                }
+            }
+            let stream = SCStream(filter: SCContentFilter(), configuration: SCStreamConfiguration(), delegate: nil)
+            pickerManager.setupPicker(stream: stream)
+            pickerManager.showPicker()
+        }
+    }
+
+    private func startRegion(_ fileURL: URL, screen: NSScreen, rect: CGRect) async {
+        do {
+            let content = try await ScreenshotEngine.shareableContent()
+            guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
+            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: [])
+            let scale = CGFloat(filter.pointPixelScale)
+            let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
+            configuration.sourceRect = rect
+            showRegionOverlay(screen: screen, rect: rect)
+            isRunning = true
+            await run(configuration: configuration, filter: filter, fileURL: fileURL)
+        } catch {
+            NSLog("Region recording failed: %@", error.localizedDescription)
+            removeOverlay()
             isRunning = false
         }
+    }
+
+    private func makeConfiguration(pixelSize: CGSize) -> SCStreamConfiguration {
+        let configuration = Defaults[.useHDR] ? SCStreamConfiguration(preset: .captureHDRStreamCanonicalDisplay) : SCStreamConfiguration()
+        let output = Defaults[.recordingResolution].outputSize(for: pixelSize)
+        configuration.width = Int(output.width)
+        configuration.height = Int(output.height)
+        configuration.scalesToFit = true
+        configuration.minimumFrameInterval = Defaults[.recordingFrameRate].minimumFrameInterval
+        configuration.queueDepth = 6
+        return configuration
+    }
+
+    private func showRegionOverlay(screen: NSScreen, rect: CGRect) {
+        let global = CGRect(x: screen.frame.minX + rect.minX, y: screen.frame.maxY - rect.maxY, width: rect.width, height: rect.height)
+        let border = RegionOverlay.borderWindow(around: global, dashed: false)
+        let model = RecordingHUDModel()
+        let hud = RegionOverlay.hudWindow(RecordingHUD(model: model) {
+            AppDelegate.shared.stopRecording()
+        }, near: global, on: screen)
+        border.orderFrontRegardless()
+        hud.orderFrontRegardless()
+        overlayWindows = [border, hud]
+    }
+
+    private func removeOverlay() {
+        overlayWindows.forEach { $0.orderOut(nil) }
+        overlayWindows.removeAll()
+    }
+
+    func stop() async -> Result<URL, any Error> {
+        removeOverlay()
+        let result = await captureEngine.stopCapture()
+        stopAudioMetering()
+        isRunning = false
+        startDate = nil
+        return result
     }
 
     private func startAudioMetering() {
@@ -118,25 +173,20 @@ class ScreenRecorder: ObservableObject {
     }
 
     private func startCapture(with filter: SCContentFilter, fileURL: URL) async {
-        @Default(.useHDR) var useHDR
-        
-        let ptRect = filter.contentRect
-        let pxScale = CGFloat(filter.pointPixelScale)
-        let pxRect = CGRect(x: ptRect.origin.x * pxScale, y: ptRect.origin.y * pxScale, width: ptRect.width * pxScale, height: ptRect.height * pxScale)
-
-        let config = useHDR ? SCStreamConfiguration(preset: .captureHDRStreamCanonicalDisplay) : SCStreamConfiguration()
-        config.width = Int(round(pxRect.width / 2) * 2)
-        config.height = Int(round(pxRect.height / 2) * 2)
-        config.scalesToFit = false
-
+        let rect = filter.contentRect
+        let scale = CGFloat(filter.pointPixelScale)
+        let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
         isRunning = true
+        await run(configuration: configuration, filter: filter, fileURL: fileURL)
+    }
 
+    private func run(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL) async {
+        startDate = Date()
+        startAudioMetering()
         do {
-            // Iterating over frames to keep the stream active
-            for try await _ in captureEngine.startCapture(configuration: config, filter: filter, fileURL: fileURL) {}
+            for try await _ in captureEngine.startCapture(configuration: configuration, filter: filter, fileURL: fileURL) {}
         } catch {
-            // Handle errors if necessary
-            print(error.localizedDescription)
+            NSLog("Capture stream ended: %@", error.localizedDescription)
         }
     }
 }

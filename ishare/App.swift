@@ -1,32 +1,13 @@
-//
-//  App.swift
-//  ishare
-//
-//  Created by Adrian Castro on 10.07.23.
-//
-
 import Defaults
 import MenuBarExtraAccess
 import SwiftUI
 
-#if canImport(Sparkle)
-    import Sparkle
-#endif
-
-protocol UpdaterProtocol {
-    init()
-    func checkForUpdates()
-}
-
 #if GITHUB_RELEASE
-class SparkleUpdater: NSObject, @preconcurrency UpdaterProtocol, SPUUpdaterDelegate {
-        let updaterController: SPUStandardUpdaterController
+    import Sparkle
 
-        override required init() {
-            updaterController = SPUStandardUpdaterController(
-                startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
-            super.init()
-        }
+    @MainActor
+    final class SparkleUpdater: NSObject {
+        let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
         @MainActor func checkForUpdates() {
             updaterController.checkForUpdates(nil)
@@ -38,12 +19,13 @@ class SparkleUpdater: NSObject, @preconcurrency UpdaterProtocol, SPUUpdaterDeleg
 struct ishare: App {
     @Default(.menuBarIcon) var menubarIcon
     @Default(.showMainMenu) var showMainMenu
-    @StateObject private var appState = AppState()
+    @StateObject private var appState = AppState.shared
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
     var body: some Scene {
         MenuBarExtra {
             MainMenuView()
+                .environmentObject(LocalizableManager.shared)
         } label: {
             switch menubarIcon {
             case .DEFAULT: Image(.menubar)
@@ -60,81 +42,73 @@ struct ishare: App {
 }
 
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let sharedInstance = AppDelegate()
     static var shared: AppDelegate { sharedInstance }
 
     var recordGif = false
+    var forceUploadRecording = false
     let screenRecorder = ScreenRecorder()
 
     #if GITHUB_RELEASE
-        private let updater: SparkleUpdater
-
-        override init() {
-            self.updater = SparkleUpdater()
-            super.init()
-        }
+        private let updater = SparkleUpdater()
     #endif
 
     func applicationDidFinishLaunching(_: Notification) {
-        NSLog("Application finished launching")
+        Migrations.run()
+        SaveLocation.activateAll()
+        Defaults[.showMainMenu] = false
+        ScreenshotMode.prepareIfNeeded()
     }
 
     func application(_: NSApplication, open urls: [URL]) {
-        if urls.first!.isFileURL {
-            NSLog("Attempting to import ISCU file from: %@", urls.first!.path)
-            importIscu(urls.first!)
-        }
-
-        if let url = urls.first {
-            NSLog("Processing URL scheme: %@", url.absoluteString)
-            let path = url.host
-            let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
-
-            if path == "upload" {
-                if let fileItem = queryItems?.first(where: { $0.name == "file" }) {
-                    if let encodedFileURLString = fileItem.value,
-                        let decodedFileURLString = encodedFileURLString.removingPercentEncoding,
-                        let fileURL = URL(string: decodedFileURLString)
-                    {
-                        NSLog("Processing upload request for file: %@", fileURL.absoluteString)
-
-                        @Default(.uploadType) var uploadType
-                        NSLog("Using upload type: %@", String(describing: uploadType))
-                        let localFileURL = fileURL
-
-                        uploadFile(fileURL: fileURL, uploadType: uploadType) {
-                            Task { @MainActor in
-                                NSLog("Upload completed, showing toast notification")
-                                showToast(fileURL: localFileURL) {
-                                    NSSound.beep()
-                                }
-                            }
-                        }
-                    } else {
-                        NSLog("Error: Failed to process file URL from query parameters")
-                    }
-                }
+        for url in urls {
+            if url.isFileURL {
+                importIscu(url)
+            } else {
+                handle(url)
             }
         }
     }
 
-    @MainActor
+    private func handle(_ url: URL) {
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        switch url.host() {
+        case "upload":
+            guard let value = items.first(where: { $0.name == "file" })?.value,
+                  let decoded = value.removingPercentEncoding,
+                  let fileURL = URL(string: decoded)
+            else { return }
+            Task { @MainActor in
+                await UploadCoordinator.upload(fileURL: fileURL)
+                await showToast(fileURL: fileURL)
+            }
+        case "capture":
+            let type = items.first(where: { $0.name == "type" })?.value.flatMap { CaptureType(rawValue: $0.uppercased()) } ?? .REGION
+            Task { @MainActor in
+                await captureScreen(type: type)
+            }
+        case "record":
+            let gif = items.contains { $0.name == "gif" && $0.value != "0" }
+            let region = items.contains { $0.name == "region" && $0.value != "0" }
+            recordScreen(gif: gif, region: region)
+        default:
+            break
+        }
+    }
+
     func stopRecording() {
         let wasRecordingGif = recordGif
-        let recorder = screenRecorder
-
-        Task {
-            recorder.stop { result in
-                Task { @MainActor in
-                    switch result {
-                    case let .success(url):
-                        print("Recording stopped successfully. URL: \(url)")
-                        postRecordingTasks(url, wasRecordingGif)
-                    case let .failure(error):
-                        print("Error while stopping recording: \(error.localizedDescription)")
-                    }
-                }
+        let forceUpload = forceUploadRecording
+        recordGif = false
+        forceUploadRecording = false
+        Task { @MainActor in
+            ContentSharingPickerManager.shared.deactivatePicker()
+            switch await screenRecorder.stop() {
+            case let .success(url):
+                postRecordingTasks(url, wasRecordingGif, forceUpload: forceUpload)
+            case let .failure(error):
+                NSLog("Error while stopping recording: %@", error.localizedDescription)
             }
         }
     }

@@ -35,6 +35,10 @@ extension KeyboardShortcuts.Name {
     static let captureScreenForceUpload = Self("captureScreenForceUpload", default: .init(.x, modifiers: [.shift, .option, .command]))
     static let recordScreenForceUpload = Self("recordScreenForceUpload", default: .init(.z, modifiers: [.shift, .control, .option]))
     static let recordGifForceUpload = Self("recordGifForceUpload", default: .init(.g, modifiers: [.shift, .control, .option]))
+    static let captureScrolling = Self("captureScrolling", default: .init(.s, modifiers: [.control, .option]))
+    static let recordRegion = Self("recordRegion", default: .init(.r, modifiers: [.control, .option]))
+    static let recordRegionGif = Self("recordRegionGif", default: .init(.f, modifiers: [.control, .option]))
+    static let openEditor = Self("openEditor", default: .init(.e, modifiers: [.control, .option]))
 }
 
 extension Defaults.Keys {
@@ -50,7 +54,6 @@ extension Defaults.Keys {
     static let captureFileName = Key<String>("captureFileName", default: "ishare", iCloud: true)
     static let recordingFileName = Key<String>("recordingFileName", default: "ishare", iCloud: true)
     static let imgurClientId = Key<String>("imgurClientId", default: "867afe9433c0a53", iCloud: true)
-    static let captureBinary = Key<String>("captureBinary", default: "/usr/sbin/screencapture", iCloud: true)
     static let activeCustomUploader = Key<UUID?>("activeCustomUploader", default: nil, iCloud: true)
     static let savedCustomUploaders = Key<Set<CustomUploader>?>("savedCustomUploaders", iCloud: true)
     static let uploadType = Key<UploadType>("uploadType", default: .IMGUR, iCloud: true)
@@ -69,6 +72,19 @@ extension Defaults.Keys {
     static let ignoredBundleIdentifiers = Key<[String]>("ignoredApps", default: [], iCloud: true)
     static let forceUploadModifier = Key<ForceUploadModifier>("forceUploadModifier", default: .shift)
     static let storedLanguage = Key<LanguageTypes>("storedlanguage", default: Locale.current.identifier.starts(with: "en-AU") ? .aussie : .english, iCloud: true)
+    static let screenshotShowsCursor = Key<Bool>("screenshotShowsCursor", default: false, iCloud: true)
+    static let windowShadow = Key<Bool>("windowShadow", default: true, iCloud: true)
+    static let showMagnifier = Key<Bool>("showMagnifier", default: true, iCloud: true)
+    static let openEditorAfterCapture = Key<Bool>("openEditorAfterCapture", default: false, iCloud: true)
+    static let scrollingAutoScroll = Key<Bool>("scrollingAutoScroll", default: true, iCloud: true)
+    static let capturePathBookmark = Key<Data?>("capturePathBookmark", default: nil)
+    static let recordingPathBookmark = Key<Data?>("recordingPathBookmark", default: nil)
+    static let recordingResolution = Key<RecordingResolution>("recordingResolution", default: .native, iCloud: true)
+    static let recordingFrameRate = Key<RecordingFrameRate>("recordingFrameRate", default: .fps60, iCloud: true)
+    static let gifFrameRate = Key<GIFFrameRate>("gifFrameRate", default: .fps20, iCloud: true)
+    static let compressBeforeUpload = Key<Bool>("compressBeforeUpload", default: false, iCloud: true)
+    static let compressionThresholdMB = Key<Int>("compressionThresholdMB", default: 25, iCloud: true)
+    static let compressionPreset = Key<CompressionPreset>("compressionPreset", default: .p1080, iCloud: true)
     static let aussieMode = Key<Bool>("aussieMode", default: Locale.current.identifier.starts(with: "en-AU"), iCloud: true)
 }
 

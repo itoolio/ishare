@@ -1,17 +1,9 @@
-//
-//  CaptureEngine.swift
-//  ishare
-//
-//  Created by Adrian Castro on 29.07.23.
-//
-
 @preconcurrency import AVFAudio
 import Combine
 import Defaults
 import Foundation
-import ScreenCaptureKit
+@preconcurrency import ScreenCaptureKit
 
-/// A structure that contains the video data to render.
 struct CapturedFrame: Sendable {
     static let invalid = CapturedFrame(surface: nil, contentRect: .zero, contentScale: 0, scaleFactor: 0)
 
@@ -22,137 +14,163 @@ struct CapturedFrame: Sendable {
     var size: CGSize { contentRect.size }
 }
 
-/// An object that wraps an instance of `SCStream`, and returns its results as an `AsyncThrowingStream`.
-class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDelegate {
-    private var recordMP4: Bool = false
-    private var useHEVC: Bool = false
-    private var recordAudio: Bool = false
-    private var recordMic: Bool = false
-    private var recordPointer: Bool = false
-    private var recordClicks: Bool = false
+enum RecordingError: LocalizedError {
+    case notRecording
+    case finalizeTimedOut
 
+    var errorDescription: String? {
+        switch self {
+        case .notRecording: "No recording is in progress"
+        case .finalizeTimedOut: "The recording could not be finalized"
+        }
+    }
+}
+
+final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDelegate {
     private var stream: SCStream?
     private var fileURL: URL?
-    private let videoSampleBufferQueue = DispatchQueue(label: "com.example.apple-samplecode.VideoSampleBufferQueue")
-    private let audioSampleBufferQueue = DispatchQueue(label: "com.example.apple-samplecode.AudioSampleBufferQueue")
-    private let micAudioSampleBufferQueue = DispatchQueue(label: "com.example.apple-samplecode.AudioSampleBufferQueue")
+    private let videoSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.VideoSampleBufferQueue")
+    private let audioSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.AudioSampleBufferQueue")
+    private let micAudioSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.MicAudioSampleBufferQueue")
 
-    // Performs average and peak power calculations on the audio samples.
     private let powerMeter = PowerMeter()
     var audioLevels: AudioLevels { powerMeter.levels }
 
-    // Store the the startCapture continuation, so that you can cancel it when you call stopCapture().
-    private var continuation: AsyncThrowingStream<CapturedFrame, any Error>.Continuation?
-
-    private var startTime = Date()
     private var streamOutput: CaptureEngineStreamOutput?
+    private let finishLock = NSLock()
+    private var finishContinuation: CheckedContinuation<Void, any Error>?
+    private var didFinishRecording = false
+    private var recordingError: (any Error)?
 
-    /// - Tag: StartCapture
     @MainActor func startCapture(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL) -> AsyncThrowingStream<CapturedFrame, any Error> {
-        let config = configuration
-        let contentFilter = filter
-        let outputURL = fileURL
-
-        @Default(.recordMP4) var recordMP4
-        @Default(.useHEVC) var useHEVC
-        @Default(.recordAudio) var recordAudio
-        @Default(.recordMic) var recordMic
-        @Default(.recordPointer) var recordPointer
-        @Default(.recordClicks) var recordClicks
-
-        self.recordMP4 = recordMP4
-        self.useHEVC = useHEVC
-        self.recordAudio = recordAudio
-        self.recordMic = recordMic
-        self.recordPointer = recordPointer
-        self.recordClicks = recordClicks
+        let recordMP4 = Defaults[.recordMP4]
+        let useHEVC = Defaults[.useHEVC]
+        let recordAudio = Defaults[.recordAudio]
+        let recordMic = Defaults[.recordMic]
+        let recordPointer = Defaults[.recordPointer]
+        let recordClicks = Defaults[.recordClicks]
+        finishLock.withLock {
+            didFinishRecording = false
+            recordingError = nil
+            finishContinuation = nil
+        }
 
         return AsyncThrowingStream<CapturedFrame, any Error> { continuation in
-            // The stream output object.
             let output = CaptureEngineStreamOutput(continuation: continuation)
             streamOutput = output
-
-            streamOutput!.capturedFrameHandler = { continuation.yield($0) }
-            streamOutput!.pcmBufferHandler = { self.powerMeter.process(buffer: $0) }
-            self.startTime = Date()
+            output.capturedFrameHandler = { continuation.yield($0) }
+            output.pcmBufferHandler = { [weak self] in self?.powerMeter.process(buffer: $0) }
 
             do {
-                config.capturesAudio = recordAudio
-                config.captureMicrophone = recordMic
-                config.showsCursor = recordPointer
-                config.showMouseClicks = recordClicks
+                configuration.capturesAudio = recordAudio
+                configuration.captureMicrophone = recordMic
+                configuration.showsCursor = recordPointer
+                configuration.showMouseClicks = recordClicks
 
-                stream = SCStream(filter: contentFilter, configuration: config, delegate: streamOutput)
-                self.fileURL = outputURL
+                let stream = SCStream(filter: filter, configuration: configuration, delegate: output)
+                self.stream = stream
+                self.fileURL = fileURL
 
-                // Add a stream output to capture screen content.
-                try stream?.addStreamOutput(streamOutput!, type: .screen, sampleHandlerQueue: videoSampleBufferQueue)
-                try stream?.addStreamOutput(streamOutput!, type: .audio, sampleHandlerQueue: audioSampleBufferQueue)
-                try stream?.addStreamOutput(streamOutput!, type: .microphone, sampleHandlerQueue: micAudioSampleBufferQueue)
+                try stream.addStreamOutput(output, type: .screen, sampleHandlerQueue: videoSampleBufferQueue)
+                try stream.addStreamOutput(output, type: .audio, sampleHandlerQueue: audioSampleBufferQueue)
+                try stream.addStreamOutput(output, type: .microphone, sampleHandlerQueue: micAudioSampleBufferQueue)
 
                 let recordingConfiguration = SCRecordingOutputConfiguration()
-
-                recordingConfiguration.outputURL = outputURL
-                recordingConfiguration.outputFileType = self.recordMP4 ? .mp4 : .mov
-                recordingConfiguration.videoCodecType = self.useHEVC ? .hevc : .h264
+                recordingConfiguration.outputURL = fileURL
+                recordingConfiguration.outputFileType = recordMP4 ? .mp4 : .mov
+                recordingConfiguration.videoCodecType = useHEVC ? .hevc : .h264
 
                 let recordingOutput = SCRecordingOutput(configuration: recordingConfiguration, delegate: self)
-
-                try stream?.addRecordingOutput(recordingOutput)
-
-                stream?.startCapture()
+                try stream.addRecordingOutput(recordingOutput)
+                stream.startCapture()
             } catch {
                 continuation.finish(throwing: error)
             }
         }
     }
 
-    func stopCapture() async -> @Sendable (@escaping @Sendable (Result<URL, any Error>) -> Void) -> Void {
-        { [weak self] completion in
-            guard let self else { return }
-            enum ScreenRecorderError: Error {
-                case missingFileURL
+    func stopCapture() async -> Result<URL, any Error> {
+        guard let url = fileURL else { return .failure(RecordingError.notRecording) }
+        let activeStream = stream
+        stream = nil
+        fileURL = nil
+        try? await activeStream?.stopCapture()
+        do {
+            try await waitForRecordingToFinish(timeout: .seconds(8))
+            return .success(url)
+        } catch {
+            if FileManager.default.fileExists(atPath: url.path) {
+                return .success(url)
             }
-
-            guard let url = fileURL else {
-                completion(.failure(ScreenRecorderError.missingFileURL))
-                return
-            }
-
-            // Stop the stream
-            stream?.stopCapture()
-            stream = nil
-
-            // Return the file URL
-            completion(.success(url))
+            return .failure(error)
         }
     }
 
-    /// - Tag: UpdateStreamConfiguration
+    private func waitForRecordingToFinish(timeout: Duration) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { [self] in
+                try await withCheckedThrowingContinuation { continuation in
+                    let state: (Bool, (any Error)?) = finishLock.withLock {
+                        if didFinishRecording || recordingError != nil {
+                            return (true, recordingError)
+                        }
+                        finishContinuation = continuation
+                        return (false, nil)
+                    }
+                    if state.0 {
+                        if let error = state.1 {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume()
+                        }
+                    }
+                }
+            }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw RecordingError.finalizeTimedOut
+            }
+            try await group.next()
+            group.cancelAll()
+            finishLock.withLock {
+                finishContinuation = nil
+            }
+        }
+    }
+
+    private func completeFinish(error: (any Error)?) {
+        let continuation = finishLock.withLock { () -> CheckedContinuation<Void, any Error>? in
+            didFinishRecording = error == nil
+            recordingError = error
+            let pending = finishContinuation
+            finishContinuation = nil
+            return pending
+        }
+        if let error {
+            continuation?.resume(throwing: error)
+        } else {
+            continuation?.resume()
+        }
+    }
+
+    func recordingOutputDidFinishRecording(_: SCRecordingOutput) {
+        completeFinish(error: nil)
+    }
+
+    func recordingOutput(_: SCRecordingOutput, didFailWithError error: any Error) {
+        completeFinish(error: error)
+    }
+
     func update(configuration: SCStreamConfiguration, filter: SCContentFilter) async {
-        struct SendableParams: @unchecked Sendable {
-            let configuration: SCStreamConfiguration
-            let filter: SCContentFilter
-        }
-
-        let params = SendableParams(configuration: configuration, filter: filter)
-
-        do {
-            try await stream?.updateConfiguration(params.configuration)
-            try await stream?.updateContentFilter(params.filter)
-        } catch {
-            print("Failed to update the stream session: \(String(describing: error))")
-        }
+        try? await stream?.updateConfiguration(configuration)
+        try? await stream?.updateContentFilter(filter)
     }
 }
 
-/// A class that handles output from an SCStream, and handles stream errors.
 @MainActor
 private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDelegate {
     var pcmBufferHandler: (@Sendable (AVAudioPCMBuffer) -> Void)?
     var capturedFrameHandler: (@Sendable (CapturedFrame) -> Void)?
-
-    // Store the the startCapture continuation, so you can cancel it if an error occurs.
     private var continuation: AsyncThrowingStream<CapturedFrame, any Error>.Continuation?
 
     init(continuation: AsyncThrowingStream<CapturedFrame, any Error>.Continuation?) {
@@ -160,85 +178,53 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDeleg
     }
 
     nonisolated func stream(_: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
-        // Return early if the sample buffer is invalid.
         guard sampleBuffer.isValid else { return }
-
-        // Determine which type of data the sample buffer contains.
         switch outputType {
         case .screen:
-            // Create a CapturedFrame structure for a video sample buffer.
             guard let frame = createFrame(for: sampleBuffer) else { return }
             Task { @MainActor [self] in
                 capturedFrameHandler?(frame)
             }
-        case .audio:
-            // Create an AVAudioPCMBuffer from an audio sample buffer.
-            guard let samples = createPCMBuffer(for: sampleBuffer) else { return }
-            Task { @MainActor [self] in
-                pcmBufferHandler?(samples)
-            }
-        case .microphone:
+        case .audio, .microphone:
             guard let samples = createPCMBuffer(for: sampleBuffer) else { return }
             Task { @MainActor [self] in
                 pcmBufferHandler?(samples)
             }
         @unknown default:
-            fatalError("Encountered unknown stream output type: \(outputType)")
+            break
         }
     }
 
     nonisolated func stream(_: SCStream, didStopWithError error: any Error) {
-        if (error as NSError).code == -3817 {
-            // User stopped the stream. Call AppDelegate's method to stop recording gracefully
-            Task { @MainActor in
-                let pickerManager = ContentSharingPickerManager.shared
-                pickerManager.deactivatePicker()
-                AppDelegate.shared.stopRecording()
-            }
-        } else {
-            // Handle other errors
-            print("Stream stopped with error: \(error.localizedDescription)")
-        }
-        // Finish the AsyncThrowingStream if it's still running
+        let code = (error as NSError).code
         Task { @MainActor [self] in
+            if code == -3817 {
+                ContentSharingPickerManager.shared.deactivatePicker()
+                AppDelegate.shared.stopRecording()
+            } else {
+                NSLog("Stream stopped with error: %@", error.localizedDescription)
+            }
             continuation?.finish(throwing: error)
         }
     }
 
-    /// Create a `CapturedFrame` for the video sample buffer.
     private nonisolated func createFrame(for sampleBuffer: CMSampleBuffer) -> CapturedFrame? {
-        // Retrieve the array of metadata attachments from the sample buffer.
-        guard let attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer,
-                                                                             createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
-            let attachments = attachmentsArray.first else { return nil }
-
-        // Validate the status of the frame. If it isn't `.complete`, return nil.
-        guard let statusRawValue = attachments[SCStreamFrameInfo.status] as? Int,
+        guard let attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
+              let attachments = attachmentsArray.first,
+              let statusRawValue = attachments[SCStreamFrameInfo.status] as? Int,
               let status = SCFrameStatus(rawValue: statusRawValue),
-              status == .complete else { return nil }
-
-        // Get the pixel buffer that contains the image data.
-        guard let pixelBuffer = sampleBuffer.imageBuffer else { return nil }
-
-        // Get the backing IOSurface.
-        guard let surfaceRef = CVPixelBufferGetIOSurface(pixelBuffer)?.takeUnretainedValue() else { return nil }
-        let surface = unsafeBitCast(surfaceRef, to: IOSurface.self)
-
-        // Retrieve the content rectangle, scale, and scale factor.
-        guard let contentRectDict = attachments[.contentRect],
+              status == .complete,
+              let pixelBuffer = sampleBuffer.imageBuffer,
+              let surfaceRef = CVPixelBufferGetIOSurface(pixelBuffer)?.takeUnretainedValue(),
+              let contentRectDict = attachments[.contentRect],
               let contentRect = CGRect(dictionaryRepresentation: contentRectDict as! CFDictionary),
               let contentScale = attachments[.contentScale] as? CGFloat,
-              let scaleFactor = attachments[.scaleFactor] as? CGFloat else { return nil }
-
-        // Create a new frame with the relevant data.
-        let frame = CapturedFrame(surface: surface,
-                                  contentRect: contentRect,
-                                  contentScale: contentScale,
-                                  scaleFactor: scaleFactor)
-        return frame
+              let scaleFactor = attachments[.scaleFactor] as? CGFloat
+        else { return nil }
+        let surface = unsafeBitCast(surfaceRef, to: IOSurface.self)
+        return CapturedFrame(surface: surface, contentRect: contentRect, contentScale: contentScale, scaleFactor: scaleFactor)
     }
 
-    // Creates an AVAudioPCMBuffer instance on which to perform an average and peak audio level calculation.
     private nonisolated func createPCMBuffer(for sampleBuffer: CMSampleBuffer) -> AVAudioPCMBuffer? {
         var ablPointer: UnsafePointer<AudioBufferList>?
         try? sampleBuffer.withAudioBufferList { audioBufferList, _ in
@@ -246,7 +232,8 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDeleg
         }
         guard let audioBufferList = ablPointer,
               let absd = sampleBuffer.formatDescription?.audioStreamBasicDescription,
-              let format = AVAudioFormat(standardFormatWithSampleRate: absd.mSampleRate, channels: absd.mChannelsPerFrame) else { return nil }
+              let format = AVAudioFormat(standardFormatWithSampleRate: absd.mSampleRate, channels: absd.mChannelsPerFrame)
+        else { return nil }
         return AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: audioBufferList)
     }
 }

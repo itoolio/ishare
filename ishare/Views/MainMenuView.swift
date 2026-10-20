@@ -53,7 +53,7 @@ struct MainMenuView: View {
 
 				ForEach(NSScreen.screens.indices, id: \.self) { index in
 					let screen = NSScreen.screens[index]
-					let screenName = screen.localizedName
+					let screenName: String? = screen.localizedName
 					Button {
 						Task {
 							await captureScreen(type: .SCREEN, display: index + 1)
@@ -69,7 +69,7 @@ struct MainMenuView: View {
 			}
 
 			Button {
-				recordScreen()
+				recordScreen(gif: false)
 			} label: {
 				Image(systemName: "menubar.dock.rectangle.badge.record")
 				Text("Record".localized())

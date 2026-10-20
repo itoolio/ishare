@@ -459,7 +459,6 @@ struct RecordingSettingsView: View {
 struct AdvancedSettingsView: View {
     @State private var showingAlert: Bool = false
     @Default(.imgurClientId) var imgurClientId
-    @Default(.captureBinary) var captureBinary
     @Default(.aussieMode) var aussieMode
 
     var body: some View {
@@ -472,20 +471,6 @@ struct AdvancedSettingsView: View {
                         TextField(String(), text: $imgurClientId)
                         Button(action: {
                             imgurClientId = Defaults.Keys.imgurClientId.defaultValue
-                        }) {
-                            Image(systemName: "arrow.clockwise")
-                        }.help("Set to default".localized())
-                    }
-                }
-                Spacer()
-                VStack(alignment: .leading) {
-                    Text("Screencapture binary:".localized()).font(.headline)
-                    HStack {
-                        TextField(String(), text: $captureBinary)
-                        Button(action: {
-                            captureBinary = Defaults.Keys.captureBinary.defaultValue
-                            BezelNotification.show(
-                                messageText: "Reset captureBinary".localized(), icon: ToastIcon)
                         }) {
                             Image(systemName: "arrow.clockwise")
                         }.help("Set to default".localized())
