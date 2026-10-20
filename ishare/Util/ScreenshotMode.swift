@@ -226,11 +226,11 @@ struct ScreenshotCanvas: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(red: 0.04, green: 0.09, blue: 0.24), Color(red: 0.07, green: 0.27, blue: 0.47), Color(red: 0.1, green: 0.52, blue: 0.58)],
+                colors: [Color(red: 0.06, green: 0.04, blue: 0.16), Color(red: 0.2, green: 0.08, blue: 0.4), Color(red: 0.47, green: 0.2, blue: 0.72)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
             Circle().fill(.white.opacity(0.12)).frame(width: 700).offset(x: -520, y: 360).blur(radius: 40)
-            Circle().fill(.cyan.opacity(0.18)).frame(width: 520).offset(x: 560, y: -340).blur(radius: 50)
+            Circle().fill(Color(red: 0.75, green: 0.45, blue: 1).opacity(0.22)).frame(width: 520).offset(x: 560, y: -340).blur(radius: 50)
             content
         }
         .frame(width: ScreenshotMode.canvasSize.width, height: ScreenshotMode.canvasSize.height)
