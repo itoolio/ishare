@@ -81,7 +81,7 @@ final class ImageEditor: NSObject, NSWindowDelegate {
             window.isReleasedWhenClosed = false
             window.delegate = self
             window.center()
-            window.setFrameAutosaveName("ishareEditor")
+            window.contentMinSize = CGSize(width: 980, height: 560)
             self.window = window
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
@@ -93,12 +93,13 @@ final class ImageEditor: NSObject, NSWindowDelegate {
         let scale = NSScreen.main?.backingScaleFactor ?? 2
         let imageSize = CGSize(width: document.imageSize.width / scale, height: document.imageSize.height / scale)
         let chromeHeight: CGFloat = 130
-        let width = min(max(760, imageSize.width + 80), visible.width * 0.9)
-        let height = min(max(520, imageSize.height + chromeHeight), visible.height * 0.9)
+        let width = min(max(980, imageSize.width + 80), max(980, visible.width * 0.9))
+        let height = min(max(560, imageSize.height + chromeHeight), max(560, visible.height * 0.9))
         return CGRect(x: visible.midX - width / 2, y: visible.midY - height / 2, width: width, height: height)
     }
 
     private func save(thenClose: Bool) {
+        Log.app.info("Editor save requested, closing: \(thenClose)")
         document.commitText()
         guard document.hasChanges else {
             if thenClose { close(with: .saved(fileURL)) }
@@ -141,6 +142,7 @@ final class ImageEditor: NSObject, NSWindowDelegate {
     }
 
     private func close(with result: EditorResult) {
+        Log.app.info("Editor closing, window present: \(self.window != nil)")
         self.result = result
         window?.close()
     }

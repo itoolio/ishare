@@ -44,7 +44,7 @@ final class EditorDocument: ObservableObject {
         self.fileURL = fileURL
         effectedBase = image
         let longest = CGFloat(max(image.width, image.height))
-        lineWidth = max(3, (longest / 400).rounded())
+        lineWidth = max(4, (longest / 220).rounded())
         fontSize = max(18, (longest / 50).rounded())
     }
 

@@ -28,7 +28,7 @@ struct EditorView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
         }
-        .frame(minWidth: 760, minHeight: 520)
+        .frame(minWidth: 980, minHeight: 560)
         .background(.background)
         .onDeleteCommand {
             if document.editingText == nil {
@@ -147,7 +147,7 @@ struct EditorView: View {
             .menuIndicator(.hidden)
             .fixedSize()
             .help("Transform".localized())
-            Spacer()
+            Spacer(minLength: 8)
             Button(role: .destructive, action: onDiscard) {
                 Label("Discard".localized(), systemImage: "trash")
             }
