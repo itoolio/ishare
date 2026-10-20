@@ -298,12 +298,14 @@ struct MainMenuView: View {
                 ])
             }
             #if GITHUB_RELEASE
+                if !ScreenshotMode.isActive {
                 FooterButton(symbol: "heart", title: "Donate") {
                     NSWorkspace.shared.open(URL(string: "https://github.com/sponsors/castdrian")!)
                 }
                 FooterButton(symbol: "arrow.triangle.2.circlepath", title: "Updates") {
                     dismissMenu()
                     AppDelegate.shared.checkForUpdates()
+                }
                 }
             #endif
         }
@@ -383,11 +385,14 @@ struct ToggleTile: View {
                     .background(Circle().fill(isOn ? Color.accentColor : Color.primary.opacity(0.1)))
                 Text(title.localized())
                     .font(.system(size: 11.5, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
             .padding(6)
+            .frame(minHeight: 38)
             .contentShape(Rectangle())
             .opacity(isEnabled ? 1 : 0.45)
         }

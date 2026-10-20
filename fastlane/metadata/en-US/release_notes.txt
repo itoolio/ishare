@@ -1,0 +1,9 @@
+- properly make menubar icon use a custom svg asset which fixes size and coloring
+- macOS 26 support
+- liquid glass app icon
+- fix share picker not dismissing when cancelling a capture
+- stop capitalizing file extensions
+- resolve screen resolution issues in video captures
+- improve aussie mode
+
+

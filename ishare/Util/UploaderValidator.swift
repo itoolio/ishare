@@ -10,17 +10,35 @@ enum UploaderIssue: Equatable, Sendable {
     case invalidS3Endpoint
     case missingS3Field(String)
 
-    var message: String {
+    static let malformedTemplateFormat = "The %@ template has unbalanced {{ }} placeholders"
+    static let missingS3FieldFormat = "The S3 %@ is required"
+
+    var messageKey: String {
         switch self {
         case .missingName: "The uploader needs a name"
         case .invalidRequestURL: "The request URL must be a valid http or https URL"
         case .missingResponseURL: "The response URL template is required"
-        case let .malformedTemplate(field): "The \(field) template has unbalanced {{ }} placeholders"
+        case .malformedTemplate: Self.malformedTemplateFormat
         case .emptyFileFormName: "The file form name cannot be empty"
         case .missingS3Configuration: "S3 uploaders need an S3 configuration"
         case .invalidS3Endpoint: "The S3 endpoint must be a valid URL"
-        case let .missingS3Field(field): "The S3 \(field) is required"
+        case .missingS3Field: Self.missingS3FieldFormat
         }
+    }
+
+    var argument: String? {
+        switch self {
+        case let .malformedTemplate(field), let .missingS3Field(field): field
+        default: nil
+        }
+    }
+
+    var message: String {
+        argument.map { String(format: messageKey, $0) } ?? messageKey
+    }
+
+    @MainActor var localizedMessage: String {
+        argument.map { String(format: messageKey.localized(), $0.localized()) } ?? messageKey.localized()
     }
 }
 

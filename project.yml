@@ -169,12 +169,12 @@ targets:
     sources:
       - path: ishareUITests
     dependencies:
-      - target: ishare
+      - target: ishare - GitHub
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.uitests
         GENERATE_INFOPLIST_FILE: YES
-        TEST_TARGET_NAME: ishare
+        TEST_TARGET_NAME: ishare - GitHub
 schemes:
   ishare:
     build:
@@ -201,7 +201,7 @@ schemes:
   Screenshots:
     build:
       targets:
-        ishare: all
+        ishare - GitHub: all
         ishareUITests: [test]
     test:
       config: Debug

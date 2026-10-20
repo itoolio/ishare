@@ -291,7 +291,7 @@ struct UploaderEditorView: View {
                 if !issues.isEmpty {
                     Section {
                         ForEach(issues, id: \.message) { issue in
-                            Label(issue.message.localized(), systemImage: "exclamationmark.triangle.fill")
+                            Label(issue.localizedMessage, systemImage: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)
                                 .font(.footnote)
                         }

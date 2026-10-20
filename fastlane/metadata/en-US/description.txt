@@ -1,0 +1,31 @@
+ishare is the definitive screen capture utility for macOS, designed with simplicity and efficiency in mind.
+
+CAPTURE ANYTHING
+• Capture a region with a precise selector, magnifier and live size readout
+• Capture any window with or without its shadow, or a whole display
+• Scrolling capture stitches long pages and documents into one image
+• Everything runs on ScreenCaptureKit, fast and private
+
+RECORD
+• Record a display, a window or a region you draw
+• Choose resolution, frame rate, HEVC, HDR, audio and microphone
+• Export GIFs at the frame rate you need
+• Compress large recordings automatically before uploading
+
+ANNOTATE
+• Arrows, lines, shapes, highlights, pen, marker and text
+• Numbered steps, blur and pixelate to hide sensitive details
+• Crop, undo and redo, then copy, save or upload in one click
+
+UPLOAD ANYWHERE
+• Imgur out of the box
+• Custom uploaders for chibisafe, Zipline, copyparty, Discord webhooks and your own server
+• Any S3-compatible storage: AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2 and MinIO
+• On Macs with Apple Intelligence, an assistant builds uploaders from a few answers
+
+AUTOMATE
+• Global keyboard shortcuts for every action
+• Shortcuts actions to capture, record, upload and switch uploaders
+• Share menu extension to upload files from any app
+
+A Control Center style menu, a Liquid Glass design on macOS 26, upload history, AirDrop and Messages sharing, and translations into 11 languages round it all off.
