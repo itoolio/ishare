@@ -57,7 +57,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #endif
 
     func applicationDidFinishLaunching(_: Notification) {
-        Migrations.run()
+        if !ScreenshotMode.isActive {
+            Migrations.run()
+        }
         SaveLocation.activateAll()
         Defaults[.showMainMenu] = false
         ScreenshotMode.prepareIfNeeded()
@@ -74,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handle(_ url: URL) {
+        Log.app.info("Handling \(url.absoluteString, privacy: .public)")
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         switch url.host() {
         case "upload":

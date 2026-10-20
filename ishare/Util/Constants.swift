@@ -43,7 +43,7 @@ extension KeyboardShortcuts.Name {
 
 enum SettingsStorage {
     static let screenshotSuiteName = "dev.adrian.ishare.screenshots"
-    static let syncsToCloud = !ScreenshotMode.isActive
+    static let syncsToCloud = !ScreenshotMode.isActive && !ProcessInfo.processInfo.arguments.contains("-ishareDisableCloudSync")
 }
 
 extension UserDefaults {
@@ -197,60 +197,32 @@ func selectFolder(completion: @escaping @Sendable (URL?) -> Void) {
 
 @MainActor
 func importIscu(_ url: URL) {
-    NSLog("Starting ISCU import process for file: %@", url.path)
-    if let keyWindow = NSApplication.shared.keyWindow {
-        let alert = NSAlert()
-        alert.messageText = "Import ISCU"
-        alert.informativeText = "Do you want to import this custom uploader?"
-        alert.addButton(withTitle: "Import")
-        alert.addButton(withTitle: "Cancel")
-        NSLog("Showing import confirmation dialog")
-        alert.beginSheetModal(for: keyWindow) { response in
-            if response == .alertFirstButtonReturn {
-                NSLog("User confirmed import")
-                
-                Task { @MainActor in
-                    alert.window.orderOut(nil)
-                    
-                    do {
-                        let data = try Data(contentsOf: url)
-                        let uploader = try CustomUploader.fromJSON(data)
-
-                        @Default(.savedCustomUploaders) var savedCustomUploaders
-                        @Default(.activeCustomUploader) var activeCustomUploader
-                        @Default(.uploadType) var uploadType
-
-                        if var uploaders = savedCustomUploaders {
-                            uploaders.remove(uploader)
-                            uploaders.insert(uploader)
-                            savedCustomUploaders = uploaders
-                        } else {
-                            savedCustomUploaders = Set([uploader])
-                        }
-
-                        activeCustomUploader = uploader.id
-                        uploadType = .CUSTOM
-                        
-                        NSLog("ISCU import successful")
-                        let successAlert = NSAlert()
-                        successAlert.messageText = "Import Successful"
-                        successAlert.informativeText = "The custom uploader has been imported successfully."
-                        successAlert.addButton(withTitle: "OK")
-                        successAlert.runModal()
-                    } catch {
-                        NSLog("ISCU import failed: %@", error.localizedDescription)
-                        let errorAlert = NSAlert()
-                        errorAlert.messageText = "Import Error"
-                        errorAlert.informativeText = error.localizedDescription
-                        errorAlert.addButton(withTitle: "OK")
-                        errorAlert.runModal()
-                    }
-                }
-            } else {
-                NSLog("User cancelled import")
-            }
-        }
+    NSApp.activate(ignoringOtherApps: true)
+    let scoped = url.startAccessingSecurityScopedResource()
+    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+    let uploader: CustomUploader
+    do {
+        uploader = try CustomUploader.fromJSON(Data(contentsOf: url))
+    } catch {
+        let alert = NSAlert(error: error)
+        alert.messageText = "Import Error".localized()
+        alert.runModal()
+        return
     }
+    let alert = NSAlert()
+    alert.messageText = "Import ISCU".localized()
+    alert.informativeText = String(format: "Do you want to import the uploader “%@”?".localized(), uploader.name)
+    alert.addButton(withTitle: "Import".localized())
+    alert.addButton(withTitle: "Cancel".localized())
+    guard ScreenshotMode.isActive || ProcessInfo.processInfo.arguments.contains("-ishareImportWithoutConfirmation") || alert.runModal() == .alertFirstButtonReturn else { return }
+    var uploaders = Defaults[.savedCustomUploaders] ?? []
+    uploaders.remove(uploader)
+    uploaders.insert(uploader)
+    Defaults[.savedCustomUploaders] = uploaders
+    Defaults[.activeCustomUploader] = uploader.id
+    Defaults[.uploadType] = .CUSTOM
+    Defaults[.uploadDestination] = .custom(uploader.id)
+    BezelNotification.show(messageText: String(format: "Selected %@".localized(), uploader.name), icon: ToastIcon)
 }
 
 @MainActor

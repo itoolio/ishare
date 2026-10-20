@@ -31,6 +31,7 @@ enum ImageCaptureFlow {
 
     static func capture(type: CaptureType, display: Int = 1) async -> CapturedImage? {
         guard ScreenshotEngine.ensurePermission() else {
+            Log.capture.error("Screen recording permission is missing")
             BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
             return nil
         }
@@ -47,7 +48,7 @@ enum ImageCaptureFlow {
                 return try await ScrollingCapture.run(content: content)
             }
         } catch {
-            NSLog("Capture failed: %@", error.localizedDescription)
+            Log.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
             return nil
         }
@@ -122,14 +123,15 @@ func captureScreen(type: CaptureType, display: Int = 1, forceUpload: Bool = fals
     guard !ImageCaptureFlow.isCapturing else { return }
     ImageCaptureFlow.isCapturing = true
     defer { ImageCaptureFlow.isCapturing = false }
-    NSLog("Starting screen capture with type: %@, display: %d", type.rawValue, display)
+    Log.capture.info("Starting \(type.rawValue, privacy: .public) capture on display \(display)")
     guard let captured = await ImageCaptureFlow.capture(type: type, display: display) else { return }
     do {
         let fileURL = try ImageCaptureFlow.save(captured)
+        Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
         ImageCaptureFlow.isCapturing = false
         await PostCapture.handle(fileURL: fileURL, kind: .image, forceUpload: forceUpload)
     } catch {
-        NSLog("Saving capture failed: %@", error.localizedDescription)
+        Log.capture.error("Saving capture failed: \(error.localizedDescription, privacy: .public)")
         BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
     }
 }

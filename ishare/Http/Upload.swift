@@ -40,6 +40,7 @@ enum UploadCoordinator {
                     progressIndicator.updateProgress(fraction: fraction)
                 }
             }
+            Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
             record(outcome, localFileURL: localFileURL)
             if !Defaults[.copyImageToClipboard] {
                 NSPasteboard.general.clearContents()
@@ -47,7 +48,7 @@ enum UploadCoordinator {
             }
             return .success(outcome)
         } catch {
-            NSLog("Upload failed: %@", error.localizedDescription)
+            Log.upload.error("Upload failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Upload failed".localized(), icon: ToastIcon)
             return .failure(error)
         }
