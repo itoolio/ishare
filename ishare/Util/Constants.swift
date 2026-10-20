@@ -14,7 +14,6 @@ import KeyboardShortcuts
 import ScreenCaptureKit
 import SwiftUI
 import SwiftyJSON
-import Zip
 
 extension KeyboardShortcuts.Name {
     static let noKeybind = Self("noKeybind")

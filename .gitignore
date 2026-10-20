@@ -90,3 +90,11 @@ fastlane/test_output
 # https://github.com/johnno1962/injectionforxcode
 
 iOSInjectionProject/
+
+# XcodeGen
+ishare.xcodeproj/
+.next-version
+fastlane/screenshots/raw
+website/node_modules
+website/dist
+website/.astro
