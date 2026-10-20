@@ -1,72 +1,66 @@
-name: Deploy README to GitHub Pages
+name: Website
 
 on:
-  push:
-    branches:
-        - main
-    paths:
-      - 'README.md'
-  workflow_dispatch:
+    push:
+        branches: [main]
+        paths:
+            - "website/**"
+            - "examples/**"
+            - "CHANGELOG.md"
+            - ".github/workflows/pages.yml"
+    workflow_dispatch:
+    workflow_call:
+        inputs:
+            appcast-artifact:
+                type: string
+                default: ""
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+    contents: read
+    pages: write
+    id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
-  
+    group: pages
+    cancel-in-progress: false
+
 jobs:
-  deploy:
-    environment:
-        name: github-pages
-        url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: main
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: lts/*
+                  cache: npm
+                  cache-dependency-path: website/package-lock.json
+            - run: npm ci
+              working-directory: website
+            - run: npm run build
+              working-directory: website
+            - name: Download the new appcast
+              if: inputs.appcast-artifact != ''
+              uses: actions/download-artifact@v8
+              with:
+                  name: ${{ inputs.appcast-artifact }}
+                  path: website/dist
+            - name: Keep the published appcast
+              if: inputs.appcast-artifact == ''
+              run: |
+                  curl -fsSL -o website/dist/appcast.xml https://ishare.itoolio.dev/appcast.xml \
+                    || echo "No published appcast yet"
+            - uses: actions/upload-pages-artifact@v5
+              with:
+                  path: website/dist
 
-      - name: Check if only README.md changed
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manually triggered - skipping file check."
-            echo "only_readme_changed=true" >> $GITHUB_ENV
-          else
-            FILE_LIST=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-            if [ "$FILE_LIST" = "README.md" ]; then
-              echo "Only README.md changed."
-              echo "only_readme_changed=true" >> $GITHUB_ENV
-            else
-              echo "Other files changed."
-              echo "only_readme_changed=false" >> $GITHUB_ENV
-            fi
-          fi
-
-      - name: Download and Save appcast.xml
-        if: env.only_readme_changed == 'true'
-        run: |
-          curl -o ./appcast.xml https://isharemac.app/appcast.xml
-          echo "File downloaded and saved as appcast.xml"
-
-      - name: Setup Pages
-        if: env.only_readme_changed == 'true'
-        uses: actions/configure-pages@v4
-        
-      - name: Build with Jekyll
-        if: env.only_readme_changed == 'true'
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-          destination: ./_site
-          
-      - name: Upload artifact
-        if: env.only_readme_changed == 'true'
-        uses: actions/upload-pages-artifact@v3
-
-      - name: Deploy to GitHub Pages
-        if: env.only_readme_changed == 'true'
-        id: deployment
-        uses: actions/deploy-pages@v4
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - uses: actions/deploy-pages@v5
+              id: deployment

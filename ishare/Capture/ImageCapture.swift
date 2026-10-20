@@ -1,18 +1,14 @@
-//
-//  ImageCapture.swift
-//  ishare
-//
-//  Created by Adrian Castro on 11.07.23.
-//
-
 import AppKit
+import BezelNotification
 import Defaults
 import Foundation
+@preconcurrency import ScreenCaptureKit
 
-enum CaptureType: String {
-    case SCREEN = "-t"
-    case WINDOW = "-wt"
-    case REGION = "-it"
+enum CaptureType: String, CaseIterable, Sendable {
+    case REGION
+    case WINDOW
+    case SCREEN
+    case SCROLLING
 }
 
 enum FileType: String, CaseIterable, Identifiable, Defaults.Serializable {
@@ -24,146 +20,132 @@ enum FileType: String, CaseIterable, Identifiable, Defaults.Serializable {
     var id: Self { self }
 }
 
-@MainActor
-func captureScreen(type: CaptureType, display: Int = 1) async {
-    NSLog("Starting screen capture with type: %@, display: %d", type.rawValue, display)
-
-    let capturePath = Defaults[.capturePath]
-    let fileType = Defaults[.captureFileType]
-    let fileName = Defaults[.captureFileName]
-    let copyToClipboard = Defaults[.copyToClipboard]
-    let openInFinder = Defaults[.openInFinder]
-    let uploadMedia = Defaults[.uploadMedia]
-    let captureBinary = Defaults[.captureBinary]
-    let uploadType = Defaults[.uploadType]
-    let saveToDisk = Defaults[.saveToDisk]
-
-    let suffix = await getCaptureNameSuffix(type: type, display: display)
-
-    let timestamp = Int(Date().timeIntervalSince1970)
-    let uniqueFilename = "\(fileName)-\(timestamp)\(suffix).\(fileType.rawValue)"
-
-    var path = "\(capturePath)\(uniqueFilename)"
-    path = NSString(string: path).expandingTildeInPath
-
-    let task = Process()
-    task.launchPath = captureBinary
-    task.arguments = type == CaptureType.SCREEN ? [type.rawValue, fileType.rawValue, "-D", "\(display)", path] : [type.rawValue, fileType.rawValue, path]
-
-    NSLog("Executing capture command: %@ %@", captureBinary, task.arguments?.joined(separator: " ") ?? "")
-    task.launch()
-    task.waitUntilExit()
-
-    let fileURL = URL(fileURLWithPath: path)
-
-    if !FileManager.default.fileExists(atPath: fileURL.path) {
-        NSLog("Error: Capture file not created at path: %@", path)
-        return
-    }
-    NSLog("Screen capture completed successfully")
-
-    if copyToClipboard {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        if Defaults[.copyImageToClipboard], let image = NSImage(contentsOf: fileURL) {
-            pasteboard.writeObjects([image])
-        } else {
-            pasteboard.setString(fileURL.absoluteString, forType: .fileURL)
-        }
-    }
-
-    if openInFinder {
-        NSWorkspace.shared.activateFileViewerSelecting([fileURL])
-    }
-
-    if uploadMedia {
-        let shouldSaveToDisk = saveToDisk
-        let localFileURL = fileURL
-        uploadFile(fileURL: fileURL, uploadType: uploadType) {
-            Task { @MainActor in
-                showToast(fileURL: localFileURL) {
-                    NSSound.beep()
-
-                    if !shouldSaveToDisk {
-                        do {
-                            try FileManager.default.removeItem(at: localFileURL)
-                        } catch {
-                            print("Error deleting the file: \(error)")
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        let shouldSaveToDisk = saveToDisk
-        let localFileURL = fileURL
-        Task { @MainActor in
-            showToast(fileURL: localFileURL) {
-                NSSound.beep()
-
-                if !shouldSaveToDisk {
-                    do {
-                        try FileManager.default.removeItem(at: localFileURL)
-                    } catch {
-                        print("Error deleting the file: \(error)")
-                    }
-                }
-            }
-        }
-    }
-    shareBasedOnPreferences(fileURL)
+struct CapturedImage {
+    let image: CGImage
+    let suffix: String?
 }
 
 @MainActor
-private func getCaptureNameSuffix(type: CaptureType, display: Int) async -> String {
-    switch type {
-    case .WINDOW:
-        if let frontmostApp = NSWorkspace.shared.frontmostApplication {
-            let appName = frontmostApp.localizedName ?? "window"
-            return "-\(appName.lowercased())"
-        }
-        return "-window"
+enum ImageCaptureFlow {
+    static var isCapturing = false
 
-    case .SCREEN:
-        if let screen = NSScreen.screens[safe: display - 1] {
-            if let displayName = screen.localizedName {
-                return "-\(displayName.lowercased())"
+    static func capture(type: CaptureType, display: Int = 1) async -> CapturedImage? {
+        guard ScreenshotEngine.ensurePermission() else {
+            Log.capture.error("Screen recording permission is missing")
+            BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
+            return nil
+        }
+        do {
+            let content = try await ScreenshotEngine.shareableContent()
+            switch type {
+            case .REGION:
+                return try await captureRegion(content: content)
+            case .WINDOW:
+                return try await captureWindow(content: content)
+            case .SCREEN:
+                return try await captureScreen(display: display, content: content)
+            case .SCROLLING:
+                return try await ScrollingCapture.run(content: content)
             }
-            return "-display-\(display)"
+        } catch {
+            Log.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
+            return nil
         }
-        return "-screen"
+    }
 
-    case .REGION:
-        if let frontmostApp = NSWorkspace.shared.frontmostApplication {
-            let appName = frontmostApp.localizedName ?? "region"
-            return "-\(appName.lowercased())"
+    static func captureRegion(content: SCShareableContent) async throws -> CapturedImage? {
+        let frontmost = frontmostAppName()
+        let backdrops = await ScreenshotEngine.backdrops(for: content)
+        let outcome = await RegionSelector.select(options: .init(backdrops: backdrops, showsMagnifier: Defaults[.showMagnifier]))
+        switch outcome {
+        case let .region(screen, rect):
+            guard let displayID = screen.displayID else { return nil }
+            if let backdrop = backdrops[displayID] {
+                let scale = CGFloat(backdrop.width) / screen.frame.width
+                return ScreenshotEngine.crop(backdrop, toPoints: rect, scale: scale).map { CapturedImage(image: $0, suffix: frontmost) }
+            }
+            guard let display = content.displays.first(where: { $0.displayID == displayID }) else { throw CaptureError.displayNotFound }
+            return try await CapturedImage(image: ScreenshotEngine.captureDisplay(display, region: rect, in: content), suffix: frontmost)
+        case let .fullScreen(screen):
+            guard let displayID = screen.displayID else { return nil }
+            if let backdrop = backdrops[displayID] {
+                return CapturedImage(image: backdrop, suffix: screen.captureSuffix)
+            }
+            return try await captureScreen(screen: screen, content: content)
+        case .switchToWindow:
+            return try await captureWindow(content: content, allowsRegionMode: false)
+        case .cancelled:
+            return nil
         }
-        return "-region"
+    }
+
+    static func captureWindow(content: SCShareableContent, allowsRegionMode: Bool = true) async throws -> CapturedImage? {
+        let outcome = await WindowPicker.pick(from: ScreenshotEngine.candidateWindows(in: content), allowsRegionMode: allowsRegionMode)
+        switch outcome {
+        case let .window(window):
+            try await Task.sleep(for: .milliseconds(60))
+            let image = try await ScreenshotEngine.captureWindow(window)
+            return CapturedImage(image: image, suffix: window.owningApplication?.applicationName ?? "window")
+        case .switchToRegion:
+            return try await captureRegion(content: content)
+        case .cancelled:
+            return nil
+        }
+    }
+
+    static func captureScreen(display index: Int, content: SCShareableContent) async throws -> CapturedImage? {
+        guard let screen = NSScreen.screens[safe: index - 1] ?? NSScreen.main else { throw CaptureError.displayNotFound }
+        return try await captureScreen(screen: screen, content: content)
+    }
+
+    static func captureScreen(screen: NSScreen, content: SCShareableContent) async throws -> CapturedImage? {
+        guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
+        let image = try await ScreenshotEngine.captureDisplay(display, in: content)
+        return CapturedImage(image: image, suffix: screen.captureSuffix)
+    }
+
+    static func frontmostAppName() -> String? {
+        NSWorkspace.shared.frontmostApplication?.localizedName
+    }
+
+    static func save(_ captured: CapturedImage) throws -> URL {
+        let fileType = Defaults[.captureFileType]
+        let fileName = CaptureFileName.make(prefix: Defaults[.captureFileName], suffix: captured.suffix, ext: fileType.rawValue)
+        let url = SaveLocation.fileURL(for: .captures, fileName: fileName)
+        try ImageEncoder.write(captured.image, as: fileType, to: url)
+        return url
     }
 }
 
-// Helper extension for safe array access
+@MainActor
+func captureScreen(type: CaptureType, display: Int = 1, forceUpload: Bool = false) async {
+    guard !ImageCaptureFlow.isCapturing else { return }
+    ImageCaptureFlow.isCapturing = true
+    defer { ImageCaptureFlow.isCapturing = false }
+    Log.capture.info("Starting \(type.rawValue, privacy: .public) capture on display \(display)")
+    guard let captured = await ImageCaptureFlow.capture(type: type, display: display) else { return }
+    do {
+        let fileURL = try ImageCaptureFlow.save(captured)
+        Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
+        ImageCaptureFlow.isCapturing = false
+        await PostCapture.handle(fileURL: fileURL, kind: .image, forceUpload: forceUpload)
+    } catch {
+        Log.capture.error("Saving capture failed: \(error.localizedDescription, privacy: .public)")
+        BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
+    }
+}
+
 extension Collection {
     subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
 }
 
-// Helper extension for NSScreen to get display name
 extension NSScreen {
-    var localizedName: String? {
-        // Get the display's bounds to help identify it
-        let bounds = frame
-        let width = Int(bounds.width)
-        let height = Int(bounds.height)
-
-        if let displayID = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID {
-            // Check if this is the main display
-            if CGDisplayIsMain(displayID) != 0 {
-                return "main-\(width)x\(height)"
-            }
-            return "display-\(width)x\(height)"
-        }
-        return nil
+    var captureSuffix: String {
+        let size = "\(Int(frame.width))x\(Int(frame.height))"
+        guard let displayID else { return "screen" }
+        return CGDisplayIsMain(displayID) != 0 ? "main-\(size)" : "display-\(size)"
     }
 }

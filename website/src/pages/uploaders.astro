@@ -1,0 +1,37 @@
+---
+import Base from "../layouts/Base.astro";
+
+const files = import.meta.glob("../../../examples/*.iscu", { query: "?raw", import: "default", eager: true });
+const examples = Object.entries(files)
+  .map(([path, source]) => {
+    const name = path.split("/").pop().replace(".iscu", "");
+    return { name, file: path.split("/").pop(), source: String(source).trim() };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name));
+---
+<Base title="Example uploaders" description="Ready-made ishare uploaders for popular self-hosted services and S3 storage.">
+  <section class="intro prose">
+    <h1>Example uploaders</h1>
+    <p>Download an example, replace the placeholder values and double-click it to import it into ishare. See the <a href="/docs/iscu/">specification</a> for every option.</p>
+  </section>
+  <section class="examples">
+    {examples.map((example) => (
+      <div class="glass example">
+        <div class="head">
+          <h2>{example.name}</h2>
+          <a class="button" href={`https://raw.githubusercontent.com/itoolio/ishare/main/examples/${example.file}`} download={example.file}>Download</a>
+        </div>
+        <pre><code>{example.source}</code></pre>
+      </div>
+    ))}
+  </section>
+</Base>
+
+<style>
+  .intro { padding-top: 50px; }
+  .examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }
+  .example { padding: 18px; }
+  .head { display: flex; justify-content: space-between; align-items: center; }
+  .head h2 { margin: 0; text-transform: capitalize; }
+  .button { padding: 8px 14px; font-size: 14px; }
+</style>

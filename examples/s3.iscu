@@ -1,0 +1,15 @@
+{
+  "name": "s3",
+  "uploaderType": "s3",
+  "s3": {
+    "endpoint": "https://s3.us-east-1.amazonaws.com",
+    "region": "us-east-1",
+    "bucket": "BUCKET_NAME",
+    "accessKeyId": "ACCESS_KEY_ID",
+    "secretAccessKey": "SECRET_ACCESS_KEY",
+    "pathStyle": false,
+    "keyTemplate": "{{date}}/{{uuid}}.{{ext}}",
+    "acl": "public-read",
+    "publicURL": "https://BUCKET_NAME.s3.us-east-1.amazonaws.com/{{key}}"
+  }
+}

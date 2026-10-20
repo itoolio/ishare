@@ -1,0 +1,15 @@
+---
+import Base from "./Base.astro";
+
+const { frontmatter } = Astro.props;
+---
+<Base title={frontmatter.title} description={frontmatter.description}>
+  <article class="prose doc">
+    <slot />
+  </article>
+</Base>
+
+<style>
+  .doc { padding-top: 50px; }
+  .doc :global(h1) { font-size: 44px; }
+</style>

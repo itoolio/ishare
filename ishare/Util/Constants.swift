@@ -14,7 +14,6 @@ import KeyboardShortcuts
 import ScreenCaptureKit
 import SwiftUI
 import SwiftyJSON
-import Zip
 
 extension KeyboardShortcuts.Name {
     static let noKeybind = Self("noKeybind")
@@ -36,41 +35,68 @@ extension KeyboardShortcuts.Name {
     static let captureScreenForceUpload = Self("captureScreenForceUpload", default: .init(.x, modifiers: [.shift, .option, .command]))
     static let recordScreenForceUpload = Self("recordScreenForceUpload", default: .init(.z, modifiers: [.shift, .control, .option]))
     static let recordGifForceUpload = Self("recordGifForceUpload", default: .init(.g, modifiers: [.shift, .control, .option]))
+    static let captureScrolling = Self("captureScrolling", default: .init(.s, modifiers: [.control, .option]))
+    static let recordRegion = Self("recordRegion", default: .init(.r, modifiers: [.control, .option]))
+    static let recordRegionGif = Self("recordRegionGif", default: .init(.f, modifiers: [.control, .option]))
+    static let openEditor = Self("openEditor", default: .init(.e, modifiers: [.control, .option]))
+}
+
+enum SettingsStorage {
+    static let screenshotSuiteName = "dev.adrian.ishare.screenshots"
+    static let syncsToCloud = !ScreenshotMode.isActive && !ProcessInfo.processInfo.arguments.contains("-ishareDisableCloudSync")
+}
+
+extension UserDefaults {
+    nonisolated(unsafe) static let ishare: UserDefaults = ScreenshotMode.isActive
+        ? UserDefaults(suiteName: SettingsStorage.screenshotSuiteName) ?? .standard
+        : .standard
 }
 
 extension Defaults.Keys {
-    static let showMainMenu = Key<Bool>("showMainMenu", default: false, iCloud: true)
-    static let copyToClipboard = Key<Bool>("copyToClipboard", default: true, iCloud: true)
-    static let copyImageToClipboard = Key<Bool>("copyImageToClipboard", default: false, iCloud: true)
-    static let openInFinder = Key<Bool>("openInFinder", default: false, iCloud: true)
-    static let saveToDisk = Key<Bool>("saveToDisk", default: true, iCloud: true)
-    static let uploadMedia = Key<Bool>("uploadMedia", default: false, iCloud: true)
-    static let capturePath = Key<String>("capturePath", default: "~/Pictures/", iCloud: true)
-    static let recordingPath = Key<String>("recordingPath", default: "~/Pictures/", iCloud: true)
-    static let captureFileType = Key<FileType>("captureFileType", default: .PNG, iCloud: true)
-    static let captureFileName = Key<String>("captureFileName", default: "ishare", iCloud: true)
-    static let recordingFileName = Key<String>("recordingFileName", default: "ishare", iCloud: true)
-    static let imgurClientId = Key<String>("imgurClientId", default: "867afe9433c0a53", iCloud: true)
-    static let captureBinary = Key<String>("captureBinary", default: "/usr/sbin/screencapture", iCloud: true)
-    static let activeCustomUploader = Key<UUID?>("activeCustomUploader", default: nil, iCloud: true)
-    static let savedCustomUploaders = Key<Set<CustomUploader>?>("savedCustomUploaders", iCloud: true)
-    static let uploadType = Key<UploadType>("uploadType", default: .IMGUR, iCloud: true)
-    static let uploadDestination = Key<UploadDestination>("uploadDestination", default: .builtIn(.IMGUR), iCloud: true)
-    static let recordMP4 = Key<Bool>("recordMP4", default: true, iCloud: true)
-    static let useHEVC = Key<Bool>("useHEVC", default: false, iCloud: true)
-    static let useHDR = Key<Bool>("useHDR", default: false, iCloud: true)
-    static let recordAudio = Key<Bool>("recordAudio", default: true, iCloud: true)
-    static let recordMic = Key<Bool>("recordMic", default: false, iCloud: true)
-    static let recordPointer = Key<Bool>("recordPointer", default: true, iCloud: true)
-    static let recordClicks = Key<Bool>("recordClicks", default: false, iCloud: true)
-    static let builtInShare = Key<SharingPreferences>("builtInShare", default: .init(), iCloud: true)
-    static let toastTimeout = Key<Double>("toastTimeout", default: 2, iCloud: true)
-    static let menuBarIcon = Key<MenuBarIcon>("menuBarIcon", default: .DEFAULT, iCloud: true)
-    static let uploadHistory = Key<[HistoryItem]>("uploadHistory", default: [], iCloud: true)
-    static let ignoredBundleIdentifiers = Key<[String]>("ignoredApps", default: [], iCloud: true)
-    static let forceUploadModifier = Key<ForceUploadModifier>("forceUploadModifier", default: .shift)
-    static let storedLanguage = Key<LanguageTypes>("storedlanguage", default: Locale.current.identifier.starts(with: "en-AU") ? .aussie : .english, iCloud: true)
-    static let aussieMode = Key<Bool>("aussieMode", default: Locale.current.identifier.starts(with: "en-AU"), iCloud: true)
+    static let showMainMenu = Key<Bool>("showMainMenu", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let copyToClipboard = Key<Bool>("copyToClipboard", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let copyImageToClipboard = Key<Bool>("copyImageToClipboard", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let openInFinder = Key<Bool>("openInFinder", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let saveToDisk = Key<Bool>("saveToDisk", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let uploadMedia = Key<Bool>("uploadMedia", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let capturePath = Key<String>("capturePath", default: "~/Pictures/", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingPath = Key<String>("recordingPath", default: "~/Pictures/", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let captureFileType = Key<FileType>("captureFileType", default: .PNG, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let captureFileName = Key<String>("captureFileName", default: "ishare", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingFileName = Key<String>("recordingFileName", default: "ishare", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let imgurClientId = Key<String>("imgurClientId", default: "867afe9433c0a53", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let activeCustomUploader = Key<UUID?>("activeCustomUploader", default: nil, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let savedCustomUploaders = Key<Set<CustomUploader>?>("savedCustomUploaders", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let uploadType = Key<UploadType>("uploadType", default: .IMGUR, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let uploadDestination = Key<UploadDestination>("uploadDestination", default: .builtIn(.IMGUR), suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordMP4 = Key<Bool>("recordMP4", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let useHEVC = Key<Bool>("useHEVC", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let useHDR = Key<Bool>("useHDR", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordAudio = Key<Bool>("recordAudio", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordMic = Key<Bool>("recordMic", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordPointer = Key<Bool>("recordPointer", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordClicks = Key<Bool>("recordClicks", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let builtInShare = Key<SharingPreferences>("builtInShare", default: .init(), suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let toastTimeout = Key<Double>("toastTimeout", default: 2, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let menuBarIcon = Key<MenuBarIcon>("menuBarIcon", default: .DEFAULT, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let uploadHistory = Key<[HistoryItem]>("uploadHistory", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let ignoredBundleIdentifiers = Key<[String]>("ignoredApps", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let forceUploadModifier = Key<ForceUploadModifier>("forceUploadModifier", default: .shift, suite: .ishare)
+    static let storedLanguage = Key<LanguageTypes>("storedlanguage", default: Locale.current.identifier.starts(with: "en-AU") ? .aussie : .english, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let screenshotShowsCursor = Key<Bool>("screenshotShowsCursor", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let windowShadow = Key<Bool>("windowShadow", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let showMagnifier = Key<Bool>("showMagnifier", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let openEditorAfterCapture = Key<Bool>("openEditorAfterCapture", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let scrollingAutoScroll = Key<Bool>("scrollingAutoScroll", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let capturePathBookmark = Key<Data?>("capturePathBookmark", default: nil, suite: .ishare)
+    static let recordingPathBookmark = Key<Data?>("recordingPathBookmark", default: nil, suite: .ishare)
+    static let recordingResolution = Key<RecordingResolution>("recordingResolution", default: .native, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingFrameRate = Key<RecordingFrameRate>("recordingFrameRate", default: .fps60, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let gifFrameRate = Key<GIFFrameRate>("gifFrameRate", default: .fps20, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let compressBeforeUpload = Key<Bool>("compressBeforeUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let compressionThresholdMB = Key<Int>("compressionThresholdMB", default: 25, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let compressionPreset = Key<CompressionPreset>("compressionPreset", default: .p1080, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let aussieMode = Key<Bool>("aussieMode", default: Locale.current.identifier.starts(with: "en-AU"), suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
 
 extension KeyboardShortcuts.Shortcut {
@@ -171,61 +197,32 @@ func selectFolder(completion: @escaping @Sendable (URL?) -> Void) {
 
 @MainActor
 func importIscu(_ url: URL) {
-    NSLog("Starting ISCU import process for file: %@", url.path)
-    if let keyWindow = NSApplication.shared.keyWindow {
-        let alert = NSAlert()
-        alert.messageText = "Import ISCU"
-        alert.informativeText = "Do you want to import this custom uploader?"
-        alert.addButton(withTitle: "Import")
-        alert.addButton(withTitle: "Cancel")
-        NSLog("Showing import confirmation dialog")
-        alert.beginSheetModal(for: keyWindow) { response in
-            if response == .alertFirstButtonReturn {
-                NSLog("User confirmed import")
-                
-                Task { @MainActor in
-                    alert.window.orderOut(nil)
-                    
-                    do {
-                        let data = try Data(contentsOf: url)
-                        let decoder = JSONDecoder()
-                        let uploader = try decoder.decode(CustomUploader.self, from: data)
-
-                        @Default(.savedCustomUploaders) var savedCustomUploaders
-                        @Default(.activeCustomUploader) var activeCustomUploader
-                        @Default(.uploadType) var uploadType
-
-                        if var uploaders = savedCustomUploaders {
-                            uploaders.remove(uploader)
-                            uploaders.insert(uploader)
-                            savedCustomUploaders = uploaders
-                        } else {
-                            savedCustomUploaders = Set([uploader])
-                        }
-
-                        activeCustomUploader = uploader.id
-                        uploadType = .CUSTOM
-                        
-                        NSLog("ISCU import successful")
-                        let successAlert = NSAlert()
-                        successAlert.messageText = "Import Successful"
-                        successAlert.informativeText = "The custom uploader has been imported successfully."
-                        successAlert.addButton(withTitle: "OK")
-                        successAlert.runModal()
-                    } catch {
-                        NSLog("ISCU import failed: %@", error.localizedDescription)
-                        let errorAlert = NSAlert()
-                        errorAlert.messageText = "Import Error"
-                        errorAlert.informativeText = error.localizedDescription
-                        errorAlert.addButton(withTitle: "OK")
-                        errorAlert.runModal()
-                    }
-                }
-            } else {
-                NSLog("User cancelled import")
-            }
-        }
+    NSApp.activate(ignoringOtherApps: true)
+    let scoped = url.startAccessingSecurityScopedResource()
+    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+    let uploader: CustomUploader
+    do {
+        uploader = try CustomUploader.fromJSON(Data(contentsOf: url))
+    } catch {
+        let alert = NSAlert(error: error)
+        alert.messageText = "Import Error".localized()
+        alert.runModal()
+        return
     }
+    let alert = NSAlert()
+    alert.messageText = "Import ISCU".localized()
+    alert.informativeText = String(format: "Do you want to import the uploader “%@”?".localized(), uploader.name)
+    alert.addButton(withTitle: "Import".localized())
+    alert.addButton(withTitle: "Cancel".localized())
+    guard ScreenshotMode.isActive || ProcessInfo.processInfo.arguments.contains("-ishareImportWithoutConfirmation") || alert.runModal() == .alertFirstButtonReturn else { return }
+    var uploaders = Defaults[.savedCustomUploaders] ?? []
+    uploaders.remove(uploader)
+    uploaders.insert(uploader)
+    Defaults[.savedCustomUploaders] = uploaders
+    Defaults[.activeCustomUploader] = uploader.id
+    Defaults[.uploadType] = .CUSTOM
+    Defaults[.uploadDestination] = .custom(uploader.id)
+    BezelNotification.show(messageText: String(format: "Selected %@".localized(), uploader.name), icon: ToastIcon)
 }
 
 @MainActor
@@ -319,6 +316,10 @@ enum MenuBarIcon: Codable, CaseIterable, Identifiable, Defaults.Serializable {
 struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var fileUrl: String?
     var deletionUrl: String?
+    var uploaderId: UUID?
+    var s3Key: String?
+    var localPath: String?
+    var date: Date?
     var id: Self { self }
 }
 

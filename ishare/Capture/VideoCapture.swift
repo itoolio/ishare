@@ -1,209 +1,117 @@
-//
-//  VideoCapture.swift
-//  ishare
-//
-//  Created by Adrian Castro on 24.07.23.
-//
-
 @preconcurrency import AppKit
 import AVFoundation
 import BezelNotification
-import Cocoa
 import Defaults
 import Foundation
-import ScreenCaptureKit
-import SwiftUI
+import ImageIO
+@preconcurrency import ScreenCaptureKit
+import UniformTypeIdentifiers
 
 @MainActor
-func recordScreen(gif: Bool? = false) {
-    NSLog("Starting screen recording, gif mode: %@", String(describing: gif))
-    @Default(.openInFinder) var openInFinder
-    @Default(.recordingPath) var recordingPath
-    @Default(.recordingFileName) var fileName
-    @Default(.recordMP4) var recordMP4
-
-    // Get the suffix based on frontmost application
-    let suffix = if let frontmostApp = NSWorkspace.shared.frontmostApplication {
-        "-\(frontmostApp.localizedName?.lowercased() ?? "screen")"
-    } else {
-        "-screen"
-    }
-
-    let timestamp = Int(Date().timeIntervalSince1970)
-    let uniqueFilename = "\(fileName)-\(timestamp)\(suffix)"
-    let path = NSString(string: "\(recordingPath)\(uniqueFilename).\(recordMP4 ? "mp4" : "mov")").expandingTildeInPath
-    NSLog("Recording to path: %@ with suffix: %@", path, suffix)
-
-    let fileURL = URL(fileURLWithPath: path)
-
-    if gif ?? false {
-        AppDelegate.shared.recordGif = true
-    }
-
-    Task {
-        if await AppDelegate.shared.screenRecorder.canRecord {
-            NSLog("Starting screen recording")
-            await AppDelegate.shared.screenRecorder.start(fileURL)
-        } else {
-            NSLog("Screen recording permission denied")
-            BezelNotification.show(messageText: "Missing permission", icon: ToastIcon)
-        }
+enum RecordingFlow {
+    static func recordingURL() -> URL {
+        let suffix = NSWorkspace.shared.frontmostApplication?.localizedName ?? "screen"
+        let ext = Defaults[.recordMP4] ? "mp4" : "mov"
+        let fileName = CaptureFileName.make(prefix: Defaults[.recordingFileName], suffix: suffix, ext: ext)
+        return SaveLocation.fileURL(for: .recordings, fileName: fileName)
     }
 }
 
-@MainActor func postRecordingTasks(_ URL: URL, _ recordGif: Bool) {
-    @Default(.copyToClipboard) var copyToClipboard
-    @Default(.openInFinder) var openInFinder
-    @Default(.recordingPath) var recordingPath
-    @Default(.recordingFileName) var fileName
-    @Default(.uploadType) var uploadType
-    @Default(.uploadMedia) var uploadMedia
-    @Default(.saveToDisk) var saveToDisk
-
-    func processGif(from url: URL, completion: @escaping (URL?) -> Void) {
-        let semaphore = DispatchSemaphore(value: 0)
-
-        Task {
-            do {
-                let gifURL = try await exportGif(from: url)
-                completion(gifURL)
-            } catch {
-                print("Error processing GIF: \(error)")
-                completion(nil)
-            }
-            semaphore.signal()
-        }
-        semaphore.wait()
-    }
-
-    var fileURL = URL
-
-    if recordGif {
-        processGif(from: fileURL) { resultingURL in
-            if let newURL = resultingURL {
-                fileURL = newURL
-            }
-        }
-    }
-
-    if !FileManager.default.fileExists(atPath: fileURL.path) {
+@MainActor
+func recordScreen(gif: Bool = false, region: Bool = false, forceUpload: Bool = false) {
+    let recorder = AppDelegate.shared.screenRecorder
+    guard !recorder.isRunning else {
+        AppDelegate.shared.stopRecording()
         return
     }
-
-    if copyToClipboard {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-
-        pasteboard.setString(fileURL.absoluteString, forType: .fileURL)
-    }
-
-    if openInFinder {
-        NSWorkspace.shared.activateFileViewerSelecting([fileURL])
-    }
-
-    if uploadMedia {
-        let shouldSaveToDisk = saveToDisk
-        let localFileURL = fileURL
-        uploadFile(fileURL: fileURL, uploadType: uploadType) {
-            Task { @MainActor in
-                showToast(fileURL: localFileURL) {
-                    NSSound.beep()
-
-                    if !shouldSaveToDisk {
-                        do {
-                            try FileManager.default.removeItem(at: localFileURL)
-                        } catch {
-                            print("Error deleting the file: \(error)")
-                        }
-                    }
-                }
-            }
+    AppDelegate.shared.recordGif = gif
+    AppDelegate.shared.forceUploadRecording = forceUpload
+    Task { @MainActor in
+        guard await recorder.canRecord else {
+            BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
+            return
         }
-    } else {
-        let shouldSaveToDisk = saveToDisk
-        let localFileURL = fileURL
-        Task { @MainActor in
-            showToast(fileURL: localFileURL) {
-                NSSound.beep()
-
-                if !shouldSaveToDisk {
-                    do {
-                        try FileManager.default.removeItem(at: localFileURL)
-                    } catch {
-                        print("Error deleting the file: \(error)")
-                    }
-                }
+        let fileURL = RecordingFlow.recordingURL()
+        if region {
+            let outcome = await RegionSelector.select(options: .init(showsMagnifier: false, allowsWindowMode: false, hint: "Select the area to record".localized()))
+            switch outcome {
+            case let .region(screen, rect):
+                await recorder.start(fileURL, target: .region(screen, rect))
+            case let .fullScreen(screen):
+                await recorder.start(fileURL, target: .region(screen, CGRect(origin: .zero, size: screen.frame.size)))
+            case .switchToWindow, .cancelled:
+                return
             }
+        } else {
+            await recorder.start(fileURL, target: .picker)
         }
     }
-    AppDelegate.shared.recordGif = false
-    shareBasedOnPreferences(fileURL)
 }
 
-func exportGif(from videoURL: URL) async throws -> URL {
-    let asset = AVURLAsset(url: videoURL)
-
-    let duration: CMTime = try await asset.load(.duration)
-    let videoTracks = try await asset.loadTracks(withMediaType: .video)
-    guard let firstVideoTrack = videoTracks.first else {
-        throw NSError(domain: "com.castdrian.ishare", code: 3, userInfo: [NSLocalizedDescriptionKey: "No video track found in the asset"])
-    }
-    let size = try await firstVideoTrack.load(.naturalSize)
-
-    let totalDuration = duration.seconds
-    let frameRate: CGFloat = 30
-    let totalFrames = Int(totalDuration * TimeInterval(frameRate))
-    var timeValues: [CMTime] = []
-
-    for frameNumber in 0 ..< totalFrames {
-        let time = CMTime(seconds: Double(frameNumber) / Double(frameRate), preferredTimescale: Int32(NSEC_PER_SEC))
-        timeValues.append(time)
-    }
-
-    let rect = CGRect(x: 0, y: 0, width: size.width, height: size.height)
-
-    let generator = AVAssetImageGenerator(asset: asset)
-    generator.requestedTimeToleranceBefore = CMTime.zero
-    generator.requestedTimeToleranceAfter = CMTime.zero
-    generator.appliesPreferredTrackTransform = true
-    generator.maximumSize = rect.size
-
-    let delayBetweenFrames: TimeInterval = 1.0 / TimeInterval(frameRate)
-    let fileProperties: [String: Any] = [
-        kCGImagePropertyGIFDictionary as String: [
-            kCGImagePropertyGIFLoopCount: 0,
-        ],
-    ]
-    let frameProperties: [String: Any] = [
-        kCGImagePropertyGIFDictionary as String: [
-            kCGImagePropertyGIFDelayTime: delayBetweenFrames,
-        ],
-    ]
-
-    let outputURL = videoURL.deletingPathExtension().appendingPathExtension("gif")
-    let imageDestination = CGImageDestinationCreateWithURL(outputURL as CFURL, UTType.gif.identifier as CFString, totalFrames, nil)!
-    CGImageDestinationSetProperties(imageDestination, fileProperties as CFDictionary)
-
-    let localTimeValues = timeValues
-    let localFrameProperties = frameProperties as CFDictionary
-    return try await withCheckedThrowingContinuation { continuation in
-        generator.generateCGImagesAsynchronously(forTimes: localTimeValues.map { NSValue(time: $0) }) { requestedTime, resultingImage, _, _, _ in
-            if let image = resultingImage {
-                CGImageDestinationAddImage(imageDestination, image, localFrameProperties)
-            }
-            if requestedTime == localTimeValues.last {
-                let success = CGImageDestinationFinalize(imageDestination)
-                if success {
-                    do {
-                        try FileManager.default.removeItem(at: videoURL)
-                        continuation.resume(returning: outputURL)
-                    } catch {
-                        continuation.resume(throwing: NSError(domain: "com.castdrian.ishare", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to delete the original video"]))
-                    }
-                } else {
-                    continuation.resume(throwing: NSError(domain: "com.castdrian.ishare", code: 2, userInfo: [NSLocalizedDescriptionKey: "Gif export failed"]))
-                }
+@MainActor
+func postRecordingTasks(_ url: URL, _ recordGif: Bool, forceUpload: Bool = false) {
+    Task { @MainActor in
+        var fileURL = url
+        if recordGif {
+            do {
+                fileURL = try await exportGif(from: url, frameRate: Defaults[.gifFrameRate].rawValue)
+            } catch {
+                NSLog("GIF export failed: %@", error.localizedDescription)
+                BezelNotification.show(messageText: "GIF export failed".localized(), icon: ToastIcon)
             }
         }
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+        await PostCapture.handle(fileURL: fileURL, kind: .video, forceUpload: forceUpload)
     }
+}
+
+enum GIFExportError: LocalizedError {
+    case noVideoTrack
+    case destinationUnavailable
+    case finalizeFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .noVideoTrack: "No video track found in the recording"
+        case .destinationUnavailable: "Couldn't create the GIF file"
+        case .finalizeFailed: "GIF export failed"
+        }
+    }
+}
+
+func exportGif(from videoURL: URL, frameRate: Int, maxPixelSize: CGFloat? = nil, deleteSource: Bool = true) async throws -> URL {
+    let asset = AVURLAsset(url: videoURL)
+    let duration = try await asset.load(.duration).seconds
+    guard let track = try await asset.loadTracks(withMediaType: .video).first else { throw GIFExportError.noVideoTrack }
+    let naturalSize = try await track.load(.naturalSize)
+    let times = GIFTiming.frameTimes(duration: duration, frameRate: frameRate)
+
+    let generator = AVAssetImageGenerator(asset: asset)
+    generator.requestedTimeToleranceBefore = .zero
+    generator.requestedTimeToleranceAfter = CMTime(seconds: GIFTiming.delay(frameRate: frameRate) / 2, preferredTimescale: 600)
+    generator.appliesPreferredTrackTransform = true
+    if let maxPixelSize {
+        let scale = min(1, maxPixelSize / max(naturalSize.width, naturalSize.height))
+        generator.maximumSize = CGSize(width: naturalSize.width * scale, height: naturalSize.height * scale)
+    }
+
+    let outputURL = videoURL.deletingPathExtension().appendingPathExtension("gif")
+    guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, UTType.gif.identifier as CFString, times.count, nil) else {
+        throw GIFExportError.destinationUnavailable
+    }
+    CGImageDestinationSetProperties(destination, [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary)
+    let frameProperties = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFDelayTime: GIFTiming.delay(frameRate: frameRate)]] as CFDictionary
+
+    var lastImage: CGImage?
+    for await result in generator.images(for: times) {
+        if let image = (try? result.image) ?? lastImage {
+            CGImageDestinationAddImage(destination, image, frameProperties)
+            lastImage = image
+        }
+    }
+    guard CGImageDestinationFinalize(destination) else { throw GIFExportError.finalizeFailed }
+    if deleteSource {
+        try? FileManager.default.removeItem(at: videoURL)
+    }
+    return outputURL
 }

@@ -1,0 +1,18 @@
+{
+  "branches": ["main"],
+  "tagFormat": "v${version}",
+  "plugins": [
+    ["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
+    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
+    ["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
+    ["@semantic-release/exec", {
+      "verifyReleaseCmd": "echo ${nextRelease.version} > .next-version",
+      "prepareCmd": "go run ./tools/cmd/set-version ${nextRelease.version}"
+    }],
+    ["@semantic-release/git", {
+      "assets": ["Config.xcconfig", "CHANGELOG.md"],
+      "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+    }],
+    ["@semantic-release/github", { "assets": [{ "path": "dist/*" }] }]
+  ]
+}
