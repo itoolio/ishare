@@ -206,4 +206,17 @@ schemes:
     test:
       config: Debug
       targets:
-        - ishareUITests
+        - name: ishareUITests
+          selectedTests:
+            - ScreenshotTests
+  UITests:
+    build:
+      targets:
+        ishare - GitHub: all
+        ishareUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - name: ishareUITests
+          skippedTests:
+            - ScreenshotTests

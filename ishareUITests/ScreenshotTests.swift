@@ -1,9 +1,10 @@
 import XCTest
 
+@MainActor
 final class ScreenshotTests: XCTestCase {
     static let scenes = ["menu", "editor", "uploaders", "assistant", "recording", "history"]
 
-    override func setUp() {
+    override func setUp() async throws {
         continueAfterFailure = false
     }
 
