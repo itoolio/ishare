@@ -195,12 +195,23 @@ final class WatchFolderService {
         let monitor = WatchFolderMonitor(directory: directory, filter: Defaults[.watchFolderFilter], processed: processed) { url in
             WatchFolderService.markProcessed(url)
             Task { @MainActor in
+                guard !WatchFolderService.isOwnCapture(url) else { return }
                 await UploadCoordinator.upload(fileURL: url, localFileURL: url)
                 await showToast(fileURL: url)
             }
         }
         monitor.start()
         self.monitor = monitor
+    }
+
+    static func isOwnCapture(_ url: URL) -> Bool {
+        let directory = url.deletingLastPathComponent().standardizedFileURL.path
+        let name = url.lastPathComponent.lowercased()
+        let sources: [(SaveLocation.Kind, String)] = [(.captures, Defaults[.captureFileName]), (.recordings, Defaults[.recordingFileName])]
+        return sources.contains { kind, prefix in
+            let base = CaptureFileName.sanitize(prefix).isEmpty ? "ishare" : CaptureFileName.sanitize(prefix)
+            return SaveLocation.directory(for: kind).standardizedFileURL.path == directory && name.hasPrefix(base + "-")
+        }
     }
 
     private static func markProcessed(_ url: URL) {

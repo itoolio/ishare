@@ -47,6 +47,22 @@ enum SettingsSearchIndex {
             "Upload", "Uploader", "Destination", "Imgur", "Custom uploader", "Server", "S3", "R2", "ISCU", "Import", "Export",
             "Assistant", "Apple Intelligence", "Delete", "Deletion URL", "Headers",
         ]),
+        SettingsSearchEntry(pane: .capture, keywords: [
+            "Privacy", "Hide the menu bar in screenshots", "Menu bar", "Blurred applications", "Blur",
+            "Background", "Add a background to screenshots", "Beautify", "Padding", "Corner radius", "Drop shadow",
+            "Gradient", "Measure", "Ruler", "Last region",
+        ]),
+        SettingsSearchEntry(pane: .recording, keywords: [
+            "Clicks & Keystrokes", "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera",
+            "Input level", "Trim recordings before saving", "Trim", "GIF size", "Meter",
+        ]),
+        SettingsSearchEntry(pane: .uploaders, keywords: [
+            "Also upload to", "Copy URL after upload", "Open URL in browser after upload", "Watch Folder", "Folder",
+            "Upload Queue", "Retry", "Expiring links", "Presigned", "ShareX", "SXCU", "Test Upload", "Method",
+        ]),
+        SettingsSearchEntry(pane: .advanced, keywords: [
+            "Backup", "Export Settings", "Import Settings", "Include upload history", "Include S3 secret access keys",
+        ]),
         SettingsSearchEntry(pane: .keybinds, keywords: [
             "Keybinds", "Keyboard", "Shortcut", "Hotkey", "Reset All Keybinds", "Force upload", "Modifier",
         ]),

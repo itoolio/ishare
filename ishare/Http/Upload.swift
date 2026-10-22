@@ -99,8 +99,11 @@ enum UploadCoordinator {
     static func upload(fileURL: URL, to targets: [UploadTarget], localFileURL: URL?) async -> [Result<UploadOutcome, any Error>] {
         let progressIndicator: UploadManager? = environment.showsProgress ? UploadManager.shared : nil
         progressIndicator?.begin()
-        defer { progressIndicator?.uploadCompleted() }
         var results: [Result<UploadOutcome, any Error>] = []
+        defer {
+            let succeeded = results.contains { if case .success = $0 { true } else { false } }
+            progressIndicator?.uploadCompleted(succeeded: succeeded)
+        }
         let count = Double(targets.count)
         for (index, target) in targets.enumerated() {
             do {

@@ -72,9 +72,10 @@ final class UploadManager: ObservableObject {
         activity = tracker.activity
     }
 
-    func uploadCompleted() {
+    func uploadCompleted(succeeded reported: Bool? = nil) {
         let newest = Defaults[.uploadHistory].first
-        let succeeded = tracker.complete(newestHistoryItem: newest)
+        let inferred = tracker.complete(newestHistoryItem: newest)
+        let succeeded = reported ?? inferred
         if succeeded {
             lastCompletedItem = newest
             lastCompletedAt = Date()
