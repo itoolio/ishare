@@ -107,7 +107,7 @@ final class ImageEditor: NSObject, NSWindowDelegate {
 
     private func save(thenClose: Bool) {
         Log.app.info("Editor save requested, closing: \(thenClose)")
-        document.commitText()
+        document.commitPendingEdits()
         guard document.hasChanges else {
             if thenClose { close(with: .saved(fileURL)) }
             return
@@ -130,7 +130,7 @@ final class ImageEditor: NSObject, NSWindowDelegate {
     }
 
     private func copy() {
-        document.commitText()
+        document.commitPendingEdits()
         guard let rendered = document.render() else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([NSImage(cgImage: rendered, size: CGSize(width: rendered.width, height: rendered.height))])

@@ -29,6 +29,14 @@ final class EditorDocument: ObservableObject {
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
     @Published var editingText: TextEdit?
+    @Published var arrowPath: ArrowPath = .straight
+    @Published var arrowHead: ArrowHead = .filled
+    @Published var doubleHeaded = false
+    @Published var dashed = false
+    @Published var spotlightShape: SpotlightShape = .rectangle
+    @Published var dimAmount = Annotation.defaultDimAmount
+    @Published var stamp: Stamp = .default
+    @Published private(set) var cropAspect: CropAspect = .free
 
     struct TextEdit: Equatable {
         var origin: CGPoint
@@ -38,6 +46,8 @@ final class EditorDocument: ObservableObject {
 
     private var undoStack: [Snapshot] = []
     private var redoStack: [Snapshot] = []
+    private var continuousChangeStart: Snapshot?
+    private var toolBeforeCrop: EditorTool = .select
 
     init(image: CGImage, fileURL: URL?) {
         base = image
@@ -49,6 +59,10 @@ final class EditorDocument: ObservableObject {
     }
 
     var imageSize: CGSize { CGSize(width: base.width, height: base.height) }
+    var imageBounds: CGRect { CGRect(origin: .zero, size: imageSize) }
+    var isCropping: Bool { tool == .crop }
+    var visibleRect: CGRect { isCropping ? imageBounds : crop ?? imageBounds }
+    var defaultStampSize: CGFloat { max(48, (CGFloat(max(base.width, base.height)) / 12).rounded()) }
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
     var hasChanges: Bool { !annotations.isEmpty || crop != nil }
@@ -82,7 +96,94 @@ final class EditorDocument: ObservableObject {
         if annotations.filter(\.isEffect) != effectsBefore || baseChanged {
             refreshEffects()
         }
+        if isCropping {
+            draftCrop = crop ?? imageBounds
+        }
         selectedID = nil
+    }
+
+    func beginContinuousChange() {
+        if continuousChangeStart == nil {
+            continuousChangeStart = snapshot
+        }
+    }
+
+    func endContinuousChange() {
+        guard let start = continuousChangeStart else { return }
+        continuousChangeStart = nil
+        guard !snapshot.matches(start) else { return }
+        undoStack.append(start)
+        redoStack.removeAll()
+    }
+
+    func updateAnnotations(where predicate: (Annotation) -> Bool, _ change: (inout Annotation) -> Void) {
+        var updated = annotations
+        for index in updated.indices where predicate(updated[index]) {
+            change(&updated[index])
+        }
+        if continuousChangeStart != nil {
+            annotations = updated
+        } else {
+            commit { annotations = updated }
+        }
+    }
+
+    func updateSelection(_ change: (inout Annotation) -> Void) {
+        guard let selectedID else { return }
+        updateAnnotations(where: { $0.id == selectedID }, change)
+    }
+
+    var selectedAnnotation: Annotation? {
+        selectedID.flatMap { id in annotations.first { $0.id == id } }
+    }
+
+    func setDimAmount(_ amount: Double) {
+        dimAmount = amount
+        updateAnnotations(where: \.isSpotlight) { $0.dimAmount = amount }
+    }
+
+    func select(tool newTool: EditorTool) {
+        commitText()
+        guard newTool != tool else { return }
+        if isCropping {
+            applyPendingCrop()
+        }
+        if newTool == .crop {
+            toolBeforeCrop = tool
+            draftCrop = crop ?? imageBounds
+            selectedID = nil
+        }
+        tool = newTool
+    }
+
+    func applyPendingCrop() {
+        guard isCropping else { return }
+        if let draftCrop {
+            applyCrop(draftCrop.integral == imageBounds ? nil : draftCrop)
+        }
+        draftCrop = nil
+        tool = toolBeforeCrop
+    }
+
+    func cancelCropping() {
+        guard isCropping else { return }
+        draftCrop = nil
+        tool = toolBeforeCrop
+    }
+
+    func setCropAspect(_ aspect: CropAspect) {
+        cropAspect = aspect
+        guard isCropping else { return }
+        draftCrop = CropGeometry.fit(draftCrop ?? imageBounds, ratio: aspect.ratio(for: imageSize), bounds: imageBounds)
+    }
+
+    var cropRatio: CGFloat? {
+        cropAspect.ratio(for: imageSize)
+    }
+
+    func commitPendingEdits() {
+        commitText()
+        applyPendingCrop()
     }
 
     enum Transform {
@@ -151,10 +252,15 @@ final class EditorDocument: ObservableObject {
 
     func resetCrop() {
         commit { crop = nil }
+        if isCropping {
+            draftCrop = imageBounds
+        }
     }
 
-    func annotation(at point: CGPoint) -> Annotation? {
-        annotations.reversed().first { $0.hitTest(point, tolerance: max(8, lineWidth)) }
+    func annotation(at point: CGPoint, tolerance: CGFloat? = nil) -> Annotation? {
+        let resolved = tolerance ?? max(8, lineWidth)
+        let hits = annotations.reversed().filter { $0.hitTest(point, tolerance: resolved) }
+        return hits.first { !$0.isSpotlight } ?? hits.first
     }
 
     func move(_ id: UUID, by delta: CGVector) {
@@ -199,7 +305,7 @@ final class EditorDocument: ObservableObject {
     func makeAnnotation(tool: EditorTool, from start: CGPoint, to end: CGPoint, points: [CGPoint]) -> Annotation? {
         let rect = ScreenGeometry.rect(from: start, to: end)
         let shape: Annotation.Shape? = switch tool {
-        case .arrow: .arrow(start, end)
+        case .arrow: arrowPath == .curved ? .curvedArrow(start, ArrowGeometry.defaultControl(from: start, to: end), end) : .arrow(start, end)
         case .line: .line(start, end)
         case .rectangle: .rectangle(rect)
         case .ellipse: .ellipse(rect)
@@ -212,14 +318,31 @@ final class EditorDocument: ObservableObject {
         case .spotlight: .spotlight(rect)
         case .magnify: .magnify(ScreenGeometry.squareRect(from: start, to: end))
         case .callout: .callout(start, CGRect(x: end.x, y: end.y, width: max(fontSize * 5, 160), height: fontSize * 1.9), "")
+        case .stamp: .stamp(stampRect(from: start, to: end), stamp)
         case .select, .text, .step, .crop, .cursor: nil
         }
-        return shape.map { Annotation(shape: $0, color: color, lineWidth: lineWidth, fontSize: fontSize, filled: filled && tool.supportsFill) }
+        return shape.map {
+            var annotation = Annotation(shape: $0, color: color, lineWidth: lineWidth, fontSize: fontSize, filled: filled && tool.supportsFill)
+            annotation.arrowHead = arrowHead
+            annotation.doubleHeaded = doubleHeaded
+            annotation.dashed = dashed && annotation.supportsDash
+            annotation.spotlightShape = spotlightShape
+            annotation.dimAmount = dimAmount
+            return annotation
+        }
+    }
+
+    func stampRect(from start: CGPoint, to end: CGPoint) -> CGRect {
+        guard hypot(end.x - start.x, end.y - start.y) > 6 else {
+            let size = defaultStampSize
+            return CGRect(x: end.x - size / 2, y: end.y - size / 2, width: size, height: size)
+        }
+        return ScreenGeometry.squareRect(from: start, to: end)
     }
 
     func isSubstantial(_ annotation: Annotation) -> Bool {
         switch annotation.shape {
-        case let .arrow(start, end), let .line(start, end):
+        case let .arrow(start, end), let .line(start, end), let .curvedArrow(start, _, end):
             hypot(end.x - start.x, end.y - start.y) > 3
         case let .pen(points), let .marker(points):
             !points.isEmpty
