@@ -10,6 +10,7 @@ struct HTTPUploader: Uploader {
         guard let url = URL(string: uploader.requestURL.trimmingCharacters(in: .whitespaces)) else {
             throw UploadFailure.invalidSpecification([.invalidRequestURL])
         }
+        let method = HTTPMethod(rawValue: (uploader.requestMethod ?? .post).rawValue)
         var headers = HTTPHeaders(uploader.headers ?? [:])
         headers.add(name: "x-file-name", value: UploadFileName.lowercasingExtension(of: fileURL))
         let request: UploadRequest
@@ -26,11 +27,11 @@ struct HTTPUploader: Uploader {
                     }
                     form.append(fileURL, withName: formName, fileName: fileName, mimeType: mimeType)
                 },
-                to: url, method: .post, headers: headers
+                to: url, method: method, headers: headers
             )
         case .binary:
             headers.add(name: "Content-Type", value: MimeType.forFile(fileURL))
-            request = UploadService.session.upload(fileURL, to: url, method: .post, headers: headers)
+            request = UploadService.session.upload(fileURL, to: url, method: method, headers: headers)
         }
         let data = try await UploadService.perform(request, progress: progress)
         return try Self.outcome(from: data, uploader: uploader)

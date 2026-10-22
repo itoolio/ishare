@@ -2,12 +2,13 @@ import Defaults
 import Foundation
 
 enum Migrations {
-    static let currentVersion = 2
+    static let currentVersion = 3
     static let versionKey = "ishareMigrationVersion"
     static let removedKeys = ["captureBinary"]
     static let removedInVersion2 = ["showMainMenu"]
 
     static func run(defaults: UserDefaults = .standard) {
+        if RuntimeEnvironment.isRunningTests, defaults === UserDefaults.standard { return }
         let version = defaults.integer(forKey: versionKey)
         guard version < currentVersion else { return }
         if version < 1 {
@@ -21,7 +22,20 @@ enum Migrations {
                 NSUbiquitousKeyValueStore.default.removeObject(forKey: key)
             }
         }
+        if version < 3 {
+            moveS3SecretsToKeychain(defaults: defaults)
+        }
         defaults.set(currentVersion, forKey: versionKey)
+    }
+
+    static func moveS3SecretsToKeychain(defaults: UserDefaults) {
+        let key = Defaults.Key<Set<CustomUploader>?>("savedCustomUploaders", suite: defaults)
+        guard let uploaders = Defaults[key] else { return }
+        let migrated = uploaders.map(S3SecretStore.movingSecretToKeychain)
+        let secrets = Dictionary(uniqueKeysWithValues: uploaders.map { ($0.id, $0.s3?.secretAccessKey) })
+        if migrated.contains(where: { secrets[$0.id] != $0.s3?.secretAccessKey }) {
+            Defaults[key] = Set(migrated)
+        }
     }
 
     static func migrateStoredLanguage(defaults: UserDefaults) {

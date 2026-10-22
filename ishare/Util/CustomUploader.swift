@@ -39,6 +39,21 @@ enum DeleteRequestType: String, Codable, CaseIterable, Sendable {
     }
 }
 
+enum UploadRequestMethod: String, Codable, CaseIterable, Sendable {
+    case post = "POST"
+    case put = "PUT"
+    case patch = "PATCH"
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        guard let method = UploadRequestMethod(rawValue: rawValue.uppercased()) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid request method: \(rawValue)")
+        }
+        self = method
+    }
+}
+
 enum UploaderKind: String, Codable, CaseIterable, Sendable {
     case custom
     case s3
@@ -65,13 +80,16 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
     let deletionURL: String?
     let deleteRequestType: DeleteRequestType?
     let uploaderType: UploaderKind?
-    let s3: S3Configuration?
+    var s3: S3Configuration?
+    var requestMethod: UploadRequestMethod?
+    var modifiedAt: Date?
 
     init(
         id: UUID = UUID(), name: String, requestURL: String, headers: [String: String]?,
         formData: [String: String]?, fileFormName: String?, requestBodyType: RequestBodyType? = nil,
         responseURL: String, deletionURL: String? = nil, deleteRequestType: DeleteRequestType? = nil,
-        uploaderType: UploaderKind? = nil, s3: S3Configuration? = nil
+        uploaderType: UploaderKind? = nil, s3: S3Configuration? = nil, requestMethod: UploadRequestMethod? = nil,
+        modifiedAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -85,6 +103,8 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         self.deleteRequestType = deleteRequestType
         self.uploaderType = uploaderType
         self.s3 = s3
+        self.requestMethod = requestMethod
+        self.modifiedAt = modifiedAt
     }
 
     static func s3(id: UUID = UUID(), name: String, configuration: S3Configuration) -> CustomUploader {
@@ -107,6 +127,8 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         case deleteRequestType = "deleterequesttype"
         case uploaderType = "uploadertype"
         case s3
+        case requestMethod = "requestmethod"
+        case modifiedAt = "modifiedat"
     }
 
     init(from decoder: any Decoder) throws {
@@ -130,6 +152,8 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         requestBodyType = try container.decodeDynamicIfPresent(RequestBodyType.self, forKey: .key(named: "requestbodytype"))
         deletionURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "deletionurl"))
         deleteRequestType = try container.decodeDynamicIfPresent(DeleteRequestType.self, forKey: .key(named: "deleterequesttype"))
+        requestMethod = try container.decodeDynamicIfPresent(UploadRequestMethod.self, forKey: .key(named: "requestmethod"))
+        modifiedAt = try container.decodeDynamicIfPresent(Date.self, forKey: .key(named: "modifiedat"))
     }
 
     var kind: UploaderKind { uploaderType ?? .custom }
@@ -166,6 +190,29 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         var copy = self
         copy.id = newID
         return copy
+    }
+
+    func renamed(_ newName: String) -> CustomUploader {
+        CustomUploader(
+            id: id, name: newName, requestURL: requestURL, headers: headers, formData: formData, fileFormName: fileFormName,
+            requestBodyType: requestBodyType, responseURL: responseURL, deletionURL: deletionURL,
+            deleteRequestType: deleteRequestType, uploaderType: uploaderType, s3: s3, requestMethod: requestMethod,
+            modifiedAt: modifiedAt
+        )
+    }
+
+    func touched(at date: Date = .init()) -> CustomUploader {
+        var copy = self
+        copy.modifiedAt = date
+        return copy
+    }
+
+    func hasSameContent(as other: CustomUploader) -> Bool {
+        var lhs = self
+        var rhs = other
+        lhs.modifiedAt = nil
+        rhs.modifiedAt = nil
+        return (try? lhs.toJSON()) == (try? rhs.toJSON())
     }
 }
 

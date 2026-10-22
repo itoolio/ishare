@@ -1,3 +1,4 @@
+import BezelNotification
 import Defaults
 import KeyboardShortcuts
 import SwiftUI
@@ -12,6 +13,7 @@ final class AppState: ObservableObject {
     init() {
         if !ScreenshotMode.isActive {
             setupKeyboardShortcuts()
+            UploadBackgroundServices.start()
         }
     }
 
@@ -87,15 +89,27 @@ final class AppState: ObservableObject {
             await showToast(fileURL: mediaURL)
             return
         }
-        guard let image = pasteboard.imageFromData,
-              let tiff = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiff),
-              let data = bitmap.representation(using: .png, properties: [:])
-        else { return }
-        let url = FileManager.default.temporaryDirectory.appending(path: CaptureFileName.make(prefix: Defaults[.captureFileName], suffix: "pasteboard", ext: "png"))
-        try? data.write(to: url)
-        await UploadCoordinator.upload(fileURL: url)
-        await showToast(fileURL: url)
-        try? FileManager.default.removeItem(at: url)
+        if let image = pasteboard.imageFromData,
+           let tiff = image.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: tiff),
+           let data = bitmap.representation(using: .png, properties: [:]) {
+            let url = FileManager.default.temporaryDirectory.appending(path: CaptureFileName.make(prefix: Defaults[.captureFileName], suffix: "pasteboard", ext: "png"))
+            try? data.write(to: url)
+            await UploadCoordinator.upload(fileURL: url)
+            await showToast(fileURL: url)
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
+        if let text = pasteboard.plainText {
+            await uploadText(text)
+        }
+    }
+
+    static func uploadText(_ text: String) async {
+        guard let url = try? TextSnippet.write(text, in: FileManager.default.temporaryDirectory, prefix: Defaults[.captureFileName]) else { return }
+        defer { try? FileManager.default.removeItem(at: url) }
+        if case .success = await UploadCoordinator.upload(fileURL: url) {
+            BezelNotification.show(messageText: "Text uploaded".localized(), icon: ToastIcon)
+        }
     }
 }

@@ -15,6 +15,12 @@ extension NSPasteboard {
         return NSImage(data: data)
     }
     
+    var plainText: String? {
+        let hasFiles = (readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL])?.isEmpty == false
+        guard !hasFiles, let text = string(forType: .string), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return text
+    }
+
     var hasMediaContent: Bool {
         return mediaURL != nil || imageFromData != nil
     }

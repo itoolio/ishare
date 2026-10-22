@@ -449,6 +449,7 @@ struct AdvancedSettingsView: View {
                     }
                 }
             }
+            SettingsTransferSection()
         }
         .formStyle(.grouped)
     }
