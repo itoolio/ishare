@@ -87,6 +87,7 @@ extension Defaults.Keys {
     static let windowShadow = Key<Bool>("windowShadow", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showMagnifier = Key<Bool>("showMagnifier", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let openEditorAfterCapture = Key<Bool>("openEditorAfterCapture", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let menuRecordsGIF = Key<Bool>("menuRecordsGIF", default: false, suite: .ishare)
     static let scrollingAutoScroll = Key<Bool>("scrollingAutoScroll", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let capturePathBookmark = Key<Data?>("capturePathBookmark", default: nil, suite: .ishare)
     static let recordingPathBookmark = Key<Data?>("recordingPathBookmark", default: nil, suite: .ishare)
