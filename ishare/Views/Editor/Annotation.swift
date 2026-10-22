@@ -58,6 +58,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
     case text
     case callout
     case step
+    case stamp
     case magnify
     case spotlight
     case blur
@@ -89,6 +90,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .text: "textformat"
         case .callout: "bubble.left"
         case .step: "1.circle"
+        case .stamp: "face.smiling"
         case .magnify: "plus.magnifyingglass"
         case .spotlight: "light.max"
         case .blur: "drop"
@@ -112,6 +114,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .text: "Text"
         case .callout: "Speech Balloon"
         case .step: "Step"
+        case .stamp: "Stamp"
         case .magnify: "Magnify"
         case .spotlight: "Spotlight"
         case .blur: "Blur"
@@ -135,6 +138,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .text: "t"
         case .callout: "s"
         case .step: "n"
+        case .stamp: "k"
         case .magnify: "g"
         case .spotlight: "f"
         case .blur: "b"
@@ -146,9 +150,33 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+enum SpotlightShape: String, CaseIterable, Identifiable, Hashable, Sendable {
+    case rectangle
+    case ellipse
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .rectangle: "Rectangle".localized()
+        case .ellipse: "Ellipse".localized()
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .rectangle: "rectangle"
+        case .ellipse: "circle"
+        }
+    }
+}
+
 struct Annotation: Identifiable, Hashable, Sendable {
+    static let defaultDimAmount = 0.55
+
     enum Shape: Hashable, Sendable {
         case arrow(CGPoint, CGPoint)
+        case curvedArrow(CGPoint, CGPoint, CGPoint)
         case line(CGPoint, CGPoint)
         case rectangle(CGRect)
         case ellipse(CGRect)
@@ -164,6 +192,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
         case pixelate(CGRect)
         case eraser(CGRect)
         case cursor(CGPoint)
+        case stamp(CGRect, Stamp)
     }
 
     var id = UUID()
@@ -173,6 +202,11 @@ struct Annotation: Identifiable, Hashable, Sendable {
     var fontSize: CGFloat = 32
     var filled = false
     var textBackground = false
+    var arrowHead: ArrowHead = .filled
+    var doubleHeaded = false
+    var dashed = false
+    var spotlightShape: SpotlightShape = .ellipse
+    var dimAmount = Annotation.defaultDimAmount
 
     var isEffect: Bool {
         switch shape {
@@ -195,6 +229,10 @@ struct Annotation: Identifiable, Hashable, Sendable {
         switch shape {
         case let .arrow(start, end), let .line(start, end):
             ScreenGeometry.rect(from: start, to: end).insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
+        case let .curvedArrow(start, control, end):
+            Annotation.boundingRect(of: ArrowGeometry.samples(from: start, control: control, to: end)).insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
+        case let .stamp(rect, _):
+            rect
         case let .rectangle(rect), let .ellipse(rect), let .highlight(rect), let .blur(rect), let .pixelate(rect),
              let .magnify(rect), let .spotlight(rect), let .eraser(rect):
             rect
@@ -219,8 +257,10 @@ struct Annotation: Identifiable, Hashable, Sendable {
         switch shape {
         case let .arrow(start, end), let .line(start, end):
             Annotation.distance(from: point, toSegment: start, end) <= max(tolerance, lineWidth)
+        case let .curvedArrow(start, control, end):
+            Annotation.distance(from: point, toPolyline: ArrowGeometry.samples(from: start, control: control, to: end)) <= max(tolerance, lineWidth)
         case let .pen(points), let .marker(points):
-            zip(points, points.dropFirst()).contains { Annotation.distance(from: point, toSegment: $0, $1) <= max(tolerance, lineWidth) }
+            Annotation.distance(from: point, toPolyline: points) <= max(tolerance, lineWidth)
         default:
             bounds.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
         }
@@ -233,6 +273,8 @@ struct Annotation: Identifiable, Hashable, Sendable {
         copy.shape = switch shape {
         case let .arrow(start, end): .arrow(move(start), move(end))
         case let .line(start, end): .line(move(start), move(end))
+        case let .curvedArrow(start, control, end): .curvedArrow(move(start), move(control), move(end))
+        case let .stamp(rect, stamp): .stamp(move(rect), stamp)
         case let .rectangle(rect): .rectangle(move(rect))
         case let .ellipse(rect): .ellipse(move(rect))
         case let .highlight(rect): .highlight(move(rect))
@@ -261,6 +303,12 @@ struct Annotation: Identifiable, Hashable, Sendable {
             maxY = max(maxY, point.y)
         }
         return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
+    static func distance(from point: CGPoint, toPolyline points: [CGPoint]) -> CGFloat {
+        guard let first = points.first else { return .infinity }
+        guard points.count > 1 else { return hypot(point.x - first.x, point.y - first.y) }
+        return zip(points, points.dropFirst()).map { distance(from: point, toSegment: $0, $1) }.min() ?? .infinity
     }
 
     static func distance(from point: CGPoint, toSegment start: CGPoint, _ end: CGPoint) -> CGFloat {

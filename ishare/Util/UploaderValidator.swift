@@ -9,6 +9,7 @@ enum UploaderIssue: Equatable, Sendable {
     case missingS3Configuration
     case invalidS3Endpoint
     case missingS3Field(String)
+    case invalidPresignedExpiry
 
     static let malformedTemplateFormat = "The %@ template has unbalanced {{ }} placeholders"
     static let missingS3FieldFormat = "The S3 %@ is required"
@@ -23,6 +24,7 @@ enum UploaderIssue: Equatable, Sendable {
         case .missingS3Configuration: "S3 uploaders need an S3 configuration"
         case .invalidS3Endpoint: "The S3 endpoint must be a valid URL"
         case .missingS3Field: Self.missingS3FieldFormat
+        case .invalidPresignedExpiry: "Link expiry must be between 1 second and 7 days"
         }
     }
 
@@ -126,6 +128,9 @@ enum UploaderValidator {
         }
         if let template = configuration.publicURL, !isWellFormedTemplate(template) {
             issues.append(.malformedTemplate(field: "public URL"))
+        }
+        if let expiry = configuration.presignedExpiry, !S3Configuration.presignedExpiryRange.contains(expiry) {
+            issues.append(.invalidPresignedExpiry)
         }
         return issues
     }

@@ -51,6 +51,15 @@ struct LocalizationTests {
         ]
         keys.formUnion(issues.map(\.messageKey))
         keys.formUnion(["response URL", "deletion URL", "key", "public URL", "bucket", "region", "access key ID", "secret access key"])
+        keys.formUnion(OnboardingStep.allCases.flatMap { [$0.title, $0.subtitle] })
+        keys.formUnion(HistoryKindFilter.allCases.map(\.title))
+        keys.formUnion([
+            "Use Imgur", "Free anonymous image hosting, ready to go.",
+            "Import .iscu File…", "Load a custom uploader shared by your server or a friend.",
+            "Set Up an Uploader…", "Configure your own server or S3-compatible storage in Settings.",
+            "Capture Region", "Capture Window", "Capture Screen", "Record Screen", "Open Main Menu", "Open History Window",
+            "Copy", "Copy URL", "Open", "Edit", "Delete",
+        ])
         return keys
     }
 

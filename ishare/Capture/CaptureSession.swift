@@ -23,10 +23,15 @@ enum CaptureSession {
     static func captureImage(_ type: CaptureType, display: Int = 1, options: CaptureOptions = .standard) async {
         guard !isCapturingImage else { return }
         isCapturingImage = true
+        let wantsDestinationChoice = DestinationChooser.isRequested()
         Log.capture.info("Starting \(type.rawValue, privacy: .public) capture on display \(display)")
         let captured = await ImageCaptureFlow.capture(type: type, display: display)
         isCapturingImage = false
         guard let captured else { return }
+        var options = options
+        if wantsDestinationChoice, let target = DestinationChooser.choose() {
+            options.destinations = [target]
+        }
         do {
             let fileURL = try ImageCaptureFlow.save(captured)
             Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
@@ -73,11 +78,16 @@ enum CaptureSession {
     static func stopRecording() {
         let pending = pendingRecording ?? (false, .standard)
         pendingRecording = nil
+        let wantsDestinationChoice = DestinationChooser.isRequested()
         Task { @MainActor in
             ContentSharingPickerManager.shared.deactivatePicker()
             switch await AppDelegate.shared.screenRecorder.stop() {
             case let .success(url):
-                await finishRecording(url, gif: pending.gif, options: pending.options)
+                var options = pending.options
+                if wantsDestinationChoice, let target = DestinationChooser.choose() {
+                    options.destinations = [target]
+                }
+                await finishRecording(url, gif: pending.gif, options: options)
             case let .failure(error):
                 Log.capture.error("Stopping the recording failed: \(error.localizedDescription, privacy: .public)")
             }
@@ -86,9 +96,21 @@ enum CaptureSession {
 
     private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions) async {
         var fileURL = url
-        if gif {
+        var isGIF = false
+        if Defaults[.trimBeforeSaving] {
+            switch await RecordingTrimWindow.present(url) {
+            case .keepOriginal:
+                break
+            case let .trimmed(trimmedURL):
+                fileURL = trimmedURL
+            case let .exportedGIF(gifURL):
+                fileURL = gifURL
+                isGIF = true
+            }
+        }
+        if gif, !isGIF {
             do {
-                fileURL = try await exportGif(from: url, frameRate: Defaults[.gifFrameRate].rawValue)
+                fileURL = try await RecordingConversions.convertToGIF(fileURL, range: nil, preset: .current, deletingSource: true)
             } catch {
                 Log.capture.error("GIF export failed: \(error.localizedDescription, privacy: .public)")
                 BezelNotification.show(messageText: "GIF export failed".localized(), icon: ToastIcon)
@@ -135,7 +157,7 @@ enum CaptureSession {
         }
 
         await showToast(fileURL: fileURL)
-        NSSound.beep()
+        SoundPlayer.play(.capture)
         if !saveToDisk {
             try? FileManager.default.removeItem(at: fileURL)
         }

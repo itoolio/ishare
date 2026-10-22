@@ -10,6 +10,15 @@ extension Color {
 
 struct MainMenuView: View {
     @ObservedObject private var recorder = AppDelegate.shared.screenRecorder
+    @ObservedObject private var menu = MenuController.shared
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings: OpenSettingsAction
+    @FocusState private var hasKeyboardFocus: Bool
+    @State private var focusedTarget: MenuFocusTarget?
+    @State private var previewedItem: HistoryItem?
+    @State private var hoveredRecentItem: HistoryItem?
+    @State private var isHoveringPreview = false
+    @State private var previewTask: Task<Void, Never>?
 
     @Default(.copyToClipboard) var copyToClipboard
     @Default(.openInFinder) var openInFinder
@@ -37,6 +46,21 @@ struct MainMenuView: View {
         }
         .padding(12)
         .frame(width: 320)
+        .environment(\.menuFocusedTarget, focusedTarget)
+        .focusable()
+        .focusEffectDisabled()
+        .focused($hasKeyboardFocus)
+        .onKeyPress(phases: .down) { press in
+            handleKeyPress(press)
+        }
+        .onAppear(perform: prepareKeyboardFocus)
+        .onChange(of: menu.isPresented) { _, presented in
+            if presented {
+                prepareKeyboardFocus()
+            } else {
+                closePreview()
+            }
+        }
         .rotationEffect(aussieMode ? .degrees(180) : .zero)
     }
 
@@ -62,6 +86,7 @@ struct MainMenuView: View {
                 .buttonStyle(MenuIconButtonStyle())
                 .help("Settings".localized())
                 .keyboardShortcut(",")
+                .menuFocusRing(.settings, shape: .circle)
                 .accessibilityIdentifier("menu.settings")
             moreMenu
         }
@@ -85,6 +110,12 @@ struct MainMenuView: View {
                     NSWorkspace.shared.open(URL(string: "https://github.com/sponsors/castdrian")!)
                 }
             #endif
+            Button("Welcome Guide…".localized()) {
+                dismissMenu()
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: Onboarding.windowID)
+            }
+            .accessibilityIdentifier("menu.onboarding")
             Divider()
             Button("Quit".localized()) {
                 NSApplication.shared.terminate(nil)
@@ -125,11 +156,13 @@ struct MainMenuView: View {
     private var captureRow: some View {
         HStack(spacing: 8) {
             ActionTile(symbol: "rectangle.dashed", title: "Region", shortcut: .captureRegion, identifier: "menu.capture.region") {
-                run { await CaptureSession.captureImage(.REGION) }
+                triggerCapture(0)
             }
+            .menuFocusRing(.capture(0))
             ActionTile(symbol: "macwindow", title: "Window", shortcut: .captureWindow, identifier: "menu.capture.window") {
-                run { await CaptureSession.captureImage(.WINDOW) }
+                triggerCapture(1)
             }
+            .menuFocusRing(.capture(1))
             if NSScreen.screens.count > 1 {
                 Menu {
                     ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { index, screen in
@@ -143,15 +176,18 @@ struct MainMenuView: View {
                 .menuStyle(.button)
                 .buttonStyle(ActionTileStyle())
                 .menuIndicator(.hidden)
+                .menuFocusRing(.capture(2))
                 .accessibilityIdentifier("menu.capture.screen")
             } else {
                 ActionTile(symbol: "display", title: "Screen", shortcut: .captureScreen, identifier: "menu.capture.screen") {
-                    run { await CaptureSession.captureImage(.SCREEN) }
+                    triggerCapture(2)
                 }
+                .menuFocusRing(.capture(2))
             }
             ActionTile(symbol: "arrow.up.and.down.text.horizontal", title: "Scrolling", shortcut: .captureScrolling, identifier: "menu.capture.scrolling") {
-                run { await CaptureSession.captureImage(.SCROLLING) }
+                triggerCapture(3)
             }
+            .menuFocusRing(.capture(3))
         }
     }
 
@@ -197,6 +233,7 @@ struct MainMenuView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .menuFocusRing(.stopRecording)
             .accessibilityIdentifier("menu.record.stop")
         } else {
             HStack(spacing: 8) {
@@ -209,6 +246,7 @@ struct MainMenuView: View {
                 ) {
                     run { CaptureSession.toggleRecording(gif: recordsGIF) }
                 }
+                .menuFocusRing(.record(0))
                 WideActionButton(
                     symbol: "rectangle.dashed.badge.record",
                     title: "Region",
@@ -217,6 +255,7 @@ struct MainMenuView: View {
                 ) {
                     run { CaptureSession.toggleRecording(gif: recordsGIF, region: true) }
                 }
+                .menuFocusRing(.record(1))
             }
         }
     }
@@ -224,21 +263,27 @@ struct MainMenuView: View {
     private var afterCaptureSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
-                ToggleChip(symbol: "doc.on.clipboard", title: "Copy to Clipboard", isOn: $copyToClipboard)
-                ToggleChip(symbol: "internaldrive", title: "Save to Disk", isOn: Binding(
-                    get: { saveToDisk },
-                    set: { saveToDisk = $0; if !$0 { openInFinder = false } }
-                ))
-                ToggleChip(symbol: "folder", title: "Open in Finder", isOn: $openInFinder)
+                ToggleChip(symbol: "doc.on.clipboard", title: "Copy to Clipboard", isOn: chipBindings[0])
+                    .menuFocusRing(.chip(0), shape: .circle)
+                ToggleChip(symbol: "internaldrive", title: "Save to Disk", isOn: chipBindings[1])
+                    .menuFocusRing(.chip(1), shape: .circle)
+                ToggleChip(symbol: "folder", title: "Open in Finder", isOn: chipBindings[2])
                     .disabled(!saveToDisk)
-                ToggleChip(symbol: "icloud.and.arrow.up", title: "Upload Media", isOn: $uploadMedia)
-                ToggleChip(symbol: "pencil.tip.crop.circle", title: "Open Editor", isOn: $openEditorAfterCapture)
+                    .menuFocusRing(.chip(2), shape: .circle)
+                ToggleChip(symbol: "icloud.and.arrow.up", title: "Upload Media", isOn: chipBindings[3])
+                    .menuFocusRing(.chip(3), shape: .circle)
+                ToggleChip(symbol: "pencil.tip.crop.circle", title: "Open Editor", isOn: chipBindings[4])
+                    .menuFocusRing(.chip(4), shape: .circle)
                 Divider()
                     .frame(height: 22)
-                ShareChip(image: airdropIcon, title: "AirDrop", isOn: $builtInShare.airdrop)
-                ShareChip(image: icon(forAppWithName: "com.apple.Photos"), title: "Photos", isOn: $builtInShare.photos)
-                ShareChip(image: icon(forAppWithName: "com.apple.MobileSMS"), title: "Messages", isOn: $builtInShare.messages)
-                ShareChip(image: icon(forAppWithName: "com.apple.Mail"), title: "Mail", isOn: $builtInShare.mail)
+                ShareChip(image: airdropIcon, title: "AirDrop", isOn: chipBindings[5])
+                    .menuFocusRing(.chip(5), shape: .circle)
+                ShareChip(image: icon(forAppWithName: "com.apple.Photos"), title: "Photos", isOn: chipBindings[6])
+                    .menuFocusRing(.chip(6), shape: .circle)
+                ShareChip(image: icon(forAppWithName: "com.apple.MobileSMS"), title: "Messages", isOn: chipBindings[7])
+                    .menuFocusRing(.chip(7), shape: .circle)
+                ShareChip(image: icon(forAppWithName: "com.apple.Mail"), title: "Mail", isOn: chipBindings[8])
+                    .menuFocusRing(.chip(8), shape: .circle)
             }
             Text(afterCaptureSummary)
                 .font(.system(size: 11))
@@ -311,6 +356,8 @@ struct MainMenuView: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .help("Upload Destination".localized())
+        .menuFocusRing(.destination, shape: .roundedRectangle(13))
+        .accessibilityValue(destinationTitle)
         .accessibilityIdentifier("menu.destination")
     }
 
@@ -329,13 +376,15 @@ struct MainMenuView: View {
 
     private var recentStrip: some View {
         HStack(spacing: 6) {
-            ForEach(uploadHistory.prefix(5), id: \.self) { item in
-                RecentUploadThumbnail(item: item)
+            ForEach(Array(uploadHistory.prefix(5).enumerated()), id: \.element) { index, item in
+                RecentUploadThumbnail(item: item, index: index) { hovering in
+                    hoverRecent(hovering ? item : nil)
+                }
+                .menuFocusRing(.recent(index), shape: .roundedRectangle(8))
             }
             Spacer(minLength: 0)
             Button {
-                dismissMenu()
-                openHistoryWindow(uploadHistory: uploadHistory)
+                openHistory()
             } label: {
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 14, weight: .medium))
@@ -344,8 +393,23 @@ struct MainMenuView: View {
             }
             .buttonStyle(ActionTileStyle())
             .help("Open History Window".localized())
+            .menuFocusRing(.history)
             .accessibilityIdentifier("menu.history")
         }
+        .overlay(alignment: .bottomLeading) {
+            if let previewedItem {
+                RecentUploadPreview(item: previewedItem, uploaderName: previewedItem.uploaderName(among: CustomUploader.allCases)) { hovering in
+                    isHoveringPreview = hovering
+                    schedulePreviewUpdate()
+                } onFinish: {
+                    closePreview()
+                }
+                .offset(y: -52)
+                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
+            }
+        }
+        .animation(.snappy(duration: 0.18), value: previewedItem)
+        .zIndex(1)
     }
 
     private var footer: some View {
@@ -353,10 +417,151 @@ struct MainMenuView: View {
             FooterButton(symbol: "pencil.and.scribble", title: "Edit Image…") {
                 run { await ImageEditor.chooseAndEdit() }
             }
+            .menuFocusRing(.footer(0))
+            .accessibilityIdentifier("menu.editImage")
             FooterButton(symbol: "doc.on.clipboard", title: "Upload Clipboard") {
                 run { await AppState.uploadPasteboard() }
             }
+            .menuFocusRing(.footer(1))
+            .accessibilityIdentifier("menu.uploadClipboard")
         }
+    }
+
+    private var chipBindings: [Binding<Bool>] {
+        [
+            $copyToClipboard,
+            Binding(get: { saveToDisk }, set: { saveToDisk = $0; if !$0 { openInFinder = false } }),
+            $openInFinder,
+            $uploadMedia,
+            $openEditorAfterCapture,
+            $builtInShare.airdrop,
+            $builtInShare.photos,
+            $builtInShare.messages,
+            $builtInShare.mail,
+        ]
+    }
+
+    private var focusRows: [[MenuFocusTarget]] {
+        var rows: [[MenuFocusTarget]] = [[.destination, .settings], (0 ..< 4).map(MenuFocusTarget.capture)]
+        rows.append(recorder.isRunning ? [.stopRecording] : [.record(0), .record(1)])
+        rows.append(chipBindings.indices.map(MenuFocusTarget.chip))
+        if !uploadHistory.isEmpty {
+            rows.append((0 ..< min(5, uploadHistory.count)).map(MenuFocusTarget.recent) + [.history])
+        }
+        rows.append([.footer(0), .footer(1)])
+        return rows
+    }
+
+    private func prepareKeyboardFocus() {
+        focusedTarget = nil
+        hasKeyboardFocus = true
+    }
+
+    private func handleKeyPress(_ press: KeyPress) -> KeyPress.Result {
+        let directions: [KeyEquivalent: MenuFocusDirection] = [.upArrow: .up, .downArrow: .down, .leftArrow: .left, .rightArrow: .right]
+        if let direction = directions[press.key] {
+            closePreview()
+            focusedTarget = MenuFocusNavigator.move(from: focusedTarget, aussieMode ? direction.flipped : direction, in: focusRows)
+            return .handled
+        }
+        if press.key == .escape {
+            dismissMenu()
+            return .handled
+        }
+        if press.key == .return || press.key == .space {
+            guard let focusedTarget else { return .ignored }
+            activate(focusedTarget)
+            return .handled
+        }
+        if press.modifiers.isDisjoint(with: [.command, .control, .option]),
+           let character = press.characters.first,
+           let index = MenuFocusNavigator.captureIndex(forKey: character)
+        {
+            triggerCapture(index)
+            return .handled
+        }
+        return .ignored
+    }
+
+    private func activate(_ target: MenuFocusTarget) {
+        switch target {
+        case .destination:
+            selectNextDestination()
+        case .settings:
+            dismissMenu()
+            NSApp.activate(ignoringOtherApps: true)
+            openSettings()
+        case let .capture(index):
+            triggerCapture(index)
+        case let .record(index):
+            run { CaptureSession.toggleRecording(gif: recordsGIF, region: index == 1) }
+        case .stopRecording:
+            CaptureSession.stopRecording()
+            dismissMenu()
+        case let .chip(index):
+            guard chipBindings.indices.contains(index), index != 2 || saveToDisk else { return }
+            chipBindings[index].wrappedValue.toggle()
+        case let .recent(index):
+            guard uploadHistory.indices.contains(index) else { return }
+            HistoryActions.copyURL(uploadHistory[index])
+        case .history:
+            openHistory()
+        case let .footer(index):
+            if index == 0 {
+                run { await ImageEditor.chooseAndEdit() }
+            } else {
+                run { await AppState.uploadPasteboard() }
+            }
+        }
+    }
+
+    private func triggerCapture(_ index: Int) {
+        let types: [CaptureType] = [.REGION, .WINDOW, .SCREEN, .SCROLLING]
+        guard types.indices.contains(index) else { return }
+        let type = types[index]
+        run { await CaptureSession.captureImage(type) }
+    }
+
+    private func selectNextDestination() {
+        let destinations = [UploadDestination.builtIn(.IMGUR)] + CustomUploader.allCases.map { UploadDestination.custom($0.id) }
+        let current = destinations.firstIndex(of: uploadDestination) ?? -1
+        select(destinations[(current + 1) % destinations.count])
+    }
+
+    private func openHistory() {
+        dismissMenu()
+        openHistoryWindow(uploadHistory: uploadHistory)
+    }
+
+    private func hoverRecent(_ item: HistoryItem?) {
+        hoveredRecentItem = item
+        schedulePreviewUpdate()
+    }
+
+    private func schedulePreviewUpdate() {
+        previewTask?.cancel()
+        if let target = hoveredRecentItem {
+            guard target != previewedItem else { return }
+            let delay: Duration = previewedItem == nil ? .milliseconds(400) : .milliseconds(120)
+            previewTask = Task { @MainActor in
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled else { return }
+                previewedItem = target
+            }
+        } else if !isHoveringPreview, previewedItem != nil {
+            previewTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                previewedItem = nil
+            }
+        }
+    }
+
+    private func closePreview() {
+        previewTask?.cancel()
+        previewedItem = nil
+        hoveredRecentItem = nil
+        isHoveringPreview = false
     }
 
     private func dismissMenu() {
@@ -561,35 +766,111 @@ struct FooterButton: View {
 
 struct RecentUploadThumbnail: View {
     let item: HistoryItem
+    let index: Int
+    let onHover: (Bool) -> Void
 
     var body: some View {
         Button {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(item.fileUrl ?? "", forType: .string)
-            BezelNotification.show(messageText: "Copied URL".localized(), icon: ToastIcon)
+            HistoryActions.copyURL(item)
         } label: {
-            HistoryThumbnail(item: item)
+            HistoryThumbnail(item: item, pointSize: 44)
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.primary.opacity(0.1), lineWidth: 1))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(item.fileUrl ?? "")
-        .contextMenu {
-            Button("Copy URL".localized()) {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(item.fileUrl ?? "", forType: .string)
-            }
-            Button("Open in Browser".localized()) {
-                if let url = item.fileUrl.flatMap(URL.init(string:)) {
-                    NSWorkspace.shared.open(url)
+        .onHover(perform: onHover)
+        .contextMenu { HistoryItemMenuItems(item: item, showsFinder: false) }
+        .accessibilityLabel(item.fileName)
+        .accessibilityIdentifier("menu.recent.\(index)")
+    }
+}
+
+struct RecentUploadPreview: View {
+    let item: HistoryItem
+    let uploaderName: String?
+    let onHover: (Bool) -> Void
+    let onFinish: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Color.clear
+                .frame(width: 272, height: 150)
+                .overlay { HistoryThumbnail(item: item, pointSize: 280, contentMode: .fit) }
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.fileName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let url = item.fileUrl {
+                    Text(url)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                if !metadata.isEmpty {
+                    Text(metadata)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
-            if let path = item.localPath, FileManager.default.fileExists(atPath: path) {
-                Button("Open in Editor".localized()) {
-                    Task { @MainActor in await ImageEditor.editAsNewCapture(sourceURL: URL(fileURLWithPath: path)) }
+            HStack(spacing: 6) {
+                ToastActionButton(symbol: "doc.on.doc", title: "Copy URL", identifier: "menu.preview.copy") {
+                    HistoryActions.copyURL(item)
+                    onFinish()
                 }
+                .disabled(item.fileUrl == nil)
+                ToastActionButton(symbol: "safari", title: "Open", iconOnly: true, identifier: "menu.preview.open") {
+                    onFinish()
+                    MenuController.shared.dismiss()
+                    HistoryActions.open(item)
+                }
+                if HistoryActions.canEdit(item) {
+                    ToastActionButton(symbol: "pencil.tip.crop.circle", title: "Edit", iconOnly: true, identifier: "menu.preview.edit") {
+                        onFinish()
+                        HistoryActions.edit(item)
+                    }
+                }
+                Menu {
+                    if item.canDeleteFromServer {
+                        Button("Delete from Server…".localized(), role: .destructive) {
+                            onFinish()
+                            HistoryActions.confirmDeleteFromServer(item)
+                        }
+                    }
+                    Button("Remove from History".localized()) {
+                        onFinish()
+                        HistoryActions.removeFromHistory(item)
+                    }
+                } label: {
+                    ToastActionLabel(symbol: "trash", title: "Delete", iconOnly: true)
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Delete".localized())
+                .accessibilityIdentifier("menu.preview.delete")
             }
         }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.regularMaterial)
+                .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+        .onHover(perform: onHover)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("menu.preview")
+    }
+
+    private var metadata: String {
+        let date = item.date?.formatted(date: .abbreviated, time: .shortened)
+        return [date, uploaderName].compactMap { $0 }.joined(separator: " · ")
     }
 }

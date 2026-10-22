@@ -42,23 +42,41 @@ enum SelectionStyle {
     static let borderColor = NSColor.white
     static var accentColor: NSColor { .controlAccentColor }
 
-    static func drawPill(_ text: String, near anchor: CGPoint, in bounds: CGRect, above: Bool = true) {
+    private static let pillPadding = CGSize(width: 8, height: 4)
+
+    private static func pillString(_ text: String) -> NSAttributedString {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
             .foregroundColor: NSColor.white,
         ]
-        let string = NSAttributedString(string: text, attributes: attributes)
+        return NSAttributedString(string: text, attributes: attributes)
+    }
+
+    static func drawPill(_ text: String, near anchor: CGPoint, in bounds: CGRect, above: Bool = true) {
+        let string = pillString(text)
         let textSize = string.size()
-        let padding = CGSize(width: 8, height: 4)
-        var frame = CGRect(
-            x: anchor.x, y: above ? anchor.y + 6 : anchor.y - textSize.height - padding.height * 2 - 6,
-            width: textSize.width + padding.width * 2, height: textSize.height + padding.height * 2
+        let frame = CGRect(
+            x: anchor.x, y: above ? anchor.y + 6 : anchor.y - textSize.height - pillPadding.height * 2 - 6,
+            width: textSize.width + pillPadding.width * 2, height: textSize.height + pillPadding.height * 2
         )
+        drawPill(string, in: frame, clampedTo: bounds)
+    }
+
+    static func drawPill(_ text: String, centeredAt center: CGPoint, in bounds: CGRect) {
+        let string = pillString(text)
+        let textSize = string.size()
+        let size = CGSize(width: textSize.width + pillPadding.width * 2, height: textSize.height + pillPadding.height * 2)
+        let frame = CGRect(x: center.x - size.width / 2, y: center.y - size.height / 2, width: size.width, height: size.height)
+        drawPill(string, in: frame, clampedTo: bounds)
+    }
+
+    private static func drawPill(_ string: NSAttributedString, in proposed: CGRect, clampedTo bounds: CGRect) {
+        var frame = proposed
         frame.origin.x = min(max(bounds.minX + 4, frame.origin.x), bounds.maxX - frame.width - 4)
         frame.origin.y = min(max(bounds.minY + 4, frame.origin.y), bounds.maxY - frame.height - 4)
         NSColor.black.withAlphaComponent(0.72).setFill()
         NSBezierPath(roundedRect: frame, xRadius: frame.height / 2, yRadius: frame.height / 2).fill()
-        string.draw(at: CGPoint(x: frame.minX + padding.width, y: frame.minY + padding.height))
+        string.draw(at: CGPoint(x: frame.minX + pillPadding.width, y: frame.minY + pillPadding.height))
     }
 
     static let cameraCursor: NSCursor = {

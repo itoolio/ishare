@@ -18,6 +18,34 @@
 				<string>com.castdrian.ishare</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
+			<key>CFBundleTypeName</key>
+			<string>ShareX custom uploader</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.getsharex.sxcu</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
+			<key>CFBundleTypeName</key>
+			<string>ishare settings</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>dev.adrian.ishare.settings</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
@@ -36,6 +64,37 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>ishare shows your camera in a bubble during recordings if you turn on the webcam overlay</string>
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>Upload with ishare</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>uploadFiles</string>
+			<key>NSPortName</key>
+			<string>ishare</string>
+			<key>NSRequiredContext</key>
+			<dict/>
+			<key>NSSendFileTypes</key>
+			<array>
+				<string>public.image</string>
+				<string>public.movie</string>
+				<string>public.data</string>
+			</array>
+			<key>NSSendTypes</key>
+			<array>
+				<string>public.file-url</string>
+				<string>NSFilenamesPboardType</string>
+				<string>public.png</string>
+				<string>public.tiff</string>
+			</array>
+		</dict>
+	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
@@ -64,6 +123,43 @@
 				<key>public.mime-type</key>
 				<array>
 					<string>application/json</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>ishare settings</string>
+			<key>UTTypeIdentifier</key>
+			<string>dev.adrian.ishare.settings</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ishare-settings</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>ShareX custom uploader</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.getsharex.sxcu</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sxcu</string>
 				</array>
 			</dict>
 		</dict>

@@ -17,6 +17,7 @@ extension KeyboardShortcuts.Name {
     static let recordScreenForceUpload = Self("recordScreenForceUpload", default: .init(.z, modifiers: [.shift, .control, .option]))
     static let recordGifForceUpload = Self("recordGifForceUpload", default: .init(.g, modifiers: [.shift, .control, .option]))
     static let captureScrolling = Self("captureScrolling", default: .init(.s, modifiers: [.control, .option]))
+    static let captureLastRegion = Self("captureLastRegion")
     static let recordRegion = Self("recordRegion", default: .init(.r, modifiers: [.control, .option]))
     static let recordRegionGif = Self("recordRegionGif", default: .init(.f, modifiers: [.control, .option]))
     static let openEditor = Self("openEditor", default: .init(.e, modifiers: [.control, .option]))

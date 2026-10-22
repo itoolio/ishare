@@ -23,6 +23,20 @@ enum UploadTarget: Sendable {
             HTTPUploader(uploader: uploader)
         }
     }
+
+    var destination: UploadDestination {
+        switch self {
+        case .imgur: .builtIn(.IMGUR)
+        case let .custom(uploader): .custom(uploader.id)
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .imgur: "Imgur"
+        case let .custom(uploader): uploader.name
+        }
+    }
 }
 
 enum UploadFailure: LocalizedError, Equatable {
@@ -31,6 +45,15 @@ enum UploadFailure: LocalizedError, Equatable {
     case http(status: Int, body: String?)
     case responseParsing(String)
     case transport(String)
+    case unsupportedFile(destination: String, fileExtension: String)
+
+    var isRetryable: Bool {
+        switch self {
+        case .transport: true
+        case let .http(status, _): status >= 500 || status == 408 || status == 429
+        default: false
+        }
+    }
 
     var errorDescription: String? {
         switch self {
@@ -44,6 +67,8 @@ enum UploadFailure: LocalizedError, Equatable {
             "Couldn't read the upload URL from the response (\(detail))"
         case let .transport(detail):
             detail
+        case let .unsupportedFile(destination, fileExtension):
+            "\(destination) doesn't accept .\(fileExtension) files"
         }
     }
 }
@@ -51,6 +76,11 @@ enum UploadFailure: LocalizedError, Equatable {
 enum MimeType {
     static func forFile(_ url: URL) -> String {
         forExtension(url.pathExtension)
+    }
+
+    static func isImageOrVideo(_ url: URL) -> Bool {
+        guard let type = UTType(filenameExtension: url.pathExtension.lowercased()) else { return false }
+        return type.conforms(to: .image) || type.conforms(to: .audiovisualContent)
     }
 
     static func forExtension(_ ext: String) -> String {
@@ -64,6 +94,17 @@ enum MimeType {
         case "heic": return "image/heic"
         case "tiff", "tif": return "image/tiff"
         case "webp": return "image/webp"
+        case "txt", "text", "log": return "text/plain; charset=utf-8"
+        case "md", "markdown": return "text/markdown; charset=utf-8"
+        case "json": return "application/json; charset=utf-8"
+        case "html", "htm": return "text/html; charset=utf-8"
+        case "xml": return "application/xml; charset=utf-8"
+        case "css": return "text/css; charset=utf-8"
+        case "js", "mjs": return "text/javascript; charset=utf-8"
+        case "csv": return "text/csv; charset=utf-8"
+        case "yaml", "yml": return "application/yaml; charset=utf-8"
+        case "swift", "py", "ts", "go", "rs", "sh", "sql", "rb", "java", "kt", "c", "h", "cpp", "cs", "php":
+            return "text/plain; charset=utf-8"
         default:
             return UTType(filenameExtension: ext.lowercased())?.preferredMIMEType ?? "application/octet-stream"
         }
@@ -102,6 +143,7 @@ enum UploadService {
         let response = await request.serializingData(emptyResponseCodes: successCodes, emptyRequestMethods: [.put, .delete, .post, .get]).response
         let status = response.response?.statusCode ?? 0
         let data = response.data ?? Data()
+        UploadDiagnostics.recorder?.record(response.response, body: data)
         if let error = response.error, response.response == nil {
             throw UploadFailure.transport(error.underlyingError?.localizedDescription ?? error.localizedDescription)
         }

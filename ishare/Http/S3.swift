@@ -11,12 +11,15 @@ struct S3Configuration: Codable, Hashable, Sendable {
     var keyTemplate: String?
     var acl: String?
     var publicURL: String?
+    var presignedExpiry: Int?
 
     static let defaultKeyTemplate = "{{filename}}"
+    static let presignedExpiryRange = 1 ... 604_800
 
     init(
         endpoint: String, region: String, bucket: String, accessKeyId: String, secretAccessKey: String,
-        pathStyle: Bool? = nil, keyTemplate: String? = nil, acl: String? = nil, publicURL: String? = nil
+        pathStyle: Bool? = nil, keyTemplate: String? = nil, acl: String? = nil, publicURL: String? = nil,
+        presignedExpiry: Int? = nil
     ) {
         self.endpoint = endpoint
         self.region = region
@@ -27,6 +30,7 @@ struct S3Configuration: Codable, Hashable, Sendable {
         self.keyTemplate = keyTemplate
         self.acl = acl
         self.publicURL = publicURL
+        self.presignedExpiry = presignedExpiry
     }
 
     enum CodingKeys: String, CodingKey {
@@ -39,6 +43,7 @@ struct S3Configuration: Codable, Hashable, Sendable {
         case keyTemplate = "keytemplate"
         case acl
         case publicURL = "publicurl"
+        case presignedExpiry = "presignedexpiry"
     }
 
     init(from decoder: any Decoder) throws {
@@ -52,6 +57,7 @@ struct S3Configuration: Codable, Hashable, Sendable {
         keyTemplate = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "keytemplate"))
         acl = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "acl"))
         publicURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "publicurl"))
+        presignedExpiry = try container.decodeDynamicIfPresent(Int.self, forKey: .key(named: "presignedexpiry"))
     }
 
     var usesPathStyle: Bool { pathStyle ?? true }
@@ -244,6 +250,43 @@ struct SigV4Signer: Sendable {
         return signed
     }
 
+    static let unsignedPayload = "UNSIGNED-PAYLOAD"
+
+    func presignedURL(method: String = "GET", url: URL, expires: Int, date: Date = .init()) -> URL? {
+        let (amzDate, shortDate) = Self.timestamps(for: date)
+        let scope = "\(shortDate)/\(region)/\(service)/aws4_request"
+        let authItems = [
+            ("X-Amz-Algorithm", "AWS4-HMAC-SHA256"),
+            ("X-Amz-Credential", "\(accessKeyId)/\(scope)"),
+            ("X-Amz-Date", amzDate),
+            ("X-Amz-Expires", String(expires)),
+            ("X-Amz-SignedHeaders", "host"),
+        ]
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        let existing = components.percentEncodedQuery.map { [$0] } ?? []
+        let encodedAuth = authItems.map { "\(S3Path.encodeSegment($0.0))=\(S3Path.encodeSegment($0.1))" }
+        components.percentEncodedQuery = (existing + encodedAuth).joined(separator: "&")
+        guard let unsignedURL = components.url else { return nil }
+        let canonicalRequest = [
+            method.uppercased(),
+            canonicalURI(for: unsignedURL),
+            canonicalQuery(for: unsignedURL),
+            "host:\(hostHeader(for: unsignedURL))\n",
+            "host",
+            Self.unsignedPayload,
+        ].joined(separator: "\n")
+        let stringToSign = [
+            "AWS4-HMAC-SHA256",
+            amzDate,
+            scope,
+            Self.sha256Hex(Data(canonicalRequest.utf8)),
+        ].joined(separator: "\n")
+        let signature = HMAC<SHA256>.authenticationCode(for: Data(stringToSign.utf8), using: derivedKey(shortDate: shortDate))
+            .map { String(format: "%02x", $0) }.joined()
+        components.percentEncodedQuery = (components.percentEncodedQuery ?? "") + "&X-Amz-Signature=\(signature)"
+        return components.url
+    }
+
     private func derivedKey(shortDate: String) -> SymmetricKey {
         let secret = SymmetricKey(data: Data("AWS4\(secretAccessKey)".utf8))
         let dateKey = hmac(secret, shortDate)
@@ -314,7 +357,9 @@ enum S3RequestBuilder {
         let keyContext = context ?? S3KeyContext(fileName: fileURL.lastPathComponent, date: date)
         let key = try S3KeyTemplate.render(configuration.keyTemplate, context: keyContext)
         guard let objectURL = configuration.objectURL(for: key) else { throw BuildError.invalidEndpoint }
-        guard let publicURL = try configuration.publicURL(for: key) else { throw BuildError.invalidPublicURL }
+        guard let publicURL = try resultURL(configuration: configuration, key: key, objectURL: objectURL, date: date) else {
+            throw BuildError.invalidPublicURL
+        }
         var headers = ["Content-Type": contentType]
         if let acl = configuration.acl?.trimmingCharacters(in: .whitespaces), !acl.isEmpty {
             headers["x-amz-acl"] = acl
@@ -325,6 +370,20 @@ enum S3RequestBuilder {
         )
         let signed = signer.signedHeaders(method: "PUT", url: objectURL, headers: headers, payloadHash: payloadHash, date: date)
         return S3UploadRequest(url: objectURL, key: key, headers: signed, publicURL: publicURL)
+    }
+
+    static func resultURL(configuration: S3Configuration, key: String, objectURL: URL, date: Date) throws -> URL? {
+        guard let expiry = configuration.presignedExpiry else { return try configuration.publicURL(for: key) }
+        return presignedGetURL(configuration: configuration, objectURL: objectURL, expiry: expiry, date: date)
+    }
+
+    static func presignedGetURL(configuration: S3Configuration, objectURL: URL, expiry: Int, date: Date = .init()) -> URL? {
+        let signer = SigV4Signer(
+            accessKeyId: configuration.accessKeyId, secretAccessKey: configuration.secretAccessKey,
+            region: configuration.region
+        )
+        let clamped = min(max(expiry, S3Configuration.presignedExpiryRange.lowerBound), S3Configuration.presignedExpiryRange.upperBound)
+        return signer.presignedURL(url: objectURL, expires: clamped, date: date)
     }
 
     static func delete(configuration: S3Configuration, key: String, date: Date = .init()) throws -> (URL, [String: String]) {

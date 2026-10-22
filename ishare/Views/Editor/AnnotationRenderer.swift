@@ -58,18 +58,30 @@ enum AnnotationRenderer {
         return source.cropping(to: sourceRect.intersection(CGRect(x: 0, y: 0, width: source.width, height: source.height)))
     }
 
-    static func drawSpotlights(_ spotlights: [Annotation], canvasSize: CGSize, in context: CGContext) {
-        context.saveGState()
-        let path = CGMutablePath()
-        path.addRect(CGRect(origin: .zero, size: canvasSize))
-        for spotlight in spotlights {
-            if case let .spotlight(rect) = spotlight.shape {
-                path.addEllipse(in: rect)
-            }
+    static func spotlightPath(_ spotlight: Annotation) -> CGPath? {
+        guard case let .spotlight(rect) = spotlight.shape else { return nil }
+        switch spotlight.spotlightShape {
+        case .ellipse:
+            return CGPath(ellipseIn: rect, transform: nil)
+        case .rectangle:
+            let radius = min(8, rect.width / 2, rect.height / 2)
+            return CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
         }
-        context.addPath(path)
-        context.setFillColor(CGColor(gray: 0, alpha: 0.55))
-        context.fillPath(using: .evenOdd)
+    }
+
+    static func drawSpotlights(_ spotlights: [Annotation], canvasSize: CGSize, in context: CGContext) {
+        let canvas = CGRect(origin: .zero, size: canvasSize)
+        let dim = spotlights.map(\.dimAmount).max() ?? Annotation.defaultDimAmount
+        context.saveGState()
+        context.beginTransparencyLayer(in: canvas, auxiliaryInfo: nil)
+        context.setFillColor(CGColor(gray: 0, alpha: min(1, max(0, dim))))
+        context.fill(canvas)
+        context.setBlendMode(.clear)
+        for path in spotlights.compactMap(spotlightPath) {
+            context.addPath(path)
+            context.fillPath()
+        }
+        context.endTransparencyLayer()
         context.restoreGState()
     }
 
@@ -84,21 +96,28 @@ enum AnnotationRenderer {
 
         switch annotation.shape {
         case let .arrow(start, end):
-            drawArrow(from: start, to: end, width: annotation.lineWidth, in: context)
+            drawArrow(from: start, control: nil, to: end, annotation: annotation, in: context)
+        case let .curvedArrow(start, control, end):
+            drawArrow(from: start, control: control, to: end, annotation: annotation, in: context)
         case let .line(start, end):
+            applyDash(for: annotation, in: context)
             context.strokeLineSegments(between: [start, end])
+        case let .stamp(rect, stamp):
+            drawStamp(stamp, in: rect, color: annotation.color, context: context)
         case let .rectangle(rect):
             let path = CGPath(roundedRect: rect, cornerWidth: min(6, rect.width / 2), cornerHeight: min(6, rect.height / 2), transform: nil)
             context.addPath(path)
             if annotation.filled {
                 context.fillPath()
             } else {
+                applyDash(for: annotation, in: context)
                 context.strokePath()
             }
         case let .ellipse(rect):
             if annotation.filled {
                 context.fillEllipse(in: rect)
             } else {
+                applyDash(for: annotation, in: context)
                 context.strokeEllipse(in: rect)
             }
         case let .highlight(rect):
@@ -230,21 +249,73 @@ enum AnnotationRenderer {
         context.strokePath()
     }
 
-    static func drawArrow(from start: CGPoint, to end: CGPoint, width: CGFloat, in context: CGContext) {
-        let angle = atan2(end.y - start.y, end.x - start.x)
+    static func dashPattern(for lineWidth: CGFloat) -> [CGFloat] {
+        [max(2, lineWidth * 2.2), max(3, lineWidth * 2)]
+    }
+
+    static func applyDash(for annotation: Annotation, in context: CGContext) {
+        guard annotation.dashed else { return }
+        context.setLineCap(.butt)
+        context.setLineDash(phase: 0, lengths: dashPattern(for: annotation.lineWidth))
+    }
+
+    static func drawArrow(from start: CGPoint, control: CGPoint?, to end: CGPoint, annotation: Annotation, in context: CGContext) {
         let length = hypot(end.x - start.x, end.y - start.y)
-        let headLength = min(length * 0.6, max(14, width * 4.5))
-        let headWidth = headLength * 0.8
-        let base = CGPoint(x: end.x - cos(angle) * headLength * 0.85, y: end.y - sin(angle) * headLength * 0.85)
-        context.strokeLineSegments(between: [start, base])
-        let left = CGPoint(x: end.x - cos(angle) * headLength + sin(angle) * headWidth / 2, y: end.y - sin(angle) * headLength - cos(angle) * headWidth / 2)
-        let right = CGPoint(x: end.x - cos(angle) * headLength - sin(angle) * headWidth / 2, y: end.y - sin(angle) * headLength + cos(angle) * headWidth / 2)
+        let headLength = ArrowGeometry.headLength(for: annotation.lineWidth, length: length)
+        let endTail = control ?? start
+        let startTail = control ?? end
+        let retraction = annotation.arrowHead == .line ? 0 : headLength * 0.85
+        let startRetraction = annotation.doubleHeaded ? retraction : 0
+        context.saveGState()
+        applyDash(for: annotation, in: context)
         context.beginPath()
-        context.move(to: end)
-        context.addLine(to: left)
-        context.addLine(to: right)
-        context.closePath()
-        context.fillPath()
+        if let control {
+            let trimmed = ArrowGeometry.trimmed(start: start, control: control, end: end, startBy: startRetraction, endBy: retraction)
+            context.move(to: trimmed.start)
+            context.addQuadCurve(to: trimmed.end, control: trimmed.control)
+        } else {
+            context.move(to: ArrowGeometry.retracted(start, toward: end, by: startRetraction))
+            context.addLine(to: ArrowGeometry.retracted(end, toward: start, by: retraction))
+        }
+        context.strokePath()
+        context.restoreGState()
+        drawArrowHead(tip: end, tail: endTail, length: headLength, annotation: annotation, in: context)
+        if annotation.doubleHeaded {
+            drawArrowHead(tip: start, tail: startTail, length: headLength, annotation: annotation, in: context)
+        }
+    }
+
+    static func drawArrowHead(tip: CGPoint, tail: CGPoint, length: CGFloat, annotation: Annotation, in context: CGContext) {
+        let (left, right) = ArrowGeometry.headPoints(tip: tip, from: tail, headLength: length)
+        context.beginPath()
+        switch annotation.arrowHead {
+        case .filled:
+            context.move(to: tip)
+            context.addLine(to: left)
+            context.addLine(to: right)
+            context.closePath()
+            context.fillPath()
+        case .open:
+            context.move(to: tip)
+            context.addLine(to: left)
+            context.addLine(to: right)
+            context.closePath()
+            context.strokePath()
+        case .line:
+            context.move(to: left)
+            context.addLine(to: tip)
+            context.addLine(to: right)
+            context.strokePath()
+        }
+    }
+
+    static func drawStamp(_ stamp: Stamp, in rect: CGRect, color: RGBAColor, context: CGContext) {
+        guard rect.width >= 1, rect.height >= 1, let image = stamp.image(size: min(rect.width, rect.height), color: color) else { return }
+        let target = Stamp.fittedRect(for: image.size, in: rect)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
+        image.draw(in: target, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+        NSGraphicsContext.restoreGraphicsState()
     }
 
     static func attributes(fontSize: CGFloat, color: RGBAColor, weight: NSFont.Weight = .semibold, shadow: Bool = true) -> [NSAttributedString.Key: Any] {

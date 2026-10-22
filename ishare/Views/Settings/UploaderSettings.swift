@@ -11,7 +11,7 @@ struct UploaderSettingsView: View {
     @State private var editor: UploaderEditorTarget?
     @State private var isImportSheetPresented = false
     @State private var isAssistantPresented = false
-    @State private var testingID: UUID?
+    @State private var testedUploader: CustomUploader?
     @State private var confirmClear = false
 
     var body: some View {
@@ -63,6 +63,10 @@ struct UploaderSettingsView: View {
                 .padding(.top, 6)
             }
 
+            UploadBehaviorSettings()
+            WatchFolderSettings()
+            UploadQueueSettings()
+
             Section {
                 LabeledContent("Shortcuts".localized()) {
                     Button {
@@ -87,6 +91,10 @@ struct UploaderSettingsView: View {
                 editor = nil
             }
             .frame(width: 560, height: 600)
+        }
+        .sheet(item: $testedUploader) { uploader in
+            UploadTestSheet(uploader: uploader) { testedUploader = nil }
+                .frame(width: 560, height: 560)
         }
         .sheet(isPresented: $isImportSheetPresented) {
             ImportCustomUploaderView()
@@ -137,12 +145,9 @@ struct UploaderSettingsView: View {
                     .truncationMode(.middle)
             }
             Spacer()
-            if testingID == uploader.id {
-                ProgressView().controlSize(.small)
-            }
             Group {
                 iconButton("checkmark.circle", help: "Use") { activate(uploader) }
-                iconButton("paperplane", help: "Test Uploader") { test(uploader) }
+                iconButton("paperplane", help: "Test Uploader") { testedUploader = uploader }
                 iconButton("pencil", help: "Edit Uploader") { editor = .edit(uploader) }
                 iconButton("square.and.arrow.up", help: "Export Uploader") { export(uploader) }
                 iconButton("trash", help: "Delete Uploader") { delete(uploader) }
@@ -150,7 +155,7 @@ struct UploaderSettingsView: View {
         }
         .padding(.vertical, 2)
         .contextMenu {
-            Button("Duplicate".localized()) { save(uploader.withID(UUID())) }
+            Button("Duplicate".localized()) { UploaderStore.duplicate(uploader) }
         }
     }
 
@@ -172,10 +177,7 @@ struct UploaderSettingsView: View {
     }
 
     private func save(_ uploader: CustomUploader) {
-        var uploaders = savedCustomUploaders ?? []
-        uploaders.remove(uploader)
-        uploaders.insert(uploader)
-        savedCustomUploaders = uploaders
+        UploaderStore.save(uploader)
     }
 
     private func activate(_ uploader: CustomUploader) {
@@ -185,7 +187,8 @@ struct UploaderSettingsView: View {
     }
 
     private func delete(_ uploader: CustomUploader) {
-        savedCustomUploaders = (savedCustomUploaders ?? []).filter { $0.id != uploader.id }
+        UploaderStore.delete(uploader)
+        Defaults[.additionalUploadDestinations].removeAll { $0 == .custom(uploader.id) }
         if uploader.id == activeCustomUploader {
             activeCustomUploader = nil
             uploadType = .IMGUR
@@ -194,41 +197,15 @@ struct UploaderSettingsView: View {
     }
 
     private func clearAllUploaders() {
-        savedCustomUploaders = nil
+        UploaderStore.deleteAll()
+        Defaults[.additionalUploadDestinations].removeAll { $0 != .builtIn(.IMGUR) }
         activeCustomUploader = nil
         uploadType = .IMGUR
         uploadDestination = .builtIn(.IMGUR)
     }
 
-    private func test(_ uploader: CustomUploader) {
-        guard let icon = NSImage(named: NSImage.applicationIconName),
-              let tiff = icon.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiff),
-              let png = bitmap.representation(using: .png, properties: [:])
-        else { return }
-        let fileURL = FileManager.default.temporaryDirectory.appending(path: "ishare-test-\(UUID().uuidString.prefix(8)).png")
-        try? png.write(to: fileURL)
-        testingID = uploader.id
-        Task { @MainActor in
-            let alert = NSAlert()
-            do {
-                let outcome = try await UploadService.upload(fileURL: fileURL, to: .custom(uploader))
-                alert.alertStyle = .informational
-                alert.messageText = "Upload Successful".localized()
-                alert.informativeText = outcome.url.absoluteString
-            } catch {
-                alert.alertStyle = .critical
-                alert.messageText = "Upload Error".localized()
-                alert.informativeText = error.localizedDescription
-            }
-            testingID = nil
-            try? FileManager.default.removeItem(at: fileURL)
-            alert.runModal()
-        }
-    }
-
     private func export(_ uploader: CustomUploader) {
-        guard let data = try? uploader.toJSON() else { return }
+        guard let data = try? S3SecretStore.exporting(uploader, includeSecret: includesSecret(for: uploader)).toJSON() else { return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "iscu") ?? .json]
         panel.nameFieldStringValue = "\(uploader.name).iscu"
@@ -237,6 +214,16 @@ struct UploaderSettingsView: View {
                 try? data.write(to: url)
             }
         }
+    }
+
+    private func includesSecret(for uploader: CustomUploader) -> Bool {
+        guard uploader.kind == .s3 else { return false }
+        let alert = NSAlert()
+        alert.messageText = "Include the secret access key?".localized()
+        alert.informativeText = "Anyone with the exported file can use this key.".localized()
+        alert.addButton(withTitle: "Leave Out".localized())
+        alert.addButton(withTitle: "Include".localized())
+        return alert.runModal() == .alertSecondButtonReturn
     }
 }
 
@@ -277,6 +264,10 @@ struct UploaderEditorView: View {
     @State private var keyTemplate = "{{date}}/{{uuid}}.{{ext}}"
     @State private var acl = ""
     @State private var publicURL = ""
+    @State private var requestMethod: UploadRequestMethod = .post
+    @State private var expiringLinks = false
+    @State private var presignedExpiry = 86400
+    @State private var testedUploader: CustomUploader?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -310,6 +301,8 @@ struct UploaderEditorView: View {
                 Button("Cancel".localized(), role: .cancel, action: onCancel)
                     .keyboardShortcut(.cancelAction)
                 Spacer()
+                Button("Test Upload".localized()) { testedUploader = build() }
+                    .disabled(!issues.isEmpty)
                 Button("Save".localized()) { onSave(build()) }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!issues.isEmpty)
@@ -318,12 +311,19 @@ struct UploaderEditorView: View {
             .padding(14)
         }
         .onAppear(perform: load)
+        .sheet(item: $testedUploader) { uploader in
+            UploadTestSheet(uploader: uploader) { testedUploader = nil }
+                .frame(width: 540, height: 520)
+        }
     }
 
     @ViewBuilder
     private var customSections: some View {
         Section("Request".localized()) {
             TextField("Request URL*".localized(), text: $requestURL, prompt: Text("https://example.com/upload"))
+            Picker("Method".localized(), selection: $requestMethod) {
+                ForEach(UploadRequestMethod.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
             Picker("Body".localized(), selection: $bodyType) {
                 Text("Multipart form data".localized()).tag(RequestBodyType.multipartFormData)
                 Text("Binary".localized()).tag(RequestBodyType.binary)
@@ -365,9 +365,25 @@ struct UploaderEditorView: View {
             TextField("Key template".localized(), text: $keyTemplate)
             TextField("ACL".localized(), text: $acl, prompt: Text("public-read"))
             TextField("Public URL".localized(), text: $publicURL, prompt: Text("https://cdn.example.com/{{key}}"))
+                .disabled(expiringLinks)
             Text("Key placeholders: {{filename}}, {{name}}, {{ext}}, {{uuid}}, {{random}}, {{timestamp}}, {{date}}. Public URL placeholders: {{key}}, {{bucket}}, {{region}}, {{host}}, {{endpoint}}.".localized())
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            Toggle("Expiring links".localized(), isOn: $expiringLinks)
+            if expiringLinks {
+                LabeledContent("Links expire after".localized()) {
+                    HStack {
+                        TextField("", value: $presignedExpiry, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        Text("seconds".localized())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text("ishare returns a signed link to the private object instead of the public URL. Links can last up to 7 days (604800 seconds).".localized())
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -396,12 +412,15 @@ struct UploaderEditorView: View {
                 region = s3.region
                 bucket = s3.bucket
                 accessKeyId = s3.accessKeyId
-                secretAccessKey = s3.secretAccessKey
+                secretAccessKey = S3SecretStore.secret(for: uploader) ?? ""
                 pathStyle = s3.usesPathStyle
                 keyTemplate = s3.keyTemplate ?? ""
                 acl = s3.acl ?? ""
                 publicURL = s3.publicURL ?? ""
+                expiringLinks = s3.presignedExpiry != nil
+                presignedExpiry = s3.presignedExpiry ?? presignedExpiry
             }
+            requestMethod = uploader.requestMethod ?? .post
         }
     }
 
@@ -421,7 +440,8 @@ struct UploaderEditorView: View {
         case .s3:
             return .s3(id: id, name: name, configuration: S3Configuration(
                 endpoint: endpoint, region: region, bucket: bucket, accessKeyId: accessKeyId, secretAccessKey: secretAccessKey,
-                pathStyle: pathStyle, keyTemplate: nonEmpty(keyTemplate), acl: nonEmpty(acl), publicURL: nonEmpty(publicURL)
+                pathStyle: pathStyle, keyTemplate: nonEmpty(keyTemplate), acl: nonEmpty(acl), publicURL: nonEmpty(publicURL),
+                presignedExpiry: expiringLinks ? presignedExpiry : nil
             ))
         case .custom:
             return CustomUploader(
@@ -429,7 +449,8 @@ struct UploaderEditorView: View {
                 headers: dictionary(headers), formData: bodyType == .multipartFormData ? dictionary(formData) : nil,
                 fileFormName: bodyType == .multipartFormData ? nonEmpty(fileFormName) : nil,
                 requestBodyType: bodyType, responseURL: responseURL.trimmingCharacters(in: .whitespaces),
-                deletionURL: nonEmpty(deletionURL), deleteRequestType: nonEmpty(deletionURL) == nil ? nil : deleteMethod
+                deletionURL: nonEmpty(deletionURL), deleteRequestType: nonEmpty(deletionURL) == nil ? nil : deleteMethod,
+                requestMethod: requestMethod == .post ? nil : requestMethod
             )
         }
     }
@@ -492,7 +513,7 @@ struct ImportCustomUploaderView: View {
                         Image(systemName: "arrow.down.doc")
                             .font(.system(size: 34))
                             .foregroundStyle(.secondary)
-                        Text("Drag and drop .iscu files here or click to select".localized())
+                        Text("Drag and drop .iscu or ShareX .sxcu files here or click to select".localized())
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -520,7 +541,7 @@ struct ImportCustomUploaderView: View {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [UTType(filenameExtension: "iscu") ?? .json, .json]
+        panel.allowedContentTypes = [UTType(filenameExtension: "iscu") ?? .json, UTType(filenameExtension: ShareXImport.fileExtension) ?? .json, .json]
         Task { @MainActor in
             if await panel.beginAsyncModal() == .OK, let url = panel.url {
                 importUploader(from: url)
@@ -532,11 +553,8 @@ struct ImportCustomUploaderView: View {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
-            let uploader = try CustomUploader.fromJSON(Data(contentsOf: url))
-            var uploaders = savedCustomUploaders ?? []
-            uploaders.remove(uploader)
-            uploaders.insert(uploader)
-            savedCustomUploaders = uploaders
+            let uploader = try UploaderFile.decode(contentsOf: url)
+            UploaderStore.save(uploader)
             activeCustomUploader = uploader.id
             uploadType = .CUSTOM
             uploadDestination = .custom(uploader.id)

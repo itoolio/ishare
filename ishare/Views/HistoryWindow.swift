@@ -11,31 +11,29 @@ class WindowHolder: Sendable {
 class HistoryWindowController: NSWindowController {
     convenience init(contentView: NSView) {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: 780, height: 520),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered, defer: false
         )
-        window.center()
+        window.contentMinSize = NSSize(width: 600, height: 400)
+        window.isReleasedWhenClosed = false
         window.contentView = contentView
+        window.center()
         self.init(window: window)
-    }
-
-    override func windowDidLoad() {
-        super.windowDidLoad()
     }
 }
 
 @MainActor
 func openHistoryWindow(uploadHistory _: [HistoryItem]) {
     if WindowHolder.shared.historyWindowController == nil {
-        let historyView = HistoryGridView()
-        let hostingController = NSHostingController(rootView: historyView)
+        let hostingController = NSHostingController(rootView: HistoryGridView())
+        hostingController.sizingOptions = []
         let windowController = HistoryWindowController(contentView: hostingController.view)
+        windowController.contentViewController = hostingController
         windowController.window?.title = "History".localized()
-
+        windowController.window?.setContentSize(NSSize(width: 780, height: 520))
         windowController.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
-
         WindowHolder.shared.historyWindowController = windowController
     } else {
         WindowHolder.shared.historyWindowController?.window?.makeKeyAndOrderFront(nil)

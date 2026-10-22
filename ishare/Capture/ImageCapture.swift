@@ -9,6 +9,7 @@ enum CaptureType: String, CaseIterable, Sendable {
     case WINDOW
     case SCREEN
     case SCROLLING
+    case LAST_REGION
 }
 
 enum FileType: String, CaseIterable, Identifiable, Defaults.Serializable {
@@ -21,13 +22,39 @@ enum FileType: String, CaseIterable, Identifiable, Defaults.Serializable {
 }
 
 struct CapturedImage {
-    let image: CGImage
+    var image: CGImage
     let suffix: String?
+    var geometry: CaptureGeometry?
+    var isWindow = false
+    var pointScale: CGFloat?
 }
 
 @MainActor
 enum ImageCaptureFlow {
     static func capture(type: CaptureType, display: Int = 1) async -> CapturedImage? {
+        await withCaptureContent { content in
+            switch type {
+            case .REGION:
+                try await captureRegion(content: content)
+            case .WINDOW:
+                try await captureWindow(content: content)
+            case .SCREEN:
+                try await captureScreen(display: display, content: content)
+            case .SCROLLING:
+                try await ScrollingCapture.run(content: content)
+            case .LAST_REGION:
+                try await captureLastRegion(displayID: nil, content: content)
+            }
+        }
+    }
+
+    static func captureLastRegion(display: CGDirectDisplayID? = nil) async -> CapturedImage? {
+        await withCaptureContent { content in
+            try await captureLastRegion(displayID: display, content: content)
+        }
+    }
+
+    private static func withCaptureContent(_ body: (SCShareableContent) async throws -> CapturedImage?) async -> CapturedImage? {
         guard ScreenshotEngine.ensurePermission() else {
             Log.capture.error("Screen recording permission is missing")
             BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
@@ -35,16 +62,7 @@ enum ImageCaptureFlow {
         }
         do {
             let content = try await ScreenshotEngine.shareableContent()
-            switch type {
-            case .REGION:
-                return try await captureRegion(content: content)
-            case .WINDOW:
-                return try await captureWindow(content: content)
-            case .SCREEN:
-                return try await captureScreen(display: display, content: content)
-            case .SCROLLING:
-                return try await ScrollingCapture.run(content: content)
-            }
+            return try await body(content).map(finalize)
         } catch {
             Log.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
@@ -54,21 +72,25 @@ enum ImageCaptureFlow {
 
     static func captureRegion(content: SCShareableContent) async throws -> CapturedImage? {
         let frontmost = frontmostAppName()
-        let backdrops = await ScreenshotEngine.backdrops(for: content)
-        let outcome = await RegionSelector.select(options: .init(backdrops: backdrops, showsMagnifier: Defaults[.showMagnifier]))
+        let backdrops = await PrivacyFilter.redactBackdrops(ScreenshotEngine.backdrops(for: content), content: content)
+        let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
+        let outcome = await RegionSelector.select(options: .init(backdrops: backdrops, showsMagnifier: Defaults[.showMagnifier], lastRegions: lastRegions))
         switch outcome {
         case let .region(screen, rect):
             guard let displayID = screen.displayID else { return nil }
+            LastRegionStore.remember(rect, for: displayID)
             if let backdrop = backdrops[displayID] {
-                let scale = CGFloat(backdrop.width) / screen.frame.width
-                return ScreenshotEngine.crop(backdrop, toPoints: rect, scale: scale).map { CapturedImage(image: $0, suffix: frontmost) }
+                let geometry = PrivacyFilter.geometry(displayID: displayID, region: rect, scale: CGFloat(backdrop.width) / screen.frame.width)
+                return ScreenshotEngine.crop(backdrop, toPoints: rect, scale: geometry.scale).map {
+                    CapturedImage(image: $0, suffix: frontmost, geometry: geometry)
+                }
             }
-            guard let display = content.displays.first(where: { $0.displayID == displayID }) else { throw CaptureError.displayNotFound }
-            return try await CapturedImage(image: ScreenshotEngine.captureDisplay(display, region: rect, in: content), suffix: frontmost)
+            return try await captureDisplayImage(displayID: displayID, region: rect, content: content, suffix: frontmost)
         case let .fullScreen(screen):
             guard let displayID = screen.displayID else { return nil }
             if let backdrop = backdrops[displayID] {
-                return CapturedImage(image: backdrop, suffix: screen.captureSuffix)
+                let geometry = PrivacyFilter.geometry(displayID: displayID, region: nil, scale: CGFloat(backdrop.width) / screen.frame.width)
+                return CapturedImage(image: backdrop, suffix: screen.captureSuffix, geometry: geometry)
             }
             return try await captureScreen(screen: screen, content: content)
         case .switchToWindow:
@@ -78,13 +100,31 @@ enum ImageCaptureFlow {
         }
     }
 
+    static func captureLastRegion(displayID: CGDirectDisplayID?, content: SCShareableContent) async throws -> CapturedImage? {
+        let displayIDs = content.displays.map(\.displayID)
+        guard let target = displayID ?? LastRegionStore.preferredDisplay(among: displayIDs, underMouse: NSScreen.underMouse?.displayID),
+              displayIDs.contains(target),
+              let rect = LastRegionStore.region(for: target)
+        else {
+            return try await captureRegion(content: content)
+        }
+        LastRegionStore.remember(rect, for: target)
+        return try await captureDisplayImage(displayID: target, region: rect, content: content, suffix: frontmostAppName())
+    }
+
     static func captureWindow(content: SCShareableContent, allowsRegionMode: Bool = true) async throws -> CapturedImage? {
         let outcome = await WindowPicker.pick(from: ScreenshotEngine.candidateWindows(in: content), allowsRegionMode: allowsRegionMode)
         switch outcome {
         case let .window(window):
             try await Task.sleep(for: .milliseconds(60))
             let image = try await ScreenshotEngine.captureWindow(window)
-            return CapturedImage(image: image, suffix: window.owningApplication?.applicationName ?? "window")
+            let scale = max(1, (CGFloat(image.width) / max(1, window.frame.width)).rounded())
+            return CapturedImage(
+                image: PrivacyFilter.redactWindow(image, window: window, scale: scale),
+                suffix: window.owningApplication?.applicationName ?? "window",
+                isWindow: true,
+                pointScale: scale
+            )
         case .switchToRegion:
             return try await captureRegion(content: content)
         case .cancelled:
@@ -98,9 +138,36 @@ enum ImageCaptureFlow {
     }
 
     static func captureScreen(screen: NSScreen, content: SCShareableContent) async throws -> CapturedImage? {
-        guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
-        let image = try await ScreenshotEngine.captureDisplay(display, in: content)
-        return CapturedImage(image: image, suffix: screen.captureSuffix)
+        guard let displayID = screen.displayID else { throw CaptureError.displayNotFound }
+        return try await captureDisplayImage(displayID: displayID, region: nil, content: content, suffix: screen.captureSuffix)
+    }
+
+    static func captureDisplayImage(displayID: CGDirectDisplayID, region: CGRect?, content: SCShareableContent, suffix: String?) async throws -> CapturedImage {
+        guard let display = content.displays.first(where: { $0.displayID == displayID }) else { throw CaptureError.displayNotFound }
+        let image = try await ScreenshotEngine.captureDisplay(display, region: region, in: content)
+        let geometry = PrivacyFilter.geometry(displayID: displayID, region: region, image: image)
+        return CapturedImage(image: PrivacyFilter.redact(image, geometry: geometry, content: content), suffix: suffix, geometry: geometry)
+    }
+
+    static func finalize(_ captured: CapturedImage) -> CapturedImage {
+        var result = captured
+        result.image = PrivacyFilter.hideMenuBarIfNeeded(result.image, geometry: result.geometry)
+        result.image = beautifyIfNeeded(result)
+        return result
+    }
+
+    static func beautifyIfNeeded(_ captured: CapturedImage) -> CGImage {
+        guard Defaults[.beautifyEnabled], captured.isWindow || !Defaults[.beautifyWindowsOnly] else { return captured.image }
+        let scale = captured.pointScale ?? captured.geometry?.scale ?? NSScreen.main?.backingScaleFactor ?? 2
+        let style = BeautifyStyle(
+            background: Defaults[.beautifyBackground],
+            solidColor: CaptureColor(hex: Defaults[.beautifySolidColor]) ?? CaptureColor(red: 0.12, green: 0.12, blue: 0.18),
+            padding: Defaults[.beautifyPadding],
+            cornerRadius: Defaults[.beautifyCornerRadius],
+            shadow: Defaults[.beautifyShadow],
+            scale: scale
+        )
+        return Beautifier.apply(to: captured.image, style: style) ?? captured.image
     }
 
     static func frontmostAppName() -> String? {

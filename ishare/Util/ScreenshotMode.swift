@@ -24,21 +24,34 @@ enum ScreenshotScene: String, CaseIterable {
     var subtitle: String {
         switch self {
         case .menu: "Screenshots, recordings and GIFs from a Control Center style menu"
-        case .editor: "Arrows, shapes, text, steps, blur and pixelate, built right in"
+        case .editor: "Arrows, stamps, spotlight, blur, crop and zoom, built right in"
         case .uploaders: "Imgur, your own server or any S3-compatible storage"
         case .assistant: "Describe your service and get a ready-to-use uploader"
-        case .recording: "Regions, windows or whole displays at the resolution you choose"
-        case .history: "Browse, copy, edit and delete everything you shared"
+        case .recording: "Regions, windows or displays with webcam, clicks and keystrokes"
+        case .history: "Search, copy, edit and delete everything you shared"
         }
     }
 }
 
 enum ScreenshotMode {
     static let windowIdentifier = "ishare-screenshot"
+    static let testWindowIdentifier = "ishare-uitest"
     static let canvasSize = CGSize(width: 1440, height: 900)
 
     nonisolated static var isActive: Bool {
+        isCapturingScreenshots || isUITesting
+    }
+
+    nonisolated static var isCapturingScreenshots: Bool {
         ProcessInfo.processInfo.arguments.contains("-ishareScreenshotMode")
+    }
+
+    nonisolated static var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ishareUITestMode")
+    }
+
+    nonisolated static var skipsOnboarding: Bool {
+        isActive || ProcessInfo.processInfo.arguments.contains("-ishareSkipOnboarding")
     }
 
     nonisolated static func argument(after flag: String) -> String? {
@@ -83,7 +96,11 @@ enum ScreenshotMode {
         UserDefaults.ishare.removePersistentDomain(forName: SettingsStorage.screenshotSuiteName)
         seedSettings()
         guard let scene else { return }
-        present(scene)
+        if isUITesting {
+            presentForTesting(scene)
+        } else {
+            present(scene)
+        }
     }
 
     @MainActor private static func seedSettings() {
@@ -112,6 +129,7 @@ enum ScreenshotMode {
         Defaults[.recordingResolution] = .p1080
         Defaults[.recordingFrameRate] = .fps60
         Defaults[.compressBeforeUpload] = true
+        Defaults[.menuRecordsGIF] = false
         Defaults[.uploadHistory] = sampleHistory()
     }
 
@@ -192,6 +210,52 @@ enum ScreenshotMode {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             window.makeFirstResponder(nil)
         }
+    }
+
+    @MainActor private static func presentForTesting(_ scene: ScreenshotScene) {
+        let hostingView = NSHostingView(rootView: UITestCanvas(scene: scene, document: testDocument(for: scene)))
+        hostingView.sizingOptions = [.minSize]
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: testWindowSize(for: scene, fitting: hostingView.fittingSize)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        window.identifier = NSUserInterfaceItemIdentifier(testWindowIdentifier)
+        window.title = testWindowIdentifier
+        window.setAccessibilityIdentifier(testWindowIdentifier)
+        window.isReleasedWhenClosed = false
+        window.contentView = hostingView
+        placeInsideVisibleFrame(window)
+        self.window = window
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    @MainActor private static func placeInsideVisibleFrame(_ window: NSWindow) {
+        guard let visible = NSScreen.main?.visibleFrame else {
+            window.center()
+            return
+        }
+        let width = min(window.frame.width, visible.width - 20)
+        let height = min(window.frame.height, visible.height - 20)
+        let origin = CGPoint(x: visible.midX - width / 2, y: visible.midY - height / 2)
+        window.setFrame(CGRect(origin: origin, size: CGSize(width: width, height: height)), display: true)
+    }
+
+    @MainActor private static func testWindowSize(for scene: ScreenshotScene, fitting: CGSize) -> CGSize {
+        let visible = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)
+        let preferred = scene == .editor ? CGSize(width: 1000, height: 600) : fitting
+        return CGSize(width: min(preferred.width, visible.width - 20), height: min(preferred.height, visible.height - 40))
+    }
+
+    @MainActor static func closeTestWindow() {
+        window?.close()
+        window = nil
+        editorDocument = nil
+    }
+
+    @MainActor private static func testDocument(for scene: ScreenshotScene) -> EditorDocument? {
+        guard scene == .editor, let image = sampleImage(size: CGSize(width: 1600, height: 1000), hue: 0.6, title: "UI test") else { return nil }
+        let document = EditorDocument(image: image, fileURL: nil)
+        editorDocument = document
+        return document
     }
 
     @MainActor private static func document(for scene: ScreenshotScene) -> EditorDocument? {
@@ -290,5 +354,55 @@ struct ScreenshotCanvas: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.18), lineWidth: 1))
             .shadow(color: .black.opacity(0.45), radius: 34, y: 16)
+    }
+}
+
+struct UITestCanvas: View {
+    let scene: ScreenshotScene
+    let document: EditorDocument?
+
+    var body: some View {
+        switch scene {
+        case .menu:
+            MainMenuView()
+        case .editor:
+            if let document {
+                VStack(spacing: 0) {
+                    EditorView(document: document, onDone: { ScreenshotMode.closeTestWindow() }, onDiscard: { ScreenshotMode.closeTestWindow() }, onCopy: {})
+                    EditorStateProbe(document: document)
+                }
+                .frame(width: 1100, height: 760)
+            }
+        case .uploaders, .recording:
+            SettingsView()
+                .frame(width: 760, height: 560)
+        case .assistant:
+            UploaderAssistantSheet { _ in }
+                .frame(width: 620, height: 690)
+        case .history:
+            HistoryGridView()
+                .frame(width: 980, height: 420)
+        }
+    }
+}
+
+struct EditorStateProbe: View {
+    @ObservedObject var document: EditorDocument
+
+    private var summary: String {
+        "annotations=\(document.annotations.count) undo=\(document.canUndo) redo=\(document.canRedo) tool=\(document.tool.rawValue)"
+    }
+
+    var body: some View {
+        Text(summary)
+            .font(.system(size: 10).monospaced())
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(summary)
+            .accessibilityValue(summary)
+            .accessibilityIdentifier("uitest.editor.state")
     }
 }

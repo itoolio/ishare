@@ -1,31 +1,39 @@
 ishare is the definitive screen capture utility for macOS, designed with simplicity and efficiency in mind.
 
 CAPTURE ANYTHING
-• Capture a region with a precise selector, magnifier and live size readout
-• Capture any window with or without its shadow, or a whole display
+• Capture a region with a precise selector, a pixel magnifier with coordinates and colors, and a measuring tool
+• Capture any window with or without its shadow, or a whole display, and recapture your last region with one shortcut
 • Scrolling capture stitches long pages and documents into one image
+• Add a gradient background with padding, rounded corners and a shadow to window captures
+• Blur chosen apps and hide the menu bar automatically for privacy
 • Everything runs on ScreenCaptureKit, fast and private
 
 RECORD
 • Record a display, a window or a region you draw
-• Choose resolution, frame rate, HEVC, HDR, audio and microphone
-• Export GIFs at the frame rate you need
-• Compress large recordings automatically before uploading
+• Show clicks, keystrokes and a webcam bubble in your recordings
+• Capture system audio and your microphone with live level meters
+• Trim recordings before saving and convert them to GIFs with size and frame rate presets
+• Choose resolution, frame rate, HEVC, HDR and automatic compression before upload
 
 ANNOTATE
-• Arrows, lines, shapes, highlights, pen, marker and text
-• Numbered steps, blur and pixelate to hide sensitive details
-• Crop, undo and redo, then copy, save or upload in one click
+• Arrows in several styles, lines, shapes, highlights, pen, marker and text
+• Numbered steps, emoji and symbol stamps, spotlight, blur and pixelate
+• Crop with handles and aspect presets, zoom and pan, undo and redo
+• Press Done and your after-capture actions run: copy, save, share and upload
 
 UPLOAD ANYWHERE
 • Imgur out of the box
-• Custom uploaders for chibisafe, Zipline, copyparty, Discord webhooks and your own server
-• Any S3-compatible storage: AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2 and MinIO
-• On Macs with Apple Intelligence, an assistant builds uploaders from a few answers
+• Custom uploaders for chibisafe, Zipline, copyparty, Discord webhooks and your own server, plus ShareX .sxcu import
+• Any S3-compatible storage, with optional expiring links and secrets kept in the Keychain
+• Upload to several destinations at once or pick one per capture
+• Upload text snippets, watch a folder for new files, and retry failed uploads automatically
+• On Macs with Apple Intelligence, an assistant builds uploaders from a conversation
 
-AUTOMATE
-• Global keyboard shortcuts for every action
-• Shortcuts actions to capture, record, upload and switch uploaders
-• Share menu extension to upload files from any app
+STAY ORGANIZED
+• A compact, keyboard-friendly menu with recent uploads and previews
+• Drop files on the menu bar icon or use "Upload with ishare" in Finder
+• Searchable upload history with filters and server-side deletion
+• Global keyboard shortcuts, Shortcuts actions and a share extension
+• Back up and restore all settings and uploaders in one file
 
-A Control Center style menu, a Liquid Glass design on macOS 26, upload history, AirDrop and Messages sharing, and translations into 11 languages round it all off.
+A Liquid Glass design on macOS 26, sound options, a welcome guide and translations into 11 languages round it all off.

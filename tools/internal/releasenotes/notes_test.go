@@ -1,4 +1,4 @@
-package main
+package releasenotes
 
 import (
 	"fmt"
@@ -52,5 +52,14 @@ func TestConvertTruncatesLongNotes(t *testing.T) {
 	}
 	if !strings.HasSuffix(got, "…") {
 		t.Fatal("expected an ellipsis at the end")
+	}
+}
+
+func TestRenderFallsBackWhenNothingIsUserFacing(t *testing.T) {
+	if got := Render("## 5.0.1\n\n### Miscellaneous Chores\n\n* bump deps\n"); got != fallback {
+		t.Fatalf("unexpected notes %q", got)
+	}
+	if got := Render(sample); got != Convert(sample) {
+		t.Fatalf("unexpected notes %q", got)
 	}
 }

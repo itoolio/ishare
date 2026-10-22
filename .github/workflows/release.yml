@@ -84,7 +84,7 @@ jobs:
                   cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
-            - run: go run ./tools/cmd/set-version ${{ needs.version.outputs.version }}
+            - run: go run ./tools/cmd/ishare-tools set-version ${{ needs.version.outputs.version }}
             - run: xcodegen generate
 
             - name: Register the bundle IDs
@@ -94,7 +94,7 @@ jobs:
                   PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
                   BUNDLE_IDENTIFIERS: dev.adrian.ishare,dev.adrian.ishare.sharemenuext
                   BUNDLE_NAME: ishare
-              run: go run ./tools/cmd/register-bundle-id
+              run: go run ./tools/cmd/ishare-tools register-bundle-id
 
             - name: Fetch Signing Assets
               uses: castdrian/setup-apple-certificate@main
@@ -208,7 +208,7 @@ jobs:
                   cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
-            - run: go run ./tools/cmd/set-version ${{ needs.version.outputs.version }}
+            - run: go run ./tools/cmd/ishare-tools set-version ${{ needs.version.outputs.version }}
             - run: xcodegen generate
 
             - name: Archive, sign in the cloud and upload
@@ -343,10 +343,10 @@ jobs:
                   TAG: ${{ needs.publish.outputs.tag }}
               run: |
                   gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body \
-                    | go run ./tools/cmd/release-notes fastlane/metadata/en-US/release_notes.txt
+                    | go run ./tools/cmd/ishare-tools release-notes fastlane/metadata/en-US/release_notes.txt
                   cat fastlane/metadata/en-US/release_notes.txt
             - name: Generate screenshots
-              run: ./scripts/screenshots.sh en-US en
+              run: go run ./tools/cmd/ishare-tools screenshots en-US:en
             - uses: actions/upload-artifact@v7
               with:
                   name: screenshots
