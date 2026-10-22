@@ -1,0 +1,87 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "Copy \"%@\"\n/path" : {
+      "comment" : "Tab\tand \u0001 control",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%@“ kopieren\n/pfad"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制“%@” 😀"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fatto"
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "完了"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ishare" : {
+      "shouldTranslate" : false
+    },
+    "Upload" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hochladen"
+          }
+        }
+      }
+    },
+    "Weights" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gewichte <b>&amp;</b>"
+          }
+        }
+      },
+      "numbers" : [
+        1,
+        2.5,
+        100000.0,
+        1e-07
+      ],
+      "empty" : [
+
+      ]
+    }
+  },
+  "version" : "1.0"
+}

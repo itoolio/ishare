@@ -1,0 +1,2 @@
+added=5
+languages=de,fr,it,zh-CN

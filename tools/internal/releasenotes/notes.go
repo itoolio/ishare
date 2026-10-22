@@ -1,17 +1,15 @@
-package main
+package releasenotes
 
 import (
 	"bufio"
-	"fmt"
-	"io"
-	"os"
 	"regexp"
 	"strings"
-
-	"github.com/itoolio/ishare/tools/internal/repo"
 )
 
-const appStoreLimit = 4000
+const (
+	appStoreLimit = 4000
+	fallback      = "Bug fixes and improvements."
+)
 
 var (
 	versionHeading = regexp.MustCompile(`^#{1,2}\s`)
@@ -36,22 +34,11 @@ var sectionTitles = map[string]string{
 	"reverts":                  "Reverts",
 }
 
-func main() {
-	input, err := io.ReadAll(os.Stdin)
-	if err != nil {
-		repo.Fail(err)
+func Render(markdown string) string {
+	if notes := Convert(markdown); notes != "" {
+		return notes
 	}
-	notes := Convert(string(input))
-	if notes == "" {
-		notes = "Bug fixes and improvements."
-	}
-	if len(os.Args) > 1 {
-		if err := os.WriteFile(os.Args[1], []byte(notes+"\n"), 0o644); err != nil {
-			repo.Fail(err)
-		}
-		return
-	}
-	fmt.Println(notes)
+	return fallback
 }
 
 func Convert(markdown string) string {

@@ -1,0 +1,62 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "Copy \"%@\"\n/path" : {
+      "comment" : "Tab\tand \u0001 control",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%@“ kopieren\n/pfad"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : ""
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "完了"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ishare" : {
+      "shouldTranslate" : false
+    },
+    "Upload" : {
+      "extractionState" : "manual"
+    },
+    "Weights" : {
+      "localizations" : {
+
+      },
+      "numbers" : [
+        1,
+        2.5,
+        100000.0,
+        1e-07
+      ],
+      "empty" : [
+
+      ]
+    }
+  },
+  "version" : "1.0"
+}
