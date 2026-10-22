@@ -1,106 +1,384 @@
 import AVFoundation
+import Combine
 import Defaults
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum ToastUploadState: Equatable {
+    case none
+    case uploading(Double)
+    case uploaded
+    case failed
+}
+
+struct ToastMessage: Equatable {
+    let title: String
+    let message: String
+    let symbol: String
+    let tint: Color
+}
+
 @MainActor
 final class ToastModel: ObservableObject {
-    let fileURL: URL
-    let thumbnail: NSImage
+    let fileURL: URL?
     let isImage: Bool
+    let message: ToastMessage?
+    @Published var thumbnail: NSImage?
+    @Published var historyItem: HistoryItem?
+    @Published var uploadState: ToastUploadState = .none
     @Published var isHovering = false
     @Published var isDragging = false
     var onDismiss: () -> Void = {}
     var onEdit: () -> Void = {}
+    var onHoverChange: (Bool) -> Void = { _ in }
+    private var cancellables: Set<AnyCancellable> = []
 
-    init(fileURL: URL, thumbnail: NSImage, isImage: Bool) {
+    init(fileURL: URL, isImage: Bool, thumbnail: NSImage? = nil, historyItem: HistoryItem? = nil) {
         self.fileURL = fileURL
-        self.thumbnail = thumbnail
         self.isImage = isImage
+        self.thumbnail = thumbnail
+        self.historyItem = historyItem
+        message = nil
+        uploadState = historyItem == nil ? .none : .uploaded
+    }
+
+    init(message: ToastMessage) {
+        fileURL = nil
+        isImage = false
+        self.message = message
+    }
+
+    var fileName: String {
+        fileURL?.lastPathComponent ?? message?.title ?? ""
+    }
+
+    var kind: PostCapture.Kind {
+        isImage || fileURL.map { HistoryItemKind(fileExtension: $0.pathExtension) == .image } == true ? .image : .video
+    }
+
+    var isAwaitingUpload: Bool {
+        if case .uploading = uploadState { return true }
+        return false
+    }
+
+    func followUpload(_ manager: UploadManager = .shared) {
+        uploadState = .uploading(0)
+        manager.$activity
+            .sink { [weak self] activity in
+                self?.apply(activity, manager: manager)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func apply(_ activity: UploadActivity, manager: UploadManager) {
+        guard isAwaitingUpload else { return }
+        switch activity {
+        case let .uploading(progress):
+            uploadState = .uploading(progress)
+        case .finished, .idle:
+            if let item = manager.recentlyCompletedItem(within: 3), item.localPath == nil || item.localPath == fileURL?.path {
+                historyItem = item
+                uploadState = .uploaded
+            } else if !manager.isUploading {
+                uploadState = .failed
+            }
+        }
     }
 }
 
-struct ToastPopoverView: View {
+struct ToastCardView: View {
+    static let width: CGFloat = 384
+
     @ObservedObject var model: ToastModel
     @Default(.saveToDisk) var saveToDisk
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Image(nsImage: model.thumbnail)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .padding(10)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .onDrag {
-                    model.isDragging = true
-                    let provider = NSItemProvider(object: model.fileURL as NSURL)
-                    provider.suggestedName = model.fileURL.lastPathComponent
-                    return provider
+        HStack(alignment: .top, spacing: 12) {
+            leading
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(model.message?.title ?? model.fileName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer(minLength: 18)
                 }
-                .onTapGesture {
-                    if saveToDisk {
-                        NSWorkspace.shared.activateFileViewerSelecting([model.fileURL])
-                    }
-                    model.onDismiss()
+                detail
+                if model.fileURL != nil {
+                    actions
                 }
-
-            if model.isHovering {
-                AdaptiveGlassContainer(spacing: 8) {
-                    HStack(spacing: 8) {
-                        if model.isImage {
-                            toastButton("pencil.tip.crop.circle", help: "Open in Editor") { model.onEdit() }
-                        }
-                        toastButton("doc.on.doc", help: "Copy to Clipboard") {
-                            PostCapture.copyToClipboard(model.fileURL, kind: model.isImage ? .image : .video)
-                        }
-                        if saveToDisk {
-                            toastButton("folder", help: "Open in Finder") {
-                                NSWorkspace.shared.activateFileViewerSelecting([model.fileURL])
-                            }
-                        }
-                        toastButton("xmark", help: "Close") { model.onDismiss() }
-                    }
-                }
-                .padding(.bottom, 16)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
+        .padding(12)
+        .frame(width: Self.width, alignment: .leading)
+        .overlay(alignment: .topTrailing) { dismissButton }
         .adaptiveGlass(cornerRadius: 18)
         .opacity(model.isDragging ? 0.3 : 1)
         .onHover { hovering in
-            withAnimation(.snappy(duration: 0.2)) {
-                model.isHovering = hovering
-            }
+            model.isHovering = hovering
+            model.onHoverChange(hovering)
         }
-        .frame(width: 320, height: 220)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("toast.card")
     }
 
-    private func toastButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 13, weight: .semibold))
-                .frame(width: 30, height: 30)
+    @ViewBuilder
+    private var leading: some View {
+        if let message = model.message {
+            Image(systemName: message.symbol)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(message.tint)
+                .frame(width: 40, height: 40)
+        } else {
+            thumbnail
+        }
+    }
+
+    private var thumbnail: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.06))
+            if let image = model.thumbnail {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Image(systemName: model.isImage ? "photo" : "film")
+                    .foregroundStyle(.secondary)
+            }
+            if model.kind == .video {
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.white, .black.opacity(0.45))
+            }
+        }
+        .frame(width: 64, height: 64)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.primary.opacity(0.1), lineWidth: 1))
+        .contentShape(Rectangle())
+        .onDrag {
+            model.isDragging = true
+            guard let url = model.fileURL else { return NSItemProvider() }
+            let provider = NSItemProvider(object: url as NSURL)
+            provider.suggestedName = url.lastPathComponent
+            return provider
+        }
+        .onTapGesture {
+            if saveToDisk, let url = model.fileURL {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
+            model.onDismiss()
+        }
+        .help("Drag to share or click to show in Finder".localized())
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        if let message = model.message {
+            Text(message.message)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(4)
+        } else {
+            switch model.uploadState {
+            case let .uploading(progress):
+                VStack(alignment: .leading, spacing: 3) {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.linear)
+                        .tint(Color.menuAccent)
+                        .controlSize(.small)
+                    Text(String(format: "Uploading… %d%%".localized(), Int((progress * 100).rounded())))
+                        .font(.system(size: 11).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityIdentifier("toast.progress")
+            case .failed:
+                Label("Upload failed".localized(), systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.orange)
+            case .uploaded, .none:
+                if let url = model.historyItem?.fileUrl {
+                    Text(url)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                        .accessibilityIdentifier("toast.url")
+                } else {
+                    Text(saveToDisk ? "Saved to disk".localized() : "Captured".localized())
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var actions: some View {
+        HStack(spacing: 6) {
+            ToastActionButton(symbol: "doc.on.doc", title: "Copy", identifier: "toast.copy") { copy() }
+            ToastActionButton(symbol: "arrow.up.forward.app", title: "Open", identifier: "toast.open") { open() }
+                .disabled(model.historyItem == nil && !fileExists)
+            if model.isImage {
+                ToastActionButton(symbol: "pencil.tip.crop.circle", title: "Edit", identifier: "toast.edit") { model.onEdit() }
+            }
+            if hasDeleteOptions {
+                deleteMenu
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    private var deleteMenu: some View {
+        Menu {
+            if let item = model.historyItem {
+                if item.canDeleteFromServer {
+                    Button("Delete from Server…".localized(), role: .destructive) {
+                        model.onDismiss()
+                        HistoryActions.confirmDeleteFromServer(item)
+                    }
+                }
+                Button("Remove from History".localized()) {
+                    HistoryActions.removeFromHistory(item)
+                    model.historyItem = nil
+                    model.uploadState = .none
+                }
+            }
+            if canTrashFile, let url = model.fileURL {
+                Button("Move to Trash".localized(), role: .destructive) {
+                    NSWorkspace.shared.recycle([url])
+                    model.onDismiss()
+                }
+            }
+        } label: {
+            ToastActionLabel(symbol: "trash", title: "Delete")
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Delete".localized())
+        .accessibilityIdentifier("toast.delete")
+    }
+
+    private var dismissButton: some View {
+        Button {
+            model.onDismiss()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 20, height: 20)
+                .background(Circle().fill(Color.primary.opacity(model.isHovering ? 0.12 : 0.06)))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .adaptiveGlassCapsule(interactive: true)
-        .help(help.localized())
+        .padding(8)
+        .help("Dismiss".localized())
+        .accessibilityLabel("Dismiss".localized())
+        .accessibilityIdentifier("toast.dismiss")
     }
+
+    private var fileExists: Bool {
+        model.fileURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+    }
+
+    private var canTrashFile: Bool {
+        saveToDisk && fileExists
+    }
+
+    private var hasDeleteOptions: Bool {
+        model.historyItem != nil || canTrashFile
+    }
+
+    private func copy() {
+        if let item = model.historyItem {
+            HistoryActions.copyURL(item)
+        } else if let url = model.fileURL {
+            PostCapture.copyToClipboard(url, kind: model.kind)
+        }
+    }
+
+    private func open() {
+        if let item = model.historyItem {
+            HistoryActions.open(item)
+        } else if let url = model.fileURL {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
+
+struct ToastActionLabel: View {
+    let symbol: String
+    let title: String
+    var iconOnly = false
+
+    var body: some View {
+        Group {
+            if iconOnly {
+                Image(systemName: symbol)
+                    .frame(width: 24, height: 24)
+                    .background(Circle().fill(Color.primary.opacity(0.08)))
+                    .contentShape(Circle())
+            } else {
+                Label(title.localized(), systemImage: symbol)
+                    .labelStyle(.titleAndIcon)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .frame(height: 24)
+                    .background(Capsule().fill(Color.primary.opacity(0.08)))
+                    .contentShape(Capsule())
+            }
+        }
+        .font(.system(size: 11, weight: .medium))
+        .fixedSize()
+    }
+}
+
+struct ToastActionButton: View {
+    let symbol: String
+    let title: String
+    var iconOnly = false
+    let identifier: String
+    let action: () -> Void
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        Button(action: action) {
+            ToastActionLabel(symbol: symbol, title: title, iconOnly: iconOnly)
+                .opacity(isEnabled ? 1 : 0.45)
+        }
+        .buttonStyle(.plain)
+        .help(title.localized())
+        .accessibilityLabel(title.localized())
+        .accessibilityIdentifier(identifier)
+    }
+}
+
+final class ToastPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }
 
 @MainActor
 final class ToastController {
+    static let margin: CGFloat = 16
+    static let spacing: CGFloat = 10
     private static var visible: [ToastController] = []
-    private let window: NSWindow
-    private let model: ToastModel
+
+    private let window: ToastPanel
+    private let hosting: NSHostingView<ToastCardView>
+    let model: ToastModel
     private var continuation: CheckedContinuation<Void, Never>?
     private var dismissTask: Task<Void, Never>?
+    private var cancellables: Set<AnyCancellable> = []
+    private let minimumTimeout: Double
 
-    private init(model: ToastModel) {
+    private init(model: ToastModel, minimumTimeout: Double = 0) {
         self.model = model
-        window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 320, height: 220),
+        self.minimumTimeout = minimumTimeout
+        hosting = NSHostingView(rootView: ToastCardView(model: model))
+        window = ToastPanel(
+            contentRect: NSRect(x: 0, y: 0, width: ToastCardView.width, height: 96),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -109,31 +387,89 @@ final class ToastController {
         window.isOpaque = false
         window.hasShadow = true
         window.level = .floating
+        window.isReleasedWhenClosed = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.contentView = NSHostingView(rootView: ToastPopoverView(model: model))
+        window.contentView = hosting
     }
 
-    static func show(fileURL: URL, thumbnail: NSImage, isImage: Bool) async {
-        let controller = ToastController(model: ToastModel(fileURL: fileURL, thumbnail: thumbnail, isImage: isImage))
-        visible.append(controller)
+    var contentSize: NSSize {
+        hosting.layoutSubtreeIfNeeded()
+        let size = hosting.fittingSize
+        return NSSize(width: ToastCardView.width, height: max(size.height, 56))
+    }
+
+    static func show(model: ToastModel, minimumTimeout: Double = 0) async {
+        let controller = ToastController(model: model, minimumTimeout: minimumTimeout)
+        visible.insert(controller, at: 0)
         await controller.present()
         visible.removeAll { $0 === controller }
+        relayout(animated: true)
+    }
+
+    static func showMessage(title: String, message: String, symbol: String, tint: Color) {
+        Task { @MainActor in
+            await show(model: ToastModel(message: ToastMessage(title: title, message: message, symbol: symbol, tint: tint)), minimumTimeout: 6)
+        }
+    }
+
+    static func targetFrames(for heights: [CGFloat], in screen: CGRect) -> [CGRect] {
+        var top = screen.maxY - margin
+        return heights.map { height in
+            let frame = CGRect(x: screen.maxX - ToastCardView.width - margin, y: top - height, width: ToastCardView.width, height: height)
+            top = frame.minY - spacing
+            return frame
+        }
+    }
+
+    static func relayout(animated: Bool) {
+        let screen = NSScreen.main?.visibleFrame ?? .zero
+        let frames = targetFrames(for: visible.map(\.contentSize.height), in: screen)
+        for (controller, frame) in zip(visible, frames) {
+            if animated, controller.window.isVisible {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.2
+                    controller.window.animator().setFrame(frame, display: true)
+                }
+            } else {
+                controller.window.setFrame(frame, display: true)
+            }
+        }
     }
 
     private func present() async {
         model.onDismiss = { [weak self] in self?.dismiss() }
         model.onEdit = { [weak self] in
-            guard let self else { return }
-            let url = model.fileURL
+            guard let self, let url = model.fileURL else { return }
             dismiss()
             Task { @MainActor in
                 await ImageEditor.editAsNewCapture(sourceURL: url)
             }
         }
-        let screen = NSScreen.main?.visibleFrame ?? .zero
-        let offset = CGFloat(Self.visible.count - 1) * 232
-        window.setFrameOrigin(NSPoint(x: screen.maxX - window.frame.width - 20, y: screen.maxY - window.frame.height - 20 - offset))
+        model.onHoverChange = { [weak self] hovering in
+            guard let self else { return }
+            if hovering {
+                dismissTask?.cancel()
+            } else {
+                scheduleDismiss()
+            }
+        }
+        model.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard self != nil else { return }
+                ToastController.relayout(animated: true)
+            }
+            .store(in: &cancellables)
+        model.$uploadState
+            .removeDuplicates()
+            .dropFirst()
+            .sink { [weak self] state in
+                guard let self, state != .none, !isAwaitingUpload(state) else { return }
+                scheduleDismiss()
+            }
+            .store(in: &cancellables)
         window.alphaValue = 0
+        Self.relayout(animated: true)
         window.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.2
@@ -145,25 +481,25 @@ final class ToastController {
         }
     }
 
+    private func isAwaitingUpload(_ state: ToastUploadState) -> Bool {
+        if case .uploading = state { return true }
+        return false
+    }
+
     private func scheduleDismiss() {
         dismissTask?.cancel()
-        let timeout = Defaults[.toastTimeout]
+        guard !model.isHovering, !model.isAwaitingUpload else { return }
+        let timeout = max(Defaults[.toastTimeout], minimumTimeout)
         dismissTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(timeout))
-            guard let self, !Task.isCancelled else { return }
-            if model.isHovering {
-                while model.isHovering, !Task.isCancelled {
-                    try? await Task.sleep(for: .milliseconds(250))
-                }
-                try? await Task.sleep(for: .seconds(1))
-            }
-            guard !Task.isCancelled else { return }
+            guard let self, !Task.isCancelled, !model.isHovering, !model.isAwaitingUpload else { return }
             dismiss()
         }
     }
 
     private func dismiss() {
         dismissTask?.cancel()
+        cancellables.removeAll()
         guard let continuation else { return }
         self.continuation = nil
         NSAnimationContext.runAnimationGroup({ context in
@@ -180,15 +516,36 @@ final class ToastController {
 
 @MainActor
 func showToast(fileURL: URL) async {
-    let isVideo = ["mov", "mp4"].contains(fileURL.pathExtension.lowercased())
-    let thumbnail: NSImage?
-    if isVideo {
-        thumbnail = await videoThumbnail(for: fileURL)
-    } else {
-        thumbnail = ImageProcessing.thumbnail(for: fileURL, maxPixelSize: 640) ?? NSImage(contentsOf: fileURL)
+    await showToast(fileURL: fileURL, awaitingUpload: false)
+}
+
+@MainActor
+func showToast(fileURL: URL, awaitingUpload: Bool) async {
+    let isImage = HistoryItemKind(fileExtension: fileURL.pathExtension) == .image && fileURL.pathExtension.lowercased() != "gif"
+    let key = ThumbnailKey.forFile(fileURL, pointSize: 64)
+    var thumbnail = ThumbnailCache.shared.cachedImage(for: key)
+    if thumbnail == nil {
+        thumbnail = await ThumbnailCache.shared.image(for: key)
     }
-    guard let thumbnail else { return }
-    await ToastController.show(fileURL: fileURL, thumbnail: thumbnail, isImage: !isVideo && fileURL.pathExtension.lowercased() != "gif")
+    let item = awaitingUpload ? nil : uploadedItem(for: fileURL)
+    let model = ToastModel(
+        fileURL: fileURL, isImage: isImage,
+        thumbnail: thumbnail ?? NSWorkspace.shared.icon(forFile: fileURL.path),
+        historyItem: item
+    )
+    if awaitingUpload {
+        model.followUpload()
+    }
+    await ToastController.show(model: model)
+}
+
+@MainActor
+private func uploadedItem(for fileURL: URL) -> HistoryItem? {
+    if let match = Defaults[.uploadHistory].prefix(10).first(where: { $0.localPath == fileURL.path }) {
+        return match
+    }
+    guard let recent = UploadManager.shared.recentlyCompletedItem(within: 3), recent.localPath == nil else { return nil }
+    return recent
 }
 
 @MainActor
