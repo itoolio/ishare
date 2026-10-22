@@ -35,7 +35,8 @@ final class EditorFlowTests: AppUITestCase {
     func testDiscardClosesTheEditor() {
         drawRectangle()
         let discard = element("editor.discard")
-        XCTAssertTrue(discard.isHittable)
+        XCTAssertTrue(discard.waitForExistence(timeout: 5))
+        waitFor("the discard button is hittable") { discard.isHittable }
         discard.click()
         assertDisappears(window)
     }
@@ -43,7 +44,8 @@ final class EditorFlowTests: AppUITestCase {
     func testDoneClosesTheEditor() {
         drawRectangle()
         let done = element("editor.done")
-        XCTAssertTrue(done.isHittable)
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        waitFor("the done button is hittable") { done.isHittable }
         done.click()
         assertDisappears(window)
     }

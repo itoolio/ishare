@@ -357,6 +357,7 @@ struct MainMenuView: View {
         .fixedSize()
         .help("Upload Destination".localized())
         .menuFocusRing(.destination, shape: .roundedRectangle(13))
+        .accessibilityValue(destinationTitle)
         .accessibilityIdentifier("menu.destination")
     }
 

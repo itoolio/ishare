@@ -56,7 +56,7 @@ final class MenuFlowTests: AppUITestCase {
         assertDisappears(app.menuItems["chibisafe"])
         let pillText = pill.staticTexts.matching(Self.mentioning("zipline")).firstMatch
         waitFor("the pill shows the selected uploader") {
-            pill.label.contains("zipline") || pill.title.contains("zipline") || pillText.exists
+            (pill.value as? String)?.contains("zipline") == true || pill.label.contains("zipline") || pill.title.contains("zipline") || pillText.exists
         }
     }
 

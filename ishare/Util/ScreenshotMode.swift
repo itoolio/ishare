@@ -214,7 +214,7 @@ enum ScreenshotMode {
 
     @MainActor private static func presentForTesting(_ scene: ScreenshotScene) {
         let hostingView = NSHostingView(rootView: UITestCanvas(scene: scene, document: testDocument(for: scene)))
-        let window = NSWindow(contentRect: CGRect(origin: .zero, size: hostingView.fittingSize), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: testWindowSize(for: scene, fitting: hostingView.fittingSize)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.identifier = NSUserInterfaceItemIdentifier(testWindowIdentifier)
         window.title = testWindowIdentifier
         window.setAccessibilityIdentifier(testWindowIdentifier)
@@ -225,6 +225,12 @@ enum ScreenshotMode {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+    }
+
+    @MainActor private static func testWindowSize(for scene: ScreenshotScene, fitting: CGSize) -> CGSize {
+        let visible = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)
+        let preferred = scene == .editor ? CGSize(width: 1000, height: 600) : fitting
+        return CGSize(width: min(preferred.width, visible.width - 40), height: min(preferred.height, visible.height - 60))
     }
 
     @MainActor static func closeTestWindow() {
