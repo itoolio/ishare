@@ -220,17 +220,28 @@ enum ScreenshotMode {
         window.setAccessibilityIdentifier(testWindowIdentifier)
         window.isReleasedWhenClosed = false
         window.contentView = hostingView
-        window.center()
+        placeInsideVisibleFrame(window)
         self.window = window
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }
 
+    @MainActor private static func placeInsideVisibleFrame(_ window: NSWindow) {
+        guard let visible = NSScreen.main?.visibleFrame else {
+            window.center()
+            return
+        }
+        let width = min(window.frame.width, visible.width - 20)
+        let height = min(window.frame.height, visible.height - 20)
+        let origin = CGPoint(x: visible.midX - width / 2, y: visible.midY - height / 2)
+        window.setFrame(CGRect(origin: origin, size: CGSize(width: width, height: height)), display: true)
+    }
+
     @MainActor private static func testWindowSize(for scene: ScreenshotScene, fitting: CGSize) -> CGSize {
         let visible = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)
         let preferred = scene == .editor ? CGSize(width: 1000, height: 600) : fitting
-        return CGSize(width: min(preferred.width, visible.width - 40), height: min(preferred.height, visible.height - 60))
+        return CGSize(width: min(preferred.width, visible.width - 20), height: min(preferred.height, visible.height - 40))
     }
 
     @MainActor static func closeTestWindow() {
