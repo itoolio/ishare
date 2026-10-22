@@ -41,11 +41,18 @@ jobs:
                   if git log -1 --format=%s | grep -q '^fix(i18n): add .* translations from Crowdin'; then
                     echo "skip=1" >> "$GITHUB_OUTPUT"
                   fi
+            - uses: actions/setup-go@v7
+              if: steps.own.outputs.skip != '1'
+              with:
+                  go-version-file: base/tools/go.mod
+                  cache-dependency-path: base/tools/go.mod
             - name: Keep only new translations
               id: merge
               if: steps.own.outputs.skip != '1'
+              working-directory: base
               run: |
-                  python3 base/scripts/merge-crowdin-translations.py "base/$CATALOG" "head/$CATALOG" merged.xcstrings | tee -a "$GITHUB_OUTPUT"
+                  set -o pipefail
+                  go run ./tools/cmd/ishare-tools merge-translations "$CATALOG" "../head/$CATALOG" ../merged.xcstrings | tee -a "$GITHUB_OUTPUT"
             - name: Close pull request without new translations
               if: steps.own.outputs.skip != '1' && steps.merge.outputs.added == '0'
               run: >-

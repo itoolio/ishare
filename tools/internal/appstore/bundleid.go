@@ -1,4 +1,4 @@
-package main
+package appstore
 
 import (
 	"bytes"
@@ -16,8 +16,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/itoolio/ishare/tools/internal/repo"
 )
 
 const bundleIDsEndpoint = "https://api.appstoreconnect.apple.com/v1/bundleIds"
@@ -30,50 +28,69 @@ type bundleIDList struct {
 	} `json:"data"`
 }
 
-func main() {
-	identifiers := strings.Split(requiredEnv("BUNDLE_IDENTIFIERS"), ",")
-	name := os.Getenv("BUNDLE_NAME")
-	if name == "" {
-		name = "ishare"
-	}
-	token, err := signedToken(requiredEnv("KEY_ID"), requiredEnv("ISSUER_ID"), requiredEnv("PRIVATE_KEY_BASE64"))
-	if err != nil {
-		repo.Fail(err)
-	}
-	for _, raw := range identifiers {
-		identifier := strings.TrimSpace(raw)
-		if identifier == "" {
-			continue
-		}
-		registered, err := isRegistered(token, identifier)
-		if err != nil {
-			repo.Fail(err)
-		}
-		if registered {
-			fmt.Println(identifier, "is already registered")
-			continue
-		}
-		if err := register(token, identifier, displayName(name, identifier)); err != nil {
-			repo.Fail(err)
-		}
-		fmt.Println("Registered", identifier)
-	}
+type Credentials struct {
+	KeyID            string
+	IssuerID         string
+	PrivateKeyBase64 string
 }
 
-func displayName(base, identifier string) string {
+func CredentialsFromEnvironment() (Credentials, error) {
+	var missing []string
+	read := func(name string) string {
+		value := os.Getenv(name)
+		if value == "" {
+			missing = append(missing, name)
+		}
+		return value
+	}
+	credentials := Credentials{KeyID: read("KEY_ID"), IssuerID: read("ISSUER_ID"), PrivateKeyBase64: read("PRIVATE_KEY_BASE64")}
+	if len(missing) > 0 {
+		return Credentials{}, fmt.Errorf("%s not set", strings.Join(missing, ", "))
+	}
+	return credentials, nil
+}
+
+func ParseIdentifiers(list string) []string {
+	var identifiers []string
+	for _, raw := range strings.Split(list, ",") {
+		if identifier := strings.TrimSpace(raw); identifier != "" {
+			identifiers = append(identifiers, identifier)
+		}
+	}
+	return identifiers
+}
+
+func RegisterBundleIDs(credentials Credentials, name string, identifiers []string, log io.Writer) error {
+	if len(identifiers) == 0 {
+		return fmt.Errorf("no bundle identifiers to register")
+	}
+	token, err := signedToken(credentials.KeyID, credentials.IssuerID, credentials.PrivateKeyBase64)
+	if err != nil {
+		return err
+	}
+	for _, identifier := range identifiers {
+		registered, err := isRegistered(token, identifier)
+		if err != nil {
+			return err
+		}
+		if registered {
+			fmt.Fprintln(log, identifier, "is already registered")
+			continue
+		}
+		if err := register(token, identifier, DisplayName(name, identifier)); err != nil {
+			return err
+		}
+		fmt.Fprintln(log, "Registered", identifier)
+	}
+	return nil
+}
+
+func DisplayName(base, identifier string) string {
 	suffix := identifier[strings.LastIndex(identifier, ".")+1:]
 	if strings.EqualFold(suffix, base) {
 		return base
 	}
 	return base + " " + suffix
-}
-
-func requiredEnv(name string) string {
-	value := os.Getenv(name)
-	if value == "" {
-		repo.Fail(fmt.Errorf("%s is not set", name))
-	}
-	return value
 }
 
 func signedToken(keyID, issuerID, privateKeyBase64 string) (string, error) {

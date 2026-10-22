@@ -21,6 +21,10 @@ jobs:
                   cache-dependency-path: tools/go.mod
             - run: go vet ./tools/...
             - run: go test ./tools/...
+            - name: Check that the string catalog round-trips through merge-translations
+              run: |
+                  go run ./tools/cmd/ishare-tools merge-translations ishare/Localizable.xcstrings ishare/Localizable.xcstrings "$RUNNER_TEMP/Localizable.xcstrings"
+                  cmp ishare/Localizable.xcstrings "$RUNNER_TEMP/Localizable.xcstrings"
 
     app:
         runs-on: macos-26

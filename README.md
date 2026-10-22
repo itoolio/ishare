@@ -51,7 +51,13 @@ open ishare.xcodeproj
 ```
 
 - The `ishare` scheme builds the sandboxed App Store app, and the `GitHub` scheme builds the direct download app with Sparkle and runs the unit tests.
-- `scripts/screenshots.sh` renders the App Store screenshots through the `Screenshots` UI test scheme.
+- The `UITests` scheme runs the menu and editor UI tests against a deterministic test mode of the app.
+- Release and maintenance tasks live in one Go CLI, `go run ./tools/cmd/ishare-tools <command>`:
+  - `set-version <version>` writes the marketing version and build number to `Config.xcconfig`;
+  - `release-notes [file]` turns release markdown on stdin into App Store release notes;
+  - `register-bundle-id [identifier...]` registers bundle identifiers with App Store Connect;
+  - `merge-translations <base> <incoming> <output>` keeps only new Crowdin translations in a string catalog;
+  - `screenshots [locale[:language]...]` renders the App Store screenshots through the `Screenshots` UI test scheme into `fastlane/screenshots`.
 - Releases are cut automatically from `main` with semantic-release, so use [Conventional Commits](https://www.conventionalcommits.org). Each release:
   - signs and notarizes the DMG;
   - updates the Sparkle appcast;
