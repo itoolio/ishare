@@ -12,6 +12,17 @@ struct UploadOutcome: Sendable, Equatable {
 enum UploadTarget: Sendable {
     case imgur(clientID: String)
     case custom(CustomUploader)
+
+    var uploader: any Uploader {
+        switch self {
+        case let .imgur(clientID):
+            ImgurUploader(clientID: clientID)
+        case let .custom(uploader) where uploader.kind == .s3:
+            S3Uploader(uploader: uploader)
+        case let .custom(uploader):
+            HTTPUploader(uploader: uploader)
+        }
+    }
 }
 
 enum UploadFailure: LocalizedError, Equatable {
@@ -77,112 +88,7 @@ enum UploadService {
         fileURL: URL, to target: UploadTarget,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> UploadOutcome {
-        switch target {
-        case let .imgur(clientID):
-            try await uploadToImgur(fileURL: fileURL, clientID: clientID, progress: progress)
-        case let .custom(uploader):
-            switch uploader.kind {
-            case .custom:
-                try await uploadToCustom(fileURL: fileURL, uploader: uploader, progress: progress)
-            case .s3:
-                try await uploadToS3(fileURL: fileURL, uploader: uploader, progress: progress)
-            }
-        }
-    }
-
-    static func uploadToImgur(
-        fileURL: URL, clientID: String, progress: @escaping @Sendable (Double) -> Void
-    ) async throws -> UploadOutcome {
-        let formName = ["mp4", "mov"].contains(fileURL.pathExtension.lowercased()) ? "video" : "image"
-        let fileName = "ishare.\(fileURL.pathExtension.lowercased())"
-        let mimeType = MimeType.forFile(fileURL)
-        let request = session.upload(
-            multipartFormData: { form in
-                form.append(fileURL, withName: formName, fileName: fileName, mimeType: mimeType)
-            },
-            to: imgurEndpoint, method: .post, headers: ["Authorization": "Client-ID " + clientID]
-        )
-        let data = try await perform(request, progress: progress)
-        let link = try ResponseTemplate.render("{{data.link}}", data: data)
-        guard let url = URL(string: link) else { throw UploadFailure.responseParsing(link) }
-        let deleteHash = try? ResponseTemplate.render("{{data.deletehash}}", data: data)
-        return UploadOutcome(
-            url: url, deletionURL: deleteHash.map { "https://api.imgur.com/3/image/\($0)" }, uploaderID: nil, s3Key: nil
-        )
-    }
-
-    static func uploadToCustom(
-        fileURL: URL, uploader: CustomUploader, progress: @escaping @Sendable (Double) -> Void
-    ) async throws -> UploadOutcome {
-        let issues = UploaderValidator.issues(for: uploader)
-        guard issues.isEmpty else { throw UploadFailure.invalidSpecification(issues) }
-        guard let url = URL(string: uploader.requestURL.trimmingCharacters(in: .whitespaces)) else {
-            throw UploadFailure.invalidSpecification([.invalidRequestURL])
-        }
-        var headers = HTTPHeaders(uploader.headers ?? [:])
-        headers.add(name: "x-file-name", value: UploadFileName.lowercasingExtension(of: fileURL))
-        let request: UploadRequest
-        switch uploader.requestBodyType ?? .multipartFormData {
-        case .multipartFormData:
-            let formData = uploader.formData ?? [:]
-            let formName = uploader.fileFormName ?? "file"
-            let fileName = UploadFileName.lowercasingExtension(of: fileURL)
-            let mimeType = MimeType.forFile(fileURL)
-            request = session.upload(
-                multipartFormData: { form in
-                    for (key, value) in formData.sorted(by: { $0.key < $1.key }) {
-                        form.append(Data(value.utf8), withName: key)
-                    }
-                    form.append(fileURL, withName: formName, fileName: fileName, mimeType: mimeType)
-                },
-                to: url, method: .post, headers: headers
-            )
-        case .binary:
-            headers.add(name: "Content-Type", value: MimeType.forFile(fileURL))
-            request = session.upload(fileURL, to: url, method: .post, headers: headers)
-        }
-        let data = try await perform(request, progress: progress)
-        return try outcome(from: data, uploader: uploader)
-    }
-
-    static func outcome(from data: Data, uploader: CustomUploader) throws -> UploadOutcome {
-        let fileURLString: String
-        do {
-            fileURLString = try ResponseTemplate.render(uploader.responseURL, data: data)
-        } catch let ResponseTemplateError.missingValue(path) {
-            throw UploadFailure.responseParsing(path)
-        }
-        guard let url = URL(string: fileURLString.trimmingCharacters(in: .whitespacesAndNewlines)), url.scheme != nil else {
-            throw UploadFailure.responseParsing(fileURLString)
-        }
-        let deletionURL = uploader.deletionURL.flatMap { template -> String? in
-            guard !template.isEmpty else { return nil }
-            return try? ResponseTemplate.render(template, data: data)
-        }
-        return UploadOutcome(url: url, deletionURL: deletionURL, uploaderID: uploader.id, s3Key: nil)
-    }
-
-    static func uploadToS3(
-        fileURL: URL, uploader: CustomUploader, progress: @escaping @Sendable (Double) -> Void
-    ) async throws -> UploadOutcome {
-        let issues = UploaderValidator.issues(for: uploader)
-        guard issues.isEmpty, let configuration = uploader.s3 else { throw UploadFailure.invalidSpecification(issues) }
-        let payloadHash = try await Task.detached(priority: .userInitiated) {
-            try SigV4Signer.sha256Hex(fileAt: fileURL)
-        }.value
-        let built = try S3RequestBuilder.upload(
-            configuration: configuration, fileURL: fileURL, contentType: MimeType.forFile(fileURL), payloadHash: payloadHash
-        )
-        let request = session.upload(fileURL, to: built.url, method: .put, headers: HTTPHeaders(built.headers))
-        _ = try await perform(request, progress: progress)
-        return UploadOutcome(url: built.publicURL, deletionURL: nil, uploaderID: uploader.id, s3Key: built.key)
-    }
-
-    static func deleteS3Object(key: String, uploader: CustomUploader) async throws {
-        guard let configuration = uploader.s3 else { throw UploadFailure.missingUploader }
-        let (url, headers) = try S3RequestBuilder.delete(configuration: configuration, key: key)
-        let request = session.request(url, method: .delete, headers: HTTPHeaders(headers))
-        _ = try await response(of: request)
+        try await target.uploader.upload(fileURL: fileURL, progress: progress)
     }
 
     static func perform(_ request: UploadRequest, progress: @escaping @Sendable (Double) -> Void) async throws -> Data {

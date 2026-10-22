@@ -82,9 +82,6 @@ enum ScreenshotMode {
         guard isActive else { return }
         UserDefaults.ishare.removePersistentDomain(forName: SettingsStorage.screenshotSuiteName)
         seedSettings()
-        if let language = argument(after: "-ishareLanguage").flatMap(LanguageTypes.init(rawValue:)) {
-            LocalizableManager.shared.currentLanguage = language
-        }
         guard let scene else { return }
         present(scene)
     }
@@ -186,8 +183,7 @@ enum ScreenshotMode {
         window.setAccessibilityIdentifier(windowIdentifier)
         window.isReleasedWhenClosed = false
         window.level = .floating
-        window.contentView = NSHostingView(rootView: ScreenshotCanvas(scene: scene, document: document(for: scene))
-            .environmentObject(LocalizableManager.shared))
+        window.contentView = NSHostingView(rootView: ScreenshotCanvas(scene: scene, document: document(for: scene)))
         window.center()
         self.window = window
         NSApp.setActivationPolicy(.regular)

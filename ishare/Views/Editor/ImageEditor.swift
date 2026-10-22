@@ -54,7 +54,7 @@ final class ImageEditor: NSObject, NSWindowDelegate {
         }
         do {
             let fileURL = try ImageCaptureFlow.save(CapturedImage(image: image, suffix: "edited"))
-            await PostCapture.handle(fileURL: fileURL, kind: .image, openEditor: true)
+            await CaptureSession.finish(fileURL: fileURL, kind: .image, options: CaptureOptions(openEditor: true))
         } catch {
             Log.app.error("Preparing \(sourceURL.lastPathComponent, privacy: .public) for editing failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Couldn't open the image".localized(), icon: ToastIcon)

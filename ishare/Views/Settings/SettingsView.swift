@@ -160,7 +160,8 @@ struct PrefixRow: View {
 }
 
 struct GeneralSettingsView: View {
-    @EnvironmentObject var localizableManager: LocalizableManager
+    @State private var language = AppLanguage.override()
+    @State private var pendingLanguage: LanguageTypes??
     @Default(.menuBarIcon) var menubarIcon
     @Default(.toastTimeout) var toastTimeout
     @Default(.aussieMode) var aussieMode
@@ -170,11 +171,13 @@ struct GeneralSettingsView: View {
         Form {
             Section {
                 Picker("Language".localized(), selection: Binding(
-                    get: { localizableManager.currentLanguage },
-                    set: { localizableManager.changeLanguage(to: $0) }
+                    get: { language },
+                    set: { if $0 != language { pendingLanguage = .some($0) } }
                 )) {
+                    Text("System Default".localized()).tag(LanguageTypes?.none)
+                    Divider()
                     ForEach(LanguageTypes.allCases, id: \.self) { language in
-                        Text(language.name).tag(language)
+                        Text(language.name).tag(LanguageTypes?.some(language))
                     }
                 }
                 LaunchAtLogin.Toggle {
@@ -202,13 +205,19 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .alert("Language Change".localized(), isPresented: $localizableManager.showRestartAlert) {
+        .alert("Language Change".localized(), isPresented: Binding(
+            get: { pendingLanguage != nil },
+            set: { if !$0 { pendingLanguage = nil } }
+        )) {
             Button("Restart Now".localized(), role: .destructive) {
-                localizableManager.confirmLanguageChange()
+                guard let choice = pendingLanguage else { return }
+                AppLanguage.set(choice)
+                language = choice
+                AppLanguage.relaunch()
             }
             Button("Cancel".localized(), role: .cancel) {}
         } message: {
-            Text("The app needs to close to apply the language change. Please reopen the app after it closes.".localized())
+            Text("ishare restarts to apply the new language.".localized())
         }
     }
 }

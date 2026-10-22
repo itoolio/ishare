@@ -139,7 +139,7 @@ final class ScreenRecorder: ObservableObject {
         let border = RegionOverlay.borderWindow(around: global, dashed: false)
         let model = RecordingHUDModel()
         let hud = RegionOverlay.hudWindow(RecordingHUD(model: model) {
-            AppDelegate.shared.stopRecording()
+            CaptureSession.stopRecording()
         }, near: global, on: screen)
         border.orderFrontRegardless()
         hud.orderFrontRegardless()

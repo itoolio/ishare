@@ -27,8 +27,6 @@ struct CapturedImage {
 
 @MainActor
 enum ImageCaptureFlow {
-    static var isCapturing = false
-
     static func capture(type: CaptureType, display: Int = 1) async -> CapturedImage? {
         guard ScreenshotEngine.ensurePermission() else {
             Log.capture.error("Screen recording permission is missing")
@@ -115,24 +113,6 @@ enum ImageCaptureFlow {
         let url = SaveLocation.fileURL(for: .captures, fileName: fileName)
         try ImageEncoder.write(captured.image, as: fileType, to: url)
         return url
-    }
-}
-
-@MainActor
-func captureScreen(type: CaptureType, display: Int = 1, forceUpload: Bool = false) async {
-    guard !ImageCaptureFlow.isCapturing else { return }
-    ImageCaptureFlow.isCapturing = true
-    defer { ImageCaptureFlow.isCapturing = false }
-    Log.capture.info("Starting \(type.rawValue, privacy: .public) capture on display \(display)")
-    guard let captured = await ImageCaptureFlow.capture(type: type, display: display) else { return }
-    do {
-        let fileURL = try ImageCaptureFlow.save(captured)
-        Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
-        ImageCaptureFlow.isCapturing = false
-        await PostCapture.handle(fileURL: fileURL, kind: .image, forceUpload: forceUpload)
-    } catch {
-        Log.capture.error("Saving capture failed: \(error.localizedDescription, privacy: .public)")
-        BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
     }
 }
 

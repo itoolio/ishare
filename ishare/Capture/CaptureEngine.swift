@@ -200,7 +200,7 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDeleg
         Task { @MainActor [self] in
             if code == -3817 {
                 ContentSharingPickerManager.shared.deactivatePicker()
-                AppDelegate.shared.stopRecording()
+                CaptureSession.stopRecording()
             } else {
                 NSLog("Stream stopped with error: %@", error.localizedDescription)
             }

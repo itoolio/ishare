@@ -152,7 +152,7 @@ struct CaptureIntent: AppIntent {
         let fileURL = try ImageCaptureFlow.save(captured)
         let result = IntentFile(fileURL: fileURL, filename: fileURL.lastPathComponent, type: ImageEncoder.contentType(for: Defaults[.captureFileType]))
         Task { @MainActor in
-            await PostCapture.handle(fileURL: fileURL, kind: .image, forceUpload: upload)
+            await CaptureSession.finish(fileURL: fileURL, kind: .image, options: CaptureOptions(forceUpload: upload))
         }
         return .result(value: result)
     }
@@ -170,7 +170,7 @@ struct RecordIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        recordScreen(gif: gif, region: region)
+        CaptureSession.toggleRecording(gif: gif, region: region)
         return .result()
     }
 }

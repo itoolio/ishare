@@ -14,7 +14,7 @@ final class ScreenshotTests: XCTestCase {
         for (index, scene) in requested.enumerated() {
             let app = XCUIApplication()
             app.launchArguments = [
-                "-ishareScreenshotMode", "-ishareScene", scene, "-ishareLanguage", language,
+                "-ishareScreenshotMode", "-ishareScene", scene,
                 "-AppleLanguages", "(\(language))", "-NSInitialToolTipDelay", "600000",
             ]
             app.launch()

@@ -7,7 +7,6 @@ import UniformTypeIdentifiers
 final class AppState: ObservableObject {
     static let shared = AppState()
 
-    @Default(.showMainMenu) var showMainMenu
     @Default(.uploadHistory) var uploadHistory
 
     init() {
@@ -19,7 +18,7 @@ final class AppState: ObservableObject {
     private func onCapture(_ name: KeyboardShortcuts.Name, _ type: CaptureType, forceUpload: Bool = false) {
         KeyboardShortcuts.onKeyUp(for: name) {
             Task { @MainActor in
-                await captureScreen(type: type, forceUpload: forceUpload)
+                await CaptureSession.captureImage(type, options: CaptureOptions(forceUpload: forceUpload))
             }
         }
     }
@@ -27,7 +26,7 @@ final class AppState: ObservableObject {
     private func onRecord(_ name: KeyboardShortcuts.Name, gif: Bool, region: Bool = false, forceUpload: Bool = false) {
         KeyboardShortcuts.onKeyUp(for: name) {
             Task { @MainActor in
-                recordScreen(gif: gif, region: region, forceUpload: forceUpload)
+                CaptureSession.toggleRecording(gif: gif, region: region, options: CaptureOptions(forceUpload: forceUpload))
             }
         }
     }
@@ -50,8 +49,7 @@ final class AppState: ObservableObject {
 
         KeyboardShortcuts.onKeyUp(for: .toggleMainMenu) {
             Task { @MainActor in
-                NSApp.activate(ignoringOtherApps: true)
-                Defaults[.showMainMenu].toggle()
+                MenuController.shared.toggle()
             }
         }
 

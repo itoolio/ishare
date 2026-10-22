@@ -68,19 +68,19 @@ enum UploadCoordinator {
     }
 
     static func delete(_ item: HistoryItem) async throws {
-        let uploader = item.uploaderId.flatMap { id in CustomUploader.allCases.first { $0.id == id } }
-        if let key = item.s3Key, let uploader {
-            try await UploadService.deleteS3Object(key: key, uploader: uploader)
-            return
+        if let target = target(for: item) {
+            try await target.uploader.delete(item)
+        } else if let deletionURL = item.deletionUrl, let request = UploadService.deletionRequest(for: deletionURL, uploader: nil) {
+            _ = try await UploadService.response(of: UploadService.session.request(request))
         }
-        guard let deletionURL = item.deletionUrl, var request = UploadService.deletionRequest(for: deletionURL, uploader: uploader) else {
-            return
+    }
+
+    static func target(for item: HistoryItem) -> UploadTarget? {
+        if let id = item.uploaderId {
+            return target(forUploaderID: id)
         }
-        if uploader == nil, request.url?.host()?.contains("imgur.com") == true {
-            request.httpMethod = "DELETE"
-            request.setValue("Client-ID " + Defaults[.imgurClientId], forHTTPHeaderField: "Authorization")
-        }
-        _ = try await UploadService.response(of: UploadService.session.request(request))
+        guard item.deletionUrl.flatMap(URL.init(string:))?.host()?.contains("imgur.com") == true else { return nil }
+        return .imgur(clientID: Defaults[.imgurClientId])
     }
 }
 

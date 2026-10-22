@@ -9,42 +9,6 @@ enum PostCapture {
         case video
     }
 
-    static func handle(fileURL originalURL: URL, kind: Kind, forceUpload: Bool = false, openEditor: Bool = false) async {
-        var fileURL = originalURL
-        if kind == .image, openEditor || Defaults[.openEditorAfterCapture] {
-            switch await ImageEditor.edit(fileURL: fileURL) {
-            case let .saved(url):
-                fileURL = url
-            case .discarded:
-                try? FileManager.default.removeItem(at: fileURL)
-                return
-            }
-        }
-
-        let saveToDisk = Defaults[.saveToDisk]
-        if Defaults[.copyToClipboard] {
-            copyToClipboard(fileURL, kind: kind)
-        }
-        if Defaults[.openInFinder], saveToDisk {
-            NSWorkspace.shared.activateFileViewerSelecting([fileURL])
-        }
-        shareBasedOnPreferences(fileURL)
-
-        if Defaults[.uploadMedia] || forceUpload {
-            let uploadURL = kind == .video ? await compressedIfNeeded(fileURL) : fileURL
-            await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: saveToDisk ? fileURL : nil)
-            if uploadURL != fileURL {
-                try? FileManager.default.removeItem(at: uploadURL)
-            }
-        }
-
-        await showToast(fileURL: fileURL)
-        NSSound.beep()
-        if !saveToDisk {
-            try? FileManager.default.removeItem(at: fileURL)
-        }
-    }
-
     static func compressedIfNeeded(_ fileURL: URL) async -> URL {
         guard Defaults[.compressBeforeUpload], fileURL.pathExtension.lowercased() != "gif",
               let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize,

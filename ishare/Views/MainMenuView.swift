@@ -9,7 +9,6 @@ extension Color {
 }
 
 struct MainMenuView: View {
-    @EnvironmentObject var localizableManager: LocalizableManager
     @ObservedObject private var recorder = AppDelegate.shared.screenRecorder
 
     @Default(.copyToClipboard) var copyToClipboard
@@ -126,16 +125,16 @@ struct MainMenuView: View {
     private var captureRow: some View {
         HStack(spacing: 8) {
             ActionTile(symbol: "rectangle.dashed", title: "Region", shortcut: .captureRegion, identifier: "menu.capture.region") {
-                run { await captureScreen(type: .REGION) }
+                run { await CaptureSession.captureImage(.REGION) }
             }
             ActionTile(symbol: "macwindow", title: "Window", shortcut: .captureWindow, identifier: "menu.capture.window") {
-                run { await captureScreen(type: .WINDOW) }
+                run { await CaptureSession.captureImage(.WINDOW) }
             }
             if NSScreen.screens.count > 1 {
                 Menu {
                     ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { index, screen in
                         Button(screen.localizedName) {
-                            run { await captureScreen(type: .SCREEN, display: index + 1) }
+                            run { await CaptureSession.captureImage(.SCREEN, display: index + 1) }
                         }
                     }
                 } label: {
@@ -147,11 +146,11 @@ struct MainMenuView: View {
                 .accessibilityIdentifier("menu.capture.screen")
             } else {
                 ActionTile(symbol: "display", title: "Screen", shortcut: .captureScreen, identifier: "menu.capture.screen") {
-                    run { await captureScreen(type: .SCREEN) }
+                    run { await CaptureSession.captureImage(.SCREEN) }
                 }
             }
             ActionTile(symbol: "arrow.up.and.down.text.horizontal", title: "Scrolling", shortcut: .captureScrolling, identifier: "menu.capture.scrolling") {
-                run { await captureScreen(type: .SCROLLING) }
+                run { await CaptureSession.captureImage(.SCROLLING) }
             }
         }
     }
@@ -175,7 +174,7 @@ struct MainMenuView: View {
     private var recordSection: some View {
         if recorder.isRunning {
             Button {
-                AppDelegate.shared.stopRecording()
+                CaptureSession.stopRecording()
                 dismissMenu()
             } label: {
                 HStack(spacing: 10) {
@@ -208,7 +207,7 @@ struct MainMenuView: View {
                     shortcut: recordsGIF ? .recordGif : .recordScreen,
                     identifier: recordsGIF ? "menu.record.gif" : "menu.record.screen"
                 ) {
-                    run { recordScreen(gif: recordsGIF) }
+                    run { CaptureSession.toggleRecording(gif: recordsGIF) }
                 }
                 WideActionButton(
                     symbol: "rectangle.dashed.badge.record",
@@ -216,7 +215,7 @@ struct MainMenuView: View {
                     shortcut: recordsGIF ? .recordRegionGif : .recordRegion,
                     identifier: recordsGIF ? "menu.record.regiongif" : "menu.record.region"
                 ) {
-                    run { recordScreen(gif: recordsGIF, region: true) }
+                    run { CaptureSession.toggleRecording(gif: recordsGIF, region: true) }
                 }
             }
         }
@@ -361,15 +360,11 @@ struct MainMenuView: View {
     }
 
     private func dismissMenu() {
-        Defaults[.showMainMenu] = false
+        MenuController.shared.dismiss()
     }
 
     private func run(_ action: @escaping @MainActor () async -> Void) {
-        dismissMenu()
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(250))
-            await action()
-        }
+        MenuController.shared.perform(afterDismissing: action)
     }
 }
 
