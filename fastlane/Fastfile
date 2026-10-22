@@ -74,6 +74,36 @@ platform :mac do
     )
   end
 
+  desc "Replace the screenshots of an App Store version and resubmit it for review"
+  lane :screenshots do |options|
+    version = options.fetch(:version)
+    submit = options.fetch(:submit, "true").to_s == "true"
+    deliver(
+      api_key: api_key,
+      platform: "osx",
+      app_version: version,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_app_version_update: true,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      screenshots_path: "./fastlane/screenshots",
+      force: true,
+      submit_for_review: submit,
+      reject_if_possible: submit,
+      automatic_release: true,
+      run_precheck_before_submit: false,
+      precheck_include_in_app_purchases: false,
+      app_review_information: review_contact,
+      app_rating_config_path: "./fastlane/metadata/age_rating.json",
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: false
+      }
+    )
+  end
+
   desc "Check that the App Store Connect credentials and app record work"
   lane :verify do
     key = api_key

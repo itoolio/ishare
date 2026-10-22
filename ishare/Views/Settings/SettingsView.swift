@@ -361,6 +361,9 @@ struct RecordingSettingsView: View {
 
     var body: some View {
         Form {
+            if ScreenshotMode.isCapturingScreenshots {
+                RecordingExtrasSettings()
+            }
             Section("Video".localized()) {
                 Picker("Resolution".localized(), selection: $resolution) {
                     ForEach(RecordingResolution.allCases) { Text($0.title.localized()).tag($0) }
@@ -395,7 +398,9 @@ struct RecordingSettingsView: View {
                     }
                 }
             }
-            RecordingExtrasSettings()
+            if !ScreenshotMode.isCapturingScreenshots {
+                RecordingExtrasSettings()
+            }
             Section("GIF".localized()) {
                 Picker("GIF frame rate".localized(), selection: $gifFrameRate) {
                     ForEach(GIFFrameRate.allCases) { Text("\($0.rawValue) fps").tag($0) }
