@@ -127,7 +127,7 @@ final class ToastController {
             let url = model.fileURL
             dismiss()
             Task { @MainActor in
-                _ = await ImageEditor.edit(fileURL: url)
+                await ImageEditor.editAsNewCapture(sourceURL: url)
             }
         }
         let screen = NSScreen.main?.visibleFrame ?? .zero

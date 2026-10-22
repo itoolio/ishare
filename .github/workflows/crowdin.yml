@@ -9,41 +9,67 @@ permissions:
     contents: write
     pull-requests: write
 
+concurrency:
+    group: crowdin-${{ github.event.pull_request.number }}
+    cancel-in-progress: false
+
 jobs:
     merge:
         if: >-
             github.event.pull_request.head.ref == 'l10n_main' &&
             github.event.pull_request.head.repo.full_name == github.repository
         runs-on: ubuntu-latest
+        env:
+            GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+            CATALOG: ishare/Localizable.xcstrings
         steps:
-            - name: Validate changed files
-              id: validate
-              env:
-                  GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
-                  PR_NUMBER: ${{ github.event.pull_request.number }}
-                  REPOSITORY: ${{ github.repository }}
+            - uses: actions/checkout@v7
+              with:
+                  ref: ${{ github.event.pull_request.base.sha }}
+                  path: base
+                  persist-credentials: false
+            - uses: actions/checkout@v7
+              with:
+                  ref: ${{ github.event.pull_request.head.sha }}
+                  path: head
+                  token: ${{ secrets.REPO_ACCESS_TOKEN }}
+            - name: Skip the merge commit this workflow pushed
+              id: own
+              working-directory: head
               run: |
-                  files=$(gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[] | "\(.filename) \(.changes)"')
-                  test -n "$files"
-                  changes=0
-                  while read -r file count; do
-                    [ "$file" = "ishare/Localizable.xcstrings" ] || { echo "Unexpected file: $file"; exit 1; }
-                    changes=$((changes + count))
-                  done <<< "$files"
-                  echo "has_translations=$([ "$changes" -gt 0 ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
-            - name: Close empty Crowdin pull request
-              if: steps.validate.outputs.has_translations != '1'
-              env:
-                  GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
-                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  if git log -1 --format=%s | grep -q '^fix(i18n): add .* translations from Crowdin'; then
+                    echo "skip=1" >> "$GITHUB_OUTPUT"
+                  fi
+            - name: Keep only new translations
+              id: merge
+              if: steps.own.outputs.skip != '1'
+              run: |
+                  python3 base/scripts/merge-crowdin-translations.py "base/$CATALOG" "head/$CATALOG" merged.xcstrings | tee -a "$GITHUB_OUTPUT"
+            - name: Close pull request without new translations
+              if: steps.own.outputs.skip != '1' && steps.merge.outputs.added == '0'
               run: >-
                   gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --delete-branch
-                  --comment "Crowdin exported no translated values, so this no-op pull request was closed. It reopens when a translation is submitted."
-            - name: Merge automatically
-              if: steps.validate.outputs.has_translations == '1'
+                  --comment "Crowdin exported no new translations (only empty strings, English copies or values the repository already has), so this pull request was closed. Crowdin opens a new one when a translation is submitted."
+            - name: Commit the merged catalog on top of the base branch
+              if: steps.own.outputs.skip != '1' && steps.merge.outputs.added != '0'
+              working-directory: head
               env:
-                  GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
-                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  BASE_SHA: ${{ github.event.pull_request.base.sha }}
+                  HEAD_REF: ${{ github.event.pull_request.head.ref }}
+                  ADDED: ${{ steps.merge.outputs.added }}
+                  LANGUAGES: ${{ steps.merge.outputs.languages }}
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git fetch -q origin "$BASE_SHA"
+                  git read-tree --reset -u "$BASE_SHA"
+                  cp ../merged.xcstrings "$CATALOG"
+                  git add -A
+                  git commit -q -m "fix(i18n): add $ADDED translations from Crowdin ($LANGUAGES)"
+                  git push -q origin "HEAD:$HEAD_REF"
+            - name: Merge automatically
+              if: steps.own.outputs.skip != '1' && steps.merge.outputs.added != '0'
               run: >-
-                  gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --auto --delete-branch
+                  gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
                   --subject "fix(i18n): update translations from Crowdin"

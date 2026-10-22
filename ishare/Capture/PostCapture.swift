@@ -9,9 +9,9 @@ enum PostCapture {
         case video
     }
 
-    static func handle(fileURL originalURL: URL, kind: Kind, forceUpload: Bool = false) async {
+    static func handle(fileURL originalURL: URL, kind: Kind, forceUpload: Bool = false, openEditor: Bool = false) async {
         var fileURL = originalURL
-        if kind == .image, Defaults[.openEditorAfterCapture] {
+        if kind == .image, openEditor || Defaults[.openEditorAfterCapture] {
             switch await ImageEditor.edit(fileURL: fileURL) {
             case let .saved(url):
                 fileURL = url
@@ -30,7 +30,7 @@ enum PostCapture {
         }
         shareBasedOnPreferences(fileURL)
 
-        if Defaults[.uploadMedia] || forceUpload, !ImageEditor.consumeUpload(of: fileURL) {
+        if Defaults[.uploadMedia] || forceUpload {
             let uploadURL = kind == .video ? await compressedIfNeeded(fileURL) : fileURL
             await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: saveToDisk ? fileURL : nil)
             if uploadURL != fileURL {

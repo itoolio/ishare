@@ -12,11 +12,7 @@ enum EditorResult: Equatable {
 @MainActor
 final class ImageEditor: NSObject, NSWindowDelegate {
     private static var open: [ImageEditor] = []
-    private static var uploadedFiles: Set<URL> = []
 
-    static func consumeUpload(of url: URL) -> Bool {
-        uploadedFiles.remove(url.standardizedFileURL) != nil
-    }
     private let document: EditorDocument
     private let fileURL: URL
     private var window: NSWindow?
@@ -41,15 +37,27 @@ final class ImageEditor: NSObject, NSWindowDelegate {
         return result
     }
 
-    static func chooseAndEdit() {
+    static func chooseAndEdit() async {
+        NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.image]
+        panel.allowedContentTypes = [.image, .pdf]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        NSApp.activate(ignoringOtherApps: true)
-        Task { @MainActor in
-            guard await panel.beginAsyncModal() == .OK, let url = panel.url else { return }
-            _ = await edit(fileURL: url)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        await editAsNewCapture(sourceURL: url)
+    }
+
+    static func editAsNewCapture(sourceURL: URL) async {
+        guard let image = ImageEncoder.loadImage(at: sourceURL) ?? pdfImage(at: sourceURL) else {
+            BezelNotification.show(messageText: "Couldn't open the image".localized(), icon: ToastIcon)
+            return
+        }
+        do {
+            let fileURL = try ImageCaptureFlow.save(CapturedImage(image: image, suffix: "edited"))
+            await PostCapture.handle(fileURL: fileURL, kind: .image, openEditor: true)
+        } catch {
+            Log.app.error("Preparing \(sourceURL.lastPathComponent, privacy: .public) for editing failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: "Couldn't open the image".localized(), icon: ToastIcon)
         }
     }
 
@@ -66,8 +74,7 @@ final class ImageEditor: NSObject, NSWindowDelegate {
                 document: document,
                 onDone: { [weak self] in self?.save(thenClose: true) },
                 onDiscard: { [weak self] in self?.discard() },
-                onCopy: { [weak self] in self?.copy() },
-                onUpload: { [weak self] in self?.upload() }
+                onCopy: { [weak self] in self?.copy() }
             )
             let window = NSWindow(
                 contentRect: initialFrame(),
@@ -128,17 +135,6 @@ final class ImageEditor: NSObject, NSWindowDelegate {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([NSImage(cgImage: rendered, size: CGSize(width: rendered.width, height: rendered.height))])
         BezelNotification.show(messageText: "Copied to clipboard".localized(), icon: ToastIcon)
-    }
-
-    private func upload() {
-        save(thenClose: false)
-        let url = fileURL
-        Task { @MainActor in
-            if case .success = await UploadCoordinator.upload(fileURL: url, localFileURL: Defaults[.saveToDisk] ? url : nil) {
-                ImageEditor.uploadedFiles.insert(url.standardizedFileURL)
-                BezelNotification.show(messageText: "Uploaded".localized(), icon: ToastIcon)
-            }
-        }
     }
 
     private func close(with result: EditorResult) {

@@ -6,7 +6,6 @@ struct EditorView: View {
     var onDone: () -> Void
     var onDiscard: () -> Void
     var onCopy: () -> Void
-    var onUpload: () -> Void
 
     @State private var dragStart: CGPoint?
     @State private var dragPoints: [CGPoint] = []
@@ -156,10 +155,6 @@ struct EditorView: View {
                 Label("Copy".localized(), systemImage: "doc.on.doc")
             }
             .keyboardShortcut("c", modifiers: .command)
-            Button(action: onUpload) {
-                Label("Upload".localized(), systemImage: "icloud.and.arrow.up")
-            }
-            .keyboardShortcut("u", modifiers: .command)
             Button(action: {
                 document.commitText()
                 onDone()

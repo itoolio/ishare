@@ -266,7 +266,7 @@ struct ScreenshotCanvas: View {
             VStack(spacing: 30) {
                 caption
                 if let document {
-                    framed(EditorView(document: document, onDone: {}, onDiscard: {}, onCopy: {}, onUpload: {}), size: CGSize(width: 1180, height: 640))
+                    framed(EditorView(document: document, onDone: {}, onDiscard: {}, onCopy: {}), size: CGSize(width: 1180, height: 640))
                 }
             }
         case .uploaders, .recording:

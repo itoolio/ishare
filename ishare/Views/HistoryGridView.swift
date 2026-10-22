@@ -91,7 +91,7 @@ struct HistoryGridView: View {
             Button("Open in Browser".localized()) { openInBrowser(item) }
             if let path = item.localPath, FileManager.default.fileExists(atPath: path) {
                 Button("Open in Editor".localized()) {
-                    Task { @MainActor in _ = await ImageEditor.edit(fileURL: URL(fileURLWithPath: path)) }
+                    Task { @MainActor in await ImageEditor.editAsNewCapture(sourceURL: URL(fileURLWithPath: path)) }
                 }
                 Button("Show in Finder".localized()) {
                     NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
