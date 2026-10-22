@@ -63,8 +63,29 @@ enum PostCapture {
         pasteboard.clearContents()
         if kind == .image, Defaults[.copyImageToClipboard], let image = NSImage(contentsOf: fileURL) {
             pasteboard.writeObjects([image])
+        } else if kind == .image {
+            pasteboard.writeObjects([pasteboardItem(forImageAt: fileURL)])
         } else {
             pasteboard.writeObjects([fileURL as NSURL])
         }
+    }
+
+    // Apps that only read bitmap types (e.g. terminal CLIs, chat inputs, image editors) ignore
+    // a bare file URL, so the PNG rides along while Finder and friends still paste the file.
+    static func pasteboardItem(forImageAt fileURL: URL) -> NSPasteboardItem {
+        let item = NSPasteboardItem()
+        item.setString(fileURL.absoluteString, forType: .fileURL)
+        if let png = pngData(at: fileURL) {
+            item.setData(png, forType: .png)
+        }
+        return item
+    }
+
+    static func pngData(at fileURL: URL) -> Data? {
+        if fileURL.pathExtension.lowercased() == FileType.PNG.rawValue {
+            return try? Data(contentsOf: fileURL)
+        }
+        guard let image = ImageEncoder.loadImage(at: fileURL) else { return nil }
+        return try? ImageEncoder.data(for: image, as: .PNG)
     }
 }
