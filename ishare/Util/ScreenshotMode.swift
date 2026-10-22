@@ -214,6 +214,7 @@ enum ScreenshotMode {
 
     @MainActor private static func presentForTesting(_ scene: ScreenshotScene) {
         let hostingView = NSHostingView(rootView: UITestCanvas(scene: scene, document: testDocument(for: scene)))
+        hostingView.sizingOptions = [.minSize]
         let window = NSWindow(contentRect: CGRect(origin: .zero, size: testWindowSize(for: scene, fitting: hostingView.fittingSize)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.identifier = NSUserInterfaceItemIdentifier(testWindowIdentifier)
         window.title = testWindowIdentifier
