@@ -5,7 +5,7 @@ import Foundation
 import SwiftUI
 
 final class AudioLevelsProvider: ObservableObject {
-    @Published var audioLevels = AudioLevels.zero
+    @Published var audioLevels = RecordingAudioLevels.zero
 }
 
 enum RecordingTarget {
@@ -16,10 +16,13 @@ enum RecordingTarget {
 @MainActor
 final class RecordingHUDModel: ObservableObject {
     @Published var startDate = Date()
+    @Published var showsSystemAudio = Defaults[.recordAudio]
+    @Published var showsMicrophone = Defaults[.recordMic]
 }
 
 struct RecordingHUD: View {
     @ObservedObject var model: RecordingHUDModel
+    @ObservedObject var levels: AudioLevelsProvider
     var onStop: () -> Void
 
     var body: some View {
@@ -30,6 +33,18 @@ struct RecordingHUD: View {
             TimelineView(.periodic(from: model.startDate, by: 1)) { context in
                 Text(Duration.seconds(context.date.timeIntervalSince(model.startDate)).formatted(.time(pattern: .minuteSecond)))
                     .font(.system(size: 13, weight: .semibold).monospacedDigit())
+            }
+            if model.showsSystemAudio || model.showsMicrophone {
+                VStack(alignment: .leading, spacing: 3) {
+                    if model.showsSystemAudio {
+                        LabeledAudioMeter(systemImage: "speaker.wave.2.fill", levels: levels.audioLevels.system)
+                            .help("System audio".localized())
+                    }
+                    if model.showsMicrophone {
+                        LabeledAudioMeter(systemImage: "mic.fill", levels: levels.audioLevels.microphone)
+                            .help("Microphone".localized())
+                    }
+                }
             }
             Button(action: onStop) {
                 Label("Stop".localized(), systemImage: "stop.fill")
@@ -54,6 +69,16 @@ final class ScreenRecorder: ObservableObject {
     private var audioMeterCancellable: AnyCancellable?
     private let captureEngine = CaptureEngine()
     private var overlayWindows: [NSWindow] = []
+    private let inputOverlay = InputOverlayController()
+    private let webcamBubble = WebcamBubbleController()
+
+    private var captureOverlayWindowIDs: Set<CGWindowID> {
+        Set(inputOverlay.windowIDs + [webcamBubble.windowID].compactMap(\.self))
+    }
+
+    private var showsNativeClicks: Bool {
+        Defaults[.recordClicks] && !inputOverlay.drawsClicks
+    }
 
     var canRecord: Bool {
         get async {
@@ -107,9 +132,13 @@ final class ScreenRecorder: ObservableObject {
 
     private func startRegion(_ fileURL: URL, screen: NSScreen, rect: CGRect) async {
         do {
+            let area = RecordingArea.region(rect, on: screen)
+            await showCaptureOverlays(areas: [area], bubbleArea: area.rect)
             let content = try await ScreenshotEngine.shareableContent()
             guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
-            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: [])
+            let overlayIDs = captureOverlayWindowIDs
+            let overlayWindows = content.windows.filter { overlayIDs.contains($0.windowID) }
+            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: overlayWindows)
             let scale = CGFloat(filter.pointPixelScale)
             let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
             configuration.sourceRect = rect
@@ -119,6 +148,7 @@ final class ScreenRecorder: ObservableObject {
         } catch {
             NSLog("Region recording failed: %@", error.localizedDescription)
             removeOverlay()
+            hideCaptureOverlays()
             isRunning = false
         }
     }
@@ -135,15 +165,50 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private func showRegionOverlay(screen: NSScreen, rect: CGRect) {
-        let global = CGRect(x: screen.frame.minX + rect.minX, y: screen.frame.maxY - rect.maxY, width: rect.width, height: rect.height)
+        let global = RecordingArea.region(rect, on: screen).rect
         let border = RegionOverlay.borderWindow(around: global, dashed: false)
-        let model = RecordingHUDModel()
-        let hud = RegionOverlay.hudWindow(RecordingHUD(model: model) {
-            CaptureSession.stopRecording()
-        }, near: global, on: screen)
+        let hud = makeHUDWindow(near: global, on: screen)
         border.orderFrontRegardless()
         hud.orderFrontRegardless()
         overlayWindows = [border, hud]
+    }
+
+    private func showPickerHUD() {
+        guard let screen = NSScreen.main else { return }
+        let anchor = CGRect(x: screen.visibleFrame.midX, y: screen.visibleFrame.minY + 80, width: 0, height: 0)
+        let hud = makeHUDWindow(near: anchor, on: screen)
+        hud.orderFrontRegardless()
+        overlayWindows = [hud]
+    }
+
+    private func makeHUDWindow(near rect: CGRect, on screen: NSScreen) -> NSPanel {
+        RegionOverlay.hudWindow(RecordingHUD(model: RecordingHUDModel(), levels: audioLevelsProvider) {
+            CaptureSession.stopRecording()
+        }, near: rect, on: screen)
+    }
+
+    private func showCaptureOverlays(areas: [RecordingArea], bubbleArea: CGRect?) async {
+        inputOverlay.start(
+            areas: areas,
+            showsClicks: Defaults[.recordClicks],
+            showsKeystrokes: Defaults[.showKeystrokes],
+            shortcutsOnly: Defaults[.keystrokesShortcutsOnly]
+        )
+        if Defaults[.showWebcam], let bubbleArea {
+            await webcamBubble.show(in: bubbleArea)
+        }
+    }
+
+    private func hideCaptureOverlays() {
+        inputOverlay.stop()
+        webcamBubble.hide()
+    }
+
+    private func recordedScreen(for filter: SCContentFilter) -> NSScreen? {
+        if #available(macOS 15.2, *), let display = filter.includedDisplays.first {
+            return NSScreen.screens.first { $0.displayID == display.displayID }
+        }
+        return NSScreen.screens.first { $0.frame.size == filter.contentRect.size } ?? NSScreen.main
     }
 
     private func removeOverlay() {
@@ -154,6 +219,7 @@ final class ScreenRecorder: ObservableObject {
     func stop() async -> Result<URL, any Error> {
         removeOverlay()
         let result = await captureEngine.stopCapture()
+        hideCaptureOverlays()
         stopAudioMetering()
         isRunning = false
         startDate = nil
@@ -169,14 +235,28 @@ final class ScreenRecorder: ObservableObject {
 
     private func stopAudioMetering() {
         audioMeterCancellable?.cancel()
-        audioLevelsProvider.audioLevels = AudioLevels.zero
+        audioLevelsProvider.audioLevels = .zero
     }
 
     private func startCapture(with filter: SCContentFilter, fileURL: URL) async {
         let rect = filter.contentRect
         let scale = CGFloat(filter.pointPixelScale)
         let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
+        guard startDate == nil else {
+            configuration.capturesAudio = Defaults[.recordAudio]
+            configuration.captureMicrophone = Defaults[.recordMic]
+            configuration.microphoneCaptureDeviceID = Defaults[.recordMic] ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
+            configuration.showsCursor = Defaults[.recordPointer]
+            configuration.showMouseClicks = showsNativeClicks
+            await captureEngine.update(configuration: configuration, filter: filter)
+            return
+        }
         isRunning = true
+        if filter.style == .display, let screen = recordedScreen(for: filter) {
+            await showCaptureOverlays(areas: [.fullScreen(screen)], bubbleArea: screen.visibleFrame)
+        } else {
+            showPickerHUD()
+        }
         await run(configuration: configuration, filter: filter, fileURL: fileURL)
     }
 
@@ -184,7 +264,7 @@ final class ScreenRecorder: ObservableObject {
         startDate = Date()
         startAudioMetering()
         do {
-            for try await _ in captureEngine.startCapture(configuration: configuration, filter: filter, fileURL: fileURL) {}
+            for try await _ in captureEngine.startCapture(configuration: configuration, filter: filter, fileURL: fileURL, showsNativeClicks: showsNativeClicks) {}
         } catch {
             NSLog("Capture stream ended: %@", error.localizedDescription)
         }

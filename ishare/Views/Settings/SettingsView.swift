@@ -340,6 +340,7 @@ struct RecordingSettingsView: View {
                     }
                 }
             }
+            RecordingExtrasSettings()
             Section("GIF".localized()) {
                 Picker("GIF frame rate".localized(), selection: $gifFrameRate) {
                     ForEach(GIFFrameRate.allCases) { Text("\($0.rawValue) fps").tag($0) }

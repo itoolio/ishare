@@ -86,9 +86,21 @@ enum CaptureSession {
 
     private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions) async {
         var fileURL = url
-        if gif {
+        var isGIF = false
+        if Defaults[.trimBeforeSaving] {
+            switch await RecordingTrimWindow.present(url) {
+            case .keepOriginal:
+                break
+            case let .trimmed(trimmedURL):
+                fileURL = trimmedURL
+            case let .exportedGIF(gifURL):
+                fileURL = gifURL
+                isGIF = true
+            }
+        }
+        if gif, !isGIF {
             do {
-                fileURL = try await exportGif(from: url, frameRate: Defaults[.gifFrameRate].rawValue)
+                fileURL = try await RecordingConversions.convertToGIF(fileURL, range: nil, preset: .current, deletingSource: true)
             } catch {
                 Log.capture.error("GIF export failed: \(error.localizedDescription, privacy: .public)")
                 BezelNotification.show(messageText: "GIF export failed".localized(), icon: ToastIcon)
