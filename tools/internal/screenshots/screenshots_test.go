@@ -81,17 +81,3 @@ func TestXcodebuildArgumentsOnlyRunScreenshotTestsUnsigned(t *testing.T) {
 		t.Errorf("unexpected build arguments %v", build)
 	}
 }
-
-func TestPreferRenderedUsesAppRenderedFilesWhenPresent(t *testing.T) {
-	copies := []Copy{
-		{Source: "/attachments/a.png", Destination: "/out/01_menu.png"},
-		{Source: "/attachments/b.png", Destination: "/out/02_editor.png"},
-	}
-	got := PreferRendered(copies, "/rendered", func(path string) bool { return path == "/rendered/01_menu.png" })
-	if got[0].Source != "/rendered/01_menu.png" || got[1].Source != "/attachments/b.png" {
-		t.Fatalf("unexpected sources: %+v", got)
-	}
-	if got[0].Destination != "/out/01_menu.png" {
-		t.Fatalf("destination changed: %+v", got[0])
-	}
-}

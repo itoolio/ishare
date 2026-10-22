@@ -1,7 +1,6 @@
 import AppKit
 import Defaults
 import SwiftUI
-import UniformTypeIdentifiers
 
 enum ScreenshotScene: String, CaseIterable {
     case menu
@@ -211,41 +210,6 @@ enum ScreenshotMode {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             window.makeFirstResponder(nil)
         }
-        if let output = argument(after: "-ishareScreenshotOutput") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                guard let view = window.contentView else { return }
-                do {
-                    try writeSnapshot(of: view, to: URL(fileURLWithPath: output))
-                } catch {
-                    Log.app.error("Writing the screenshot failed: \(error.localizedDescription, privacy: .public)")
-                }
-            }
-        }
-    }
-
-    @MainActor static func writeSnapshot(of view: NSView, to url: URL, scale: CGFloat = 2) throws {
-        let size = view.bounds.size
-        let width = Int(size.width * scale)
-        let height = Int(size.height * scale)
-        guard let rep = NSBitmapImageRep(
-            bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height, bitsPerSample: 8, samplesPerPixel: 4,
-            hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
-        ) else { throw CocoaError(.fileWriteUnknown) }
-        rep.size = size
-        view.cacheDisplay(in: view.bounds, to: rep)
-        guard let rendered = rep.cgImage,
-              let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                                      space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
-        else { throw CocoaError(.fileWriteUnknown) }
-        context.setFillColor(NSColor.black.cgColor)
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        context.draw(rendered, in: CGRect(x: 0, y: 0, width: width, height: height))
-        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        guard let opaque = context.makeImage(),
-              let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
-        else { throw CocoaError(.fileWriteUnknown) }
-        CGImageDestinationAddImage(destination, opaque, nil)
-        guard CGImageDestinationFinalize(destination) else { throw CocoaError(.fileWriteUnknown) }
     }
 
     @MainActor private static func presentForTesting(_ scene: ScreenshotScene) {
