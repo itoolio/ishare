@@ -145,8 +145,9 @@ func Run(options Options) error {
 func capture(options Options, work, derivedData string, target Target) error {
 	output := filepath.Join(options.Root, "fastlane", "screenshots", target.Locale)
 	attachments := filepath.Join(work, "attachments", target.Locale)
+	rendered := filepath.Join(work, "rendered", target.Locale)
 	result := filepath.Join(work, "Screenshots-"+target.Locale+".xcresult")
-	for _, directory := range []string{output, attachments} {
+	for _, directory := range []string{output, attachments, rendered} {
 		if err := os.RemoveAll(directory); err != nil {
 			return err
 		}
@@ -154,7 +155,7 @@ func capture(options Options, work, derivedData string, target Target) error {
 			return err
 		}
 	}
-	environment := []string{"TEST_RUNNER_ISHARE_LANGUAGE=" + target.Language}
+	environment := []string{"TEST_RUNNER_ISHARE_LANGUAGE=" + target.Language, "TEST_RUNNER_ISHARE_SCREENSHOT_DIR=" + rendered}
 	if err := xcodebuild(options, environment, TestArguments(derivedData, result)); err != nil {
 		return err
 	}
@@ -169,6 +170,7 @@ func capture(options Options, work, derivedData string, target Target) error {
 	if err != nil {
 		return err
 	}
+	copies = PreferRendered(copies, rendered, fileExists)
 	for _, copy := range copies {
 		if err := copyFile(copy.Source, copy.Destination); err != nil {
 			return err
@@ -179,6 +181,23 @@ func capture(options Options, work, derivedData string, target Target) error {
 	}
 	fmt.Fprintf(options.Output, "Exported %d screenshots to %s\n", len(copies), output)
 	return nil
+}
+
+func PreferRendered(copies []Copy, rendered string, exists func(string) bool) []Copy {
+	preferred := make([]Copy, len(copies))
+	for index, copy := range copies {
+		candidate := filepath.Join(rendered, filepath.Base(copy.Destination))
+		if exists(candidate) {
+			copy.Source = candidate
+		}
+		preferred[index] = copy
+	}
+	return preferred
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func copyFile(source, destination string) error {
