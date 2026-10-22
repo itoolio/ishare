@@ -1,3 +1,23 @@
+## [5.1.0](https://github.com/itoolio/ishare/compare/v5.0.0...v5.1.0) (2026-10-22)
+
+### Features
+
+* **capture:** add measuring, clearer magnifier, last region, privacy blur and beautify ([683e534](https://github.com/itoolio/ishare/commit/683e534554e84147709193af337fab100b7b3877))
+* **editor:** canvas crop handles, spotlight union, stamps, arrow styles and zoom ([45a7eb4](https://github.com/itoolio/ishare/commit/45a7eb40f2f2014c86e54e5dd56f9063b7ffd137))
+* **editor:** discard with Command-Delete ([ef9fc0c](https://github.com/itoolio/ishare/commit/ef9fc0c39389a880f80d882932bb7465e2b03715))
+* **history:** cached thumbnails, history search, server deletion, limits and sounds ([1333f84](https://github.com/itoolio/ishare/commit/1333f8493561e1bb1f5dfb985b7e09ee822457a1))
+* **i18n:** translate the new features into all supported languages ([52abecc](https://github.com/itoolio/ishare/commit/52abeccbc5a48cbea06a352a36a3907e152eecbc))
+* **recording:** add input overlay, webcam bubble, audio meters, trimming and GIF presets ([f69d654](https://github.com/itoolio/ishare/commit/f69d654716a472557877db261516c947ad4fa59c))
+* **settings:** add privacy and background options for screenshots ([d63cbdf](https://github.com/itoolio/ishare/commit/d63cbdf0b5fdeefd3ac3928b6472bc24c8bb3654))
+* **ui:** keyboard menu, hover previews, menu bar drops, services, onboarding and settings search ([224bc70](https://github.com/itoolio/ishare/commit/224bc70b18d62a122b05f2ee57c1cbab693a2a81))
+* **upload:** multi-destination uploads, retry queue, watch folder and uploader tooling ([da25d26](https://github.com/itoolio/ishare/commit/da25d2691d0aae2a2c10f11a08c94031e83c511c))
+
+### Bug Fixes
+
+* **capture:** copy PNG pixels with the file URL ([3a75ef7](https://github.com/itoolio/ishare/commit/3a75ef738cd7eab76f5d4d818aed6b0f1561654f))
+* **capture:** copy PNG pixels with the file URL ([#153](https://github.com/itoolio/ishare/issues/153)) ([d8ed46b](https://github.com/itoolio/ishare/commit/d8ed46bf177ad9ef20073e5647ca9a6746f0f97b))
+* report real upload results, skip own captures in the watch folder and index new settings ([61c571d](https://github.com/itoolio/ishare/commit/61c571d19e74da59f00e2ed2dd264eddc8120340))
+
 ## [5.0.0](https://github.com/itoolio/ishare/compare/v4.2.6...v5.0.0) (2026-10-20)
 
 ### ⚠ BREAKING CHANGES
