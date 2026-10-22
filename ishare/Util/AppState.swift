@@ -63,7 +63,7 @@ final class AppState: ObservableObject {
 
         KeyboardShortcuts.onKeyUp(for: .openEditor) {
             Task { @MainActor in
-                ImageEditor.chooseAndEdit()
+                await ImageEditor.chooseAndEdit()
             }
         }
 
