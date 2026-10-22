@@ -37,6 +37,47 @@ enum ImageProcessing {
         return render(output.composited(over: input), extent: input.extent, colorSpace: image.colorSpace) ?? image
     }
 
+    static func blur(_ image: CGImage, mask: CGImage, radius: CGFloat) -> CGImage {
+        let input = CIImage(cgImage: image)
+        let maskImage = CIImage(cgImage: mask)
+        guard maskImage.extent == input.extent else { return image }
+        let blurred = input.clampedToExtent().applyingGaussianBlur(sigma: Double(max(1, radius))).cropped(to: input.extent)
+        let filter = CIFilter.blendWithMask()
+        filter.inputImage = blurred
+        filter.backgroundImage = input
+        filter.maskImage = maskImage
+        guard let output = filter.outputImage else { return image }
+        return render(output, extent: input.extent, colorSpace: image.colorSpace) ?? image
+    }
+
+    static func pixelColor(of image: CGImage, at pixel: CGPoint) -> CaptureColor? {
+        let x = Int(pixel.x.rounded(.down))
+        let y = Int(pixel.y.rounded(.down))
+        guard x >= 0, y >= 0, x < image.width, y < image.height,
+              let single = image.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)),
+              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)
+        else { return nil }
+        var bytes = [UInt8](repeating: 0, count: 4)
+        let drawn = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return false }
+            context.setBlendMode(.copy)
+            context.draw(single, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+            return true
+        }
+        guard drawn else { return nil }
+        let alpha = CGFloat(bytes[3]) / 255
+        guard alpha > 0 else { return CaptureColor(red: 0, green: 0, blue: 0, alpha: 0) }
+        return CaptureColor(
+            red: CGFloat(bytes[0]) / 255 / alpha,
+            green: CGFloat(bytes[1]) / 255 / alpha,
+            blue: CGFloat(bytes[2]) / 255 / alpha,
+            alpha: alpha
+        )
+    }
+
     static func borderColor(of image: CGImage, around region: CGRect) -> CIColor {
         let input = CIImage(cgImage: image)
         let rect = ciRect(fromTopLeft: region, imageHeight: CGFloat(image.height))

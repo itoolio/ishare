@@ -36,6 +36,7 @@ final class AppState: ObservableObject {
         onCapture(.captureWindow, .WINDOW)
         onCapture(.captureScreen, .SCREEN)
         onCapture(.captureScrolling, .SCROLLING)
+        onCapture(.captureLastRegion, .LAST_REGION)
         onCapture(.captureRegionForceUpload, .REGION, forceUpload: true)
         onCapture(.captureWindowForceUpload, .WINDOW, forceUpload: true)
         onCapture(.captureScreenForceUpload, .SCREEN, forceUpload: true)
