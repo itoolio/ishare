@@ -32,12 +32,21 @@ struct ishare: App {
             case .SYSTEM: Image(systemName: "photo.on.rectangle.angled")
             }
         }
-        .menuBarExtraAccess(isPresented: $menu.isPresented)
+        .menuBarExtraAccess(isPresented: $menu.isPresented) { statusItem in
+            StatusItemController.shared.attach(statusItem)
+        }
         .menuBarExtraStyle(.window)
         Settings {
             SettingsView()
         }
         .windowResizability(.contentSize)
+        Window("Welcome to ishare".localized(), id: Onboarding.windowID) {
+            OnboardingView()
+        }
+        .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
+        .defaultLaunchBehavior(Onboarding.shouldPresentAtLaunch ? .presented : .suppressed)
+        .restorationBehavior(.disabled)
     }
 }
 
@@ -57,7 +66,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Migrations.run()
         }
         SaveLocation.activateAll()
+        if !ScreenshotMode.isActive {
+            applyHistoryLimits()
+        }
+        NSApp.servicesProvider = self
+        NSUpdateDynamicServices()
         ScreenshotMode.prepareIfNeeded()
+    }
+
+    func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
+        false
+    }
+
+    @objc func uploadFiles(_ pasteboard: NSPasteboard, userData _: String?, error: AutoreleasingUnsafeMutablePointer<NSString?>) {
+        guard let payload = ExternalUpload.payload(from: pasteboard) else {
+            error.pointee = "No files to upload".localized() as NSString
+            return
+        }
+        Task { @MainActor in
+            await ExternalUpload.upload(payload)
+        }
     }
 
     func application(_: NSApplication, open urls: [URL]) {
