@@ -68,7 +68,7 @@ open ishare.xcodeproj
   - `release-notes [file]` turns release markdown on stdin into App Store release notes;
   - `register-bundle-id [identifier...]` registers bundle identifiers with App Store Connect;
   - `merge-translations <base> <incoming> <output>` keeps only new Crowdin translations in a string catalog;
-  - `screenshots [locale[:language]...]` renders the App Store screenshots through the `Screenshots` UI test scheme into `fastlane/screenshots`.
+  - `screenshots [locale[:language]...]` renders the App Store screenshots through the `Screenshots` UI test scheme into `fastlane/screenshots` as 2880×1800 JPEGs. Run it on a Mac with a Retina display (the scenes are 1440×900 points) and commit the result; releases upload the committed screenshots, and the App Store workflow replaces them on a version already in review.
 - Releases are cut automatically from `main` with semantic-release, so use [Conventional Commits](https://www.conventionalcommits.org). Each release:
   - signs and notarizes the DMG;
   - updates the Sparkle appcast;

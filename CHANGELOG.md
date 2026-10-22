@@ -15,7 +15,6 @@
 ### Bug Fixes
 
 * **capture:** copy PNG pixels with the file URL ([3a75ef7](https://github.com/itoolio/ishare/commit/3a75ef738cd7eab76f5d4d818aed6b0f1561654f))
-* **capture:** copy PNG pixels with the file URL ([#153](https://github.com/itoolio/ishare/issues/153)) ([d8ed46b](https://github.com/itoolio/ishare/commit/d8ed46bf177ad9ef20073e5647ca9a6746f0f97b))
 * report real upload results, skip own captures in the watch folder and index new settings ([61c571d](https://github.com/itoolio/ishare/commit/61c571d19e74da59f00e2ed2dd264eddc8120340))
 
 ## [5.0.0](https://github.com/itoolio/ishare/compare/v4.2.6...v5.0.0) (2026-10-20)
@@ -42,8 +41,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ### Features
 
 * add option to copy image data to clipboard instead of URL ([102b57b](https://github.com/itoolio/ishare/commit/102b57bd06a1ed75db9fc4d69f1afb668b1cdf23))
-* add option to copy image data to clipboard instead of URL ([#146](https://github.com/itoolio/ishare/issues/146)) ([c911c24](https://github.com/itoolio/ishare/commit/c911c244e38d39a7950f07f2bdfe6eb7eae613b7))
-* add option to copy image data to clipboard instead of URL ([#147](https://github.com/itoolio/ishare/issues/147)) ([fbe5f58](https://github.com/itoolio/ishare/commit/fbe5f58653504a9095dfabdc6dcec3598fbf05e7))
 * **capture:** capture with ScreenCaptureKit and on-screen selectors ([8b4c984](https://github.com/itoolio/ishare/commit/8b4c984eb691e3e259633f8bb55d125d30c1bf85)), closes [#114](https://github.com/itoolio/ishare/issues/114) [#116](https://github.com/itoolio/ishare/issues/116) [#115](https://github.com/itoolio/ishare/issues/115) [#92](https://github.com/itoolio/ishare/issues/92) [#119](https://github.com/itoolio/ishare/issues/119) [#41](https://github.com/itoolio/ishare/issues/41)
 * chat uploader assistant, permission helper and live-test fixes ([#151](https://github.com/itoolio/ishare/issues/151)) ([e6c793e](https://github.com/itoolio/ishare/commit/e6c793e0f56ee48f2a4f3def00d9a2b0aaf6ac67))
 * chat-based uploader assistant and drag-in permission helper ([d7394f5](https://github.com/itoolio/ishare/commit/d7394f53c8d4fa040c934e9755ab22dc1d9e91e9))
