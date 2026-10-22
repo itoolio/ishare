@@ -74,12 +74,33 @@ platform :mac do
     )
   end
 
+  def withdraw_from_review(version:, timeout: 900)
+    app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
+    UI.user_error!("App not found in App Store Connect") unless app
+    platform = Spaceship::ConnectAPI::Platform::MAC_OS
+    submission = app.get_in_progress_review_submission(platform: platform)
+    return unless submission
+    UI.message("Cancelling review submission #{submission.id} (#{submission.state})")
+    submission.cancel_submission
+    deadline = Time.now + timeout
+    loop do
+      current = app.get_app_store_versions(filter: { versionString: version, platform: platform }).first
+      state = current&.app_store_state
+      UI.message("Version #{version}: #{state}")
+      break if app.get_in_progress_review_submission(platform: platform).nil? && %w[DEVELOPER_REJECTED PREPARE_FOR_SUBMISSION REJECTED].include?(state)
+      UI.user_error!("Timed out waiting for the review submission to be cancelled") if Time.now > deadline
+      sleep(20)
+    end
+  end
+
   desc "Replace the screenshots of an App Store version and resubmit it for review"
   lane :screenshots do |options|
     version = options.fetch(:version)
     submit = options.fetch(:submit, "true").to_s == "true"
+    key = api_key
+    withdraw_from_review(version: version) if submit
     deliver(
-      api_key: api_key,
+      api_key: key,
       platform: "osx",
       app_version: version,
       skip_binary_upload: true,
