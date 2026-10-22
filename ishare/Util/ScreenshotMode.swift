@@ -266,10 +266,11 @@ enum ScreenshotMode {
         document.add(Annotation(shape: .blur(CGRect(x: 150, y: 382, width: 960, height: 124)), color: .red, lineWidth: 6))
         document.add(Annotation(shape: .step(CGPoint(x: 200, y: 537), 2), color: .blue, lineWidth: 6, fontSize: 44))
         document.add(Annotation(shape: .highlight(CGRect(x: 236, y: 522, width: 720, height: 32)), color: .yellow, lineWidth: 6))
-        document.add(Annotation(shape: .magnify(CGRect(x: 250, y: 40, width: 300, height: 300)), color: .white, lineWidth: 8))
-        document.add(Annotation(shape: .arrow(CGPoint(x: 1520, y: 720), CGPoint(x: 1130, y: 330)), color: .red, lineWidth: 10))
+        document.add(Annotation(shape: .spotlight(CGRect(x: 120, y: 226, width: 1060, height: 356)), color: .white, lineWidth: 4, spotlightShape: .rectangle, dimAmount: 0.45))
+        document.add(Annotation(shape: .stamp(CGRect(x: 1110, y: 244, width: 96, height: 96), .emoji("✅")), color: .white, lineWidth: 4))
+        document.add(Annotation(shape: .stamp(CGRect(x: 980, y: 500, width: 76, height: 76), .symbol("star.fill")), color: .yellow, lineWidth: 4))
+        document.add(Annotation(shape: .curvedArrow(CGPoint(x: 1540, y: 760), CGPoint(x: 1560, y: 420), CGPoint(x: 1230, y: 300)), color: .red, lineWidth: 10))
         document.add(Annotation(shape: .callout(CGPoint(x: 1060, y: 640), CGRect(x: 1140, y: 830, width: 420, height: 120), "Ship it!"), color: .red, lineWidth: 6, fontSize: 64))
-        document.add(Annotation(shape: .cursor(CGPoint(x: 1040, y: 300)), color: .white, lineWidth: 6, fontSize: 80))
         document.tool = .arrow
         editorDocument = document
         return document
@@ -317,10 +318,12 @@ struct ScreenshotCanvas: View {
         switch scene {
         case .menu:
             HStack(spacing: 70) {
-                caption.frame(width: 560, alignment: .leading)
+                caption.frame(width: 520, alignment: .leading)
                 MainMenuView()
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .shadow(color: .black.opacity(0.4), radius: 30, y: 12)
+                    .scaleEffect(1.45)
+                    .frame(width: 464, height: 640)
             }
         case .editor:
             VStack(spacing: 30) {
