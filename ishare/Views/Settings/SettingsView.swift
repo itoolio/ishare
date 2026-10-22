@@ -52,21 +52,33 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 struct SettingsView: View {
     @Default(.aussieMode) var aussieMode
     @State private var selection: SettingsPane? = ScreenshotMode.initialSettingsPane ?? .general
+    @State private var searchText = ""
+    @ObservedObject private var navigator = SettingsNavigator.shared
+
+    private var matches: [SettingsSearchMatch] {
+        SettingsSearchIndex.matches(for: searchText)
+    }
 
     var body: some View {
         NavigationSplitView {
-            List(SettingsPane.allCases, selection: $selection) { pane in
-                NavigationLink(value: pane) {
-                    HStack(spacing: 8) {
-                        Image(systemName: pane.symbol)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 22, height: 22)
-                            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(pane.tint.gradient))
-                        Text(pane.title.localized())
-                    }
+            List(matches, id: \.pane, selection: $selection) { match in
+                NavigationLink(value: match.pane) {
+                    SettingsPaneRow(pane: match.pane, keyword: match.keyword, isSearching: !searchText.isEmpty)
                 }
-                .accessibilityIdentifier("settings.pane.\(pane.rawValue)")
+                .accessibilityIdentifier("settings.pane.\(match.pane.rawValue)")
+            }
+            .overlay {
+                if matches.isEmpty {
+                    Text("No Results".localized())
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .safeAreaInset(edge: .top) {
+                SettingsSearchField(text: $searchText)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 190, max: 220)
             .safeAreaInset(edge: .bottom) {
@@ -94,6 +106,47 @@ struct SettingsView: View {
             .rotationEffect(aussieMode ? .degrees(180) : .zero)
         }
         .frame(width: 760, height: 560)
+        .onChange(of: searchText) {
+            guard let first = matches.first, !searchText.isEmpty else { return }
+            if !matches.contains(where: { $0.pane == selection }) {
+                selection = first.pane
+            }
+        }
+        .onAppear(perform: applyRequestedPane)
+        .onChange(of: navigator.pane) { applyRequestedPane() }
+    }
+
+    private func applyRequestedPane() {
+        guard let pane = navigator.pane else { return }
+        searchText = ""
+        selection = pane
+        navigator.pane = nil
+    }
+}
+
+struct SettingsPaneRow: View {
+    let pane: SettingsPane
+    let keyword: String?
+    let isSearching: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: pane.symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(pane.tint.gradient))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(pane.title.localized())
+                    .fontWeight(isSearching ? .semibold : .regular)
+                if let keyword {
+                    Text(keyword.localized().trimmingCharacters(in: CharacterSet(charactersIn: ":")))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
     }
 }
 
@@ -203,6 +256,8 @@ struct GeneralSettingsView: View {
                         .frame(width: 220)
                 }
             }
+            SoundSettingsSection()
+            HistorySettingsSection()
         }
         .formStyle(.grouped)
         .alert("Language Change".localized(), isPresented: Binding(
@@ -373,7 +428,7 @@ struct RecordingSettingsView: View {
 struct KeybindSettingsView: View {
     @Default(.forceUploadModifier) var forceUploadModifier
 
-    private let groups: [(String, [(String, KeyboardShortcuts.Name)])] = [
+    static let groups: [(String, [(String, KeyboardShortcuts.Name)])] = [
         ("Capture", [
             ("Capture Region:", .captureRegion),
             ("Capture Window:", .captureWindow),
@@ -405,7 +460,7 @@ struct KeybindSettingsView: View {
 
     var body: some View {
         Form {
-            ForEach(groups, id: \.0) { group in
+            ForEach(Self.groups, id: \.0) { group in
                 Section(group.0.localized()) {
                     ForEach(group.1, id: \.1.rawValue) { entry in
                         KeyboardShortcuts.Recorder(entry.0.localized(), name: entry.1)
@@ -414,7 +469,7 @@ struct KeybindSettingsView: View {
             }
             Section {
                 Button(role: .destructive) {
-                    KeyboardShortcuts.reset(groups.flatMap { $0.1.map(\.1) })
+                    KeyboardShortcuts.reset(Self.groups.flatMap { $0.1.map(\.1) })
                     BezelNotification.show(messageText: "Reset keybinds".localized(), icon: ToastIcon)
                 } label: {
                     Text("Reset All Keybinds".localized())

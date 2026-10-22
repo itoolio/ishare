@@ -157,7 +157,7 @@ enum CaptureSession {
         }
 
         await showToast(fileURL: fileURL)
-        NSSound.beep()
+        SoundPlayer.play(.capture)
         if !saveToDisk {
             try? FileManager.default.removeItem(at: fileURL)
         }
