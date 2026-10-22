@@ -108,14 +108,27 @@ final class ThumbnailCache {
         return image
     }
 
+    nonisolated static let quickLookTimeout: TimeInterval = 5
+
     nonisolated static func generateThumbnail(for url: URL, pixelSize: Int) async -> NSImage? {
+        if let image = ImageProcessing.thumbnail(for: url, maxPixelSize: pixelSize) {
+            return image
+        }
+        return await quickLookThumbnail(for: url, pixelSize: pixelSize)
+    }
+
+    nonisolated static func quickLookThumbnail(for url: URL, pixelSize: Int) async -> NSImage? {
         let size = CGSize(width: pixelSize, height: pixelSize)
         let request = QLThumbnailGenerator.Request(fileAt: url, size: size, scale: 1, representationTypes: .thumbnail)
-        if let representation = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request) {
-            let image = representation.cgImage
-            return NSImage(cgImage: image, size: CGSize(width: image.width, height: image.height))
+        return await withCheckedContinuation { continuation in
+            let delivery = SingleDelivery(continuation)
+            QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { representation, _ in
+                delivery.deliver(representation.map { NSImage(cgImage: $0.cgImage, size: CGSize(width: $0.cgImage.width, height: $0.cgImage.height)) })
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + quickLookTimeout) {
+                delivery.deliver(nil)
+            }
         }
-        return ImageProcessing.thumbnail(for: url, maxPixelSize: pixelSize)
     }
 
     nonisolated static func fetchThumbnail(from url: URL, pixelSize: Int, session: URLSession) async -> NSImage? {
@@ -171,5 +184,22 @@ struct ThumbnailImage<Placeholder: View>: View {
             image = loaded
             failed = loaded == nil
         }
+    }
+}
+
+private final class SingleDelivery: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<NSImage?, Never>?
+
+    init(_ continuation: CheckedContinuation<NSImage?, Never>) {
+        self.continuation = continuation
+    }
+
+    func deliver(_ image: NSImage?) {
+        lock.lock()
+        let pending = continuation
+        continuation = nil
+        lock.unlock()
+        pending?.resume(returning: image)
     }
 }
