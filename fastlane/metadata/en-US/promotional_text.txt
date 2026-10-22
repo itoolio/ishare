@@ -1,1 +1,1 @@
-ishare 5 brings a Liquid Glass menu, an annotation editor, scrolling capture, region recording, S3 uploads and an Apple Intelligence uploader assistant.
+Now with webcam and keystroke overlays, recording trim, stamps and spotlight, multi-destination uploads, a watch folder and searchable history.

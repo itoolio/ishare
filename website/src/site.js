@@ -12,17 +12,17 @@ export const links = {
 export const features = [
   {
     title: "Capture anything",
-    body: "Regions with a magnifier and pixel-precise readout, windows with or without shadows, whole displays and long scrolling pages, all through ScreenCaptureKit.",
+    body: "Regions with a pixel magnifier, coordinates, colors and a measuring tool, windows with gradient backgrounds, whole displays, your last region and long scrolling pages. Blur chosen apps for privacy, all through ScreenCaptureKit.",
     image: "01_menu",
   },
   {
     title: "Annotate in seconds",
-    body: "Arrows, shapes, highlights, speech balloons, numbered steps, a magnifier and spotlight, blur, pixelate and a smart eraser. Crop, rotate, copy or upload in one click.",
+    body: "Arrows in several styles, shapes, highlights, speech balloons, numbered steps, emoji and symbol stamps, spotlight, blur and pixelate. Crop with handles and aspect presets, zoom in, and press Done to copy, save and upload.",
     image: "02_editor",
   },
   {
     title: "Upload anywhere",
-    body: "Imgur out of the box, custom uploaders for any HTTP service, and SigV4-signed uploads to AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2 or MinIO.",
+    body: "Imgur out of the box, custom uploaders for any HTTP service, ShareX .sxcu import, and S3-compatible storage with expiring links. Upload to several destinations, watch a folder and retry failed uploads automatically.",
     image: "03_uploaders",
   },
   {
@@ -32,12 +32,12 @@ export const features = [
   },
   {
     title: "Record exactly what you need",
-    body: "Record a display, a window or a region you draw, at the resolution and frame rate you pick. Export GIFs and compress large recordings before uploading.",
+    body: "Record a display, a window or a region with a webcam bubble, clicks and keystrokes, system audio and microphone. Trim before saving and turn recordings into GIFs with presets.",
     image: "05_recording",
   },
   {
     title: "Every upload at hand",
-    body: "Browse, copy, edit and delete everything you shared from the history window or the menu.",
+    body: "Search and filter everything you shared, preview it from the menu, and delete it from the server in one click.",
     image: "06_history",
   },
 ];

@@ -24,11 +24,11 @@ enum ScreenshotScene: String, CaseIterable {
     var subtitle: String {
         switch self {
         case .menu: "Screenshots, recordings and GIFs from a Control Center style menu"
-        case .editor: "Arrows, shapes, text, steps, blur and pixelate, built right in"
+        case .editor: "Arrows, stamps, spotlight, blur, crop and zoom, built right in"
         case .uploaders: "Imgur, your own server or any S3-compatible storage"
         case .assistant: "Describe your service and get a ready-to-use uploader"
-        case .recording: "Regions, windows or whole displays at the resolution you choose"
-        case .history: "Browse, copy, edit and delete everything you shared"
+        case .recording: "Regions, windows or displays with webcam, clicks and keystrokes"
+        case .history: "Search, copy, edit and delete everything you shared"
         }
     }
 }
