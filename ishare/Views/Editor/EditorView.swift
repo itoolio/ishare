@@ -240,6 +240,7 @@ struct EditorView: View {
             Button(role: .destructive, action: onDiscard) {
                 Label("Discard".localized(), systemImage: "trash")
             }
+            .keyboardShortcut(.delete, modifiers: .command)
             .accessibilityIdentifier("editor.discard")
             Button(action: onCopy) {
                 Label("Copy".localized(), systemImage: "doc.on.doc")

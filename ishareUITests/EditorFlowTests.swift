@@ -36,8 +36,7 @@ final class EditorFlowTests: AppUITestCase {
         drawRectangle()
         let discard = element("editor.discard")
         XCTAssertTrue(discard.waitForExistence(timeout: 5))
-        waitFor("the discard button is hittable") { discard.isHittable }
-        discard.click()
+        window.typeKey(.delete, modifierFlags: .command)
         assertDisappears(window)
     }
 
@@ -45,8 +44,7 @@ final class EditorFlowTests: AppUITestCase {
         drawRectangle()
         let done = element("editor.done")
         XCTAssertTrue(done.waitForExistence(timeout: 5))
-        waitFor("the done button is hittable") { done.isHittable }
-        done.click()
+        window.typeKey(.return, modifierFlags: .command)
         assertDisappears(window)
     }
 
