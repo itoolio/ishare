@@ -264,6 +264,7 @@ struct CaptureSettingsView: View {
                 Toggle("Show magnifier while selecting".localized(), isOn: $showMagnifier)
                 Toggle("Open editor after capture".localized(), isOn: $openEditorAfterCapture)
             }
+            CaptureExtrasSettings()
             Section("Scrolling Capture".localized()) {
                 Toggle("Scroll automatically".localized(), isOn: $scrollingAutoScroll)
                 if scrollingAutoScroll {
@@ -377,6 +378,7 @@ struct KeybindSettingsView: View {
             ("Capture Window:", .captureWindow),
             ("Capture Screen:", .captureScreen),
             ("Scrolling Capture:", .captureScrolling),
+            ("Capture Last Region:", .captureLastRegion),
         ]),
         ("Record", [
             ("Record Screen:", .recordScreen),
