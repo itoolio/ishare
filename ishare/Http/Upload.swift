@@ -9,8 +9,53 @@ enum UploadType: String, CaseIterable, Identifiable, Codable, Defaults.Serializa
     var id: Self { self }
 }
 
+struct UploadEnvironment {
+    var recordHistory: @MainActor (HistoryItem) -> Void
+    var notify: @MainActor (String) -> Void
+    var enqueue: @MainActor (URL, UploadTarget, String?, any Error) throws -> Void
+    var deliver: @MainActor (URL) -> Void
+    var showsProgress = true
+
+    @MainActor static let live = UploadEnvironment(
+        recordHistory: { addToUploadHistory($0) },
+        notify: { BezelNotification.show(messageText: $0, icon: ToastIcon) },
+        enqueue: { fileURL, target, localPath, error in
+            try UploadQueue.shared.enqueue(fileURL: fileURL, target: target, localPath: localPath, error: error)
+        },
+        deliver: { url in
+            let actions = UploadPlan.deliveryActions(
+                copyURL: Defaults[.copyURLAfterUpload], copyImage: Defaults[.copyImageToClipboard], openURL: Defaults[.openURLAfterUpload]
+            )
+            if actions.copy {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(url.absoluteString, forType: .string)
+            }
+            if actions.open {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    )
+}
+
+enum UploadPlan {
+    static func additional(_ destinations: [UploadDestination], excluding primary: UploadDestination) -> [UploadDestination] {
+        var seen: Set<UploadDestination> = [primary]
+        return destinations.filter { seen.insert($0).inserted }
+    }
+
+    static func urlToDeliver(_ results: [Result<UploadOutcome, any Error>]) -> URL? {
+        results.lazy.compactMap { try? $0.get().url }.first
+    }
+
+    static func deliveryActions(copyURL: Bool, copyImage: Bool, openURL: Bool) -> (copy: Bool, open: Bool) {
+        (copyURL && !copyImage, openURL)
+    }
+}
+
 @MainActor
 enum UploadCoordinator {
+    static var environment = UploadEnvironment.live
+
     static func currentTarget() -> UploadTarget? {
         switch Defaults[.uploadType] {
         case .IMGUR:
@@ -25,37 +70,74 @@ enum UploadCoordinator {
         return .custom(uploader)
     }
 
-    @discardableResult
-    static func upload(fileURL: URL, target explicitTarget: UploadTarget? = nil, localFileURL: URL? = nil) async -> Result<UploadOutcome, any Error> {
-        guard let target = explicitTarget ?? currentTarget() else {
-            BezelNotification.show(messageText: "No uploader is selected".localized(), icon: ToastIcon)
-            return .failure(UploadFailure.missingUploader)
-        }
-        let progressIndicator = UploadManager.shared
-        progressIndicator.begin()
-        defer { progressIndicator.uploadCompleted() }
-        do {
-            let outcome = try await UploadService.upload(fileURL: fileURL, to: target) { fraction in
-                Task { @MainActor in
-                    progressIndicator.updateProgress(fraction: fraction)
-                }
-            }
-            Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
-            record(outcome, localFileURL: localFileURL)
-            if !Defaults[.copyImageToClipboard] {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(outcome.url.absoluteString, forType: .string)
-            }
-            return .success(outcome)
-        } catch {
-            Log.upload.error("Upload failed: \(error.localizedDescription, privacy: .public)")
-            BezelNotification.show(messageText: "Upload failed".localized(), icon: ToastIcon)
-            return .failure(error)
+    static func target(for destination: UploadDestination) -> UploadTarget? {
+        switch destination {
+        case .builtIn(.IMGUR): .imgur(clientID: Defaults[.imgurClientId])
+        case .builtIn(.CUSTOM): currentTarget()
+        case let .custom(id): target(forUploaderID: id)
         }
     }
 
+    static func additionalTargets(for primary: UploadTarget, destinations: [UploadDestination] = Defaults[.additionalUploadDestinations]) -> [UploadTarget] {
+        UploadPlan.additional(destinations, excluding: primary.destination).compactMap(target(for:))
+    }
+
+    @discardableResult
+    static func upload(fileURL: URL, target explicitTarget: UploadTarget? = nil, localFileURL: URL? = nil) async -> Result<UploadOutcome, any Error> {
+        guard let primary = explicitTarget ?? currentTarget() else {
+            environment.notify("No uploader is selected".localized())
+            return .failure(UploadFailure.missingUploader)
+        }
+        let targets = [primary] + (explicitTarget == nil ? additionalTargets(for: primary) : [])
+        let results = await upload(fileURL: fileURL, to: targets, localFileURL: localFileURL)
+        if let url = UploadPlan.urlToDeliver(results) {
+            environment.deliver(url)
+        }
+        return results[0]
+    }
+
+    static func upload(fileURL: URL, to targets: [UploadTarget], localFileURL: URL?) async -> [Result<UploadOutcome, any Error>] {
+        let progressIndicator: UploadManager? = environment.showsProgress ? UploadManager.shared : nil
+        progressIndicator?.begin()
+        defer { progressIndicator?.uploadCompleted() }
+        var results: [Result<UploadOutcome, any Error>] = []
+        let count = Double(targets.count)
+        for (index, target) in targets.enumerated() {
+            do {
+                let outcome = try await UploadService.upload(fileURL: fileURL, to: target) { fraction in
+                    Task { @MainActor in
+                        progressIndicator?.updateProgress(fraction: (Double(index) + fraction) / count)
+                    }
+                }
+                Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
+                record(outcome, localFileURL: localFileURL)
+                results.append(.success(outcome))
+            } catch {
+                handleFailure(error, fileURL: fileURL, target: target, localFileURL: localFileURL)
+                results.append(.failure(error))
+            }
+        }
+        return results
+    }
+
+    static func handleFailure(_ error: any Error, fileURL: URL, target: UploadTarget, localFileURL: URL?) {
+        Log.upload.error("Upload to \(target.displayName, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+        let failure = error as? UploadFailure
+        if case let .unsupportedFile(destination, fileExtension) = failure {
+            environment.notify(String(format: "%@ can't host .%@ files. Choose a custom uploader instead.".localized(), destination, fileExtension))
+        } else if failure?.isRetryable == true, (try? environment.enqueue(fileURL, target, localFileURL?.path, error)) != nil {
+            environment.notify("Upload failed, ishare will retry it later".localized())
+        } else {
+            environment.notify("Upload failed".localized())
+        }
+    }
+
+    static func deliver(_ url: URL) {
+        environment.deliver(url)
+    }
+
     static func record(_ outcome: UploadOutcome, localFileURL: URL?) {
-        addToUploadHistory(
+        environment.recordHistory(
             HistoryItem(
                 fileUrl: outcome.url.absoluteString,
                 deletionUrl: outcome.deletionURL,

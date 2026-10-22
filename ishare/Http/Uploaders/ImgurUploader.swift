@@ -5,6 +5,9 @@ struct ImgurUploader: Uploader {
     let clientID: String
 
     func upload(fileURL: URL, progress: @escaping @Sendable (Double) -> Void) async throws -> UploadOutcome {
+        guard MimeType.isImageOrVideo(fileURL) else {
+            throw UploadFailure.unsupportedFile(destination: "Imgur", fileExtension: fileURL.pathExtension.lowercased())
+        }
         let formName = ["mp4", "mov"].contains(fileURL.pathExtension.lowercased()) ? "video" : "image"
         let fileName = "ishare.\(fileURL.pathExtension.lowercased())"
         let mimeType = MimeType.forFile(fileURL)

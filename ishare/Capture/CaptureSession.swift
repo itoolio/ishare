@@ -23,10 +23,15 @@ enum CaptureSession {
     static func captureImage(_ type: CaptureType, display: Int = 1, options: CaptureOptions = .standard) async {
         guard !isCapturingImage else { return }
         isCapturingImage = true
+        let wantsDestinationChoice = DestinationChooser.isRequested()
         Log.capture.info("Starting \(type.rawValue, privacy: .public) capture on display \(display)")
         let captured = await ImageCaptureFlow.capture(type: type, display: display)
         isCapturingImage = false
         guard let captured else { return }
+        var options = options
+        if wantsDestinationChoice, let target = DestinationChooser.choose() {
+            options.destinations = [target]
+        }
         do {
             let fileURL = try ImageCaptureFlow.save(captured)
             Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
@@ -73,11 +78,16 @@ enum CaptureSession {
     static func stopRecording() {
         let pending = pendingRecording ?? (false, .standard)
         pendingRecording = nil
+        let wantsDestinationChoice = DestinationChooser.isRequested()
         Task { @MainActor in
             ContentSharingPickerManager.shared.deactivatePicker()
             switch await AppDelegate.shared.screenRecorder.stop() {
             case let .success(url):
-                await finishRecording(url, gif: pending.gif, options: pending.options)
+                var options = pending.options
+                if wantsDestinationChoice, let target = DestinationChooser.choose() {
+                    options.destinations = [target]
+                }
+                await finishRecording(url, gif: pending.gif, options: options)
             case let .failure(error):
                 Log.capture.error("Stopping the recording failed: \(error.localizedDescription, privacy: .public)")
             }
