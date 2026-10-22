@@ -9,7 +9,7 @@ import Accelerate
 import AVFoundation
 import Foundation
 
-struct AudioLevels {
+struct AudioLevels: Equatable, Sendable {
     static let zero = AudioLevels(level: 0, peakLevel: 0)
     let level: Float
     let peakLevel: Float
@@ -29,12 +29,14 @@ class PowerMeter: AudioLevelProvider {
     }
 
     private var values = [PowerLevels]()
+    private var lastUpdate = Date.distantPast
+    private let staleInterval: TimeInterval = 0.5
 
     private var meterTableAverage = MeterTable()
     private var meterTablePeak = MeterTable()
 
     var levels: AudioLevels {
-        if values.isEmpty { return AudioLevels(level: 0.0, peakLevel: 0.0) }
+        if values.isEmpty || Date().timeIntervalSince(lastUpdate) > staleInterval { return AudioLevels(level: 0.0, peakLevel: 0.0) }
         return AudioLevels(level: meterTableAverage.valueForPower(values[0].average),
                            peakLevel: meterTablePeak.valueForPower(values[0].peak))
     }
@@ -76,6 +78,7 @@ class PowerMeter: AudioLevelProvider {
             }
         }
         values = powerLevels
+        lastUpdate = Date()
     }
 
     private func calculatePowers(data: UnsafePointer<Float>, strideFrames: Int, length: vDSP_Length) -> PowerLevels {

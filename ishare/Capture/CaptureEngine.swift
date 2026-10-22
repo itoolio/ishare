@@ -33,8 +33,11 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
     private let audioSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.AudioSampleBufferQueue")
     private let micAudioSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.MicAudioSampleBufferQueue")
 
-    private let powerMeter = PowerMeter()
-    var audioLevels: AudioLevels { powerMeter.levels }
+    private let systemAudioMeter = PowerMeter()
+    private let microphoneMeter = PowerMeter()
+    var audioLevels: RecordingAudioLevels {
+        RecordingAudioLevels(system: systemAudioMeter.levels, microphone: microphoneMeter.levels)
+    }
 
     private var streamOutput: CaptureEngineStreamOutput?
     private let finishLock = NSLock()
@@ -42,13 +45,13 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
     private var didFinishRecording = false
     private var recordingError: (any Error)?
 
-    @MainActor func startCapture(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL) -> AsyncThrowingStream<CapturedFrame, any Error> {
+    @MainActor func startCapture(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL, showsNativeClicks: Bool) -> AsyncThrowingStream<CapturedFrame, any Error> {
         let recordMP4 = Defaults[.recordMP4]
         let useHEVC = Defaults[.useHEVC]
         let recordAudio = Defaults[.recordAudio]
         let recordMic = Defaults[.recordMic]
         let recordPointer = Defaults[.recordPointer]
-        let recordClicks = Defaults[.recordClicks]
+        let microphoneID = recordMic ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
         finishLock.withLock {
             didFinishRecording = false
             recordingError = nil
@@ -59,13 +62,15 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
             let output = CaptureEngineStreamOutput(continuation: continuation)
             streamOutput = output
             output.capturedFrameHandler = { continuation.yield($0) }
-            output.pcmBufferHandler = { [weak self] in self?.powerMeter.process(buffer: $0) }
+            output.systemAudioHandler = { [weak self] in self?.systemAudioMeter.process(buffer: $0) }
+            output.microphoneHandler = { [weak self] in self?.microphoneMeter.process(buffer: $0) }
 
             do {
                 configuration.capturesAudio = recordAudio
                 configuration.captureMicrophone = recordMic
+                configuration.microphoneCaptureDeviceID = microphoneID
                 configuration.showsCursor = recordPointer
-                configuration.showMouseClicks = recordClicks
+                configuration.showMouseClicks = showsNativeClicks
 
                 let stream = SCStream(filter: filter, configuration: configuration, delegate: output)
                 self.stream = stream
@@ -169,7 +174,8 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
 
 @MainActor
 private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDelegate {
-    var pcmBufferHandler: (@Sendable (AVAudioPCMBuffer) -> Void)?
+    var systemAudioHandler: (@Sendable (AVAudioPCMBuffer) -> Void)?
+    var microphoneHandler: (@Sendable (AVAudioPCMBuffer) -> Void)?
     var capturedFrameHandler: (@Sendable (CapturedFrame) -> Void)?
     private var continuation: AsyncThrowingStream<CapturedFrame, any Error>.Continuation?
 
@@ -185,10 +191,15 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDeleg
             Task { @MainActor [self] in
                 capturedFrameHandler?(frame)
             }
-        case .audio, .microphone:
-            guard let samples = createPCMBuffer(for: sampleBuffer) else { return }
+        case .audio:
+            guard let samples = PCMBufferConverter.pcmBuffer(from: sampleBuffer) else { return }
             Task { @MainActor [self] in
-                pcmBufferHandler?(samples)
+                systemAudioHandler?(samples)
+            }
+        case .microphone:
+            guard let samples = PCMBufferConverter.pcmBuffer(from: sampleBuffer) else { return }
+            Task { @MainActor [self] in
+                microphoneHandler?(samples)
             }
         @unknown default:
             break
@@ -223,17 +234,5 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDeleg
         else { return nil }
         let surface = unsafeBitCast(surfaceRef, to: IOSurface.self)
         return CapturedFrame(surface: surface, contentRect: contentRect, contentScale: contentScale, scaleFactor: scaleFactor)
-    }
-
-    private nonisolated func createPCMBuffer(for sampleBuffer: CMSampleBuffer) -> AVAudioPCMBuffer? {
-        var ablPointer: UnsafePointer<AudioBufferList>?
-        try? sampleBuffer.withAudioBufferList { audioBufferList, _ in
-            ablPointer = audioBufferList.unsafePointer
-        }
-        guard let audioBufferList = ablPointer,
-              let absd = sampleBuffer.formatDescription?.audioStreamBasicDescription,
-              let format = AVAudioFormat(standardFormatWithSampleRate: absd.mSampleRate, channels: absd.mChannelsPerFrame)
-        else { return nil }
-        return AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: audioBufferList)
     }
 }

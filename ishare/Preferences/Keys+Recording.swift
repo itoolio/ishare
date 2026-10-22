@@ -18,4 +18,13 @@ extension Defaults.Keys {
     static let compressBeforeUpload = Key<Bool>("compressBeforeUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let compressionThresholdMB = Key<Int>("compressionThresholdMB", default: 25, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let compressionPreset = Key<CompressionPreset>("compressionPreset", default: .p1080, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let showKeystrokes = Key<Bool>("showKeystrokes", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let keystrokesShortcutsOnly = Key<Bool>("keystrokesShortcutsOnly", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let showWebcam = Key<Bool>("showWebcam", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let webcamSize = Key<WebcamBubbleSize>("webcamSize", default: .medium, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let webcamCorner = Key<WebcamCorner>("webcamCorner", default: .bottomRight, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let webcamDeviceID = Key<String?>("webcamDeviceID", default: nil, suite: .ishare)
+    static let microphoneDeviceID = Key<String?>("microphoneDeviceID", default: nil, suite: .ishare)
+    static let trimBeforeSaving = Key<Bool>("trimBeforeSaving", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let gifMaxSize = Key<GIFMaxSize>("gifMaxSize", default: .original, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
