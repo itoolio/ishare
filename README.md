@@ -27,14 +27,25 @@ brew install --cask ishare
 
 ![ishare](website/public/screenshots/01_menu.jpg)
 
+<table>
+  <tr>
+    <td><img src="website/public/screenshots/02_editor.jpg" alt="Editor"></td>
+    <td><img src="website/public/screenshots/05_recording.jpg" alt="Recording settings"></td>
+  </tr>
+  <tr>
+    <td><img src="website/public/screenshots/03_uploaders.jpg" alt="Uploaders"></td>
+    <td><img src="website/public/screenshots/06_history.jpg" alt="History"></td>
+  </tr>
+</table>
+
 ## Features
 
-- **Capture**: regions with a magnifier, windows with or without shadows, whole displays and scrolling pages, all through ScreenCaptureKit.
-- **Record**: displays, windows or a region you draw, at the resolution and frame rate you choose, as video or GIF.
-- **Annotate**: arrows, lines, shapes, highlights, pen, marker, text, speech balloons, numbered steps, magnifier, spotlight, blur, pixelate, smart eraser, cursor stamps, crop, rotate and flip.
-- **Upload**: Imgur, custom HTTP uploaders and S3-compatible storage (AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2, MinIO), with an Apple Intelligence assistant that builds uploaders for you.
-- **Automate**: global keyboard shortcuts, Shortcuts actions and a share menu extension.
-- **Everything else**: upload history, AirDrop, Photos, Messages and Mail sharing, 11 languages, and Liquid Glass on macOS 26.
+- **Capture**: regions with a pixel magnifier, coordinates, colors and a measuring tool, windows with or without shadows, whole displays, your last region and scrolling pages, all through ScreenCaptureKit. Optional gradient backgrounds for window captures, and privacy blur for chosen apps.
+- **Record**: displays, windows or a region you draw, as video or GIF, with a webcam bubble, click and keystroke overlays, system audio and microphone meters, trimming before saving and GIF presets.
+- **Annotate**: arrows in several styles, lines, shapes, highlights, pen, marker, text, speech balloons, numbered steps, emoji and symbol stamps, magnifier, spotlight, blur, pixelate, smart eraser, crop with handles and aspect presets, rotate, flip, zoom and pan. Done runs your after-capture actions.
+- **Upload**: Imgur, custom HTTP uploaders, ShareX `.sxcu` import and S3-compatible storage (AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2, MinIO) with expiring links and Keychain-stored secrets. Upload to several destinations, pick one per capture, upload text snippets, watch a folder and retry failed uploads. An Apple Intelligence assistant builds uploaders from a conversation.
+- **Automate**: global keyboard shortcuts, Shortcuts actions, a share menu extension, "Upload with ishare" in Finder and drag and drop onto the menu bar icon.
+- **Everything else**: a keyboard-friendly menu with previews, searchable upload history with server-side deletion, settings search and backup, sound options, a welcome guide, AirDrop, Photos, Messages and Mail sharing, 11 languages, and Liquid Glass on macOS 26.
 
 ## Custom uploaders
 
