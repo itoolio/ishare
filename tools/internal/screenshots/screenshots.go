@@ -105,6 +105,8 @@ func TestArguments(derivedData, result string) []string {
 		"-derivedDataPath", derivedData,
 		"-resultBundlePath", result,
 		"-only-testing:" + testID,
+		"-test-timeouts-enabled", "YES",
+		"-maximum-test-execution-time-allowance", "600",
 	}, unsignedBuild...)
 }
 

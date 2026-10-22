@@ -6,8 +6,12 @@ on:
             version:
                 description: App Store version to update, for example 5.1.0
                 required: true
+            build:
+                description: Build number to submit with metadata and release notes; leave empty to only replace screenshots
+                required: false
+                default: ""
             submit:
-                description: Upload the screenshots and resubmit the version for review
+                description: Upload to App Store Connect and submit the version for review
                 type: boolean
                 default: true
 
@@ -34,13 +38,42 @@ jobs:
             - name: Install XcodeGen
               run: brew install xcodegen
             - name: Generate screenshots
+              timeout-minutes: 25
               run: go run ./tools/cmd/ishare-tools screenshots en-US:en
             - uses: actions/upload-artifact@v7
               with:
                   name: screenshots
                   path: fastlane/screenshots
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: screenshots-xcresult
+                  path: build/screenshots/*.xcresult
+            - name: Write the App Store release notes
+              if: inputs.submit && inputs.build != ''
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body \
+                    | go run ./tools/cmd/ishare-tools release-notes fastlane/metadata/en-US/release_notes.txt
+            - name: Submit the version with metadata and release notes
+              if: inputs.submit && inputs.build != ''
+              env:
+                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+                  REVIEW_CONTACT_FIRST_NAME: ${{ secrets.REVIEW_CONTACT_FIRST_NAME }}
+                  REVIEW_CONTACT_LAST_NAME: ${{ secrets.REVIEW_CONTACT_LAST_NAME }}
+                  REVIEW_CONTACT_EMAIL: ${{ secrets.REVIEW_CONTACT_EMAIL }}
+                  REVIEW_CONTACT_PHONE: ${{ secrets.REVIEW_CONTACT_PHONE }}
+                  VERSION: ${{ inputs.version }}
+                  BUILD: ${{ inputs.build }}
+                  LC_ALL: en_US.UTF-8
+                  LANG: en_US.UTF-8
+              run: bundle exec fastlane mac release version:"$VERSION" build:"$BUILD"
             - name: Replace the App Store screenshots
-              if: inputs.submit
+              if: inputs.submit && inputs.build == ''
               env:
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
