@@ -345,12 +345,8 @@ jobs:
                   gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body \
                     | go run ./tools/cmd/ishare-tools release-notes fastlane/metadata/en-US/release_notes.txt
                   cat fastlane/metadata/en-US/release_notes.txt
-            - name: Generate screenshots
-              run: go run ./tools/cmd/ishare-tools screenshots en-US:en
-            - uses: actions/upload-artifact@v7
-              with:
-                  name: screenshots
-                  path: fastlane/screenshots
+            - name: Check the committed screenshots
+              run: test "$(find fastlane/screenshots -name '*.jpg' | wc -l)" -ge 1
             - name: Submit to the App Store
               env:
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}

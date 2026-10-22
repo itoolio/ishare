@@ -81,3 +81,9 @@ func TestXcodebuildArgumentsOnlyRunScreenshotTestsUnsigned(t *testing.T) {
 		t.Errorf("unexpected build arguments %v", build)
 	}
 }
+
+func TestJPEGPathReplacesTheExtension(t *testing.T) {
+	if got := JPEGPath("/out/01_menu.png"); got != "/out/01_menu.jpg" {
+		t.Fatalf("unexpected path %q", got)
+	}
+}

@@ -176,9 +176,22 @@ func capture(options Options, work, derivedData string, target Target) error {
 		if err := runTo(io.Discard, options, nil, "sips", "-z", pixelHeight, pixelWidth, copy.Destination); err != nil {
 			return err
 		}
+		jpeg := JPEGPath(copy.Destination)
+		if err := runTo(io.Discard, options, nil, "sips", "-s", "format", "jpeg", "-s", "formatOptions", jpegQuality, copy.Destination, "--out", jpeg); err != nil {
+			return err
+		}
+		if err := os.Remove(copy.Destination); err != nil {
+			return err
+		}
 	}
 	fmt.Fprintf(options.Output, "Exported %d screenshots to %s\n", len(copies), output)
 	return nil
+}
+
+const jpegQuality = "92"
+
+func JPEGPath(png string) string {
+	return strings.TrimSuffix(png, filepath.Ext(png)) + ".jpg"
 }
 
 func copyFile(source, destination string) error {
