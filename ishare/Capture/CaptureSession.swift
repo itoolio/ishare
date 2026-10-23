@@ -96,15 +96,19 @@ enum CaptureSession {
                 if wantsDestinationChoice, let target = DestinationChooser.choose() {
                     options.destinations = [target]
                 }
-                await finishRecording(url, gif: pending.gif, options: options)
+                await finishRecording(url, gif: pending.gif, options: options, sidecar: AppDelegate.shared.screenRecorder.takeSidecar())
             case let .failure(error):
                 Log.capture.error("Stopping the recording failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
 
-    private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions) async {
-        let sidecar = AppDelegate.shared.screenRecorder.takeSidecar()
+    static func finishInstantReplay(_ url: URL) async {
+        await finishRecording(url, gif: false, options: .standard, sidecar: .empty)
+    }
+
+    private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions, sidecar: RecordingSidecar) async {
+        await RecordingPostProcessor.mergeAppAudio(url, sidecar: sidecar)
         await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
         var fileURL = url
         var markers = sidecar.markers

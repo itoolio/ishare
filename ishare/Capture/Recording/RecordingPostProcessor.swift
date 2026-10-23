@@ -10,6 +10,7 @@ struct RecordingSidecar: Sendable {
     var markers: [RecordingMarker] = []
     var overlay: OverlayCapture?
     var recordingStart: Double?
+    var appAudio: AppAudioClip?
 }
 
 @MainActor
@@ -68,6 +69,17 @@ enum ProcessingHUDPresenter {
 enum RecordingPostProcessor {
     private static let chapterExtensions: Set<String> = ["mp4", "mov", "m4v"]
     private static let videoExtensions: Set<String> = ["mp4", "mov", "m4v"]
+
+    static func mergeAppAudio(_ url: URL, sidecar: RecordingSidecar) async {
+        guard let clip = sidecar.appAudio else { return }
+        defer { try? FileManager.default.removeItem(at: clip.url) }
+        guard let start = sidecar.recordingStart, videoExtensions.contains(url.pathExtension.lowercased()) else { return }
+        do {
+            try await AppAudioMuxer.merge(clip, into: url, recordingStart: start)
+        } catch {
+            Log.capture.error("Adding the selected apps' audio failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
 
     static func compositeOverlays(_ url: URL, sidecar: RecordingSidecar) async {
         guard let capture = sidecar.overlay, let start = sidecar.recordingStart else { return }

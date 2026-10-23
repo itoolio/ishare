@@ -15,6 +15,7 @@ final class AppState: ObservableObject {
             setupKeyboardShortcuts()
             UploadPresetShortcuts.start()
             UploadBackgroundServices.start()
+            InstantReplay.shared.activate()
         }
     }
 
@@ -54,6 +55,8 @@ final class AppState: ObservableObject {
         onRecord(.recordGifForceUpload, gif: true, forceUpload: true)
 
         KeyboardShortcuts.onKeyUp(for: .addRecordingMarker) { Task { @MainActor in AppDelegate.shared.screenRecorder.addMarker() } }
+        KeyboardShortcuts.onKeyUp(for: .toggleRecordingNotes) { Task { @MainActor in AppDelegate.shared.screenRecorder.toggleNotes() } }
+        KeyboardShortcuts.onKeyUp(for: .saveInstantReplay) { Task { @MainActor in await InstantReplay.shared.save() } }
 
         KeyboardShortcuts.onKeyUp(for: .toggleMainMenu) {
             Task { @MainActor in

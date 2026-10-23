@@ -10,6 +10,7 @@ struct RecordingSettingsView: View {
     @Default(.useHEVC) var useHEVC
     @Default(.useHDR) var useHDR
     @Default(.recordAudio) var recordAudio
+    @Default(.recordingAudioSource) var audioSource
     @Default(.recordMic) var recordMic
     @Default(.recordPointer) var recordPointer
     @Default(.recordClicks) var recordClicks
@@ -40,7 +41,10 @@ struct RecordingSettingsView: View {
                 Toggle("Use HDR".localized(), isOn: $useHDR)
             }
             Section("Content".localized()) {
-                Toggle("Record audio".localized(), isOn: $recordAudio)
+                AudioSourceSettingsRows(audioSource: Binding(
+                    get: { RecordingAudioSource.resolved(recordAudio: recordAudio, source: audioSource) },
+                    set: { RecordingAudioSource.store($0) }
+                ))
                 Toggle("Record microphone".localized(), isOn: $recordMic)
                     .onChange(of: recordMic) { _, enabled in
                         guard enabled else { return }

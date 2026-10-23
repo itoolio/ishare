@@ -23,6 +23,10 @@ enum MenuAppKitMenus {
             marker.setAccessibilityIdentifier("menu.addMarker")
             menu.addItem(marker)
         }
+        menu.addItem(notesItem())
+        if InstantReplay.isRunning {
+            menu.addItem(instantReplayItem())
+        }
         if !UploadPresets.all.isEmpty {
             menu.addItem(presetsItem())
         }
@@ -50,6 +54,24 @@ enum MenuAppKitMenus {
             NSApplication.shared.terminate(nil)
         })
         return menu
+    }
+
+    static func notesItem() -> NSMenuItem {
+        let title = RecordingNotesController.shared.isVisible ? "Hide Notes" : "Show Notes"
+        let item = ClosureMenuItem(title: title.localized(), symbol: "list.bullet.rectangle") {
+            AppDelegate.shared.screenRecorder.toggleNotes()
+        }
+        item.setAccessibilityIdentifier("menu.recordingNotes")
+        return item
+    }
+
+    static func instantReplayItem() -> NSMenuItem {
+        let item = ClosureMenuItem(title: "Save Instant Replay".localized(), symbol: "gobackward") {
+            MenuController.shared.perform(afterDismissing: { await InstantReplay.shared.save() })
+        }
+        item.toolTip = "Instant replay is buffering the last moments of your main display".localized()
+        item.setAccessibilityIdentifier("menu.instantReplay")
+        return item
     }
 
     static func presetsItem() -> NSMenuItem {
