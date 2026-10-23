@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 type ReviewTopic struct {
@@ -80,8 +81,13 @@ func CheckEntitlements(bundleID string, entitlements map[string]any, allowlist A
 	return problems
 }
 
+const MaxReviewNotesLength = 4000
+
 func CheckReviewNotes(notes string, entitlements map[string]bool, allowlist Allowlist) []string {
 	var problems []string
+	if length := utf8.RuneCountInString(strings.TrimSpace(notes)); length > MaxReviewNotesLength {
+		problems = append(problems, fmt.Sprintf("the App Review notes are %d characters long; App Store Connect accepts at most %d, so shorten fastlane/review_notes.txt", length, MaxReviewNotesLength))
+	}
 	lowered := strings.ToLower(notes)
 	for _, topic := range allowlist.ReviewNotes {
 		if topic.Entitlement != "" && !entitlements[topic.Entitlement] {
