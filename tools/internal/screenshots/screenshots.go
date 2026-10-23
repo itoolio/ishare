@@ -123,7 +123,7 @@ func TestArguments(derivedData, result string) []string {
 		"test-without-building",
 		"-project", "ishare.xcodeproj",
 		"-scheme", scheme,
-		"-destination", "platform=macOS",
+		"-destination", "platform=macOS,arch=arm64",
 		"-derivedDataPath", derivedData,
 		"-resultBundlePath", result,
 		"-only-testing:" + testID,
@@ -137,7 +137,7 @@ func BuildArguments(derivedData string) []string {
 		"build-for-testing",
 		"-project", "ishare.xcodeproj",
 		"-scheme", scheme,
-		"-destination", "platform=macOS",
+		"-destination", "platform=macOS,arch=arm64",
 		"-derivedDataPath", derivedData,
 	}, unsignedBuild...)
 }
