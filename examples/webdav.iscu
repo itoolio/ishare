@@ -1,0 +1,13 @@
+{
+  "name": "Nextcloud",
+  "uploaderType": "webdav",
+  "webdav": {
+    "url": "https://cloud.example.com/remote.php/dav/files/USERNAME/ishare",
+    "username": "USERNAME",
+    "password": "APP_PASSWORD",
+    "authentication": "basic",
+    "pathTemplate": "{{date}}/{{uuid}}.{{ext}}",
+    "createDirectories": true,
+    "publicURL": "https://files.example.com/ishare/{{path}}"
+  }
+}
