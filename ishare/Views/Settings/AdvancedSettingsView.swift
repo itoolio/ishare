@@ -29,6 +29,8 @@ struct AdvancedSettingsView: View {
                     }
                 }
             }
+            LocalCaptureCleanupSection()
+            DiagnosticsSection()
             SettingsTransferSection()
         }
         .formStyle(.grouped)
