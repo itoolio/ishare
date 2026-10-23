@@ -114,7 +114,7 @@ private struct MenuSectionDropTarget: ViewModifier {
                 }
                 .dropDestination(for: String.self) { payloads, _ in
                     guard let dragged = payloads.lazy.compactMap(MenuSectionDrag.section(from:)).first, dragged != section else { return false }
-                    withAnimation(.snappy(duration: 0.2)) {
+                    withMotionAnimation(.snappy(duration: 0.2)) {
                         MenuLayout.current = MenuLayout.current.moving(dragged, onto: section)
                     }
                     return true

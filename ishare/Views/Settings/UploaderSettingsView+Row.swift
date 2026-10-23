@@ -5,6 +5,7 @@ extension UploaderSettingsView {
     func row(for uploader: CustomUploader) -> some View {
         HStack(spacing: 10) {
             Image(systemName: uploader.kind.symbolName)
+                .accessibilityHidden(true)
                 .foregroundStyle(.white)
                 .frame(width: 26, height: 26)
                 .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(color(for: uploader.kind).gradient))
@@ -90,6 +91,6 @@ extension UploaderSettingsView {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
-        .help(help.localized())
+        .helpAndAccessibilityLabel(help.localized())
     }
 }

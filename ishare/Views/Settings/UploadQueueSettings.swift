@@ -68,14 +68,14 @@ private struct UploadQueueSection: View {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help("Retry".localized())
+            .helpAndAccessibilityLabel("Retry".localized())
             Button {
                 queue.discard(item.id)
             } label: {
                 Image(systemName: "trash")
             }
             .buttonStyle(.borderless)
-            .help("Discard".localized())
+            .helpAndAccessibilityLabel("Discard".localized())
         }
     }
 

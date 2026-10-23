@@ -274,7 +274,7 @@ struct QuickAnnotateToolbar: View {
             .buttonStyle(.plain)
             .disabled(!session.canUndo)
             .opacity(session.canUndo ? 1 : 0.4)
-            .help("Undo".localized())
+            .helpAndAccessibilityLabel("Undo".localized())
             .accessibilityIdentifier("toast.annotate.undo")
             Spacer(minLength: 4)
             ToastActionButton(symbol: "xmark", title: "Cancel", identifier: "toast.annotate.cancel", action: onCancel)

@@ -230,6 +230,7 @@ struct UploadPresetsSettings: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
+            .helpAndAccessibilityLabel("More".localized())
         }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { editing = preset }

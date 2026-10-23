@@ -153,7 +153,7 @@ struct SettingsSearchField: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Clear".localized())
+                .helpAndAccessibilityLabel("Clear".localized())
             }
         }
         .font(.system(size: 12))

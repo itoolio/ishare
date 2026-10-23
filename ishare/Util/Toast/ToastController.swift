@@ -73,7 +73,7 @@ final class ToastController {
         let screen = screenFrame ?? ToastPlacement.currentScreenFrame()
         let frames = targetFrames(for: visible.map(\.contentSize.height), in: screen, corner: Defaults[.toastCorner])
         for (controller, frame) in zip(visible, frames) {
-            if animated, controller.window.isVisible {
+            if animated, !MotionPreference.reducesMotion, controller.window.isVisible {
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.2
                     controller.window.animator().setFrame(frame, display: true)

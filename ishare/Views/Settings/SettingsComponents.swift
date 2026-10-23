@@ -182,7 +182,7 @@ struct FolderRow: View {
                 } label: {
                     Image(systemName: "folder")
                 }
-                .help("Open in Finder".localized())
+                .helpAndAccessibilityLabel("Open in Finder".localized())
             }
         }
     }
@@ -203,7 +203,7 @@ struct PrefixRow: View {
                 } label: {
                     Image(systemName: "arrow.counterclockwise")
                 }
-                .help("Set to default".localized())
+                .helpAndAccessibilityLabel("Set to default".localized())
             }
         }
     }

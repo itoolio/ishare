@@ -19,11 +19,13 @@ struct EntrySection: View {
                             .foregroundStyle(.red)
                     }
                     .buttonStyle(.borderless)
+                    .helpAndAccessibilityLabel("Delete".localized())
                 }
             }
         } header: {
             HStack {
                 Text(title.localized())
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button {
                     entries.append(CustomEntryModel(key: "", value: ""))
@@ -31,6 +33,7 @@ struct EntrySection: View {
                     Image(systemName: "plus")
                 }
                 .buttonStyle(.borderless)
+                .helpAndAccessibilityLabel("Add".localized())
             }
         }
     }

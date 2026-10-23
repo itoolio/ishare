@@ -10,6 +10,7 @@ struct MenuSectionTitle: View {
         Text(title.localized())
             .font(.system(size: 11, weight: Font.Weight.semibold.emphasized(contrast)))
             .foregroundStyle(contrast.isHigh ? AnyShapeStyle(Color.primary.opacity(contrast.secondaryOpacity)) : AnyShapeStyle(.secondary))
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -37,6 +38,7 @@ struct ActionTileLabel: View {
             Image(systemName: symbol)
                 .font(.system(size: metrics.tileSymbolSize, weight: Font.Weight.medium.emphasized(contrast)))
                 .frame(height: metrics.tileSymbolSize + 3)
+                .accessibilityHidden(true)
             Text(title.localized())
                 .font(.system(size: 11, weight: Font.Weight.medium.emphasized(contrast)))
                 .lineLimit(1)
@@ -80,6 +82,7 @@ struct WideActionButton: View {
             HStack(spacing: 8) {
                 Image(systemName: symbol)
                     .font(.system(size: 15, weight: Font.Weight.medium.emphasized(contrast)))
+                    .accessibilityHidden(true)
                 Text(title.localized())
                     .font(.system(size: 12, weight: Font.Weight.medium.emphasized(contrast)))
                     .lineLimit(1)
@@ -120,7 +123,7 @@ struct ToggleChip: View {
         .buttonStyle(.plain)
         .help(title.localized())
         .accessibilityLabel(title.localized())
-        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .accessibilityToggleState(isOn)
     }
 }
 
@@ -147,6 +150,6 @@ struct ShareChip: View {
         .buttonStyle(.plain)
         .help(title.localized())
         .accessibilityLabel(title.localized())
-        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .accessibilityToggleState(isOn)
     }
 }

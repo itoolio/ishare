@@ -32,11 +32,23 @@ extension ToastCardContent {
             }
             model.onDismiss()
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(model.fileName)
+        .accessibilityAddTraits(.isImage)
+        .accessibilityAction(named: Text("Copy".localized())) { copy() }
+        .accessibilityAction(named: Text("Open".localized())) { open() }
+        .accessibilityAction(named: Text("Show in Finder".localized())) { showInFinder() }
         .help("Drag to share or click to show in Finder".localized())
         .overlay(alignment: .bottomTrailing) {
             if model.canAnnotate {
                 annotateButton
             }
+        }
+    }
+
+    private func showInFinder() {
+        if let url = model.fileURL, FileManager.default.fileExists(atPath: url.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
         }
     }
 

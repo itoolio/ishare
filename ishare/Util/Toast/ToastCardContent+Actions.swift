@@ -94,7 +94,7 @@ extension ToastCardContent {
         model.historyItem != nil || canTrashFile
     }
 
-    private func copy() {
+    func copy() {
         if let item = model.historyItem {
             HistoryActions.copyURL(item)
         } else if let url = model.fileURL {
@@ -102,7 +102,7 @@ extension ToastCardContent {
         }
     }
 
-    private func open() {
+    func open() {
         if let item = model.historyItem {
             HistoryActions.open(item)
         } else if let url = model.fileURL {

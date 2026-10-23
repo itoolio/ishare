@@ -130,7 +130,7 @@ private struct TemplatesPanel: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
-            .help("More".localized())
+            .helpAndAccessibilityLabel("More".localized())
             .accessibilityIdentifier("editor.templates.more")
         }
         .padding(4)

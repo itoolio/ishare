@@ -17,6 +17,7 @@ struct HistoryThumbnail: View {
                     Image(systemName: placeholderSymbol)
                         .font(.system(size: 18))
                         .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                 } else {
                     ProgressView()
                         .controlSize(.small)
@@ -26,6 +27,7 @@ struct HistoryThumbnail: View {
                 Image(systemName: "play.circle.fill")
                     .font(.system(size: 18))
                     .foregroundStyle(.white, .black.opacity(0.45))
+                    .accessibilityHidden(true)
             }
         }
     }
@@ -193,6 +195,7 @@ struct HistoryGridView: View {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 TextField("Search uploads".localized(), text: $filter.query)
                     .textFieldStyle(.plain)
                     .accessibilityIdentifier("history.search")
@@ -204,7 +207,7 @@ struct HistoryGridView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Clear".localized())
+                    .helpAndAccessibilityLabel("Clear".localized())
                 }
             }
             .padding(.horizontal, 8)
@@ -276,6 +279,7 @@ struct HistoryCard: View {
     var bulkItems: [HistoryItem]?
     @State private var isHovered = false
     @State private var shareAnchor = ViewAnchor()
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -305,6 +309,12 @@ struct HistoryCard: View {
         .adaptiveGlass(cornerRadius: 14)
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.menuAccent.opacity(isSelected ? 0.12 : 0)).allowsHitTesting(false))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.menuAccent.opacity(isSelected ? 1 : isHovered ? 0.6 : 0), lineWidth: isSelected ? 2 : 1.5))
+        .overlay {
+            let contrast = MenuContrast.resolve(colorSchemeContrast)
+            if contrast.isHigh, !isSelected, !isHovered {
+                RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(contrast.borderOpacity), lineWidth: contrast.borderWidth)
+            }
+        }
         .anchored(to: shareAnchor)
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
@@ -316,6 +326,7 @@ struct HistoryCard: View {
         .help(item.fileUrl ?? "")
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .historyItemAccessibilityActions(item)
         .accessibilityIdentifier("history.card")
     }
 

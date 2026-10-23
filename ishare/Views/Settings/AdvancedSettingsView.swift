@@ -25,7 +25,7 @@ struct AdvancedSettingsView: View {
                         } label: {
                             Image(systemName: "arrow.counterclockwise")
                         }
-                        .help("Set to default".localized())
+                        .helpAndAccessibilityLabel("Set to default".localized())
                     }
                 }
             }

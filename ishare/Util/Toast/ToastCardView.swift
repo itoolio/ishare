@@ -42,6 +42,7 @@ struct ToastCardContent: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: "pencil.tip.crop.circle")
+                    .accessibilityHidden(true)
                     .foregroundStyle(Color.menuAccent)
                 Text(model.fileName)
                     .font(.system(size: 13, weight: Font.Weight.semibold.emphasized(contrast)))
@@ -91,6 +92,7 @@ struct ToastCardContent: View {
     private var leading: some View {
         if let message = model.message {
             Image(systemName: message.symbol)
+                .accessibilityHidden(true)
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(message.tint)
                 .frame(width: 40, height: 40)

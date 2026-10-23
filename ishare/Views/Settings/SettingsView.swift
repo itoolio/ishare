@@ -185,7 +185,7 @@ struct SettingsView: View {
 
 
     private func scroll(to anchor: String, with proxy: ScrollViewProxy) {
-        withAnimation(.snappy(duration: 0.35)) {
+        withMotionAnimation(.snappy(duration: 0.35)) {
             proxy.scrollTo(anchor, anchor: .center)
         }
         navigator.highlight(anchor)

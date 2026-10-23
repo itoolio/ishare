@@ -12,6 +12,8 @@ struct EditorView: View {
     @Default(.editorShowsLayers) private var showsLayers
     @State private var showsAdjustments = false
     @State private var showsBeautify = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     init(document: EditorDocument, onDone: @escaping () -> Void, onDiscard: @escaping () -> Void, onCopy: @escaping () -> Void) {
         self.document = document
@@ -42,7 +44,7 @@ struct EditorView: View {
                 if showsLayers {
                     Divider()
                     LayersSidebar(document: document)
-                        .transition(.move(edge: .trailing))
+                        .transition(MotionPreference.transition(.move(edge: .trailing), reducesMotion: reduceMotion))
                 }
             }
             bottomBar
@@ -122,14 +124,22 @@ struct EditorView: View {
                                 RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.accentColor)
                             }
                         }
+                        .overlay {
+                            if contrast.isHigh, document.tool != tool {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.primary.opacity(contrast.borderOpacity), lineWidth: contrast.borderWidth)
+                            }
+                        }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("\(tool.title.localized()) (\(String(tool.shortcut).uppercased()))")
                 .keyboardShortcut(document.editingText == nil ? KeyboardShortcut(KeyEquivalent(tool.shortcut), modifiers: []) : nil)
+                .accessibilityLabel(tool.accessibilityLabel)
+                .accessibilityAddTraits(document.tool == tool ? .isSelected : [])
                 .accessibilityIdentifier("editor.tool.\(tool.rawValue)")
             }
         }
+        .accessibilityElement(children: .contain)
         .padding(5)
         .adaptiveGlass(cornerRadius: 12)
         .fixedSize()
@@ -139,7 +149,7 @@ struct EditorView: View {
         HStack(spacing: 4) {
             TemplatesButton(document: document, store: templates)
             Button {
-                withAnimation(.easeInOut(duration: 0.18)) { showsLayers.toggle() }
+                withMotionAnimation(.easeInOut(duration: 0.18)) { showsLayers.toggle() }
             } label: {
                 Image(systemName: "sidebar.right")
                     .font(.system(size: 14, weight: .medium))
@@ -156,11 +166,16 @@ struct EditorView: View {
             .keyboardShortcut("l", modifiers: .command)
             .help("Layers".localized() + " (⌘L)")
             .accessibilityLabel("Layers".localized())
+            .accessibilityToggleState(showsLayers)
             .accessibilityIdentifier("editor.layers.toggle")
         }
         .padding(5)
         .adaptiveGlass(cornerRadius: 12)
         .fixedSize()
+    }
+
+    private var contrast: MenuContrast {
+        MenuContrast.resolve(colorSchemeContrast)
     }
 
     private var showsWidthSlider: Bool {
@@ -331,7 +346,7 @@ struct EditorView: View {
         }
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Image Actions".localized())
+        .helpAndAccessibilityLabel("Image Actions".localized())
         .accessibilityIdentifier("editor.imageActions")
     }
 

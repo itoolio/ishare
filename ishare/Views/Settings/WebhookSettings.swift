@@ -30,14 +30,14 @@ struct WebhookSettings: View {
                         Image(systemName: "pencil")
                     }
                     .buttonStyle(.borderless)
-                    .help("Edit Webhook".localized())
+                    .helpAndAccessibilityLabel("Edit Webhook".localized())
                     Button {
                         remove(webhook)
                     } label: {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
-                    .help("Delete Webhook".localized())
+                    .helpAndAccessibilityLabel("Delete Webhook".localized())
                 }
             }
             Button {

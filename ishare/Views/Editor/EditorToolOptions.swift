@@ -112,7 +112,7 @@ struct EditorToolOptions: View {
             }
             .menuIndicator(.visible)
             .fixedSize()
-            .help("Arrowhead".localized())
+            .helpAndAccessibilityLabel("Arrowhead".localized())
             .accessibilityIdentifier("editor.arrow.head")
             dashToggle
         }

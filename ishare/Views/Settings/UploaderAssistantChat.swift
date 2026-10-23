@@ -359,6 +359,7 @@ struct UploaderAssistantSheet: View {
             .background(Circle().fill(Color.accentColor))
             .disabled(model.input.trimmingCharacters(in: .whitespaces).isEmpty || model.isResponding)
             .keyboardShortcut(.return, modifiers: .command)
+            .accessibilityLabel("Send".localized())
             .accessibilityIdentifier("assistant.send")
         }
         .padding(12)

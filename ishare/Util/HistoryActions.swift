@@ -91,6 +91,14 @@ enum HistoryActions {
         }
     }
 
+    static func delete(_ item: HistoryItem) {
+        if item.canDeleteFromServer {
+            confirmDeleteFromServer(item)
+        } else {
+            removeFromHistory(item)
+        }
+    }
+
     static func undoUpload(_ item: HistoryItem) async {
         await deleteFromServer(item, announcement: "Upload Undone".localized())
     }
