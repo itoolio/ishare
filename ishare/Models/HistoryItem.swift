@@ -11,6 +11,8 @@ struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var shortUrl: String?
     var altText: String?
     var localIdentifier: String?
+    var uploaderName: String?
+    var title: String?
     var id: Self { self }
 }
 
@@ -99,9 +101,9 @@ extension HistoryItem {
         case .imgur:
             "Imgur"
         case let .custom(id):
-            uploaders.first { $0.id == id }?.name
+            uploaders.first { $0.id == id }?.name ?? uploaderName
         case .unknown:
-            nil
+            uploaderName
         }
     }
 }
@@ -169,10 +171,20 @@ func applyHistoryLimits() {
     }
 }
 
+@MainActor
 func removeFromUploadHistory(_ item: HistoryItem) {
-    Defaults[.uploadHistory].removeAll { $0 == item }
+    removeFromUploadHistory([item])
 }
 
+@MainActor
+func removeFromUploadHistory(_ items: [HistoryItem]) {
+    let removed = Set(items)
+    HistorySync.shared.recordDeletion(of: items)
+    Defaults[.uploadHistory].removeAll { removed.contains($0) }
+}
+
+@MainActor
 func clearUploadHistory() {
+    HistorySync.shared.recordDeletion(of: Defaults[.uploadHistory])
     Defaults[.uploadHistory] = []
 }
