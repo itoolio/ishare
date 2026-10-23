@@ -19,6 +19,7 @@ struct MenuLayoutSettingsSection: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("settings.menu.density")
+            .settingsAnchor(SettingsAnchor.menuDensity)
             ForEach(Array(layout.order.enumerated()), id: \.element) { index, section in
                 row(section, index: index)
             }
@@ -27,6 +28,7 @@ struct MenuLayoutSettingsSection: View {
             }
             .disabled(layout == MenuLayout())
             .accessibilityIdentifier("settings.menu.reset")
+            .settingsAnchor(SettingsAnchor.menuLayout)
         } header: {
             Text("Menu".localized())
         } footer: {
@@ -81,6 +83,7 @@ struct AppearanceSettingsSection: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("settings.appearance.theme")
+            .settingsAnchor(SettingsAnchor.appearance)
             Toggle(isOn: $highContrast) {
                 Text("High contrast menu".localized())
                 if system.increaseContrast {
@@ -88,6 +91,7 @@ struct AppearanceSettingsSection: View {
                 }
             }
             .accessibilityIdentifier("settings.appearance.highContrast")
+            .settingsAnchor(SettingsAnchor.highContrast)
             MenuPreview()
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
@@ -163,6 +167,7 @@ struct ToastPlacementSettings: View {
             ForEach(ToastCorner.allCases) { Text($0.title.localized()).tag($0) }
         }
         .accessibilityIdentifier("settings.toast.corner")
+        .settingsAnchor(SettingsAnchor.toastPlacement)
         Picker("Screen".localized(), selection: $screen) {
             ForEach(ToastScreenChoice.allCases) { Text($0.title.localized()).tag($0) }
         }
@@ -179,6 +184,8 @@ struct ResultPresentationSettings: View {
             ForEach(ResultPresentation.allCases) { Text($0.title.localized()).tag($0) }
         }
         .accessibilityIdentifier("settings.toast.presentation")
+        .settingsAnchor(SettingsAnchor.resultPresentation)
+
         .onChange(of: presentation) { _, choice in
             guard choice.postsNotification else { return }
             Task { @MainActor in

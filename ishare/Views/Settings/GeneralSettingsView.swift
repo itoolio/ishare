@@ -26,10 +26,13 @@ struct GeneralSettingsView: View {
                         Text(language.name).tag(LanguageTypes?.some(language))
                     }
                 }
+                .settingsAnchor(SettingsAnchor.language)
                 LaunchAtLogin.Toggle {
                     Text("Launch at login".localized())
                 }
+                .settingsAnchor(SettingsAnchor.launchAtLogin)
                 Toggle("Land down under".localized(), isOn: $aussieMode)
+                    .settingsAnchor(SettingsAnchor.aussieMode)
             }
             Section("Menu Bar Icon".localized()) {
                 Picker("Menu Bar Icon".localized(), selection: $menubarIcon) {
@@ -39,24 +42,28 @@ struct GeneralSettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .settingsAnchor(SettingsAnchor.menuBarIcon)
             }
             MenuLayoutSettingsSection()
             AppearanceSettingsSection()
             Section("Clipboard".localized()) {
                 Toggle("Copy image to clipboard instead of URL".localized(), isOn: $copyImageToClipboard)
+                    .settingsAnchor(SettingsAnchor.clipboard)
             }
             Section("Toast".localized()) {
                 LabeledContent(String(format: "Toast Timeout: %d seconds".localized(), Int(toastTimeout))) {
                     Slider(value: $toastTimeout, in: 1 ... 10, step: 1)
                         .frame(width: 220)
                 }
+                .settingsAnchor(SettingsAnchor.toastTimeout)
                 ToastPlacementSettings()
                 ResultPresentationSettings()
             }
             SoundSettingsSection()
             HistorySettingsSection()
         }
-        .formStyle(.grouped)
+        .settingsPaneStyle()
+
         .alert("Language Change".localized(), isPresented: Binding(
             get: { pendingLanguage != nil },
             set: { if !$0 { pendingLanguage = nil } }

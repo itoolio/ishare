@@ -70,8 +70,11 @@ targetTemplates:
           - "**/Info*.plist"
       - path: AppIcon.icon
         buildPhase: resources
+      - path: CHANGELOG.md
+        buildPhase: resources
     dependencies:
       - package: Alamofire
+
       - package: SwiftyJSON
       - package: BezelNotification
       - package: MenuBarExtraAccess

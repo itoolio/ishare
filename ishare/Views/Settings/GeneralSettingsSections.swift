@@ -9,6 +9,7 @@ struct SoundSettingsSection: View {
     var body: some View {
         Section("Sounds".localized()) {
             soundPicker("Capture sound".localized(), selection: $captureSound, identifier: "settings.sounds.capture")
+                .settingsAnchor(SettingsAnchor.sounds)
             soundPicker("Upload complete sound".localized(), selection: $uploadCompleteSound, identifier: "settings.sounds.upload")
         }
     }
@@ -61,6 +62,7 @@ struct HistorySettingsSection: View {
                 ForEach(HistoryLimit.allCases) { Text($0.title).tag($0) }
             }
             .accessibilityIdentifier("settings.history.limit")
+            .settingsAnchor(SettingsAnchor.history)
             Picker("Remove uploads older than".localized(), selection: $historyRetention) {
                 ForEach(HistoryRetention.allCases) { Text($0.title).tag($0) }
             }
@@ -72,6 +74,8 @@ struct HistorySettingsSection: View {
                 .disabled(uploadHistory.isEmpty)
                 .accessibilityIdentifier("settings.history.clear")
             }
+            .settingsAnchor(SettingsAnchor.clearHistory)
+
         }
         .onChange(of: historyLimit) { applyHistoryLimits() }
         .onChange(of: historyRetention) { applyHistoryLimits() }

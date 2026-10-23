@@ -5,37 +5,98 @@ import SwiftUI
 final class SettingsNavigator: ObservableObject {
     static let shared = SettingsNavigator()
 
+    struct AnchorRequest: Equatable {
+        let anchor: String
+        let token = UUID()
+    }
+
     @Published var pane: SettingsPane?
+    @Published var anchorRequest: AnchorRequest?
+    @Published private(set) var highlightedAnchor: String?
+    private var highlightTask: Task<Void, Never>?
+
+    func reveal(_ anchor: String, in pane: SettingsPane? = nil) {
+        if let pane {
+            self.pane = pane
+        }
+        anchorRequest = AnchorRequest(anchor: anchor)
+    }
+
+    func highlight(_ anchor: String, duration: Duration = .seconds(1.6)) {
+        highlightTask?.cancel()
+        highlightedAnchor = anchor
+        highlightTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: duration)
+            guard let self, !Task.isCancelled else { return }
+            highlightedAnchor = nil
+        }
+    }
+}
+
+enum SettingsAnchor {
+    static let language = "general.language"
+    static let launchAtLogin = "general.launchAtLogin"
+    static let aussieMode = "general.aussieMode"
+    static let menuBarIcon = "general.menuBarIcon"
+    static let menuLayout = "general.menuLayout"
+    static let menuDensity = "general.menuDensity"
+    static let appearance = "general.appearance"
+    static let highContrast = "general.highContrast"
+    static let clipboard = "general.clipboard"
+    static let toastTimeout = "general.toastTimeout"
+    static let toastPlacement = "general.toastPlacement"
+    static let resultPresentation = "general.resultPresentation"
+    static let sounds = "general.sounds"
+    static let history = "general.history"
+    static let clearHistory = "general.clearHistory"
 }
 
 struct SettingsSearchEntry: Sendable {
     let pane: SettingsPane
     let keywords: [String]
+    let anchor: String?
+
+    init(pane: SettingsPane, keywords: [String], anchor: String? = nil) {
+        self.pane = pane
+        self.keywords = keywords
+        self.anchor = anchor
+    }
 }
 
 struct SettingsSearchMatch: Equatable, Sendable {
     let pane: SettingsPane
     let keyword: String?
+    let anchor: String?
+
+    init(pane: SettingsPane, keyword: String?, anchor: String? = nil) {
+        self.pane = pane
+        self.keyword = keyword
+        self.anchor = anchor
+    }
 }
 
 @MainActor
 enum SettingsSearchIndex {
     static let entries: [SettingsSearchEntry] = [
-        SettingsSearchEntry(pane: .general, keywords: [
-            "Language", "Launch at login", "Startup", "Land down under", "Menu Bar Icon", "Icon",
-            "Clipboard", "Copy image to clipboard instead of URL", "Toast", "Toast Timeout", "Notification",
-        ]),
-        SettingsSearchEntry(pane: .general, keywords: [
-            "Menu", "Density", "Compact", "Comfortable", "Sections", "Restore Default Layout",
-            "Appearance", "Menu theme", "Dark", "Light", "High contrast menu", "Contrast", "Menu preview",
-            "Position", "Corner", "Screen", "Show results as", "Notification Center",
-        ]),
+        SettingsSearchEntry(pane: .general, keywords: ["Language"], anchor: SettingsAnchor.language),
+        SettingsSearchEntry(pane: .general, keywords: ["Launch at login", "Startup"], anchor: SettingsAnchor.launchAtLogin),
+        SettingsSearchEntry(pane: .general, keywords: ["Land down under"], anchor: SettingsAnchor.aussieMode),
+        SettingsSearchEntry(pane: .general, keywords: ["Menu Bar Icon", "Icon"], anchor: SettingsAnchor.menuBarIcon),
+        SettingsSearchEntry(pane: .general, keywords: ["Clipboard", "Copy image to clipboard instead of URL"], anchor: SettingsAnchor.clipboard),
+        SettingsSearchEntry(pane: .general, keywords: ["Toast", "Toast Timeout"], anchor: SettingsAnchor.toastTimeout),
+        SettingsSearchEntry(pane: .general, keywords: ["Density", "Compact", "Comfortable"], anchor: SettingsAnchor.menuDensity),
+        SettingsSearchEntry(pane: .general, keywords: ["Menu", "Sections", "Restore Default Layout", "Favorites", "Reorder"], anchor: SettingsAnchor.menuLayout),
+        SettingsSearchEntry(pane: .general, keywords: ["Appearance", "Menu theme", "Dark", "Light", "Menu preview"], anchor: SettingsAnchor.appearance),
+        SettingsSearchEntry(pane: .general, keywords: ["High contrast menu", "Contrast"], anchor: SettingsAnchor.highContrast),
+        SettingsSearchEntry(pane: .general, keywords: ["Position", "Corner", "Screen"], anchor: SettingsAnchor.toastPlacement),
+        SettingsSearchEntry(pane: .general, keywords: ["Show results as", "Notification", "Notification Center"], anchor: SettingsAnchor.resultPresentation),
         SettingsSearchEntry(pane: .general, keywords: [
             "Sounds", "Sound", "Capture sound", "Upload complete sound", "Mute", "Beep",
-        ]),
+        ], anchor: SettingsAnchor.sounds),
         SettingsSearchEntry(pane: .general, keywords: [
-            "History", "Keep up to", "Remove uploads older than", "Clear History", "Limit", "Retention",
-        ]),
+            "History", "Keep up to", "Remove uploads older than", "Limit", "Retention",
+        ], anchor: SettingsAnchor.history),
+        SettingsSearchEntry(pane: .general, keywords: ["Clear History"], anchor: SettingsAnchor.clearHistory),
         SettingsSearchEntry(pane: .capture, keywords: [
             "Screenshot", "Format", "PNG", "JPG", "HEIC", "WebP", "TIFF", "File prefix", "Image path", "Folder",
             "Show pointer in screenshots", "Pointer", "Cursor", "Include window shadow", "Shadow",
@@ -104,11 +165,15 @@ enum SettingsSearchIndex {
             if contains(pane.title, needle, localize: localize) {
                 return SettingsSearchMatch(pane: pane, keyword: nil)
             }
-            let keywords = entries.filter { $0.pane == pane }.flatMap(\.keywords)
-            guard let keyword = keywords.first(where: { contains($0, needle, localize: localize) }) else { return nil }
-            return SettingsSearchMatch(pane: pane, keyword: keyword)
+            for entry in entries where entry.pane == pane {
+                if let keyword = entry.keywords.first(where: { contains($0, needle, localize: localize) }) {
+                    return SettingsSearchMatch(pane: pane, keyword: keyword, anchor: entry.anchor)
+                }
+            }
+            return nil
         }
     }
+
 
     private static func contains(_ candidate: String, _ needle: String, localize: (String) -> String) -> Bool {
         normalized(candidate).contains(needle) || normalized(localize(candidate)).contains(needle)

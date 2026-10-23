@@ -83,6 +83,13 @@ final class ThumbnailCache {
         images.removeAllObjects()
     }
 
+    func removeImages(forFile url: URL) {
+        let path = url.standardizedFileURL.path
+        for bucket in ThumbnailKey.pixelBuckets {
+            images.removeObject(forKey: ThumbnailKey(source: .file(path), requestedPixelSize: bucket).cacheKey as NSString)
+        }
+    }
+
     func image(for key: ThumbnailKey) async -> NSImage? {
         if let cached = cachedImage(for: key) {
             return cached

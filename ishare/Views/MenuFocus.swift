@@ -5,6 +5,7 @@ enum MenuFocusTarget: Hashable, Sendable {
     case settings
     case donate
     case more
+    case favorite(Int)
     case capture(Int)
     case record(Int)
     case stopRecording
@@ -86,8 +87,10 @@ enum MenuFocusLayout {
         showsDonate ? [.destination, .donate, .settings, .more] : [.destination, .settings, .more]
     }
 
-    static func rows(sections: [MenuSection], isRecording: Bool, chipCount: Int, recentCount: Int, showsDonate: Bool = false) -> [[MenuFocusTarget]] {
-        [headerRow(showsDonate: showsDonate)] + sections.compactMap { section in
+    static func rows(sections: [MenuSection], isRecording: Bool, chipCount: Int, recentCount: Int, showsDonate: Bool = false, favoriteCount: Int = 0) -> [[MenuFocusTarget]] {
+        let favorites = favoriteCount > 0 ? [(0 ..< favoriteCount).map(MenuFocusTarget.favorite)] : []
+        return [headerRow(showsDonate: showsDonate)] + favorites + sections.compactMap { section in
+
             switch section {
             case .capture:
                 (0 ..< 4).map(MenuFocusTarget.capture)

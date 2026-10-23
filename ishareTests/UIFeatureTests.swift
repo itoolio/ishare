@@ -185,7 +185,7 @@ struct OnboardingTests {
     }
 
     @Test func walksThroughAllSteps() {
-        #expect(OnboardingStep.allCases == [.permission, .uploader, .shortcuts, .afterCapture])
+        #expect(OnboardingStep.allCases == [.permission, .uploader, .shortcuts, .tryCapture, .tryEditor, .tryPalette, .afterCapture])
     }
 }
 
