@@ -1,0 +1,22 @@
+Process:               ishare [4242]
+Path:                  /Applications/ishare.app/Contents/MacOS/ishare
+Identifier:            dev.adrian.ishare
+Version:               5.3.0 (412)
+Code Type:             ARM-64 (Native)
+
+Exception Type:        EXC_BREAKPOINT (SIGTRAP)
+
+Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
+0   ishare                        	0x00000001024a1234 0x1024a0000 + 4660
+1   ishare                        	0x00000001024a2000 0x1024a0000 + 8192
+2   libsystem_kernel.dylib        	0x000000018800ea60 __pthread_kill + 8
+
+Thread 1:
+0   ishare                        	0x00000001024a1234 0x1024a0000 + 4660
+
+Thread 0 crashed with ARM Thread State (64-bit):
+    x0: 0x0000000000000000   x1: 0x0000000000000000
+
+Binary Images:
+       0x1024a0000 -        0x10259ffff ishare arm64  <1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f> /Applications/ishare.app/Contents/MacOS/ishare
+       0x188000000 -        0x18803bfff libsystem_kernel.dylib arm64e  <11111111222233334444555555555555> /usr/lib/system/libsystem_kernel.dylib

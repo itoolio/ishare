@@ -105,3 +105,38 @@ func TestAppStorePlanPrintsOutputs(t *testing.T) {
 		t.Fatalf("missing --releases exited with %d", code)
 	}
 }
+
+func TestCoverageWritesTheSummaryAndEnforcesMinimums(t *testing.T) {
+	directory := t.TempDir()
+	report := filepath.Join(directory, "coverage.json")
+	json := `{"targets":[{"name":"ishare.app","files":[{"path":"/repo/ishare/Http/Upload.swift","coveredLines":3,"executableLines":4}]}]}`
+	if err := os.WriteFile(report, []byte(json), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary := filepath.Join(directory, "summary.md")
+	output := filepath.Join(directory, "comment.md")
+	code, stdout, stderr := execute(t, "", "coverage", "--root", "/repo", "--min", "Http=70", "--output", output, "--summary-file", summary, report)
+	if code != 0 || !strings.Contains(stdout, "| Http | 1 | 3 / 4 | 75.0% | 70.0% met |") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	for _, path := range []string{summary, output} {
+		if data, _ := os.ReadFile(path); !strings.Contains(string(data), "### Code coverage") {
+			t.Errorf("%s was not written: %q", path, data)
+		}
+	}
+	code, _, stderr = execute(t, "", "coverage", "--root", "/repo", "--min", "Http=80", "--summary-file", "", report)
+	if code != 1 || !strings.Contains(stderr, "1 coverage minimums not met") {
+		t.Fatalf("exit code %d, stderr %q", code, stderr)
+	}
+	if code, _, _ := execute(t, "", "coverage", "--summary-file", "", "--min", "Http", report); code != 1 {
+		t.Fatalf("an invalid minimum should fail, got %d", code)
+	}
+}
+
+func TestSymbolicateNeedsACrashReportAndDSYMs(t *testing.T) {
+	for _, arguments := range [][]string{{"symbolicate"}, {"symbolicate", "crash.ips"}, {"symbolicate", "--dsyms", "d.zip"}} {
+		if code, _, stderr := execute(t, "", arguments...); code != 2 || !strings.HasPrefix(stderr, "usage: ishare-tools symbolicate") {
+			t.Errorf("%v: exit code %d, stderr %q", arguments, code, stderr)
+		}
+	}
+}
