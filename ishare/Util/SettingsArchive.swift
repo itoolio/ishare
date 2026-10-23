@@ -146,7 +146,7 @@ enum SettingsTransfer {
         .toastCorner, .toastScreen, .resultPresentation,
         .recordingAudioSource, .recordingAudioBundleIDs, .instantReplayDuration, .instantReplayResolution, .instantReplayFrameRate, .recordingNotesFontSize,
         .recordingNotesScrollSpeed, .recordingNotesOpacity, .translationTargetLanguage, .generateAltText, .linkOptionPreferences, .menuFavorites,
-        .showsWhatsNew,
+        .showsWhatsNew, .showQRCodeAfterUpload, .localShareExpiry, .localShareMaxDownloads, .historySyncEnabled,
     ]
 
     static var preferenceNames: Set<String> {
