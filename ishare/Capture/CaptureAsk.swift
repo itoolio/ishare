@@ -103,8 +103,8 @@ final class CaptureAskModel: ObservableObject {
         let fullPrompt = SceneContextPrompt.question(text, context: context)
         task = Task { [weak self] in
             do {
-                try await OnDeviceModel.stream(fullPrompt, instructions: SceneContextPrompt.askInstructions) { partial in
-                    guard !Task.isCancelled else { return }
+                for try await partial in OnDeviceModel.responses(to: fullPrompt, instructions: SceneContextPrompt.askInstructions) {
+                    guard !Task.isCancelled else { break }
                     self?.answer = partial
                 }
             } catch {

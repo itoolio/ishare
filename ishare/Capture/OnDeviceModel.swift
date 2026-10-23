@@ -31,13 +31,28 @@ enum OnDeviceModel {
         throw OnDeviceModelError.unavailable
     }
 
-    static func stream(_ prompt: String, instructions: String, onPartial: @escaping @MainActor (String) -> Void) async throws {
+    static func responses(to prompt: String, instructions: String) -> AsyncThrowingStream<String, any Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    try await streamResponses(to: prompt, instructions: instructions, into: continuation)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private static func streamResponses(
+        to prompt: String, instructions: String, into continuation: AsyncThrowingStream<String, any Error>.Continuation
+    ) async throws {
         #if canImport(FoundationModels)
             if #available(macOS 26.0, *), isAvailable {
                 let session = LanguageModelSession(instructions: instructions)
                 for try await snapshot in session.streamResponse(to: prompt) {
-                    let partial = snapshot.content
-                    await onPartial(partial)
+                    continuation.yield(snapshot.content)
                 }
                 return
             }
