@@ -61,6 +61,13 @@ enum MenuAppKitMenus {
         let onboarding = ClosureMenuItem(title: "Welcome Guide…".localized(), handler: openOnboarding)
         onboarding.setAccessibilityIdentifier("menu.onboarding")
         menu.addItem(onboarding)
+        let whatsNew = ClosureMenuItem(title: "What’s New…".localized()) {
+            MenuController.shared.dismiss()
+            WhatsNewWindow.show()
+        }
+        whatsNew.setAccessibilityIdentifier("menu.whatsNew")
+        menu.addItem(whatsNew)
+
         menu.addItem(.separator())
         menu.addItem(ClosureMenuItem(title: "Quit".localized(), keyEquivalent: "q") {
             NSApplication.shared.terminate(nil)

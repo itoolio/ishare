@@ -9,27 +9,143 @@ struct SettingsPaneRow: View {
     let pane: SettingsPane
     let keyword: String?
     let isSearching: Bool
+    var isSelected = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: pane.symbol)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 22, height: 22)
-                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(pane.tint.gradient))
+        HStack(spacing: 9) {
+            SettingsIconTile(symbol: pane.symbol, tint: pane.tint, isSelected: isSelected)
             VStack(alignment: .leading, spacing: 1) {
                 Text(pane.title.localized())
-                    .fontWeight(isSearching ? .semibold : .regular)
+                    .font(.system(size: 13, weight: isSearching || isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Color.white : Color.primary)
                 if let keyword {
                     Text(keyword.localized().trimmingCharacters(in: CharacterSet(charactersIn: ":")))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isSelected ? AnyShapeStyle(Color.white.opacity(0.8)) : AnyShapeStyle(.secondary))
                         .lineLimit(1)
                 }
             }
+            Spacer(minLength: 0)
         }
     }
 }
+
+struct SettingsIconTile: View {
+    let symbol: String
+    let tint: Color
+    var isSelected = false
+    var size: CGFloat = 24
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size * 0.48, weight: .semibold))
+            .foregroundStyle(Color.white)
+            .frame(width: size, height: size)
+            .background(
+                RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+                    .fill(tint.gradient)
+            )
+            .overlay(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous).strokeBorder(Color.white.opacity(isSelected ? 0.7 : 0.18), lineWidth: isSelected ? 1 : 0.5))
+            .shadow(color: tint.opacity(isSelected ? 0 : 0.25), radius: 2, y: 1)
+    }
+}
+
+struct SettingsSidebarButtonStyle: ButtonStyle {
+    let isSelected: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        SettingsSidebarButtonBody(isSelected: isSelected, isPressed: configuration.isPressed) {
+            configuration.label
+        }
+    }
+}
+
+private struct SettingsSidebarButtonBody<Content: View>: View {
+    let isSelected: Bool
+    let isPressed: Bool
+    @ViewBuilder var content: Content
+    @State private var isHovered = false
+    @Environment(\.menuContrast) private var contrast
+
+    var body: some View {
+        content
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(isSelected ? Color.menuAccent : Color.primary.opacity(isHovered || isPressed ? contrast.fillOpacity : 0))
+            )
+            .overlay {
+                if contrast.isHigh, !isSelected {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(isHovered ? contrast.borderOpacity : 0), lineWidth: 1)
+                }
+            }
+            .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
+            .animation(.easeOut(duration: 0.12), value: isHovered)
+    }
+}
+
+struct SettingsPaneStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .background(SettingsBackdrop())
+            .tint(Color.menuAccent)
+            .environment(\.defaultMinListRowHeight, 30)
+    }
+}
+
+struct SettingsBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            Color(nsColor: .windowBackgroundColor)
+            LinearGradient(
+                colors: [Color.menuAccent.opacity(colorScheme == .dark ? 0.10 : 0.06), .clear],
+                startPoint: .top,
+                endPoint: .center
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+extension View {
+    func settingsPaneStyle() -> some View {
+        modifier(SettingsPaneStyle())
+    }
+
+    func settingsAnchor(_ anchor: String) -> some View {
+        modifier(SettingsAnchorModifier(anchor: anchor))
+    }
+}
+
+private struct SettingsAnchorModifier: ViewModifier {
+    let anchor: String
+    @ObservedObject private var navigator = SettingsNavigator.shared
+
+    func body(content: Content) -> some View {
+        let isHighlighted = navigator.highlightedAnchor == anchor
+        content
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.menuAccent.opacity(isHighlighted ? 0.18 : 0))
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.menuAccent.opacity(isHighlighted ? 0.8 : 0), lineWidth: 1.5))
+                    .padding(.horizontal, -8)
+                    .padding(.vertical, -4)
+                    .allowsHitTesting(false)
+            }
+            .animation(.easeInOut(duration: 0.35), value: isHighlighted)
+            .id(anchor)
+            .accessibilityAddTraits(isHighlighted ? .isSelected : [])
+    }
+}
+
 
 struct FolderRow: View {
     let title: String

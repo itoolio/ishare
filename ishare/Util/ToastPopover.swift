@@ -41,9 +41,12 @@ final class ToastModel: ObservableObject {
     @Published var undoDeadline: Date?
     @Published var isHovering = false
     @Published var isDragging = false
+    @Published private(set) var annotation: QuickAnnotateSession?
+    @Published var replacedItem: HistoryItem?
     var onDismiss: () -> Void = {}
     var onEdit: () -> Void = {}
     var onHoverChange: (Bool) -> Void = { _ in }
+    var onRequestKey: () -> Void = {}
     private var cancellables: Set<AnyCancellable> = []
 
     init(fileURL: URL, isImage: Bool, thumbnail: NSImage? = nil, historyItem: HistoryItem? = nil) {
@@ -77,6 +80,83 @@ final class ToastModel: ObservableObject {
 
     var canUndo: Bool {
         undoDeadline.map { $0 > Date() } ?? false
+    }
+
+    var isAnnotating: Bool {
+        annotation != nil
+    }
+
+    var canAnnotate: Bool {
+        guard message == nil, isImage, !isAwaitingUpload, let fileURL else { return false }
+        return FileManager.default.fileExists(atPath: fileURL.path)
+    }
+
+    var holdsOpen: Bool {
+        isHovering || isAwaitingUpload || isAnnotating || replacedItem != nil
+    }
+
+    func beginAnnotating() {
+        guard annotation == nil, canAnnotate, let fileURL, let session = QuickAnnotateSession(fileURL: fileURL) else { return }
+        replacedItem = nil
+        annotation = session
+        onRequestKey()
+    }
+
+    func cancelAnnotating() {
+        annotation = nil
+    }
+
+    func finishAnnotating() async {
+        guard let session = annotation, let fileURL else { return }
+        do {
+            let saved = try session.save()
+            annotation = nil
+            guard saved else { return }
+            ThumbnailCache.shared.removeImages(forFile: fileURL)
+            if let refreshed = await ThumbnailCache.shared.image(for: ThumbnailKey.forFile(fileURL, pointSize: 64)) {
+                thumbnail = refreshed
+            }
+            if let previous = historyItem {
+                await replaceUpload(of: previous, with: fileURL)
+            }
+        } catch {
+            annotation = nil
+            Log.app.error("Saving quick annotations failed: \(error.localizedDescription, privacy: .public)")
+            ToastController.showMessage(title: "Couldn’t save the annotations".localized(), message: error.localizedDescription, symbol: "exclamationmark.triangle.fill", tint: .orange)
+        }
+    }
+
+    private func replaceUpload(of previous: HistoryItem, with fileURL: URL) async {
+        followUpload(resolvesExplicitly: true)
+        var redactedURL: URL?
+        switch await Redactor.prepareUpload(of: fileURL) {
+        case .unchanged:
+            break
+        case let .redacted(url):
+            redactedURL = url
+        case .failed:
+            resolveUpload()
+            return
+        }
+        let localFileURL = previous.localFileURL == nil ? nil : fileURL
+        await UploadCoordinator.upload(fileURL: redactedURL ?? fileURL, target: UploadCoordinator.target(for: previous), localFileURL: localFileURL)
+        if let redactedURL {
+            Redactor.discard(redactedURL)
+        }
+        resolveUpload()
+        guard let replacement = historyItem, replacement != previous else { return }
+        Defaults[.uploadHistory] = UploadReplacement.history(Defaults[.uploadHistory], replacing: previous, with: replacement)
+        if UploadReplacement.offersServerDeletion(of: previous, replacedBy: replacement) {
+            replacedItem = previous
+        }
+    }
+
+    func deleteReplacedUpload() {
+        guard let replacedItem else { return }
+        self.replacedItem = nil
+        Task { @MainActor in
+            await HistoryActions.deleteFromServer(replacedItem, announcement: "Deleted the previous upload".localized())
+        }
     }
 
     func followUpload(_ manager: UploadManager = .shared, resolvesExplicitly: Bool = false) {
@@ -145,6 +225,53 @@ private struct ToastCardContent: View {
     @Environment(\.menuContrast) private var contrast
 
     var body: some View {
+        Group {
+            if let session = model.annotation {
+                annotating(session)
+            } else {
+                card
+            }
+        }
+        .adaptiveGlass(cornerRadius: 18)
+        .opacity(model.isDragging ? 0.3 : 1)
+        .onHover { hovering in
+            if hovering {
+                model.isDragging = false
+            }
+            model.isHovering = hovering
+            model.onHoverChange(hovering)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("toast.card")
+    }
+
+    private func annotating(_ session: QuickAnnotateSession) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "pencil.tip.crop.circle")
+                    .foregroundStyle(Color.menuAccent)
+                Text(model.fileName)
+                    .font(.system(size: 13, weight: Font.Weight.semibold.emphasized(contrast)))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: 18)
+            }
+            QuickAnnotateCanvas(session: session)
+                .frame(maxWidth: .infinity)
+            QuickAnnotateToolbar(session: session) {
+                model.cancelAnnotating()
+            } onDone: {
+                Task { @MainActor in
+                    await model.finishAnnotating()
+                }
+            }
+        }
+        .padding(12)
+        .frame(width: ToastCardView.width, alignment: .leading)
+        .accessibilityIdentifier("toast.annotate")
+    }
+
+    private var card: some View {
         HStack(alignment: .top, spacing: 12) {
             leading
             VStack(alignment: .leading, spacing: 6) {
@@ -156,6 +283,7 @@ private struct ToastCardContent: View {
                     Spacer(minLength: 18)
                 }
                 detail
+                replacementPrompt
                 if model.fileURL != nil {
                     actions
                 }
@@ -164,14 +292,6 @@ private struct ToastCardContent: View {
         .padding(12)
         .frame(width: ToastCardView.width, alignment: .leading)
         .overlay(alignment: .topTrailing) { dismissButton }
-        .adaptiveGlass(cornerRadius: 18)
-        .opacity(model.isDragging ? 0.3 : 1)
-        .onHover { hovering in
-            model.isHovering = hovering
-            model.onHoverChange(hovering)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("toast.card")
     }
 
     @ViewBuilder
@@ -209,10 +329,7 @@ private struct ToastCardContent: View {
         .contentShape(Rectangle())
         .onDrag {
             model.isDragging = true
-            guard let url = model.fileURL else { return NSItemProvider() }
-            let provider = NSItemProvider(object: url as NSURL)
-            provider.suggestedName = url.lastPathComponent
-            return provider
+            return DragExport.provider(fileURL: model.fileURL, historyItem: model.historyItem, isImage: model.kind == .image)
         }
         .onTapGesture {
             if saveToDisk, let url = model.fileURL {
@@ -221,6 +338,50 @@ private struct ToastCardContent: View {
             model.onDismiss()
         }
         .help("Drag to share or click to show in Finder".localized())
+        .overlay(alignment: .bottomTrailing) {
+            if model.canAnnotate {
+                annotateButton
+            }
+        }
+    }
+
+    private var annotateButton: some View {
+        Button {
+            model.beginAnnotating()
+        } label: {
+            Image(systemName: "pencil.tip")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(Color.menuAccent))
+                .overlay(Circle().strokeBorder(.white.opacity(0.6), lineWidth: 1))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .padding(3)
+        .help("Annotate".localized())
+        .accessibilityLabel("Annotate".localized())
+        .accessibilityIdentifier("toast.annotate.open")
+    }
+
+    @ViewBuilder
+    private var replacementPrompt: some View {
+        if model.replacedItem != nil {
+            HStack(spacing: 6) {
+                Text("Delete the previous upload from the server?".localized())
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
+                Button("Keep".localized()) { model.replacedItem = nil }
+                    .accessibilityIdentifier("toast.replaced.keep")
+                Button("Delete".localized(), role: .destructive) { model.deleteReplacedUpload() }
+                    .accessibilityIdentifier("toast.replaced.delete")
+            }
+            .controlSize(.small)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("toast.replaced")
+        }
     }
 
     @ViewBuilder
@@ -517,6 +678,11 @@ final class ToastController {
                 await ImageEditor.editAsNewCapture(sourceURL: url)
             }
         }
+        model.onRequestKey = { [weak self] in
+            guard let self else { return }
+            dismissTask?.cancel()
+            window.makeKeyAndOrderFront(nil)
+        }
         model.onHoverChange = { [weak self] hovering in
             guard let self else { return }
             if hovering {
@@ -539,6 +705,18 @@ final class ToastController {
                 guard let self, state != .none, !isAwaitingUpload(state) else { return }
                 scheduleDismiss()
             }
+            .store(in: &cancellables)
+        model.$annotation
+            .map { $0 != nil }
+            .removeDuplicates()
+            .dropFirst()
+            .sink { [weak self] _ in self?.scheduleDismiss() }
+            .store(in: &cancellables)
+        model.$replacedItem
+            .map { $0 != nil }
+            .removeDuplicates()
+            .dropFirst()
+            .sink { [weak self] _ in self?.scheduleDismiss() }
             .store(in: &cancellables)
         model.$undoDeadline
             .removeDuplicates()
@@ -578,12 +756,13 @@ final class ToastController {
 
     private func scheduleDismiss() {
         dismissTask?.cancel()
-        guard !model.isHovering, !model.isAwaitingUpload else { return }
+        guard !model.holdsOpen else { return }
         let undoRemaining = model.undoDeadline.map { max($0.timeIntervalSinceNow, 0) } ?? 0
         let timeout = max(Defaults[.toastTimeout], minimumTimeout, undoRemaining)
         dismissTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(timeout))
-            guard let self, !Task.isCancelled, !model.isHovering, !model.isAwaitingUpload else { return }
+            guard let self, !Task.isCancelled, !model.holdsOpen else { return }
+
             dismiss()
         }
     }

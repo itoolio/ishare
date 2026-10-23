@@ -9,6 +9,7 @@ struct CaptureOptions: Sendable {
     var destinations: [UploadTarget]?
     var preset: UploadPreset?
     var delay: Int?
+    var resultHandler: (@MainActor @Sendable (URL) -> Void)?
 
     static let standard = CaptureOptions()
 }
@@ -44,7 +45,13 @@ enum CaptureSession {
         do {
             let fileURL = try ImageCaptureFlow.save(captured)
             Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
+            if let resultHandler = options.resultHandler {
+                ToastPlacement.capturedDisplayID = nil
+                resultHandler(fileURL)
+                return
+            }
             await finish(fileURL: fileURL, kind: .image, options: options)
+
         } catch {
             Log.capture.error("Saving capture failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)

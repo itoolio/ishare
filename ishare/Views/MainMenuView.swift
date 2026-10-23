@@ -22,6 +22,7 @@ struct MainMenuView: View {
     @State private var previewTask: Task<Void, Never>?
     @State private var destinationAnchor = ViewAnchor()
     @State private var moreAnchor = ViewAnchor()
+    @State private var dropTargetSection: MenuSection?
 
     @Default(.copyToClipboard) var copyToClipboard
     @Default(.openInFinder) var openInFinder
@@ -38,6 +39,7 @@ struct MainMenuView: View {
     @Default(.menuSectionOrder) var sectionOrder
     @Default(.hiddenMenuSections) var hiddenSections
     @Default(.menuDensity) var density
+    @Default(.menuFavorites) var favoriteIDs
 
     private var metrics: MenuMetrics { density.metrics }
 
@@ -55,8 +57,12 @@ struct MainMenuView: View {
             if showsPalette {
                 CommandPaletteView(onClose: closePalette)
             } else {
+                if !favoriteCommands.isEmpty {
+                    favoritesSection
+                }
                 ForEach(renderedSections) { section in
                     sectionView(section)
+                        .menuSectionDropTarget(section, enabled: !isPreview, targeted: $dropTargetSection)
                 }
             }
         }
@@ -98,17 +104,34 @@ struct MainMenuView: View {
     private func sectionView(_ section: MenuSection) -> some View {
         switch section {
         case .capture:
-            self.section("Capture") { captureRow }
+            self.section("Capture", id: .capture) { captureRow }
         case .record:
-            self.section("Record", accessory: { recordFormatPicker }) { recordSection }
+            self.section("Record", id: .record, accessory: { recordFormatPicker }) { recordSection }
         case .afterCapture:
-            self.section("After Capture") { afterCaptureSection }
+            self.section("After Capture", id: .afterCapture) { afterCaptureSection }
         case .recentUploads:
-            self.section("Recent Uploads") { recentStrip }
+            self.section("Recent Uploads", id: .recentUploads) { recentStrip }
                 .zIndex(1)
         case .footer:
             footer
         }
+    }
+
+    private var favoriteCommands: [AppCommand] {
+        guard !favoriteIDs.isEmpty else { return [] }
+        _ = (recorder.isRunning, uploadDestination)
+        return MenuFavorites(favoriteIDs).resolved(in: AppCommand.all(), id: \.id)
+    }
+
+    private var favoritesSection: some View {
+        VStack(alignment: .leading, spacing: metrics.sectionSpacing) {
+            MenuSectionTitle(title: "Favorites")
+            MenuFavoritesRow(commands: favoriteCommands) { command in
+                guard !isPreview else { return }
+                command.perform()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var header: some View {
@@ -215,13 +238,15 @@ struct MainMenuView: View {
 
     private func section(
         _ title: String,
+        id: MenuSection,
         @ViewBuilder accessory: () -> some View = { EmptyView() },
         @ViewBuilder content: () -> some View
     ) -> some View {
         VStack(alignment: .leading, spacing: metrics.sectionSpacing) {
             HStack {
-                MenuSectionTitle(title: title)
-                Spacer()
+                MenuSectionDragHandle(section: id, enabled: !isPreview) {
+                    MenuSectionTitle(title: title)
+                }
                 accessory()
             }
             content()
@@ -234,10 +259,12 @@ struct MainMenuView: View {
             ActionTile(symbol: "rectangle.dashed", title: "Region", shortcut: .captureRegion, identifier: "menu.capture.region") {
                 triggerCapture(0)
             }
+            .favoriteContextMenu(MenuFavoriteCommandID.capture(0))
             .menuFocusRing(.capture(0))
             ActionTile(symbol: "macwindow", title: "Window", shortcut: .captureWindow, identifier: "menu.capture.window") {
                 triggerCapture(1)
             }
+            .favoriteContextMenu(MenuFavoriteCommandID.capture(1))
             .menuFocusRing(.capture(1))
             if NSScreen.screens.count > 1 {
                 Menu {
@@ -252,17 +279,20 @@ struct MainMenuView: View {
                 .menuStyle(.button)
                 .buttonStyle(ActionTileStyle())
                 .menuIndicator(.hidden)
+                .favoriteContextMenu(MenuFavoriteCommandID.capture(2))
                 .menuFocusRing(.capture(2))
                 .accessibilityIdentifier("menu.capture.screen")
             } else {
                 ActionTile(symbol: "display", title: "Screen", shortcut: .captureScreen, identifier: "menu.capture.screen") {
                     triggerCapture(2)
                 }
+                .favoriteContextMenu(MenuFavoriteCommandID.capture(2))
                 .menuFocusRing(.capture(2))
             }
             ActionTile(symbol: "arrow.up.and.down.text.horizontal", title: "Scrolling", shortcut: .captureScrolling, identifier: "menu.capture.scrolling") {
                 triggerCapture(3)
             }
+            .favoriteContextMenu(MenuFavoriteCommandID.capture(3))
             .menuFocusRing(.capture(3))
         }
     }
@@ -322,6 +352,7 @@ struct MainMenuView: View {
                 ) {
                     run { CaptureSession.toggleRecording(gif: recordsGIF) }
                 }
+                .favoriteContextMenu(MenuFavoriteCommandID.record(0, gif: recordsGIF))
                 .menuFocusRing(.record(0))
                 WideActionButton(
                     symbol: "rectangle.dashed.badge.record",
@@ -331,6 +362,7 @@ struct MainMenuView: View {
                 ) {
                     run { CaptureSession.toggleRecording(gif: recordsGIF, region: true) }
                 }
+                .favoriteContextMenu(MenuFavoriteCommandID.record(1, gif: recordsGIF))
                 .menuFocusRing(.record(1))
             }
         }
@@ -401,6 +433,8 @@ struct MainMenuView: View {
             ForEach(Array(uploadHistory.prefix(5).enumerated()), id: \.element) { index, item in
                 RecentUploadThumbnail(item: item, index: index, size: metrics.thumbnailSize) { hovering in
                     hoverRecent(hovering ? item : nil)
+                } onDragStart: {
+                    closePreview()
                 }
                 .menuFocusRing(.recent(index), shape: .roundedRectangle(8))
             }
@@ -415,6 +449,7 @@ struct MainMenuView: View {
             }
             .buttonStyle(ActionTileStyle())
             .help("Open History Window".localized())
+            .favoriteContextMenu(MenuFavoriteCommandID.history)
             .menuFocusRing(.history)
             .accessibilityIdentifier("menu.history")
         }
@@ -439,11 +474,13 @@ struct MainMenuView: View {
             FooterButton(symbol: "pencil.and.scribble", title: "Edit Image…") {
                 run { await ImageEditor.chooseAndEdit() }
             }
+            .favoriteContextMenu(MenuFavoriteCommandID.footer(0))
             .menuFocusRing(.footer(0))
             .accessibilityIdentifier("menu.editImage")
             FooterButton(symbol: "doc.on.clipboard", title: "Upload Clipboard") {
                 run { await AppState.uploadPasteboard() }
             }
+            .favoriteContextMenu(MenuFavoriteCommandID.footer(1))
             .menuFocusRing(.footer(1))
             .accessibilityIdentifier("menu.uploadClipboard")
         }
@@ -455,7 +492,8 @@ struct MainMenuView: View {
             isRecording: recorder.isRunning,
             chipCount: AfterCaptureStep.allCases.count,
             recentCount: min(5, uploadHistory.count),
-            showsDonate: showsDonate
+            showsDonate: showsDonate,
+            favoriteCount: favoriteCommands.count
         )
     }
 
@@ -518,6 +556,9 @@ struct MainMenuView: View {
             openDonation()
         case .more:
             showOverflowMenu()
+        case let .favorite(index):
+            guard let command = favoriteCommands[safe: index] else { return }
+            command.perform()
         case let .capture(index):
             triggerCapture(index)
         case let .record(index):
@@ -857,6 +898,7 @@ struct RecentUploadThumbnail: View {
     let index: Int
     var size: CGFloat = 44
     let onHover: (Bool) -> Void
+    var onDragStart: () -> Void = {}
     @State private var shareAnchor = ViewAnchor()
     @Environment(\.menuContrast) private var contrast
 
@@ -873,6 +915,11 @@ struct RecentUploadThumbnail: View {
         .buttonStyle(.plain)
         .anchored(to: shareAnchor)
         .onHover(perform: onHover)
+        .onDrag {
+            onDragStart()
+            return DragExport.provider(for: item)
+        }
+
         .contextMenu { HistoryItemMenuItems(item: item, showsFinder: false, shareAnchor: shareAnchor) }
         .accessibilityLabel(item.fileName)
         .accessibilityIdentifier("menu.recent.\(index)")

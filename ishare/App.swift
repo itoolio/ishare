@@ -82,7 +82,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         BackgroundMaintenance.start()
+        WhatsNew.presentIfNeeded()
     }
+
 
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
         false

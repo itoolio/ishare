@@ -1,58 +1,171 @@
+import Defaults
 import SwiftUI
 
+enum GlassFallback: Equatable, Sendable {
+    case material
+    case fill(Double)
+}
+
+enum GlassRendering: Equatable, Sendable {
+    case glass
+    case material
+    case fill(Double)
+    case solid
+
+    static func resolve(glassAvailable: Bool, reduceTransparency: Bool, fallback: GlassFallback) -> GlassRendering {
+        if reduceTransparency { return .solid }
+        if glassAvailable { return .glass }
+        switch fallback {
+        case .material: return .material
+        case let .fill(opacity): return .fill(opacity)
+        }
+    }
+
+    static func borderOpacity(for rendering: GlassRendering, contrast: MenuContrast) -> Double {
+        if contrast.isHigh { return contrast.borderOpacity }
+        switch rendering {
+        case .glass, .fill: return 0
+        case .material: return 0.12
+        case .solid: return contrast.borderOpacity
+        }
+    }
+
+    static var isGlassAvailable: Bool {
+        if #available(macOS 26.0, *) { return true }
+        return false
+    }
+}
+
 extension View {
-    @ViewBuilder
-    func adaptiveGlass(cornerRadius: CGFloat = 16, interactive: Bool = false, tint: Color? = nil) -> some View {
-        if #available(macOS 26.0, *) {
-            glassEffect(glass(interactive: interactive, tint: tint), in: .rect(cornerRadius: cornerRadius))
-        } else {
-            background {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.regularMaterial)
-                    .overlay {
-                        if let tint {
-                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(tint.opacity(0.25))
-                        }
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
-                    }
-            }
-        }
+    func adaptiveGlass(cornerRadius: CGFloat = 16, interactive: Bool = false, tint: Color? = nil, fallback: GlassFallback = .material) -> some View {
+        modifier(AdaptiveGlassModifier(shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), interactive: interactive, tint: tint, fallback: fallback))
     }
 
-    @ViewBuilder
-    func adaptiveGlassCapsule(interactive: Bool = false, tint: Color? = nil) -> some View {
-        if #available(macOS 26.0, *) {
-            glassEffect(glass(interactive: interactive, tint: tint), in: .capsule)
-        } else {
-            background {
-                Capsule().fill(.regularMaterial)
-                    .overlay {
-                        if let tint {
-                            Capsule().fill(tint.opacity(0.25))
-                        }
-                    }
-            }
-        }
+    func adaptiveGlassCapsule(interactive: Bool = false, tint: Color? = nil, fallback: GlassFallback = .material) -> some View {
+        modifier(AdaptiveGlassModifier(shape: Capsule(), interactive: interactive, tint: tint, fallback: fallback))
     }
 
-    @ViewBuilder
     func adaptiveGlassButtonStyle(prominent: Bool = false) -> some View {
-        if #available(macOS 26.0, *) {
-            if prominent {
-                buttonStyle(.glassProminent)
-            } else {
-                buttonStyle(.glass)
+        modifier(AdaptiveGlassButtonStyleModifier(prominent: prominent))
+    }
+
+    func adaptiveGlassBar(edge: VerticalEdge = .top) -> some View {
+        modifier(AdaptiveGlassBarModifier(edge: edge))
+    }
+}
+
+@MainActor
+private struct ResolvedGlassContrast: DynamicProperty {
+    @Environment(\.menuContrast) private var environmentContrast
+    @Default(.highContrastMenu) private var highContrastMenu
+    @ObservedObject private var system = SystemContrastObserver.shared
+
+    var value: MenuContrast {
+        environmentContrast.isHigh ? environmentContrast : MenuContrast.resolve(userPreference: highContrastMenu, systemIncreaseContrast: system.increaseContrast)
+    }
+}
+
+private struct AdaptiveGlassModifier<S: InsettableShape>: ViewModifier {
+    let shape: S
+    let interactive: Bool
+    let tint: Color?
+    let fallback: GlassFallback
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    private var contrast = ResolvedGlassContrast()
+
+    private var rendering: GlassRendering {
+        GlassRendering.resolve(glassAvailable: GlassRendering.isGlassAvailable, reduceTransparency: reduceTransparency, fallback: fallback)
+    }
+
+    func body(content: Content) -> some View {
+        let rendering = rendering
+        let border = GlassRendering.borderOpacity(for: rendering, contrast: contrast.value)
+        styled(content, rendering: rendering)
+            .overlay {
+                if border > 0 {
+                    shape.strokeBorder(rendering == .material && !contrast.value.isHigh ? Color.white.opacity(border) : Color.primary.opacity(border), lineWidth: rendering == .material && !contrast.value.isHigh ? 0.5 : contrast.value.borderWidth)
+                        .allowsHitTesting(false)
+                }
             }
-        } else {
-            if prominent {
-                buttonStyle(.borderedProminent)
+    }
+
+    @ViewBuilder
+    private func styled(_ content: Content, rendering: GlassRendering) -> some View {
+        switch rendering {
+        case .glass:
+            if #available(macOS 26.0, *) {
+                content.glassEffect(glass(interactive: interactive, tint: tint), in: shape)
             } else {
-                buttonStyle(.bordered)
+                content.background { materialBackground }
+            }
+        case .material:
+            content.background { materialBackground }
+        case let .fill(opacity):
+            content.background {
+                shape.fill(Color.primary.opacity(opacity))
+                    .overlay { tintOverlay }
+            }
+        case .solid:
+            content.background {
+                shape.fill(Color(nsColor: .windowBackgroundColor))
+                    .overlay { tintOverlay }
             }
         }
+    }
+
+    private var materialBackground: some View {
+        shape.fill(.regularMaterial)
+            .overlay { tintOverlay }
+    }
+
+    @ViewBuilder
+    private var tintOverlay: some View {
+        if let tint {
+            shape.fill(tint.opacity(0.25))
+        }
+    }
+}
+
+private struct AdaptiveGlassButtonStyleModifier: ViewModifier {
+    let prominent: Bool
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *), !reduceTransparency {
+            if prominent {
+                content.buttonStyle(.glassProminent)
+            } else {
+                content.buttonStyle(.glass)
+            }
+        } else if prominent {
+            content.buttonStyle(.borderedProminent)
+        } else {
+            content.buttonStyle(.bordered)
+        }
+    }
+}
+
+private struct AdaptiveGlassBarModifier: ViewModifier {
+    let edge: VerticalEdge
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    private var contrast = ResolvedGlassContrast()
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                if reduceTransparency {
+                    Rectangle().fill(Color(nsColor: .windowBackgroundColor))
+                } else {
+                    Rectangle().fill(.bar)
+                }
+            }
+            .overlay(alignment: edge == .top ? .bottom : .top) {
+                if contrast.value.isHigh {
+                    Rectangle()
+                        .fill(Color.primary.opacity(contrast.value.borderOpacity))
+                        .frame(height: 1)
+                }
+            }
     }
 }
 

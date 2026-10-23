@@ -18,5 +18,10 @@ extension Defaults.Keys {
     static let highContrastMenu = Key<Bool>("highContrastMenu", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let toastCorner = Key<ToastCorner>("toastCorner", default: .topRight, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let toastScreen = Key<ToastScreenChoice>("toastScreen", default: .main, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let menuFavorites = Key<[String]>("menuFavorites", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let onboardingStep = Key<Int>("onboardingStep", default: 0, suite: .ishare)
+    static let onboardingTrials = Key<Set<String>>("onboardingTrials", default: [], suite: .ishare)
+    static let lastLaunchedVersion = Key<String?>("lastLaunchedVersion", default: nil, suite: .ishare)
+    static let showsWhatsNew = Key<Bool>("showsWhatsNew", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let resultPresentation = Key<ResultPresentation>("resultPresentation", default: .toast, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
