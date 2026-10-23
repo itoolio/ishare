@@ -38,6 +38,29 @@ enum HistoryActions {
         }
     }
 
+    static func combinableFiles(in items: [HistoryItem]) -> [URL] {
+        items.filter(canEdit).compactMap(\.existingLocalFileURL)
+    }
+
+    static func canCombine(_ items: [HistoryItem]) -> Bool {
+        combinableFiles(in: items).count >= 2
+    }
+
+    static func combine(_ items: [HistoryItem]) {
+        let files = combinableFiles(in: items)
+        guard files.count >= 2 else { return }
+        MenuController.shared.perform {
+            CombineWindowController.present(urls: files)
+        }
+    }
+
+    static func liftSubject(_ item: HistoryItem) {
+        guard let file = item.existingLocalFileURL else { return }
+        MenuController.shared.perform {
+            await SubjectLiftFlow.liftAsNewCapture(from: file)
+        }
+    }
+
     static func revealInFinder(_ item: HistoryItem) {
         guard let file = item.existingLocalFileURL else { return }
         NSWorkspace.shared.activateFileViewerSelecting([file])
@@ -172,6 +195,7 @@ struct HistoryItemMenuItems: View {
     let item: HistoryItem
     var showsFinder = true
     var shareAnchor: ViewAnchor?
+    var showsImageActions = false
 
     var body: some View {
         Button("Copy URL".localized()) { HistoryActions.copyURL(item) }
@@ -186,6 +210,9 @@ struct HistoryItemMenuItems: View {
             .disabled(item.remoteURL == nil)
         if HistoryActions.canEdit(item) {
             Button("Open in Editor".localized()) { HistoryActions.edit(item) }
+            if showsImageActions {
+                Button("Lift Subject".localized()) { HistoryActions.liftSubject(item) }
+            }
         }
         if showsFinder, item.existingLocalFileURL != nil {
             Button("Show in Finder".localized()) { HistoryActions.revealInFinder(item) }
