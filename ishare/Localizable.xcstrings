@@ -33831,6 +33831,70 @@
         }
       }
     },
+    "With automatic scrolling, ishare scrolls the area you selected by sending scroll events to it, so long pages are captured without scrolling by hand. macOS lists this permission under Accessibility. ishare asks for it only when you turn this on and uses it for nothing else. Without it, you scroll yourself and ishare captures as you go." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مع التمرير التلقائي، يمرّر ishare المنطقة التي حددتها بإرسال أحداث تمرير إليها، فتُلتقط الصفحات الطويلة دون التمرير يدويًا. يدرج macOS هذا الإذن ضمن تسهيلات الاستخدام. لا يطلبه ishare إلا عند تفعيل هذا الخيار ولا يستخدمه لأي غرض آخر. بدونه، تمرّر أنت ويلتقط ishare أثناء ذلك."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim automatischen Scrollen scrollt ishare den ausgewählten Bereich, indem es Scroll-Ereignisse sendet, sodass lange Seiten ohne manuelles Scrollen aufgenommen werden. macOS führt diese Berechtigung unter Bedienungshilfen. ishare fragt nur danach, wenn du diese Option einschaltest, und nutzt sie für nichts anderes. Ohne sie scrollst du selbst und ishare nimmt dabei auf."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con el desplazamiento automático, ishare desplaza el área seleccionada enviándole eventos de desplazamiento, para capturar páginas largas sin desplazarte a mano. macOS incluye este permiso en Accesibilidad. ishare solo lo solicita cuando activas esta opción y no lo usa para nada más. Sin él, te desplazas tú e ishare captura mientras tanto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avec le défilement automatique, ishare fait défiler la zone sélectionnée en lui envoyant des événements de défilement, pour capturer les longues pages sans faire défiler à la main. macOS classe cette autorisation dans Accessibilité. ishare ne la demande que lorsque vous activez cette option et ne l’utilise pour rien d’autre. Sans elle, vous faites défiler vous‑même et ishare capture au fur et à mesure."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्वचालित स्क्रॉलिंग में ishare चुने गए क्षेत्र को स्क्रॉल इवेंट भेजकर स्क्रॉल करता है, ताकि लंबे पेज बिना हाथ से स्क्रॉल किए कैप्चर हों। macOS इस अनुमति को एक्सेसिबिलिटी में दिखाता है। ishare इसे केवल तब मांगता है जब आप इसे चालू करते हैं और किसी और काम में इसका उपयोग नहीं करता। इसके बिना आप स्वयं स्क्रॉल करते हैं और ishare साथ-साथ कैप्चर करता है।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動スクロールでは、ishareが選択した範囲にスクロールイベントを送ってスクロールするため、長いページも手動でスクロールせずにキャプチャできます。macOSではこの許可は「アクセシビリティ」に表示されます。ishareはこの設定をオンにしたときだけ許可を求め、ほかの目的には使用しません。許可がない場合は、自分でスクロールするとishareが随時キャプチャします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동 스크롤을 사용하면 ishare가 선택한 영역에 스크롤 이벤트를 보내 스크롤하므로 긴 페이지를 직접 스크롤하지 않고 캡처할 수 있습니다. macOS는 이 권한을 손쉬운 사용 항목에 표시합니다. ishare는 이 옵션을 켤 때만 권한을 요청하며 다른 용도로는 사용하지 않습니다. 권한이 없으면 직접 스크롤하는 동안 ishare가 캡처합니다."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatik kaydırmada ishare, seçtiğiniz alana kaydırma olayları göndererek alanı kaydırır; böylece uzun sayfalar elle kaydırmadan yakalanır. macOS bu izni Erişilebilirlik altında listeler. ishare bu izni yalnızca bu seçeneği açtığınızda ister ve başka hiçbir şey için kullanmaz. İzin olmadan siz kaydırırsınız, ishare de bu sırada yakalar."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "З автоматичним прокручуванням ishare прокручує вибрану область, надсилаючи їй події прокручування, тож довгі сторінки знімаються без ручного прокручування. macOS показує цей дозвіл у розділі «Доступність». ishare запитує його лише тоді, коли ви вмикаєте цей параметр, і не використовує ні для чого іншого. Без нього ви прокручуєте самі, а ishare знімає по ходу."
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开启自动滚动后，ishare 会向所选区域发送滚动事件来滚动它，无需手动滚动即可截取长页面。macOS 将此权限列在“辅助功能”中。只有在你打开此选项时 ishare 才会请求该权限，且不会用于其他任何用途。没有此权限时，你自行滚动，ishare 会随之截取。"
+          }
+        }
+      }
+    },
     "You have no saved uploaders" : {
       "localizations" : {
         "ar" : {

@@ -118,7 +118,7 @@ enum ScrollingCapture {
             width: rect.width, height: rect.height
         )
         let model = ScrollingCaptureModel()
-        let canAutoScroll = Defaults[.scrollingAutoScroll] && postEventAccess()
+        let canAutoScroll = Defaults[.scrollingAutoScroll] && hasPostEventAccess
         model.isAutomatic = canAutoScroll
         let border = RegionOverlay.borderWindow(around: globalRect)
         let hud = RegionOverlay.hudWindow(ScrollingCaptureHUD(model: model), near: globalRect, on: screen)
@@ -174,11 +174,14 @@ enum ScrollingCapture {
         return CapturedImage(image: stitched, suffix: "scrolling")
     }
 
-    static func postEventAccess() -> Bool {
-        if CGPreflightPostEventAccess() {
-            return true
-        }
-        return CGRequestPostEventAccess()
+    #if APP_STORE
+        nonisolated static let autoScrollsByDefault = false
+    #else
+        nonisolated static let autoScrollsByDefault = true
+    #endif
+
+    static var hasPostEventAccess: Bool {
+        CGPreflightPostEventAccess()
     }
 
     static func scroll(at point: CGPoint, by points: Int) {

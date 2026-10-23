@@ -10,8 +10,6 @@
 	<array>
 		<string>$(TeamIdentifierPrefix)group.dev.adrian.ishare</string>
 	</array>
-	<key>com.apple.security.assets.movies.read-write</key>
-	<true/>
 	<key>com.apple.security.assets.pictures.read-write</key>
 	<true/>
 	<key>com.apple.security.device.audio-input</key>

@@ -19,7 +19,7 @@ platform :mac do
       phone_number: ENV.fetch("REVIEW_CONTACT_PHONE"),
       demo_user: "",
       demo_password: "",
-      notes: "ishare is a menu bar app. Click the ishare icon in the menu bar to open the capture menu. Uploading requires a custom uploader, which can be added in Settings > Uploaders."
+      notes: "ishare is a menu bar app. Click the ishare icon in the menu bar to open the capture menu. Uploading requires a custom uploader, which can be added in Settings > Uploaders, or the built-in Imgur option. Camera (com.apple.security.device.camera): used only for the optional webcam bubble that is overlaid on screen recordings. To try it, open Settings > Recordings, turn on Webcam > Show webcam, then choose Record > Screen or Region in the menu; a round camera preview appears over the recording. Microphone (com.apple.security.device.audio-input): records your voice into screen recordings when Settings > Recordings > Record microphone is on, and powers the input level meter there. Input Monitoring is requested only when Settings > Recordings > Show keystrokes is turned on, to display pressed keyboard shortcuts in recordings. Accessibility (event posting) is used only for the optional automatic scrolling in scrolling capture, which is off by default: when the user turns on Settings > Screenshots > Scrolling Capture > Scroll automatically, ishare asks for the permission with an explanation and then scrolls the area the user selected so a long page can be stitched into one image. It is never requested otherwise; without it the user scrolls manually. The Movies folder entitlement was removed because it was not needed."
     }
   end
 

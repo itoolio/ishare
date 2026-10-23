@@ -320,13 +320,27 @@ struct CaptureSettingsView: View {
                 Toggle("Open editor after capture".localized(), isOn: $openEditorAfterCapture)
             }
             CaptureExtrasSettings()
-            Section("Scrolling Capture".localized()) {
-                Toggle("Scroll automatically".localized(), isOn: $scrollingAutoScroll)
+            Section {
+                Toggle("Scroll automatically".localized(), isOn: Binding(
+                    get: { scrollingAutoScroll },
+                    set: { enabled in
+                        scrollingAutoScroll = enabled
+                        if enabled, !ScrollingCapture.hasPostEventAccess {
+                            PermissionGuide.show(.accessibility)
+                        }
+                    }
+                ))
                 if scrollingAutoScroll {
                     PermissionRow(title: "Scrolling permission", granted: eventAccess) {
                         PermissionGuide.show(.accessibility)
                     }
                 }
+            } header: {
+                Text("Scrolling Capture".localized())
+            } footer: {
+                Text("With automatic scrolling, ishare scrolls the area you selected by sending scroll events to it, so long pages are captured without scrolling by hand. macOS lists this permission under Accessibility. ishare asks for it only when you turn this on and uses it for nothing else. Without it, you scroll yourself and ishare captures as you go.".localized())
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             Section("Permissions".localized()) {
                 PermissionRow(title: "Screen recording", granted: screenAccess) {
