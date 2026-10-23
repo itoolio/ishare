@@ -12,6 +12,7 @@ enum UploadDestinationOptions {
         case .builtIn(.IMGUR): "Imgur"
         case .builtIn(.CUSTOM): "Active uploader".localized()
         case let .custom(id): CustomUploader.allCases.first { $0.id == id }?.name ?? "Missing uploader".localized()
+        case .localNetwork: "Local Network".localized()
         }
     }
 }

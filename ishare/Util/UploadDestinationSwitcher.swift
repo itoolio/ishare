@@ -16,13 +16,14 @@ enum UploadDestinationSwitcher {
         if case let .custom(id) = destination, let uploader = CustomUploader.allCases.first(where: { $0.id == id }) {
             return uploader.name
         }
-        return "Imgur"
+        return destination == .localNetwork ? "Local Network".localized() : "Imgur"
     }
 
     static func identifier(for destination: UploadDestination) -> String {
         switch destination {
         case let .builtIn(type): type.rawValue.lowercased()
         case let .custom(id): id?.uuidString ?? "none"
+        case .localNetwork: "localnetwork"
         }
     }
 
@@ -34,6 +35,7 @@ enum UploadDestinationSwitcher {
     }
 
     static func select(_ destination: UploadDestination) {
+        guard destination != .localNetwork else { return }
         Defaults[.uploadDestination] = destination
         switch destination {
         case .builtIn:
@@ -42,6 +44,8 @@ enum UploadDestinationSwitcher {
         case let .custom(id):
             Defaults[.activeCustomUploader] = id
             Defaults[.uploadType] = .CUSTOM
+        case .localNetwork:
+            break
         }
         BezelNotification.show(messageText: String(format: "Selected %@".localized(), title(for: destination)), icon: ToastIcon)
     }

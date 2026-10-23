@@ -15,8 +15,13 @@
       "com.apple.security.files.bookmarks.app-scope": "Remembers save and watch folders the user picked outside Pictures.",
       "com.apple.security.files.user-selected.read-write": "Opens, uploads and saves files the user picks.",
       "com.apple.security.network.client": "Uploads captures to Imgur, the user's server or S3-compatible storage.",
+      "com.apple.security.network.server": "Serves a capture the user explicitly chooses to share on the local network from a temporary link with a random unguessable path, which expires after the time the user picks or when ishare quits.",
       "com.apple.security.personal-information.photos-library": "Adds captures to a Photos album when the user sets up a Photos uploader; access is requested only then, and assets are removed only when the user deletes the upload from the history.",
       "keychain-access-groups": "Stores the S3 secret access keys and optional default link passwords the user enters as iCloud Keychain items so they reach the user's other Macs; no other data is kept in the shared keychain group."
+    },
+    "dev.adrian.ishare.cli": {
+      "com.apple.security.app-sandbox": "Required for every executable in a Mac App Store app, including the bundled ishare command-line tool.",
+      "com.apple.security.application-groups": "Writes the user's command-line request to the shared container and reads the app's reply."
     },
     "dev.adrian.ishare.sharemenuext": {
       "com.apple.security.app-sandbox": "Required for every Mac App Store extension.",
@@ -68,6 +73,13 @@
       "mentions": [
         "keychain-access-groups",
         "keychain group"
+      ]
+    },
+    {
+      "topic": "the network server entitlement",
+      "entitlement": "com.apple.security.network.server",
+      "mentions": [
+        "com.apple.security.network.server"
       ]
     },
     {

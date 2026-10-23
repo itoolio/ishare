@@ -14,6 +14,7 @@ enum DestinationChooser {
     static func entries() -> [(title: String, target: UploadTarget)] {
         [("Imgur", UploadTarget.imgur(clientID: Defaults[.imgurClientId]))]
             + CustomUploader.allCases.map { ($0.name, UploadTarget.custom($0)) }
+            + [("Local Network".localized(), UploadTarget.localNetwork)]
     }
 
     static func choose(at location: NSPoint = NSEvent.mouseLocation) -> UploadTarget? {
