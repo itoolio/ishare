@@ -325,7 +325,7 @@ struct TrimView: View {
                 Button("Keep Original".localized(), action: model.cancel)
                     .keyboardShortcut(.cancelAction)
                 if model.offersAutoZoom {
-                    Toggle("Auto zoom".localized(), isOn: Binding(get: { model.appliesAutoZoom }, set: model.setAutoZoom))
+                    Toggle("Auto zoom".localized(), isOn: Binding(get: { model.appliesAutoZoom }, set: { model.setAutoZoom($0) }))
                         .toggleStyle(.switch)
                         .controlSize(.small)
                         .help("Zooms in on clicks and typing. The player shows a preview at the current position; Save or Export applies it.".localized())
