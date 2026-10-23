@@ -239,7 +239,7 @@ struct SettingsAnchorSearchTests {
     }
 
     @MainActor @Test func extraEntriesCanDeclareTheirOwnAnchors() {
-        let entries = [SettingsSearchEntry(pane: .advanced, keywords: ["Telemetry"], anchor: "advanced.telemetry")]
+        let entries = [SettingsSearchEntry("Telemetry", pane: .advanced, anchor: "advanced.telemetry")]
         #expect(SettingsSearchIndex.matches(for: "telemetry", entries: entries, localize: { $0 }) == [SettingsSearchMatch(pane: .advanced, keyword: "Telemetry", anchor: "advanced.telemetry")])
     }
 

@@ -69,3 +69,25 @@ struct CaptureSettingsView: View {
         }
     }
 }
+
+extension CaptureSettingsView: SettingsSearchable {
+    static let searchEntries: [SettingsSearchEntry] = [
+        SettingsSearchEntry("Screenshot", pane: .capture, keywords: [
+            "Format", "PNG", "JPG", "HEIC", "WebP", "TIFF", "File prefix", "Image path", "Folder", "Show pointer in screenshots",
+            "Pointer", "Cursor", "Include window shadow", "Shadow", "Show magnifier while selecting", "Magnifier",
+            "Open editor after capture", "Editor", "Scrolling Capture", "Scroll automatically", "Permissions", "Screen recording",
+        ]),
+        SettingsSearchEntry("Privacy", pane: .capture, keywords: [
+            "Hide the menu bar in screenshots", "Menu bar", "Blurred applications", "Blur", "Background", "Add a background to screenshots",
+            "Beautify", "Padding", "Corner radius", "Drop shadow", "Gradient", "Measure", "Ruler", "Last region",
+        ]),
+        SettingsSearchEntry("Capture delay", pane: .capture, keywords: [
+            "Self-timer", "Timer", "Countdown", "Copy links from QR codes", "QR code", "Barcode", "Redact sensitive text before uploading",
+            "Redaction", "Redact", "Also redact the saved file", "Email addresses", "API keys and tokens", "Credit card numbers",
+            "IP addresses", "Phone numbers", "Interval Capture", "Interval", "Burst", "Time-lapse", "Also make a GIF",
+            "App Profiles", "Profile", "Name files after the window title", "Window title", "Capture Text", "Text recognition",
+            "OCR", "Capture and Translate", "Translate", "Translation", "Translate to", "System Language", "Translate & Describe",
+            "Capture and Ask", "Apple Intelligence", "Generate alt text for uploads", "Alt text",
+        ]),
+    ]
+}

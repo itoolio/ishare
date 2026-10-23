@@ -51,15 +51,39 @@ enum SettingsAnchor {
     static let clearHistory = "general.clearHistory"
 }
 
-struct SettingsSearchEntry: Sendable {
+struct SettingsSearchEntry: Equatable, Sendable {
     let pane: SettingsPane
+    let title: String
     let keywords: [String]
     let anchor: String?
 
-    init(pane: SettingsPane, keywords: [String], anchor: String? = nil) {
+    init(_ title: String, pane: SettingsPane, keywords: [String] = [], anchor: String? = nil) {
         self.pane = pane
+        self.title = title
         self.keywords = keywords
         self.anchor = anchor
+    }
+
+    var searchTerms: [String] {
+        [title] + keywords
+    }
+}
+
+@MainActor
+protocol SettingsSearchable {
+    static var searchEntries: [SettingsSearchEntry] { get }
+}
+
+extension SettingsPane {
+    @MainActor var searchable: any SettingsSearchable.Type {
+        switch self {
+        case .general: GeneralSettingsView.self
+        case .capture: CaptureSettingsView.self
+        case .recording: RecordingSettingsView.self
+        case .uploaders: UploaderSettingsView.self
+        case .keybinds: KeybindSettingsView.self
+        case .advanced: AdvancedSettingsView.self
+        }
     }
 }
 
@@ -77,81 +101,7 @@ struct SettingsSearchMatch: Equatable, Sendable {
 
 @MainActor
 enum SettingsSearchIndex {
-    static let entries: [SettingsSearchEntry] = [
-        SettingsSearchEntry(pane: .general, keywords: ["Language"], anchor: SettingsAnchor.language),
-        SettingsSearchEntry(pane: .general, keywords: ["Launch at login", "Startup"], anchor: SettingsAnchor.launchAtLogin),
-        SettingsSearchEntry(pane: .general, keywords: ["Land down under"], anchor: SettingsAnchor.aussieMode),
-        SettingsSearchEntry(pane: .general, keywords: ["Menu Bar Icon", "Icon"], anchor: SettingsAnchor.menuBarIcon),
-        SettingsSearchEntry(pane: .general, keywords: ["Clipboard", "Copy image to clipboard instead of URL"], anchor: SettingsAnchor.clipboard),
-        SettingsSearchEntry(pane: .general, keywords: ["Toast", "Toast Timeout"], anchor: SettingsAnchor.toastTimeout),
-        SettingsSearchEntry(pane: .general, keywords: ["Density", "Compact", "Comfortable"], anchor: SettingsAnchor.menuDensity),
-        SettingsSearchEntry(pane: .general, keywords: ["Menu", "Sections", "Restore Default Layout", "Favorites", "Reorder"], anchor: SettingsAnchor.menuLayout),
-        SettingsSearchEntry(pane: .general, keywords: ["Appearance", "Menu theme", "Dark", "Light", "Menu preview"], anchor: SettingsAnchor.appearance),
-        SettingsSearchEntry(pane: .general, keywords: ["High contrast menu", "Contrast"], anchor: SettingsAnchor.highContrast),
-        SettingsSearchEntry(pane: .general, keywords: ["Position", "Corner", "Screen"], anchor: SettingsAnchor.toastPlacement),
-        SettingsSearchEntry(pane: .general, keywords: ["Show results as", "Notification", "Notification Center"], anchor: SettingsAnchor.resultPresentation),
-        SettingsSearchEntry(pane: .general, keywords: [
-            "Sounds", "Sound", "Capture sound", "Upload complete sound", "Mute", "Beep",
-        ], anchor: SettingsAnchor.sounds),
-        SettingsSearchEntry(pane: .general, keywords: [
-            "History", "Keep up to", "Remove uploads older than", "Limit", "Retention",
-        ], anchor: SettingsAnchor.history),
-        SettingsSearchEntry(pane: .general, keywords: ["Clear History"], anchor: SettingsAnchor.clearHistory),
-        SettingsSearchEntry(pane: .capture, keywords: [
-            "Screenshot", "Format", "PNG", "JPG", "HEIC", "WebP", "TIFF", "File prefix", "Image path", "Folder",
-            "Show pointer in screenshots", "Pointer", "Cursor", "Include window shadow", "Shadow",
-            "Show magnifier while selecting", "Magnifier", "Open editor after capture", "Editor",
-            "Scrolling Capture", "Scroll automatically", "Permissions", "Screen recording",
-        ]),
-        SettingsSearchEntry(pane: .recording, keywords: [
-            "Video", "Resolution", "Frame rate", "FPS", "MP4", "MOV", "HEVC", "HDR",
-            "Record audio", "Audio", "Record microphone", "Microphone", "Record pointer", "Record clicks",
-            "Excluded applications", "GIF", "GIF frame rate", "Compress large recordings before upload", "Compression",
-            "Video path",
-        ]),
-        SettingsSearchEntry(pane: .uploaders, keywords: [
-            "Upload", "Uploader", "Destination", "Imgur", "Custom uploader", "Server", "S3", "R2", "ISCU", "Import", "Export",
-            "Assistant", "Apple Intelligence", "Delete", "Deletion URL", "Headers",
-        ]),
-        SettingsSearchEntry(pane: .capture, keywords: [
-            "Privacy", "Hide the menu bar in screenshots", "Menu bar", "Blurred applications", "Blur",
-            "Background", "Add a background to screenshots", "Beautify", "Padding", "Corner radius", "Drop shadow",
-            "Gradient", "Measure", "Ruler", "Last region",
-        ]),
-        SettingsSearchEntry(pane: .capture, keywords: [
-            "Capture delay", "Self-timer", "Timer", "Countdown", "Copy links from QR codes", "QR code", "Barcode",
-            "Redact sensitive text before uploading", "Redaction", "Redact", "Also redact the saved file", "Email addresses",
-            "API keys and tokens", "Credit card numbers", "IP addresses", "Phone numbers", "Interval Capture", "Interval",
-            "Burst", "Time-lapse", "Also make a GIF", "App Profiles", "Profile", "Name files after the window title", "Window title",
-            "Capture Text", "Text recognition", "OCR",
-            "Capture and Translate", "Translate", "Translation", "Translate to", "System Language", "Translate & Describe",
-            "Capture and Ask", "Apple Intelligence", "Generate alt text for uploads", "Alt text",
-        ]),
-        SettingsSearchEntry(pane: .recording, keywords: [
-            "Clicks & Keystrokes", "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera",
-            "Input level", "Trim recordings before saving", "Trim", "GIF size", "Meter",
-        ]),
-        SettingsSearchEntry(pane: .recording, keywords: ["Captions", "Generate captions", "Subtitles", "SRT", "Transcription", "Speech", "Burn into the video", "Markers", "Chapters", "Export"]),
-        SettingsSearchEntry(pane: .recording, keywords: [
-            "Audio source", "All system audio", "Only selected apps", "App audio", "Notes", "Teleprompter", "Script",
-            "Instant replay", "Replay", "Buffer", "Keep the last",
-        ]),
-        SettingsSearchEntry(pane: .uploaders, keywords: [
-            "Also upload to", "Copy URL after upload", "Open URL in browser after upload", "Watch Folder", "Folder",
-            "Upload Queue", "Retry", "Expiring links", "Presigned", "ShareX", "SXCU", "Test Upload", "Method",
-        ]),
-        SettingsSearchEntry(pane: .advanced, keywords: [
-            "Backup", "Export Settings", "Import Settings", "Include upload history", "Include S3 secret access keys",
-        ]),
-        SettingsSearchEntry(pane: .keybinds, keywords: [
-            "Keybinds", "Keyboard", "Shortcut", "Hotkey", "Reset All Keybinds", "Force upload", "Modifier",
-        ]),
-        SettingsSearchEntry(pane: .keybinds, keywords: KeybindSettingsView.groups.flatMap { [$0.0] + $0.1.map(\.0) }),
-        SettingsSearchEntry(pane: .advanced, keywords: [
-            "Advanced", "Imgur Client ID", "Client ID",
-        ]),
-        SettingsSearchEntry(pane: .uploaders, keywords: ["Upload Presets", "Preset", "URL Shortener", "Shorten", "Short link", "is.gd", "v.gd"]),
-    ]
+    static let entries: [SettingsSearchEntry] = SettingsPane.allCases.flatMap { $0.searchable.searchEntries }
 
     static func normalized(_ text: String) -> String {
         text.folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
@@ -172,14 +122,13 @@ enum SettingsSearchIndex {
                 return SettingsSearchMatch(pane: pane, keyword: nil)
             }
             for entry in entries where entry.pane == pane {
-                if let keyword = entry.keywords.first(where: { contains($0, needle, localize: localize) }) {
+                if let keyword = entry.searchTerms.first(where: { contains($0, needle, localize: localize) }) {
                     return SettingsSearchMatch(pane: pane, keyword: keyword, anchor: entry.anchor)
                 }
             }
             return nil
         }
     }
-
 
     private static func contains(_ candidate: String, _ needle: String, localize: (String) -> String) -> Bool {
         normalized(candidate).contains(needle) || normalized(localize(candidate)).contains(needle)

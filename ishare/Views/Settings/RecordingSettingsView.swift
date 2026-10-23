@@ -96,3 +96,25 @@ struct RecordingSettingsView: View {
         }
     }
 }
+
+extension RecordingSettingsView: SettingsSearchable {
+    static let searchEntries: [SettingsSearchEntry] = [
+        SettingsSearchEntry("Video", pane: .recording, keywords: [
+            "Resolution", "Frame rate", "FPS", "MP4", "MOV", "HEVC", "HDR", "Record audio", "Audio", "Record microphone",
+            "Microphone", "Record pointer", "Record clicks", "Excluded applications", "GIF", "GIF frame rate", "Compress large recordings before upload",
+            "Compression", "Video path",
+        ]),
+        SettingsSearchEntry("Clicks & Keystrokes", pane: .recording, keywords: [
+            "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera", "Input level", "Trim recordings before saving",
+            "Trim", "GIF size", "Meter",
+        ]),
+        SettingsSearchEntry("Captions", pane: .recording, keywords: [
+            "Generate captions", "Subtitles", "SRT", "Transcription", "Speech", "Burn into the video", "Markers", "Chapters",
+            "Export",
+        ]),
+        SettingsSearchEntry("Audio source", pane: .recording, keywords: [
+            "All system audio", "Only selected apps", "App audio", "Notes", "Teleprompter", "Script", "Instant replay",
+            "Replay", "Buffer", "Keep the last",
+        ]),
+    ]
+}

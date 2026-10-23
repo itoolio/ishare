@@ -120,8 +120,8 @@ extension View {
         modifier(SettingsPaneStyle())
     }
 
-    func settingsAnchor(_ anchor: String) -> some View {
-        modifier(SettingsAnchorModifier(anchor: anchor))
+    func settingsEntry(_ entry: SettingsSearchEntry) -> some View {
+        modifier(SettingsAnchorModifier(anchor: entry.anchor ?? "\(entry.pane.rawValue).\(entry.title)"))
     }
 }
 
