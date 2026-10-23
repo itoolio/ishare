@@ -122,37 +122,29 @@ enum CaptureSession {
 
     static func finish(fileURL originalURL: URL, kind: PostCapture.Kind, options: CaptureOptions = .standard) async {
         var fileURL = originalURL
-        if kind == .image, options.openEditor || Defaults[.openEditorAfterCapture] {
-            switch await ImageEditor.edit(fileURL: fileURL) {
-            case let .saved(url):
-                fileURL = url
-            case .discarded:
-                try? FileManager.default.removeItem(at: fileURL)
-                return
-            }
-        }
-
-        let saveToDisk = Defaults[.saveToDisk]
-        if Defaults[.copyToClipboard] {
-            PostCapture.copyToClipboard(fileURL, kind: kind)
-        }
-        if Defaults[.openInFinder], saveToDisk {
-            NSWorkspace.shared.activateFileViewerSelecting([fileURL])
-        }
-        shareBasedOnPreferences(fileURL)
-
-        if Defaults[.uploadMedia] || options.forceUpload || options.destinations != nil {
-            let uploadURL = kind == .video ? await PostCapture.compressedIfNeeded(fileURL) : fileURL
-            let localFileURL = saveToDisk ? fileURL : nil
-            if let destinations = options.destinations {
-                for target in destinations {
-                    await UploadCoordinator.upload(fileURL: uploadURL, target: target, localFileURL: localFileURL)
+        let saveToDisk = AfterCaptureStep.saveToDisk.isEnabled
+        for step in AfterCaptureStep.allCases where step.runs(for: kind, options: options) {
+            switch step {
+            case .openEditor:
+                switch await ImageEditor.edit(fileURL: fileURL) {
+                case let .saved(url):
+                    fileURL = url
+                case .discarded:
+                    try? FileManager.default.removeItem(at: fileURL)
+                    return
                 }
-            } else {
-                await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: localFileURL)
-            }
-            if uploadURL != fileURL {
-                try? FileManager.default.removeItem(at: uploadURL)
+            case .saveToDisk:
+                break
+            case .copyToClipboard:
+                PostCapture.copyToClipboard(fileURL, kind: kind)
+            case .openInFinder:
+                NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+            case .airdrop, .photos, .messages, .mail:
+                if let service = step.sharingService {
+                    NSSharingService(named: service)?.perform(withItems: [fileURL])
+                }
+            case .upload:
+                await upload(fileURL, kind: kind, options: options, keepsLocalFile: saveToDisk)
             }
         }
 
@@ -160,6 +152,31 @@ enum CaptureSession {
         SoundPlayer.play(.capture)
         if !saveToDisk {
             try? FileManager.default.removeItem(at: fileURL)
+        }
+    }
+
+    private static func upload(_ fileURL: URL, kind: PostCapture.Kind, options: CaptureOptions, keepsLocalFile: Bool) async {
+        let uploadURL = kind == .video ? await PostCapture.compressedIfNeeded(fileURL) : fileURL
+        let localFileURL = keepsLocalFile ? fileURL : nil
+        if let destinations = options.destinations {
+            for target in destinations {
+                await UploadCoordinator.upload(fileURL: uploadURL, target: target, localFileURL: localFileURL)
+            }
+        } else {
+            await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: localFileURL)
+        }
+        if uploadURL != fileURL {
+            try? FileManager.default.removeItem(at: uploadURL)
+        }
+    }
+}
+
+extension AfterCaptureStep {
+    @MainActor func runs(for kind: PostCapture.Kind, options: CaptureOptions) -> Bool {
+        switch self {
+        case .openEditor: kind == .image && (options.openEditor || isEnabled)
+        case .upload: isEnabled || options.forceUpload || options.destinations != nil
+        default: isEnabled
         }
     }
 }

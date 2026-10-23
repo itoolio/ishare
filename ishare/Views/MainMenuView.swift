@@ -263,29 +263,14 @@ struct MainMenuView: View {
     private var afterCaptureSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
-                ToggleChip(symbol: "pencil.tip.crop.circle", title: "Open Editor", isOn: chipBindings[0])
-                    .menuFocusRing(.chip(0), shape: .circle)
-                ToggleChip(symbol: "internaldrive", title: "Save to Disk", isOn: chipBindings[1])
-                    .menuFocusRing(.chip(1), shape: .circle)
-                ToggleChip(symbol: "doc.on.clipboard", title: "Copy to Clipboard", isOn: chipBindings[2])
-                    .menuFocusRing(.chip(2), shape: .circle)
-                ToggleChip(symbol: "folder", title: "Open in Finder", isOn: chipBindings[3])
-                    .disabled(!saveToDisk)
-                    .menuFocusRing(.chip(3), shape: .circle)
-                Divider()
-                    .frame(height: 22)
-                ShareChip(image: airdropIcon, title: "AirDrop", isOn: chipBindings[4])
-                    .menuFocusRing(.chip(4), shape: .circle)
-                ShareChip(image: icon(forAppWithName: "com.apple.Photos"), title: "Photos", isOn: chipBindings[5])
-                    .menuFocusRing(.chip(5), shape: .circle)
-                ShareChip(image: icon(forAppWithName: "com.apple.MobileSMS"), title: "Messages", isOn: chipBindings[6])
-                    .menuFocusRing(.chip(6), shape: .circle)
-                ShareChip(image: icon(forAppWithName: "com.apple.Mail"), title: "Mail", isOn: chipBindings[7])
-                    .menuFocusRing(.chip(7), shape: .circle)
-                Divider()
-                    .frame(height: 22)
-                ToggleChip(symbol: "icloud.and.arrow.up", title: "Upload Media", isOn: chipBindings[8])
-                    .menuFocusRing(.chip(8), shape: .circle)
+                ForEach(Array(AfterCaptureStep.allCases.enumerated()), id: \.element) { index, step in
+                    if index > 0, AfterCaptureStep.allCases[index - 1].group != step.group {
+                        Divider()
+                            .frame(height: 22)
+                    }
+                    afterCaptureChip(step)
+                        .menuFocusRing(.chip(index), shape: .circle)
+                }
             }
             Text(afterCaptureSummary)
                 .font(.system(size: 11))
@@ -296,19 +281,23 @@ struct MainMenuView: View {
     }
 
     private var afterCaptureSummary: String {
-        let enabled: [(Bool, String)] = [
-            (openEditorAfterCapture, "Open Editor"),
-            (saveToDisk, "Save to Disk"),
-            (copyToClipboard, "Copy to Clipboard"),
-            (saveToDisk && openInFinder, "Open in Finder"),
-            (builtInShare.airdrop, "AirDrop"),
-            (builtInShare.photos, "Photos"),
-            (builtInShare.messages, "Messages"),
-            (builtInShare.mail, "Mail"),
-            (uploadMedia, "Upload Media"),
-        ]
-        let titles = enabled.filter(\.0).map { $0.1.localized() }
-        return titles.isEmpty ? "Nothing happens after a capture".localized() : titles.formatted(.list(type: .and))
+        _ = (openEditorAfterCapture, saveToDisk, copyToClipboard, openInFinder, builtInShare.airdrop, uploadMedia)
+        return AfterCaptureStep.summary
+    }
+
+    @ViewBuilder
+    private func afterCaptureChip(_ step: AfterCaptureStep) -> some View {
+        if step.group == .share {
+            ShareChip(image: step == .airdrop ? airdropIcon : step.appBundleIdentifier.flatMap(icon(forAppWithName:)), title: step.title, isOn: binding(for: step))
+        } else {
+            ToggleChip(symbol: step.symbol, title: step.title, isOn: binding(for: step))
+                .disabled(step.dependsOn.map { !$0.isEnabled } ?? false)
+        }
+    }
+
+    private func binding(for step: AfterCaptureStep) -> Binding<Bool> {
+        _ = (openEditorAfterCapture, saveToDisk, copyToClipboard, openInFinder, builtInShare, uploadMedia)
+        return Binding(get: { step.isEnabled }, set: { step.isEnabled = $0 })
     }
 
     private var destinationTitle: String {
@@ -430,17 +419,7 @@ struct MainMenuView: View {
     }
 
     private var chipBindings: [Binding<Bool>] {
-        [
-            $openEditorAfterCapture,
-            Binding(get: { saveToDisk }, set: { saveToDisk = $0; if !$0 { openInFinder = false } }),
-            $copyToClipboard,
-            $openInFinder,
-            $builtInShare.airdrop,
-            $builtInShare.photos,
-            $builtInShare.messages,
-            $builtInShare.mail,
-            $uploadMedia,
-        ]
+        AfterCaptureStep.allCases.map(binding(for:))
     }
 
     private var focusRows: [[MenuFocusTarget]] {
@@ -501,8 +480,8 @@ struct MainMenuView: View {
             CaptureSession.stopRecording()
             dismissMenu()
         case let .chip(index):
-            guard chipBindings.indices.contains(index), index != 2 || saveToDisk else { return }
-            chipBindings[index].wrappedValue.toggle()
+            guard let step = AfterCaptureStep.allCases[safe: index], step.dependsOn.map(\.isEnabled) ?? true else { return }
+            step.isEnabled.toggle()
         case let .recent(index):
             guard uploadHistory.indices.contains(index) else { return }
             HistoryActions.copyURL(uploadHistory[index])
