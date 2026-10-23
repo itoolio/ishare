@@ -6,28 +6,31 @@ import SwiftUI
 
 enum TrimOutcome: Equatable {
     case keepOriginal
-    case trimmed(URL)
+    case trimmed(URL, range: ClosedRange<Double>)
     case exportedGIF(URL)
+    case exported(URL, range: ClosedRange<Double>?)
 }
 
 @MainActor
 final class TrimModel: ObservableObject {
     let url: URL
     let player: AVPlayer
+    let markers: [RecordingMarker]
     @Published var selection = TrimSelection(duration: 0)
     @Published private(set) var playhead: Double = 0
     @Published private(set) var isPlaying = false
     @Published private(set) var isWorking = false
     @Published private(set) var progress: Double?
     @Published private(set) var thumbnails: [CGImage] = []
-    @Published var gifPreset = GIFPreset.current
+    @Published var exportSettings = RecordingExportSettings.current
     @Published var errorMessage: String?
 
     var onFinish: ((TrimOutcome) -> Void)?
     private var timeObserver: Any?
 
-    init(url: URL) {
+    init(url: URL, markers: [RecordingMarker] = []) {
         self.url = url
+        self.markers = markers
         player = AVPlayer(url: url)
         player.actionAtItemEnd = .pause
     }
@@ -68,16 +71,19 @@ final class TrimModel: ObservableObject {
             return
         }
         let range = selection.timeRange
+        let bounds = selection.start ... selection.end
         perform { [url] _ in
-            .trimmed(try await VideoTrimmer.trimInPlace(url, range: range))
+            .trimmed(try await VideoTrimmer.trimInPlace(url, range: range), range: bounds)
         }
     }
 
-    func exportGIF() {
+    func export() {
         let range = selection.isFullLength ? nil : selection.timeRange
-        let preset = gifPreset
+        let bounds = selection.isFullLength ? nil : selection.start ... selection.end
+        let settings = exportSettings
         perform { [url] progress in
-            .exportedGIF(try await RecordingConversions.convertToGIF(url, range: range, preset: preset, deletingSource: true, progress: progress))
+            let output = try await RecordingConversions.export(url, settings: settings, range: range, deletingSource: true, progress: progress)
+            return settings.format == .gif ? .exportedGIF(output) : .exported(output, range: bounds)
         }
     }
 
@@ -162,12 +168,12 @@ final class RecordingTrimWindow: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var continuation: CheckedContinuation<TrimOutcome, Never>?
 
-    private init(url: URL) {
-        model = TrimModel(url: url)
+    private init(url: URL, markers: [RecordingMarker]) {
+        model = TrimModel(url: url, markers: markers)
     }
 
-    static func present(_ url: URL) async -> TrimOutcome {
-        let controller = RecordingTrimWindow(url: url)
+    static func present(_ url: URL, markers: [RecordingMarker] = []) async -> TrimOutcome {
+        let controller = RecordingTrimWindow(url: url, markers: markers)
         open.append(controller)
         let outcome = await controller.run()
         open.removeAll { $0 === controller }
@@ -226,7 +232,7 @@ final class RecordingTrimWindow: NSObject, NSWindowDelegate {
 
 struct TrimView: View {
     @ObservedObject var model: TrimModel
-    @State private var showsGIFOptions = false
+    @State private var showsExportOptions = false
 
     var body: some View {
         VStack(spacing: 14) {
@@ -243,7 +249,7 @@ struct TrimView: View {
                 .help(model.isPlaying ? "Pause".localized() : "Play".localized())
                 .disabled(model.isWorking)
 
-                TrimRangeSlider(selection: $model.selection, playhead: model.playhead, thumbnails: model.thumbnails, onScrub: model.seek)
+                TrimRangeSlider(selection: $model.selection, playhead: model.playhead, thumbnails: model.thumbnails, markers: model.markers, onScrub: model.seek)
                     .disabled(model.isWorking)
             }
 
@@ -274,11 +280,11 @@ struct TrimView: View {
                         ProgressView().controlSize(.small)
                     }
                 }
-                Button("Export as GIF…".localized()) { showsGIFOptions = true }
-                    .popover(isPresented: $showsGIFOptions, arrowEdge: .top) {
-                        GIFExportOptionsView(preset: $model.gifPreset) {
-                            showsGIFOptions = false
-                            model.exportGIF()
+                Button("Export…".localized()) { showsExportOptions = true }
+                    .popover(isPresented: $showsExportOptions, arrowEdge: .top) {
+                        RecordingExportOptionsView(settings: $model.exportSettings) {
+                            showsExportOptions = false
+                            model.export()
                         }
                     }
                 Button("Save".localized(), action: model.save)
@@ -298,25 +304,40 @@ struct TrimView: View {
     }
 }
 
-struct GIFExportOptionsView: View {
-    @Binding var preset: GIFPreset
+struct RecordingExportOptionsView: View {
+    @Binding var settings: RecordingExportSettings
     var onExport: () -> Void
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 12) {
             Form {
-                Picker("Frame rate".localized(), selection: $preset.frameRate) {
-                    ForEach(GIFFrameRate.allCases) { Text("\($0.rawValue) fps").tag($0) }
+                Picker("Format".localized(), selection: $settings.format) {
+                    ForEach(RecordingExportFormat.allCases) { Text($0.title.localized()).tag($0) }
                 }
-                Picker("Size".localized(), selection: $preset.maxSize) {
-                    ForEach(GIFMaxSize.allCases) { Text($0.title.localized()).tag($0) }
+                if settings.format.hasVideo {
+                    Picker("Size".localized(), selection: $settings.size) {
+                        ForEach(RecordingExportSize.allCases) { Text($0.title.localized()).tag($0) }
+                    }
+                }
+                if settings.format == .gif {
+                    Picker("Frame rate".localized(), selection: $settings.gifFrameRate) {
+                        ForEach(GIFFrameRate.allCases) { Text("\($0.rawValue) fps").tag($0) }
+                    }
+                } else {
+                    Picker("Quality".localized(), selection: $settings.quality) {
+                        ForEach(RecordingExportQuality.allCases) { Text($0.title.localized()).tag($0) }
+                    }
+                }
+                if settings.format.hasVideo, settings.format.supportsAudio {
+                    Toggle("Remove audio".localized(), isOn: $settings.removesAudio)
                 }
             }
             Button("Export".localized(), action: onExport)
                 .keyboardShortcut(.defaultAction)
         }
         .padding(16)
-        .frame(width: 260)
+        .frame(width: 300)
+        .accessibilityIdentifier("trim.export.options")
     }
 }
 
@@ -342,6 +363,7 @@ struct TrimRangeSlider: View {
     @Binding var selection: TrimSelection
     let playhead: Double
     let thumbnails: [CGImage]
+    var markers: [RecordingMarker] = []
     var onScrub: (Double) -> Void
 
     private let handleWidth: CGFloat = 12
@@ -376,6 +398,10 @@ struct TrimRangeSlider: View {
                     .shadow(radius: 1)
                     .offset(x: playheadX - 1)
                     .allowsHitTesting(false)
+                ForEach(markers, id: \.self) { marker in
+                    markerPin(marker)
+                        .offset(x: CGFloat(selection.fraction(of: marker.time)) * width - 7)
+                }
                 handle(systemImage: "chevron.compact.left")
                     .offset(x: startX - handleWidth / 2)
                     .gesture(dragGesture(width: width) { selection.setStart($0); onScrub(selection.start) })
@@ -409,6 +435,20 @@ struct TrimRangeSlider: View {
                 }
             }
         }
+    }
+
+    private func markerPin(_ marker: RecordingMarker) -> some View {
+        Image(systemName: "bookmark.fill")
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.orange)
+            .shadow(radius: 1)
+            .frame(width: 14, height: height, alignment: .top)
+            .offset(y: -6)
+            .contentShape(Rectangle())
+            .onTapGesture { onScrub(marker.time) }
+            .help(marker.title)
+            .accessibilityLabel(Text(marker.title))
+            .accessibilityAddTraits(.isButton)
     }
 
     private func handle(systemImage: String) -> some View {

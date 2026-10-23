@@ -95,28 +95,39 @@ enum CaptureSession {
     }
 
     private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions) async {
+        let sidecar = AppDelegate.shared.screenRecorder.takeSidecar()
+        await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
         var fileURL = url
+        var markers = sidecar.markers
         var isGIF = false
         if Defaults[.trimBeforeSaving] {
-            switch await RecordingTrimWindow.present(url) {
+            switch await RecordingTrimWindow.present(url, markers: markers) {
             case .keepOriginal:
                 break
-            case let .trimmed(trimmedURL):
+            case let .trimmed(trimmedURL, range):
                 fileURL = trimmedURL
+                markers = RecordingChapters.rebased(markers, to: range)
             case let .exportedGIF(gifURL):
                 fileURL = gifURL
                 isGIF = true
+            case let .exported(exportedURL, range):
+                fileURL = exportedURL
+                markers = range.map { RecordingChapters.rebased(markers, to: $0) } ?? markers
             }
         }
         if gif, !isGIF {
             do {
                 fileURL = try await RecordingConversions.convertToGIF(fileURL, range: nil, preset: .current, deletingSource: true)
+                isGIF = true
             } catch {
                 Log.capture.error("GIF export failed: \(error.localizedDescription, privacy: .public)")
                 BezelNotification.show(messageText: "GIF export failed".localized(), icon: ToastIcon)
             }
         }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+        if !isGIF {
+            await RecordingPostProcessor.finalize(fileURL, markers: markers)
+        }
         await finish(fileURL: fileURL, kind: .video, options: options)
     }
 
