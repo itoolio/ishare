@@ -150,7 +150,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-enum SpotlightShape: String, CaseIterable, Identifiable, Hashable, Sendable {
+enum SpotlightShape: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
     case rectangle
     case ellipse
 
@@ -174,7 +174,7 @@ enum SpotlightShape: String, CaseIterable, Identifiable, Hashable, Sendable {
 struct Annotation: Identifiable, Hashable, Sendable {
     static let defaultDimAmount = 0.55
 
-    enum Shape: Hashable, Sendable {
+    enum Shape: Hashable, Codable, Sendable {
         case arrow(CGPoint, CGPoint)
         case curvedArrow(CGPoint, CGPoint, CGPoint)
         case line(CGPoint, CGPoint)
@@ -207,6 +207,8 @@ struct Annotation: Identifiable, Hashable, Sendable {
     var dashed = false
     var spotlightShape: SpotlightShape = .ellipse
     var dimAmount = Annotation.defaultDimAmount
+    var locked = false
+    var hidden = false
 
     var isEffect: Bool {
         switch shape {

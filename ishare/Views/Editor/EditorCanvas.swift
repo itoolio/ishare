@@ -7,7 +7,7 @@ struct EditorCanvas: View {
 
     enum Interaction {
         case drawing
-        case moving(UUID)
+        case moving(Set<UUID>)
         case editingHandle(Annotation, EditHandle)
         case resizingCrop(CGRect, ResizeHandle)
         case movingCrop(CGRect)
@@ -24,6 +24,7 @@ struct EditorCanvas: View {
     @State private var liveAnnotation: Annotation?
     @State private var spaceHeld = false
     @State private var pinchStartZoom: CGFloat?
+    @StateObject private var effectPreview = LiveEffectPreview()
     @FocusState private var textFocused: Bool
 
     var body: some View {
@@ -39,8 +40,10 @@ struct EditorCanvas: View {
                 .simultaneousGesture(pinchGesture)
                 .onContinuousHover { phase in
                     if case let .active(location) = phase {
+                        viewport.pointerLocation = location
                         cursor(at: location, transform: transform).set()
                     } else {
+                        viewport.pointerLocation = nil
                         NSCursor.arrow.set()
                     }
                 }
@@ -99,11 +102,15 @@ struct EditorCanvas: View {
 
         var clipped = context
         clipped.clip(to: Path(content))
-        clipped.draw(Image(decorative: document.effectedBase, scale: 1), in: transform.toView(document.imageBounds))
+        let backdrop = effectPreview.background ?? document.effectedBase
+        clipped.draw(Image(decorative: backdrop, scale: 1), in: transform.toView(document.imageBounds))
+        if let tile = effectPreview.tile {
+            clipped.draw(Image(decorative: tile.image, scale: 1), in: transform.toView(tile.rect))
+        }
         let annotations = visibleAnnotations
         for annotation in annotations where annotation.isMagnifier {
             guard case let .magnify(rect) = annotation.shape,
-                  let crop = AnnotationRenderer.magnifiedSource(for: rect, in: document.effectedBase)
+                  let crop = AnnotationRenderer.magnifiedSource(for: rect, in: backdrop)
             else { continue }
             let lensRect = transform.toView(rect)
             var lens = clipped
@@ -116,14 +123,19 @@ struct EditorCanvas: View {
         }
         if document.isCropping {
             drawCropOverlay(in: &context, transform: transform)
-        } else if let selected = selectedAnnotation {
-            drawSelection(of: selected, in: &context, transform: transform)
+        } else {
+            let selected = selectedAnnotations
+            for annotation in selected {
+                drawSelection(of: annotation, showsHandles: selected.count == 1 && !annotation.locked, in: &context, transform: transform)
+            }
         }
     }
 
-    private func drawSelection(of annotation: Annotation, in context: inout GraphicsContext, transform: CanvasTransform) {
+    private func drawSelection(of annotation: Annotation, showsHandles: Bool, in context: inout GraphicsContext, transform: CanvasTransform) {
         let outline = transform.toView(annotation.bounds).insetBy(dx: -6, dy: -6)
-        context.stroke(Path(outline), with: .color(.accentColor), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+        let outlineColor: Color = annotation.locked ? .secondary : .accentColor
+        context.stroke(Path(outline), with: .color(outlineColor), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+        guard showsHandles else { return }
         if case let .curvedArrow(start, control, end) = annotation.shape {
             var guide = Path()
             guide.move(to: transform.toView(start))
@@ -174,11 +186,18 @@ struct EditorCanvas: View {
 
     private var selectedAnnotation: Annotation? {
         guard let id = document.selectedID else { return nil }
-        return visibleAnnotations.first { $0.id == id }
+        return visibleAnnotations.first { $0.id == id && !$0.locked }
+    }
+
+    private var selectedAnnotations: [Annotation] {
+        visibleAnnotations.filter { document.selectedIDs.contains($0.id) }
     }
 
     private var visibleAnnotations: [Annotation] {
         var list = document.annotations.filter { annotation in
+            if annotation.hidden {
+                return false
+            }
             if case .text = annotation.shape, document.editingText?.replacing == annotation.id {
                 return false
             }
@@ -189,8 +208,10 @@ struct EditorCanvas: View {
             hidden.shape = .callout(tail, rect, "")
             return hidden
         }
-        if case let .moving(id) = interaction, let index = list.firstIndex(where: { $0.id == id }) {
-            list[index] = list[index].offset(by: moveOffset)
+        if case let .moving(ids) = interaction {
+            for index in list.indices where ids.contains(list[index].id) && !list[index].locked {
+                list[index] = list[index].offset(by: moveOffset)
+            }
         }
         if let liveAnnotation, let index = list.firstIndex(where: { $0.id == liveAnnotation.id }) {
             list[index] = liveAnnotation
@@ -317,27 +338,62 @@ struct EditorCanvas: View {
             }
             return
         }
-        if document.tool != .text, let selected = document.selectedAnnotation, let handle = selected.editHandle(at: point, tolerance: tolerance) {
+        if document.tool != .text, let selected = document.selectedAnnotation, selected.isInteractive,
+           let handle = selected.editHandle(at: point, tolerance: tolerance)
+        {
             interaction = .editingHandle(selected, handle)
+            if selected.isEffect {
+                effectPreview.begin(for: selected, background: document.effectedBase(excluding: selected.id), zoom: viewport.effectiveZoom)
+            }
             return
         }
         switch document.tool {
         case .select:
-            document.selectedID = document.annotation(at: point, tolerance: max(transform.toImage(8), document.lineWidth))?.id
-            moveOffset = .zero
-            interaction = document.selectedID.map { .moving($0) } ?? .drawing
+            beginSelecting(at: point, transform: transform)
         default:
             document.selectedID = nil
             interaction = .drawing
         }
     }
 
+    private func beginSelecting(at point: CGPoint, transform: CanvasTransform) {
+        let hit = document.annotation(at: point, tolerance: max(transform.toImage(8), document.lineWidth))
+        moveOffset = .zero
+        let modifiers = NSEvent.modifierFlags
+        let extendsSelection = modifiers.contains(.command) || modifiers.contains(.shift)
+        guard let hit else {
+            if !extendsSelection {
+                document.selectedIDs = []
+            }
+            interaction = .drawing
+            return
+        }
+        if extendsSelection {
+            document.toggleSelection(hit.id)
+            interaction = .drawing
+            return
+        }
+        if !document.selectedIDs.contains(hit.id) {
+            document.selectedID = hit.id
+        }
+        let group = document.selectedIDs
+        interaction = .moving(group)
+        if group.count == 1, hit.isEffect {
+            effectPreview.begin(for: hit, background: document.effectedBase(excluding: hit.id), zoom: viewport.effectiveZoom)
+        }
+    }
+
     private func changed(from start: CGPoint, to current: CGPoint) {
         switch interaction {
-        case .moving:
+        case let .moving(ids):
             moveOffset = CGVector(dx: current.x - start.x, dy: current.y - start.y)
+            if effectPreview.isActive, let id = ids.first, let moving = document.annotations.first(where: { $0.id == id }) {
+                effectPreview.update(moving.offset(by: moveOffset))
+            }
         case let .editingHandle(original, handle):
-            liveAnnotation = original.editing(handle, to: current)
+            let edited = original.editing(handle, to: current)
+            liveAnnotation = edited
+            effectPreview.update(edited)
         case let .resizingCrop(original, handle):
             document.draftCrop = CropGeometry.resize(original, handle: handle, to: current, ratio: document.cropRatio, bounds: document.imageBounds)
         case let .movingCrop(original):
@@ -353,7 +409,15 @@ struct EditorCanvas: View {
             case .select, .text, .step, .cursor, .crop:
                 break
             default:
-                document.draft = document.makeAnnotation(tool: document.tool, from: start, to: current, points: dragPoints)
+                let draft = document.makeAnnotation(tool: document.tool, from: start, to: current, points: dragPoints)
+                document.draft = draft
+                if let draft, draft.isEffect {
+                    if effectPreview.isActive {
+                        effectPreview.update(draft)
+                    } else {
+                        effectPreview.begin(for: draft, background: document.effectedBase, zoom: viewport.effectiveZoom)
+                    }
+                }
             }
         case .panning, nil:
             break
@@ -362,9 +426,9 @@ struct EditorCanvas: View {
 
     private func ended(from start: CGPoint, to end: CGPoint, transform: CanvasTransform) {
         switch interaction {
-        case let .moving(id):
+        case let .moving(ids):
             if hypot(moveOffset.dx, moveOffset.dy) > 0.5 {
-                document.move(id, by: moveOffset)
+                document.move(ids, by: moveOffset)
             }
             moveOffset = .zero
         case .editingHandle:
@@ -377,6 +441,7 @@ struct EditorCanvas: View {
         case .drawing:
             finishDrawing(from: start, to: end, transform: transform)
         }
+        effectPreview.end()
     }
 
     private func finishDrawing(from start: CGPoint, to end: CGPoint, transform: CanvasTransform) {

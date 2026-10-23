@@ -1,7 +1,7 @@
 import AppKit
 import CoreGraphics
 
-enum Stamp: Hashable, Sendable {
+enum Stamp: Hashable, Codable, Sendable {
     case emoji(String)
     case symbol(String)
 

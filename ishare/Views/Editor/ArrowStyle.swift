@@ -21,7 +21,7 @@ enum ArrowPath: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-enum ArrowHead: String, CaseIterable, Identifiable, Hashable, Sendable {
+enum ArrowHead: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
     case filled
     case open
     case line
