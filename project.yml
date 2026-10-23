@@ -32,6 +32,9 @@ settings:
     SWIFT_UPCOMING_FEATURE_IMPORT_OBJC_FORWARD_DECLS: YES
     SWIFT_UPCOMING_FEATURE_INFER_SENDABLE_FROM_CAPTURES: YES
     SWIFT_UPCOMING_FEATURE_ISOLATED_DEFAULT_VALUES: YES
+  configs:
+    Release:
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
 packages:
   Alamofire:
     url: https://github.com/Alamofire/Alamofire

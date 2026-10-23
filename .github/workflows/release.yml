@@ -151,6 +151,17 @@ jobs:
                   go run ./tools/cmd/ishare-tools build-warnings \
                     "$RUNNER_TEMP/developer-id-archive.log"
 
+            - name: Package the dSYMs
+              env:
+                  VERSION: ${{ needs.version.outputs.version }}
+              run: go run ./tools/cmd/ishare-tools package-dsyms build/ishare.xcarchive "build/dsyms/ishare-$VERSION-dSYMs.zip"
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: dsyms
+                  path: build/dsyms/*.zip
+                  if-no-files-found: error
+
             - name: Notarize and staple app
               env:
                   PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
@@ -268,6 +279,17 @@ jobs:
                   name: app-store-app
                   path: build/ishare.app.zip
 
+            - name: Package the dSYMs
+              env:
+                  VERSION: ${{ needs.version.outputs.version }}
+              run: go run ./tools/cmd/ishare-tools package-dsyms build/ishare-appstore.xcarchive "build/dsyms/ishare-$VERSION-AppStore-dSYMs.zip"
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: app-store-dsyms
+                  path: build/dsyms/*.zip
+                  if-no-files-found: error
+
     publish:
         needs: [checks, version, developer-id, app-store]
         if: github.event_name == 'push'
@@ -293,6 +315,16 @@ jobs:
               with:
                   name: dmg
                   path: dist
+            - uses: actions/download-artifact@v8
+              with:
+                  name: dsyms
+                  path: dist
+            - uses: actions/download-artifact@v8
+              with:
+                  name: app-store-dsyms
+                  path: dist
+            - name: List the release assets
+              run: ls -l dist
             - name: Publish the release
               id: release
               env:

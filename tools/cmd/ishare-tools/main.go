@@ -47,6 +47,7 @@ var commands = map[string]command{
 	"appcast-hardware":   {"appcast-hardware <requirement> <appcast.xml>", appcastHardware},
 	"build-warnings":     {"build-warnings [--ignore fragment]... <xcodebuild.log>...", buildWarnings},
 	"coverage":           {"coverage [--root dir] [--min Area=percent]... [--output summary.md] [--summary-file path] <xccov.json>", coverageReport},
+	"package-dsyms":      {"package-dsyms <archive.xcarchive> <output.zip>", packageDSYMs},
 	"symbolicate":        {"symbolicate <crash.ips|crash> --dsyms <dSYMs.zip|dir> [--output file]", symbolicate},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
@@ -418,4 +419,17 @@ func splitPositional(arguments []string) (string, []string) {
 		return arguments[0], arguments[1:]
 	}
 	return "", arguments
+}
+
+func packageDSYMs(env environment, arguments []string) error {
+	if len(arguments) != 2 {
+		return errUsage
+	}
+	result, err := symbolication.PackageArchive(symbolication.ExecRunner{}, arguments[0], arguments[1], symbolication.RequiredDSYMs)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(env.stdout, "packaged %s into %s, UUIDs verified for %s\n",
+		strings.Join(result.Bundles, ", "), arguments[1], strings.Join(result.Verified, ", "))
+	return nil
 }
