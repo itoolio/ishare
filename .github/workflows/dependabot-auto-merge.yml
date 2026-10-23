@@ -12,11 +12,11 @@ permissions:
 jobs:
     auto-merge:
         if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'itoolio/ishare'
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         steps:
             - name: Read the update metadata
               id: metadata
-              uses: dependabot/fetch-metadata@v2
+              uses: dependabot/fetch-metadata@v3
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
             - name: Squash-merge minor and patch updates once the required checks pass

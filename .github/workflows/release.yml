@@ -37,7 +37,7 @@ jobs:
         uses: ./.github/workflows/ci.yml
 
     version:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         permissions:
             contents: write
         outputs:
@@ -263,7 +263,7 @@ jobs:
     publish:
         needs: [checks, version, developer-id, app-store]
         if: github.event_name == 'push'
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         outputs:
             tag: ${{ steps.release.outputs.tag }}
         permissions:

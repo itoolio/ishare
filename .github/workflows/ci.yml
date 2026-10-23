@@ -22,7 +22,7 @@ defaults:
 
 jobs:
     tools:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         steps:
             - uses: actions/checkout@v7
             - uses: actions/setup-go@v7
@@ -64,7 +64,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
             - name: Collect the snapshot renderings that differ from their references
               if: failure()
@@ -106,7 +106,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -only-testing:ishareTests/SnapshotTests \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
             - name: Check the recorded references
@@ -121,7 +121,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -only-testing:ishareTests/SnapshotTests \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
             - uses: actions/upload-artifact@v7
@@ -161,7 +161,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme AppStoreTests \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -derivedDataPath build/DerivedData \
                     -resultBundlePath build/AppStoreTests.xcresult \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
@@ -190,7 +190,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme UITests \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -derivedDataPath build/DerivedData \
                     -resultBundlePath build/UITests.xcresult \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
@@ -244,7 +244,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -derivedDataPath build/DerivedData \
                     -resultBundlePath build/S3Integration.xcresult \
                     -only-testing:ishareTests/NetworkSuite \

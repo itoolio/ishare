@@ -21,7 +21,7 @@ jobs:
         if: >-
             github.event_name == 'workflow_dispatch' ||
             !startsWith(github.event.head_commit.message, 'fix(i18n): update translations from Crowdin')
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         env:
             CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
             CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
