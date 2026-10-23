@@ -35,6 +35,8 @@ jobs:
             contents: write
         steps:
             - uses: actions/checkout@v7
+              with:
+                  token: ${{ secrets.REPO_ACCESS_TOKEN }}
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: latest-stable
