@@ -138,6 +138,10 @@ extension AppCommand {
                     MenuController.shared.dismiss()
                     AppModel.shared.recorder.addMarker()
                 },
+                AppCommand(id: "record.draw", title: "Draw on Screen", keywords: ["annotate", "pen", "highlighter", "arrow", "drawing"], symbol: "pencil.tip.crop.circle") {
+                    MenuController.shared.dismiss()
+                    AppModel.shared.recorder.toggleDrawing()
+                },
             ] + recordingExtraCommands()
         }
         return recordingExtraCommands() + [
