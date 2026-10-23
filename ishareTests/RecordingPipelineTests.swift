@@ -57,13 +57,13 @@ struct RecordingChapterTests {
         #expect(rebased == [RecordingMarker(time: 1, title: "Marker 2")])
     }
 
-    @Test func encodesChapterTitlesAsTextSamples() {
+    @Test func encodesChapterTitlesAsTextSamples() throws {
         let payload = ChapterTextSample.payload(for: "Intro")
         #expect(Array(payload.prefix(2)) == [0, 5])
         #expect(String(data: payload.subdata(in: 2 ..< 7), encoding: .utf8) == "Intro")
         #expect(Array(payload.suffix(12)) == [0, 0, 0, 12, 0x65, 0x6E, 0x63, 0x64, 0, 0, 1, 0])
-        let format = try? #require(ChapterTextSample.formatDescription())
-        #expect(format?.mediaType == .text)
+        let format = try #require(ChapterTextSample.formatDescription())
+        #expect(format.mediaType == .text)
     }
 }
 

@@ -13,7 +13,7 @@ struct SnapshotTests {
         case editorToolbar
         case generalSettings
 
-        var size: CGSize {
+        @MainActor var size: CGSize {
             switch self {
             case .menu: CGSize(width: 360, height: 420)
             case .toast: CGSize(width: ToastCardView.width + 24, height: 120)
