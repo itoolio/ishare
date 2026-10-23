@@ -8,6 +8,7 @@ struct CaptureOptions: Sendable {
     var openEditor = false
     var destinations: [UploadTarget]?
     var preset: UploadPreset?
+    var delay: Int?
 
     static let standard = CaptureOptions()
 }
@@ -24,9 +25,15 @@ enum CaptureSession {
     static func captureImage(_ type: CaptureType, display: Int = 1, options: CaptureOptions = .standard) async {
         guard !isCapturingImage else { return }
         isCapturingImage = true
-        let wantsDestinationChoice = DestinationChooser.isRequested()
         Log.capture.info("Starting \(type.rawValue, privacy: .public) capture on display \(display)")
-        let captured = await ImageCaptureFlow.capture(type: type, display: display)
+        if type == .TEXT {
+            await TextCaptureFlow.captureAndCopy()
+            isCapturingImage = false
+            return
+        }
+        let wantsDestinationChoice = DestinationChooser.isRequested()
+        let delay = CaptureDelay.effectiveSeconds(for: type, explicit: options.delay, setting: Defaults[.captureDelay])
+        let captured = await ImageCaptureFlow.capture(type: type, display: display, delay: delay)
         isCapturingImage = false
         guard let captured else { return }
         var options = options
@@ -124,7 +131,11 @@ enum CaptureSession {
     static func finish(fileURL originalURL: URL, kind: PostCapture.Kind, options: CaptureOptions = .standard) async {
         var fileURL = originalURL
         let saveToDisk = options.isEnabled(.saveToDisk)
+        var copiedCode: Bool?
         for step in AfterCaptureStep.allCases where step.runs(for: kind, options: options) {
+            if copiedCode == nil, step != .openEditor, kind == .image {
+                copiedCode = await CodeDetection.copyPayloadIfEnabled(fromImageAt: fileURL)
+            }
             switch step {
             case .openEditor:
                 switch await ImageEditor.edit(fileURL: fileURL) {
@@ -137,7 +148,9 @@ enum CaptureSession {
             case .saveToDisk:
                 break
             case .copyToClipboard:
-                PostCapture.copyToClipboard(fileURL, kind: kind)
+                if copiedCode != true {
+                    PostCapture.copyToClipboard(fileURL, kind: kind)
+                }
             case .openInFinder:
                 NSWorkspace.shared.activateFileViewerSelecting([fileURL])
             case .airdrop, .photos, .messages, .mail:
@@ -148,6 +161,9 @@ enum CaptureSession {
                 await upload(fileURL, kind: kind, options: options, keepsLocalFile: saveToDisk)
             }
         }
+        if copiedCode == nil, kind == .image {
+            await CodeDetection.copyPayloadIfEnabled(fromImageAt: fileURL)
+        }
 
         await showToast(fileURL: fileURL)
         SoundPlayer.play(.capture)
@@ -157,7 +173,19 @@ enum CaptureSession {
     }
 
     private static func upload(_ fileURL: URL, kind: PostCapture.Kind, options: CaptureOptions, keepsLocalFile: Bool) async {
-        let uploadURL = kind == .video ? await PostCapture.compressedIfNeeded(fileURL) : fileURL
+        var redactedURL: URL?
+        if kind == .image {
+            switch await Redactor.prepareUpload(of: fileURL) {
+            case .unchanged:
+                break
+            case let .redacted(url):
+                redactedURL = url
+            case .failed:
+                BezelNotification.show(messageText: "Upload skipped because sensitive text couldn't be checked".localized(), icon: ToastIcon)
+                return
+            }
+        }
+        let uploadURL = kind == .video ? await PostCapture.compressedIfNeeded(fileURL) : redactedURL ?? fileURL
         let localFileURL = keepsLocalFile ? fileURL : nil
         if let destinations = options.destinations {
             for target in destinations {
@@ -168,7 +196,9 @@ enum CaptureSession {
         } else {
             await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: localFileURL)
         }
-        if uploadURL != fileURL {
+        if let redactedURL {
+            Redactor.discard(redactedURL)
+        } else if uploadURL != fileURL {
             try? FileManager.default.removeItem(at: uploadURL)
         }
     }

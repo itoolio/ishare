@@ -15,6 +15,8 @@ struct KeybindSettingsView: View {
             ("Capture Screen:", .captureScreen),
             ("Scrolling Capture:", .captureScrolling),
             ("Capture Last Region:", .captureLastRegion),
+            ("Capture Text:", .captureText),
+            ("Interval Capture:", .intervalCapture),
         ]),
         ("Record", [
             ("Record Screen:", .recordScreen),

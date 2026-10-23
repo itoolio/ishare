@@ -40,6 +40,8 @@ final class AppState: ObservableObject {
         onCapture(.captureScreen, .SCREEN)
         onCapture(.captureScrolling, .SCROLLING)
         onCapture(.captureLastRegion, .LAST_REGION)
+        onCapture(.captureText, .TEXT)
+        IntervalCapture.registerShortcut()
         onCapture(.captureRegionForceUpload, .REGION, forceUpload: true)
         onCapture(.captureWindowForceUpload, .WINDOW, forceUpload: true)
         onCapture(.captureScreenForceUpload, .SCREEN, forceUpload: true)

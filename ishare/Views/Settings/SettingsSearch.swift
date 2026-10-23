@@ -52,6 +52,13 @@ enum SettingsSearchIndex {
             "Background", "Add a background to screenshots", "Beautify", "Padding", "Corner radius", "Drop shadow",
             "Gradient", "Measure", "Ruler", "Last region",
         ]),
+        SettingsSearchEntry(pane: .capture, keywords: [
+            "Capture delay", "Self-timer", "Timer", "Countdown", "Copy links from QR codes", "QR code", "Barcode",
+            "Redact sensitive text before uploading", "Redaction", "Redact", "Also redact the saved file", "Email addresses",
+            "API keys and tokens", "Credit card numbers", "IP addresses", "Phone numbers", "Interval Capture", "Interval",
+            "Burst", "Time-lapse", "Also make a GIF", "App Profiles", "Profile", "Name files after the window title", "Window title",
+            "Capture Text", "Text recognition", "OCR",
+        ]),
         SettingsSearchEntry(pane: .recording, keywords: [
             "Clicks & Keystrokes", "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera",
             "Input level", "Trim recordings before saving", "Trim", "GIF size", "Meter",
