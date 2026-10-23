@@ -1,0 +1,14 @@
+{
+  "name": "GitHub screenshots",
+  "uploaderType": "github",
+  "github": {
+    "repository": "OWNER/screenshots",
+    "branch": "main",
+    "pathTemplate": "{{date}}/{{uuid}}.{{ext}}",
+    "linkStyle": "markdown",
+    "token": "github_pat_YOUR_FINE_GRAINED_TOKEN",
+    "textAsGist": true,
+    "publicGists": false
+  },
+  "imageOptimization": { "enabled": true, "format": "lossless" }
+}

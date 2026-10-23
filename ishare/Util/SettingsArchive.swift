@@ -151,6 +151,8 @@ enum SettingsTransfer {
         .liveDrawingTool, .liveDrawingColor, .liveDrawingFadeDelay, .recordingMaxMinutes, .recordingMaxMegabytes, .recordingLowDiskWarningMB,
         .beautifyFrame, .beautifyFrameAppearance, .beautifyFrameFit, .beautifyFrameTitle, .editorSmartShapes,
         .showQRCodeAfterUpload, .localShareExpiry, .localShareMaxDownloads, .historySyncEnabled,
+        .optimizeImagesBeforeUpload, .imageOptimizationFormat, .imageConversionQuality, .stripImageMetadata,
+        .stripImportedImageMetadata, .uploadWebhooks,
     ]
 
     static var preferenceNames: Set<String> {
@@ -176,7 +178,7 @@ enum SettingsTransfer {
         }
         let uploaders = (Defaults[uploadersKey(in: defaults)] ?? [])
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            .map { S3SecretStore.exporting($0, includeSecret: includeSecrets) }
+            .map { UploaderSecrets.exporting(S3SecretStore.exporting($0, includeSecret: includeSecrets), includeSecrets: includeSecrets) }
         let shortcutEntries = shortcuts.names().reduce(into: [String: ShortcutEntry]()) { result, name in
             result[name] = ShortcutEntry(shortcut: shortcuts.get(name))
         }

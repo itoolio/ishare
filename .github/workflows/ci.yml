@@ -276,3 +276,168 @@ jobs:
               with:
                   name: s3-integration-xcresult
                   path: build/S3Integration.xcresult
+
+    webdav-integration:
+        runs-on: macos-26
+        timeout-minutes: 60
+        env:
+            WEBDAV_USER: ishare
+            WEBDAV_PASSWORD: ishare-ci-secret
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen and rclone
+              run: brew install xcodegen rclone
+            - name: Install WsgiDAV for digest authentication
+              run: |
+                  python3 -m venv "$RUNNER_TEMP/wsgidav"
+                  "$RUNNER_TEMP/wsgidav/bin/pip" install --quiet wsgidav cheroot
+            - name: Start the WebDAV servers
+              run: |
+                  mkdir -p "$RUNNER_TEMP/webdav" "$RUNNER_TEMP/digest"
+                  nohup rclone serve webdav "$RUNNER_TEMP/webdav" --addr 127.0.0.1:8081 --user "$WEBDAV_USER" --pass "$WEBDAV_PASSWORD" > "$RUNNER_TEMP/webdav.log" 2>&1 &
+                  cat > "$RUNNER_TEMP/wsgidav.yaml" <<YAML
+                  host: 127.0.0.1
+                  port: 8082
+                  server: cheroot
+                  verbose: 3
+                  http_authenticator:
+                    accept_basic: false
+                    accept_digest: true
+                    default_to_digest: true
+                  simple_dc:
+                    user_mapping:
+                      "*":
+                        $WEBDAV_USER:
+                          password: $WEBDAV_PASSWORD
+                  provider_mapping:
+                    "/": $RUNNER_TEMP/digest
+                  YAML
+                  nohup "$RUNNER_TEMP/wsgidav/bin/wsgidav" --config "$RUNNER_TEMP/wsgidav.yaml" > "$RUNNER_TEMP/digest.log" 2>&1 &
+                  for _ in $(seq 1 60); do
+                      basic=$(curl -s -o /dev/null -w "%{http_code}" -u "$WEBDAV_USER:$WEBDAV_PASSWORD" http://127.0.0.1:8081/ || true)
+                      digest=$(curl -s -o /dev/null -w "%{http_code}" --digest -u "$WEBDAV_USER:$WEBDAV_PASSWORD" http://127.0.0.1:8082/ || true)
+                      if [ "$basic" = "200" ] && [ "$digest" = "200" ]; then
+                          exit 0
+                      fi
+                      sleep 1
+                  done
+                  cat "$RUNNER_TEMP/webdav.log" "$RUNNER_TEMP/digest.log"
+                  exit 1
+            - run: xcodegen generate
+            - name: Run the WebDAV integration tests
+              env:
+                  TEST_RUNNER_ISHARE_WEBDAV_URL: http://127.0.0.1:8081/
+                  TEST_RUNNER_ISHARE_WEBDAV_DIGEST_URL: http://127.0.0.1:8082/
+                  TEST_RUNNER_ISHARE_WEBDAV_USER: ishare
+                  TEST_RUNNER_ISHARE_WEBDAV_PASSWORD: ishare-ci-secret
+              run: |
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -derivedDataPath build/DerivedData \
+                    -resultBundlePath build/WebDAVIntegration.xcresult \
+                    -only-testing:ishareTests/NetworkSuite \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - name: Check that the integration tests ran
+              run: |
+                  xcrun xcresulttool get test-results tests --path build/WebDAVIntegration.xcresult > "$RUNNER_TEMP/tests.json"
+                  python3 - "$RUNNER_TEMP/tests.json" <<'PY'
+                  import json, sys
+
+                  def walk(node):
+                      yield node
+                      for child in node.get("children", []):
+                          yield from walk(child)
+
+                  nodes = [node for root in json.load(open(sys.argv[1]))["testNodes"] for node in walk(root)]
+                  integration = [node for node in nodes if node.get("nodeType") == "Test Case" and "WebDAVIntegrationTests" in node.get("nodeIdentifier", "")]
+                  passed = [node for node in integration if node.get("result") == "Passed"]
+                  print(f"{len(passed)} of {len(integration)} WebDAVIntegrationTests passed")
+                  sys.exit(0 if integration and len(passed) == len(integration) else 1)
+                  PY
+            - name: Show the WebDAV server logs
+              if: failure()
+              run: cat "$RUNNER_TEMP/webdav.log" "$RUNNER_TEMP/digest.log"
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: webdav-integration-xcresult
+                  path: build/WebDAVIntegration.xcresult
+
+    sftp-integration:
+        runs-on: macos-26
+        timeout-minutes: 60
+        env:
+            SFTP_USER: ishare
+            SFTP_PASSWORD: ishare-ci-secret
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen and rclone
+              run: brew install xcodegen rclone
+            - name: Start a throwaway SFTP server
+              run: |
+                  mkdir -p "$RUNNER_TEMP/sftp/uploads" "$RUNNER_TEMP/keys"
+                  ssh-keygen -q -t ed25519 -N "" -f "$RUNNER_TEMP/keys/client" -C ishare-ci
+                  ssh-keygen -q -t ed25519 -N "" -f "$RUNNER_TEMP/keys/host" -C ishare-ci-host
+                  ssh-keygen -lf "$RUNNER_TEMP/keys/host.pub"
+                  nohup rclone serve sftp "$RUNNER_TEMP/sftp" --addr 127.0.0.1:2222 --user "$SFTP_USER" --pass "$SFTP_PASSWORD" \
+                    --authorized-keys "$RUNNER_TEMP/keys/client.pub" --key "$RUNNER_TEMP/keys/host" > "$RUNNER_TEMP/sftp.log" 2>&1 &
+                  for _ in $(seq 1 60); do
+                      if nc -z 127.0.0.1 2222; then
+                          exit 0
+                      fi
+                      sleep 1
+                  done
+                  cat "$RUNNER_TEMP/sftp.log"
+                  exit 1
+            - run: xcodegen generate
+            - name: Run the SFTP integration tests
+              run: |
+                  export TEST_RUNNER_ISHARE_SFTP_HOST=127.0.0.1
+                  export TEST_RUNNER_ISHARE_SFTP_PORT=2222
+                  export TEST_RUNNER_ISHARE_SFTP_USER="$SFTP_USER"
+                  export TEST_RUNNER_ISHARE_SFTP_PASSWORD="$SFTP_PASSWORD"
+                  export TEST_RUNNER_ISHARE_SFTP_KEY_PATH="$RUNNER_TEMP/keys/client"
+                  export TEST_RUNNER_ISHARE_SFTP_DIRECTORY=uploads
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -derivedDataPath build/DerivedData \
+                    -resultBundlePath build/SFTPIntegration.xcresult \
+                    -only-testing:ishareTests/NetworkSuite \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - name: Check that the integration tests ran
+              run: |
+                  xcrun xcresulttool get test-results tests --path build/SFTPIntegration.xcresult > "$RUNNER_TEMP/tests.json"
+                  python3 - "$RUNNER_TEMP/tests.json" <<'PY'
+                  import json, sys
+
+                  def walk(node):
+                      yield node
+                      for child in node.get("children", []):
+                          yield from walk(child)
+
+                  nodes = [node for root in json.load(open(sys.argv[1]))["testNodes"] for node in walk(root)]
+                  integration = [node for node in nodes if node.get("nodeType") == "Test Case" and "SFTPIntegrationTests" in node.get("nodeIdentifier", "")]
+                  passed = [node for node in integration if node.get("result") == "Passed"]
+                  print(f"{len(passed)} of {len(integration)} SFTPIntegrationTests passed")
+                  sys.exit(0 if integration and len(passed) == len(integration) else 1)
+                  PY
+            - name: Check that the uploads reached the server
+              run: find "$RUNNER_TEMP/sftp/uploads" -type f | head -20
+            - name: Show the SFTP server log
+              if: failure()
+              run: cat "$RUNNER_TEMP/sftp.log"
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: sftp-integration-xcresult
+                  path: build/SFTPIntegration.xcresult

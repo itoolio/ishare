@@ -13,6 +13,8 @@ struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var localIdentifier: String?
     var uploaderName: String?
     var title: String?
+    var originalSize: Int?
+    var uploadedSize: Int?
     var id: Self { self }
 }
 
@@ -82,6 +84,11 @@ extension HistoryItem {
 
     var kind: HistoryItemKind {
         HistoryItemKind(fileExtension: fileExtension)
+    }
+
+    var savingsDescription: String? {
+        guard let originalSize, let uploadedSize, uploadedSize < originalSize else { return nil }
+        return ByteSavings.description(saved: originalSize - uploadedSize, original: originalSize)
     }
 
     var canDeleteFromServer: Bool {

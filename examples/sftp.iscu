@@ -1,0 +1,15 @@
+{
+  "name": "My server (SFTP)",
+  "uploaderType": "sftp",
+  "sftp": {
+    "host": "files.example.com",
+    "port": 22,
+    "username": "deploy",
+    "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nPASTE YOUR KEY HERE\n-----END OPENSSH PRIVATE KEY-----",
+    "directory": "/var/www/i.example.com",
+    "pathTemplate": "{{year}}/{{month}}/{{random}}.{{ext}}",
+    "createDirectories": true,
+    "publicURL": "https://i.example.com/{{path}}",
+    "hostKeyFingerprint": "SHA256:REPLACE_WITH_ssh-keygen_-lf_OUTPUT"
+  }
+}

@@ -35,6 +35,21 @@ struct UploaderSettingsView: View {
                     Menu {
                         Button("Custom HTTP uploader".localized()) { editor = .new(.custom) }
                         Button("S3-compatible storage".localized()) { editor = .new(.s3) }
+                        Button("WebDAV".localized()) { editor = .new(.webdav) }
+                        Button("SFTP".localized()) { editor = .new(.sftp) }
+                        Button("GitHub".localized()) { editor = .new(.github) }
+                        Divider()
+                        ForEach(CloudProvider.allCases.filter(\.hasBuiltInClientID), id: \.self) { provider in
+                            Button(provider.title.localized()) { editor = .new(provider.kind) }
+                        }
+                        let ownAppProviders = CloudProvider.allCases.filter { !$0.hasBuiltInClientID }
+                        if !ownAppProviders.isEmpty {
+                            Menu("With your own app".localized()) {
+                                ForEach(ownAppProviders, id: \.self) { provider in
+                                    Button(provider.title.localized()) { editor = .new(provider.kind) }
+                                }
+                            }
+                        }
                         Divider()
                         Button("Folder".localized()) { editor = .new(.folder) }
                         Button("iCloud Drive folder".localized()) { editor = .iCloudDrive }
@@ -69,6 +84,8 @@ struct UploaderSettingsView: View {
             }
 
             UploadBehaviorSettings()
+            ImageUploadSettings()
+            WebhookSettings()
             URLShortenerSettings()
             UploadPresetsSettings()
             WatchFolderSettings()
@@ -181,6 +198,16 @@ struct UploaderSettingsView: View {
             return name.isEmpty ? "Photos library".localized() : name
         case .custom:
             return uploader.requestURL
+        case .webdav:
+            return uploader.webdav?.url ?? ""
+        case .sftp:
+            guard let sftp = uploader.sftp else { return "" }
+            return "\(sftp.username)@\(sftp.host)" + (sftp.directory.map { ":\($0)" } ?? "")
+        case .dropbox, .googleDrive, .oneDrive:
+            let folder = uploader.cloud?.folderPath ?? CloudStorageConfiguration.defaultFolder
+            return [uploader.cloud?.account, "/" + folder].compactMap { $0 }.joined(separator: " · ")
+        case .github:
+            return uploader.github?.repository ?? ""
         }
     }
 
@@ -190,6 +217,12 @@ struct UploaderSettingsView: View {
         case .s3: .orange
         case .folder: .blue
         case .photos: .pink
+        case .webdav: .indigo
+        case .sftp: .gray
+        case .dropbox: .blue
+        case .googleDrive: .green
+        case .oneDrive: .cyan
+        case .github: .purple
         }
     }
 
@@ -239,7 +272,9 @@ struct UploaderSettingsView: View {
     }
 
     private func export(_ uploader: CustomUploader) {
-        guard let data = try? S3SecretStore.exporting(uploader, includeSecret: includesSecret(for: uploader)).toJSON() else { return }
+        let includeSecret = includesSecret(for: uploader)
+        let exported = UploaderSecrets.exporting(S3SecretStore.exporting(uploader, includeSecret: includeSecret), includeSecrets: includeSecret)
+        guard let data = try? exported.toJSON() else { return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "iscu") ?? .json]
         panel.nameFieldStringValue = "\(uploader.name).iscu"
@@ -251,9 +286,9 @@ struct UploaderSettingsView: View {
     }
 
     private func includesSecret(for uploader: CustomUploader) -> Bool {
-        guard uploader.kind == .s3 else { return false }
+        guard uploader.kind == .s3 || UploaderSecrets.hasExportableSecrets(uploader) else { return false }
         let alert = NSAlert()
-        alert.messageText = "Include the secret access key?".localized()
+        alert.messageText = uploader.kind == .s3 ? "Include the secret access key?".localized() : "Include the password, key or token?".localized()
         alert.informativeText = "Anyone with the exported file can use this key.".localized()
         alert.addButton(withTitle: "Leave Out".localized())
         alert.addButton(withTitle: "Include".localized())
@@ -310,6 +345,11 @@ struct UploaderEditorView: View {
     @State private var folderDraft = FolderDraft()
     @State private var photosDraft = PhotosDraft()
     @State private var suggestsICloudDrive = false
+    @State private var webdavDraft = WebDAVDraft()
+    @State private var sftpDraft = SFTPDraft()
+    @State private var cloudDraft = CloudDraft()
+    @State private var githubDraft = GitHubDraft()
+    @State private var optimizationOverride = ImageOptimizationOverride()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -330,6 +370,19 @@ struct UploaderEditorView: View {
                     FolderDestinationSection(draft: $folderDraft, suggestsICloudDrive: suggestsICloudDrive)
                 case .photos:
                     PhotosDestinationSection(draft: $photosDraft)
+                case .webdav:
+                    WebDAVSections(draft: $webdavDraft)
+                case .sftp:
+                    SFTPSections(draft: $sftpDraft)
+                case .dropbox, .googleDrive, .oneDrive:
+                    if let provider = kind.cloudProvider {
+                        CloudSections(provider: provider, uploaderID: id, draft: $cloudDraft)
+                    }
+                case .github:
+                    GitHubSections(draft: $githubDraft)
+                }
+                if kind != .photos {
+                    ImageOptimizationOverrideSection(override: $optimizationOverride)
                 }
                 if case let .edit(uploader) = target {
                     UploaderStatisticsSection(key: uploader.id.uuidString)
@@ -453,14 +506,30 @@ struct UploaderEditorView: View {
             LinkOptionsResolver.forget(uploader.id)
         }
         LocalFolderAccess.setBookmark(uploader.kind == .folder ? folderDraft.bookmark : nil, for: uploader.id)
+        clearRemovedSecrets(of: uploader)
+        if uploader.kind.cloudProvider == nil {
+            try? OAuthTokenStore.save(nil, for: uploader.id)
+        }
         onSave(uploader)
+    }
+
+    private func clearRemovedSecrets(of uploader: CustomUploader) {
+        let values: [(UploaderSecretField, String?)] = [
+            (.password, uploader.webdav?.password ?? uploader.sftp?.password),
+            (.privateKey, uploader.sftp?.privateKey),
+            (.passphrase, uploader.sftp?.passphrase),
+            (.accessToken, uploader.github?.token),
+        ]
+        for (field, value) in values where value == nil {
+            try? UploaderSecrets.write(nil, field, for: uploader.id)
+        }
     }
 
     private func load() {
         switch target {
         case let .new(newKind):
             kind = newKind
-            name = newKind.isLocal ? newKind.titleKey.localized() : ""
+            name = newKind.isLocal || newKind.cloudProvider != nil ? newKind.titleKey.localized() : ""
         case .iCloudDrive:
             kind = .folder
             name = "iCloud Drive"
@@ -496,6 +565,11 @@ struct UploaderEditorView: View {
             defaultLinkPassword = LinkPasswordStore.password(for: uploader.id) ?? ""
             folderDraft = FolderDraft(destination: uploader.folder, bookmark: LocalFolderAccess.bookmark(for: uploader.id))
             photosDraft = PhotosDraft(destination: uploader.photos)
+            webdavDraft = WebDAVDraft(uploader: uploader)
+            sftpDraft = SFTPDraft(uploader: uploader)
+            cloudDraft = CloudDraft(uploader: uploader)
+            githubDraft = GitHubDraft(uploader: uploader)
+            optimizationOverride = uploader.imageOptimization ?? ImageOptimizationOverride()
         }
     }
 
@@ -511,7 +585,21 @@ struct UploaderEditorView: View {
     }
 
     private func build() -> CustomUploader {
+        var uploader = buildDefinition()
+        uploader.imageOptimization = kind == .photos || optimizationOverride.isEmpty ? nil : optimizationOverride
+        return uploader
+    }
+
+    private func buildDefinition() -> CustomUploader {
         switch kind {
+        case .webdav:
+            return .webdav(id: id, name: name, configuration: webdavDraft.configuration)
+        case .sftp:
+            return .sftp(id: id, name: name, configuration: sftpDraft.configuration)
+        case .dropbox, .googleDrive, .oneDrive:
+            return .cloud(id: id, name: name, provider: kind.cloudProvider ?? .dropbox, configuration: cloudDraft.configuration)
+        case .github:
+            return .github(id: id, name: name, configuration: githubDraft.configuration)
         case .s3:
             return .s3(id: id, name: name, configuration: S3Configuration(
                 endpoint: endpoint, region: region, bucket: bucket, accessKeyId: accessKeyId, secretAccessKey: secretAccessKey,
@@ -662,9 +750,12 @@ struct CustomEntryModel: Identifiable, Equatable {
 
 extension UploaderSettingsView: SettingsSearchable {
     static let searchEntries: [SettingsSearchEntry] = [
+        ImageUploadSettings.optimization, ImageUploadSettings.metadata, WebhookSettings.entry,
         SettingsSearchEntry("Upload", pane: .uploaders, keywords: [
             "Uploader", "Destination", "Imgur", "Custom uploader", "Server", "S3", "R2", "ISCU", "Import", "Export",
             "Assistant", "Apple Intelligence", "Delete", "Deletion URL", "Headers",
+            "WebDAV", "SFTP", "SSH", "Host key", "Fingerprint", "Dropbox", "Google Drive", "OneDrive", "GitHub", "Gist",
+            "Personal access token", "Sign in",
         ]),
         SettingsSearchEntry("Also upload to", pane: .uploaders, keywords: [
             "Copy URL after upload", "Open URL in browser after upload", "Watch Folder", "Folder", "Upload Queue",

@@ -19,7 +19,9 @@ enum ContinuityCameraImport {
         do {
             let fileURL = try ImageCaptureFlow.save(CapturedImage(image: image, suffix: "iphone"))
             Log.capture.info("Imported a Continuity Camera image to \(fileURL.path, privacy: .public)")
-            await CaptureSession.finish(fileURL: fileURL, kind: .image)
+            await UploadOrigin.$current.withValue(.imported) {
+                await CaptureSession.finish(fileURL: fileURL, kind: .image)
+            }
         } catch {
             Log.capture.error("Saving the Continuity Camera image failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Couldn't import the image".localized(), icon: ToastIcon)

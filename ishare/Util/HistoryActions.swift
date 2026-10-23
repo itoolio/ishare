@@ -224,6 +224,9 @@ struct HistoryItemMenuItems: View {
         if let shareAnchor {
             Button("Share…".localized()) { SharePicker.show(SharePicker.items(for: item), from: shareAnchor) }
         }
+        if let savings = item.savingsDescription {
+            Text(savings)
+        }
         Divider()
         if item.canDeleteFromServer {
             Button("Delete from Server…".localized(), role: .destructive) { HistoryActions.confirmDeleteFromServer(item) }

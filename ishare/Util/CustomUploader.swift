@@ -57,13 +57,24 @@ enum UploadRequestMethod: String, Codable, CaseIterable, Sendable {
 enum UploaderKind: String, Codable, CaseIterable, Sendable {
     case custom
     case s3
+    case webdav
+    case sftp
+    case dropbox
+    case googleDrive = "googledrive"
+    case oneDrive = "onedrive"
+    case github
     case folder
     case photos
+
+    static let aliases: [String: UploaderKind] = [
+        "google-drive": .googleDrive, "google_drive": .googleDrive, "gdrive": .googleDrive,
+        "one-drive": .oneDrive, "one_drive": .oneDrive, "http": .custom,
+    ]
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(String.self).lowercased()
-        guard let kind = UploaderKind(rawValue: rawValue) else {
+        guard let kind = UploaderKind(rawValue: rawValue) ?? Self.aliases[rawValue] else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid uploader type: \(rawValue)")
         }
         self = kind
@@ -73,10 +84,25 @@ enum UploaderKind: String, Codable, CaseIterable, Sendable {
         self == .folder || self == .photos
     }
 
+    var cloudProvider: CloudProvider? {
+        switch self {
+        case .dropbox: .dropbox
+        case .googleDrive: .googleDrive
+        case .oneDrive: .oneDrive
+        default: nil
+        }
+    }
+
     var symbolName: String {
         switch self {
         case .custom: "server.rack"
         case .s3: "externaldrive.connected.to.line.below"
+        case .webdav: "network"
+        case .sftp: "terminal"
+        case .dropbox: "shippingbox"
+        case .googleDrive: "triangle"
+        case .oneDrive: "cloud"
+        case .github: "chevron.left.forwardslash.chevron.right"
         case .folder: "folder"
         case .photos: "photo.on.rectangle"
         }
@@ -86,6 +112,12 @@ enum UploaderKind: String, Codable, CaseIterable, Sendable {
         switch self {
         case .custom: "Custom HTTP uploader"
         case .s3: "S3-compatible storage"
+        case .webdav: "WebDAV"
+        case .sftp: "SFTP"
+        case .dropbox: "Dropbox"
+        case .googleDrive: "Google Drive"
+        case .oneDrive: "OneDrive"
+        case .github: "GitHub"
         case .folder: "Folder"
         case .photos: "Photos"
         }
@@ -110,6 +142,11 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
     var linkOptions: LinkOptionsSpec?
     var folder: FolderDestination?
     var photos: PhotosDestination?
+    var webdav: WebDAVConfiguration?
+    var sftp: SFTPConfiguration?
+    var cloud: CloudStorageConfiguration?
+    var github: GitHubConfiguration?
+    var imageOptimization: ImageOptimizationOverride?
 
     init(
         id: UUID = UUID(), name: String, requestURL: String, headers: [String: String]?,
@@ -117,7 +154,9 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         responseURL: String, deletionURL: String? = nil, deleteRequestType: DeleteRequestType? = nil,
         uploaderType: UploaderKind? = nil, s3: S3Configuration? = nil, requestMethod: UploadRequestMethod? = nil,
         modifiedAt: Date? = nil, linkOptions: LinkOptionsSpec? = nil, folder: FolderDestination? = nil,
-        photos: PhotosDestination? = nil
+        photos: PhotosDestination? = nil, webdav: WebDAVConfiguration? = nil, sftp: SFTPConfiguration? = nil,
+        cloud: CloudStorageConfiguration? = nil, github: GitHubConfiguration? = nil,
+        imageOptimization: ImageOptimizationOverride? = nil
     ) {
         self.id = id
         self.name = name
@@ -136,6 +175,11 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         self.linkOptions = linkOptions
         self.folder = folder
         self.photos = photos
+        self.webdav = webdav
+        self.sftp = sftp
+        self.cloud = cloud
+        self.github = github
+        self.imageOptimization = imageOptimization
     }
 
     static func folder(id: UUID = UUID(), name: String, destination: FolderDestination) -> CustomUploader {
@@ -159,6 +203,34 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         )
     }
 
+    static func remote(id: UUID = UUID(), name: String, kind: UploaderKind) -> CustomUploader {
+        CustomUploader(id: id, name: name, requestURL: "", headers: nil, formData: nil, fileFormName: nil, responseURL: "", uploaderType: kind)
+    }
+
+    static func webdav(id: UUID = UUID(), name: String, configuration: WebDAVConfiguration) -> CustomUploader {
+        var uploader = remote(id: id, name: name, kind: .webdav)
+        uploader.webdav = configuration
+        return uploader
+    }
+
+    static func sftp(id: UUID = UUID(), name: String, configuration: SFTPConfiguration) -> CustomUploader {
+        var uploader = remote(id: id, name: name, kind: .sftp)
+        uploader.sftp = configuration
+        return uploader
+    }
+
+    static func cloud(id: UUID = UUID(), name: String, provider: CloudProvider, configuration: CloudStorageConfiguration) -> CustomUploader {
+        var uploader = remote(id: id, name: name, kind: provider.kind)
+        uploader.cloud = configuration
+        return uploader
+    }
+
+    static func github(id: UUID = UUID(), name: String, configuration: GitHubConfiguration) -> CustomUploader {
+        var uploader = remote(id: id, name: name, kind: .github)
+        uploader.github = configuration
+        return uploader
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case name
@@ -177,6 +249,11 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         case linkOptions = "linkoptions"
         case folder
         case photos
+        case webdav
+        case sftp
+        case cloud
+        case github
+        case imageOptimization = "imageoptimization"
     }
 
     init(from decoder: any Decoder) throws {
@@ -186,9 +263,15 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         s3 = try container.decodeDynamicIfPresent(S3Configuration.self, forKey: .key(named: "s3"))
         folder = try container.decodeDynamicIfPresent(FolderDestination.self, forKey: .key(named: "folder"))
         photos = try container.decodeDynamicIfPresent(PhotosDestination.self, forKey: .key(named: "photos"))
+        webdav = try container.decodeDynamicIfPresent(WebDAVConfiguration.self, forKey: .key(named: "webdav"))
+        sftp = try container.decodeDynamicIfPresent(SFTPConfiguration.self, forKey: .key(named: "sftp"))
+        cloud = try container.decodeDynamicIfPresent(CloudStorageConfiguration.self, forKey: .key(named: "cloud"))
+        github = try container.decodeDynamicIfPresent(GitHubConfiguration.self, forKey: .key(named: "github"))
+        imageOptimization = try container.decodeDynamicIfPresent(ImageOptimizationOverride.self, forKey: .key(named: "imageoptimization"))
         linkOptions = try container.decodeDynamicIfPresent(LinkOptionsSpec.self, forKey: .key(named: "linkoptions"))
         let declaredKind = try container.decodeDynamicIfPresent(UploaderKind.self, forKey: .key(named: "uploadertype"))
         uploaderType = declaredKind ?? Self.inferredKind(s3: s3, folder: folder, photos: photos)
+            ?? Self.inferredRemoteKind(webdav: webdav, sftp: sftp, github: github)
         let needsRequest = uploaderType == nil || uploaderType == .custom
         if !needsRequest {
             requestURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "requesturl")) ?? ""
@@ -213,6 +296,13 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         if s3 != nil { return .s3 }
         if folder != nil { return .folder }
         if photos != nil { return .photos }
+        return nil
+    }
+
+    private static func inferredRemoteKind(webdav: WebDAVConfiguration?, sftp: SFTPConfiguration?, github: GitHubConfiguration?) -> UploaderKind? {
+        if webdav != nil { return .webdav }
+        if sftp != nil { return .sftp }
+        if github != nil { return .github }
         return nil
     }
 
@@ -256,12 +346,18 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
     }
 
     func renamed(_ newName: String) -> CustomUploader {
-        CustomUploader(
+        var copy = CustomUploader(
             id: id, name: newName, requestURL: requestURL, headers: headers, formData: formData, fileFormName: fileFormName,
             requestBodyType: requestBodyType, responseURL: responseURL, deletionURL: deletionURL,
             deleteRequestType: deleteRequestType, uploaderType: uploaderType, s3: s3, requestMethod: requestMethod,
             modifiedAt: modifiedAt, linkOptions: linkOptions, folder: folder, photos: photos
         )
+        copy.webdav = webdav
+        copy.sftp = sftp
+        copy.cloud = cloud
+        copy.github = github
+        copy.imageOptimization = imageOptimization
+        return copy
     }
 
     func touched(at date: Date = .init()) -> CustomUploader {

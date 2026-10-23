@@ -64,7 +64,9 @@ enum ExternalUpload {
         let toast = Task { @MainActor in
             await showToast(fileURL: fileURL, awaitingUpload: true)
         }
-        await UploadCoordinator.upload(fileURL: fileURL, localFileURL: keepsLocalCopy ? fileURL : nil)
+        await UploadOrigin.$current.withValue(.imported) {
+            _ = await UploadCoordinator.upload(fileURL: fileURL, localFileURL: keepsLocalCopy ? fileURL : nil)
+        }
         if !keepsLocalCopy {
             await toast.value
         }

@@ -63,6 +63,9 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: 2.6.4
+  Citadel:
+    url: https://github.com/orlandos-nl/Citadel
+    exactVersion: 0.12.0
 targetTemplates:
   ishareApp:
     type: application
@@ -86,6 +89,7 @@ targetTemplates:
       - package: Defaults
       - package: KeyboardShortcuts
       - package: LaunchAtLogin
+      - package: Citadel
       - target: sharemenuext
         embed: true
         codeSign: true

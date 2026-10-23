@@ -196,7 +196,9 @@ final class WatchFolderService {
             WatchFolderService.markProcessed(url)
             Task { @MainActor in
                 guard !WatchFolderService.isOwnCapture(url) else { return }
-                await UploadCoordinator.upload(fileURL: url, localFileURL: url)
+                await UploadOrigin.$current.withValue(.imported) {
+                    _ = await UploadCoordinator.upload(fileURL: url, localFileURL: url)
+                }
                 await showToast(fileURL: url)
             }
         }
