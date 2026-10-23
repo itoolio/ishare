@@ -1,3 +1,10 @@
+## [5.1.1](https://github.com/itoolio/ishare/compare/v5.1.0...v5.1.1) (2026-10-23)
+
+### Bug Fixes
+
+* **app-store:** make automatic scrolling opt-in and drop the Movies entitlement ([b4664a3](https://github.com/itoolio/ishare/commit/b4664a304076b5af1852e10638a96b3f79949768))
+* **history:** decode image thumbnails directly and time out QuickLook ([5bf74f2](https://github.com/itoolio/ishare/commit/5bf74f2df345daf223402f93550b424f1af5dd51))
+
 ## [5.1.0](https://github.com/itoolio/ishare/compare/v5.0.0...v5.1.0) (2026-10-22)
 
 ### Features
