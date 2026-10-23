@@ -101,8 +101,9 @@ struct OverlayTimeline: Hashable, Sendable {
     var clicks: [OverlayClick] = []
     var keystrokes: [OverlayKeystrokeSpan] = []
     var webcam: OverlayWebcamClip?
+    var effects = RecordingEffectsPlan()
 
-    var isEmpty: Bool { clicks.isEmpty && keystrokes.isEmpty && webcam == nil }
+    var isEmpty: Bool { clicks.isEmpty && keystrokes.isEmpty && webcam == nil && effects.isEmpty }
 
     func ripples(at time: Double) -> [(point: CGPoint, progress: Double)] {
         clicks
