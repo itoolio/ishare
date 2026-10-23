@@ -53,6 +53,8 @@ final class AppState: ObservableObject {
         onRecord(.recordScreenForceUpload, gif: false, forceUpload: true)
         onRecord(.recordGifForceUpload, gif: true, forceUpload: true)
 
+        KeyboardShortcuts.onKeyUp(for: .addRecordingMarker) { Task { @MainActor in AppDelegate.shared.screenRecorder.addMarker() } }
+
         KeyboardShortcuts.onKeyUp(for: .toggleMainMenu) {
             Task { @MainActor in
                 MenuController.shared.toggle()

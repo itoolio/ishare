@@ -23,6 +23,7 @@ struct KeybindSettingsView: View {
             ("Record Region:", .recordRegion),
             ("Record GIF:", .recordGif),
             ("Record Region as GIF:", .recordRegionGif),
+            ("Add Recording Marker:", .addRecordingMarker),
         ]),
         ("Capture and Upload", [
             ("Capture Region:", .captureRegionForceUpload),

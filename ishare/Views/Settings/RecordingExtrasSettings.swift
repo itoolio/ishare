@@ -1,5 +1,6 @@
 @preconcurrency import AVFoundation
 import Defaults
+import Speech
 import SwiftUI
 
 struct RecordingExtrasSettings: View {
@@ -9,6 +10,7 @@ struct RecordingExtrasSettings: View {
             WebcamSettingsSection()
             MicrophoneSettingsSection()
             AfterRecordingSettingsSection()
+            CaptionsSettingsSection()
         }
     }
 }
@@ -38,7 +40,7 @@ private struct InputOverlaySettingsSection: View {
         } header: {
             Text("Clicks & Keystrokes".localized())
         } footer: {
-            Text("Clicks and keystrokes are drawn on screen so they appear in full-screen and region recordings. Window recordings use the system click highlight instead. Keystrokes need Input Monitoring permission; with “Only show shortcuts” on, plain typing such as passwords is never shown.".localized())
+            Text("Clicks and keystrokes are drawn on screen in full-screen and region recordings. In window and app recordings they are added to the video, together with the webcam, after you stop recording. Keystrokes need Input Monitoring permission; with “Only show shortcuts” on, plain typing such as passwords is never shown.".localized())
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -150,6 +152,45 @@ private struct AfterRecordingSettingsSection: View {
             Picker("GIF size".localized(), selection: $gifMaxSize) {
                 ForEach(GIFMaxSize.allCases) { Text($0.title.localized()).tag($0) }
             }
+        }
+    }
+}
+
+private struct CaptionsSettingsSection: View {
+    @Default(.generateCaptions) private var generateCaptions
+    @Default(.captionOutput) private var captionOutput
+    @State private var authorized = SpeechCaptioner.isAuthorized
+
+    var body: some View {
+        Section {
+            Toggle("Generate captions".localized(), isOn: $generateCaptions)
+                .onChange(of: generateCaptions) { _, enabled in
+                    guard enabled else { return }
+                    Task { @MainActor in
+                        authorized = await SpeechCaptioner.requestAuthorization()
+                        if !authorized { generateCaptions = false }
+                    }
+                }
+            if generateCaptions {
+                Picker("Captions".localized(), selection: $captionOutput) {
+                    ForEach(CaptionOutput.allCases) { Text($0.title.localized()).tag($0) }
+                }
+            }
+            if !authorized, SFSpeechRecognizer.authorizationStatus() == .denied || SFSpeechRecognizer.authorizationStatus() == .restricted {
+                PermissionRow(title: "Speech Recognition", granted: false) {
+                    SystemSettingsLink.open("Privacy_SpeechRecognition")
+                }
+            }
+        } header: {
+            Text("Captions".localized())
+        } footer: {
+            Text("ishare transcribes the audio of each recording on this Mac and never sends it anywhere. Turning this on asks for Speech Recognition permission.".localized())
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .onAppear { authorized = SpeechCaptioner.isAuthorized }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            authorized = SpeechCaptioner.isAuthorized
         }
     }
 }
