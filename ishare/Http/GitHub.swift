@@ -1,99 +1,8 @@
 import Alamofire
 import AppKit
 import Foundation
+import ishareCore
 import UniformTypeIdentifiers
-
-enum GitHubLinkStyle: String, Codable, CaseIterable, Sendable {
-    case raw
-    case blob
-    case markdown
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let rawValue = try container.decode(String.self).lowercased()
-        guard let value = GitHubLinkStyle(rawValue: rawValue) else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid GitHub link style: \(rawValue)")
-        }
-        self = value
-    }
-
-    var titleKey: String {
-        switch self {
-        case .raw: "Raw file URL"
-        case .blob: "GitHub page URL"
-        case .markdown: "Markdown"
-        }
-    }
-}
-
-struct GitHubConfiguration: Codable, Hashable, Sendable {
-    var repository: String
-    var branch: String?
-    var pathTemplate: String?
-    var linkStyle: GitHubLinkStyle?
-    var token: String?
-    var textAsGist: Bool?
-    var publicGists: Bool?
-    var commitMessage: String?
-
-    static let defaultPathTemplate = "{{date}}/{{uuid}}.{{ext}}"
-    static let defaultCommitMessage = "Upload {{filename}} with ishare"
-    static let tokenPermissions = "Contents: Read and write (only the upload repository), Gists: Read and write"
-    static let deviceFlowScopes = "repo gist"
-
-    init(
-        repository: String, branch: String? = nil, pathTemplate: String? = nil, linkStyle: GitHubLinkStyle? = nil,
-        token: String? = nil, textAsGist: Bool? = nil, publicGists: Bool? = nil, commitMessage: String? = nil
-    ) {
-        self.repository = repository
-        self.branch = branch
-        self.pathTemplate = pathTemplate
-        self.linkStyle = linkStyle
-        self.token = token
-        self.textAsGist = textAsGist
-        self.publicGists = publicGists
-        self.commitMessage = commitMessage
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case repository
-        case branch
-        case pathTemplate = "pathtemplate"
-        case linkStyle = "linkstyle"
-        case token
-        case textAsGist = "textasgist"
-        case publicGists = "publicgists"
-        case commitMessage = "commitmessage"
-    }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
-        repository = try container.decodeDynamic(String.self, forKey: .key(named: "repository"))
-        branch = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "branch"))
-        pathTemplate = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "pathtemplate"))
-        linkStyle = try container.decodeDynamicIfPresent(GitHubLinkStyle.self, forKey: .key(named: "linkstyle"))
-        token = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "token"))
-        textAsGist = try container.decodeDynamicIfPresent(Bool.self, forKey: .key(named: "textasgist"))
-        publicGists = try container.decodeDynamicIfPresent(Bool.self, forKey: .key(named: "publicgists"))
-        commitMessage = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "commitmessage"))
-    }
-
-    var ownerAndName: (owner: String, name: String)? {
-        let trimmed = repository.trimmingCharacters(in: .whitespaces)
-            .replacingOccurrences(of: "https://github.com/", with: "")
-            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let parts = trimmed.split(separator: "/").map(String.init)
-        guard parts.count == 2, parts.allSatisfy({ !$0.isEmpty && !$0.contains(" ") }) else { return nil }
-        return (parts[0], parts[1].hasSuffix(".git") ? String(parts[1].dropLast(4)) : parts[1])
-    }
-
-    var trimmedBranch: String? {
-        branch?.trimmingCharacters(in: .whitespaces).nilIfEmpty
-    }
-
-    var sendsTextToGist: Bool { textAsGist ?? true }
-    var style: GitHubLinkStyle { linkStyle ?? .raw }
-}
 
 enum GitHubError: LocalizedError, Equatable {
     case invalidRepository
@@ -192,11 +101,13 @@ enum GitHubAPI {
     }
 
     static func createGistRequest(fileName: String, text: String, isPublic: Bool, token: String) -> APIRequest {
-        .json("POST", baseURL.appending(path: "gists"), token: nil, body: [
-            "description": "Shared with ishare",
-            "public": isPublic,
-            "files": [fileName: ["content": text]],
-        ], headers: headers(token: token))
+        .json(
+            "POST", baseURL.appending(path: "gists"), token: nil,
+            body: [
+                "description": "Shared with ishare",
+                "public": isPublic,
+                "files": [fileName: ["content": text]],
+            ], headers: headers(token: token))
     }
 
     static func deleteGistRequest(id: String, token: String) -> APIRequest {
@@ -214,7 +125,9 @@ enum GitHubAPI {
         return isImage ? "![\(label)](\(url))" : "[\(label)](\(url))"
     }
 
-    static func contentsOutcome(_ data: Data, configuration: GitHubConfiguration, path: String, fileURL: URL) throws -> (link: String, clipboard: String?, reference: GitHubReference) {
+    static func contentsOutcome(_ data: Data, configuration: GitHubConfiguration, path: String, fileURL: URL) throws -> (
+        link: String, clipboard: String?, reference: GitHubReference
+    ) {
         let object = try JSONValue.object(data)
         let sha = try JSONValue.require(object, "content", "sha")
         let storedPath = JSONValue.string(object, "content", "path") ?? path
@@ -229,7 +142,8 @@ enum GitHubAPI {
             link = raw ?? blob ?? ""
         case .markdown:
             link = raw ?? blob ?? ""
-            clipboard = markdown(fileName: fileURL.lastPathComponent, url: link, isImage: MimeType.isImageOrVideo(fileURL) && !["mp4", "mov"].contains(fileURL.pathExtension.lowercased()))
+            clipboard = markdown(
+                fileName: fileURL.lastPathComponent, url: link, isImage: MimeType.isImageOrVideo(fileURL) && !["mp4", "mov"].contains(fileURL.pathExtension.lowercased()))
         }
         return (link, clipboard, .contents(path: storedPath, sha: sha))
     }
@@ -273,7 +187,7 @@ enum GitHubDeviceFlow {
 
     static func deviceCode(from object: [String: Any]) throws -> GitHubDeviceCode {
         guard let deviceCode = object["device_code"] as? String, let userCode = object["user_code"] as? String,
-              let uri = (object["verification_uri"] as? String).flatMap(URL.init(string:))
+            let uri = (object["verification_uri"] as? String).flatMap(URL.init(string:))
         else {
             throw GitHubError.deviceFlow((object["error_description"] as? String) ?? (object["error"] as? String) ?? "device_code")
         }
@@ -298,9 +212,11 @@ enum GitHubDeviceFlow {
         let deadline = Date().addingTimeInterval(TimeInterval(code.expiresIn))
         while Date() < deadline {
             try await sleep(.seconds(interval))
-            let request = OAuthRequests.formRequest(GitHubAPI.accessTokenURL, fields: [
-                ("client_id", clientID), ("device_code", code.deviceCode), ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-            ])
+            let request = OAuthRequests.formRequest(
+                GitHubAPI.accessTokenURL,
+                fields: [
+                    ("client_id", clientID), ("device_code", code.deviceCode), ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+                ])
             let object = try JSONValue.object(try await UploadService.response(of: UploadService.session.request(request)))
             switch try pollResult(from: object) {
             case .pending: continue

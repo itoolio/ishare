@@ -1,3 +1,4 @@
+import ishareCore
 import SwiftUI
 
 struct MenuRecentUploadsSection: View {
@@ -8,6 +9,7 @@ struct MenuRecentUploadsSection: View {
     let onClosePreview: () -> Void
     @EnvironmentObject private var app: AppModel
     @Environment(\.menuMetrics) private var metrics
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static let visibleCount = 5
 
@@ -31,7 +33,7 @@ struct MenuRecentUploadsSection: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(ActionTileStyle())
-            .help("Open History Window".localized())
+            .helpAndAccessibilityLabel("Open History Window".localized())
             .favoriteContextMenu(MenuFavoriteCommandID.history)
             .menuFocusRing(.history)
             .accessibilityIdentifier("menu.history")
@@ -44,10 +46,10 @@ struct MenuRecentUploadsSection: View {
                     onClosePreview()
                 }
                 .offset(y: -(metrics.thumbnailSize + 8))
-                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
+                .transition(MotionPreference.transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)), reducesMotion: reduceMotion))
             }
         }
-        .animation(.snappy(duration: 0.18), value: previewedItem)
+        .animation(MotionPreference.animation(.snappy(duration: 0.18), reducesMotion: reduceMotion), value: previewedItem)
         .zIndex(1)
     }
 }
@@ -80,6 +82,7 @@ struct RecentUploadThumbnail: View {
         }
         .contextMenu { HistoryItemMenuItems(item: item, showsFinder: false, shareAnchor: shareAnchor) }
         .accessibilityLabel(item.fileName)
+        .historyItemAccessibilityActions(item)
         .accessibilityIdentifier("menu.recent.\(index)")
     }
 }

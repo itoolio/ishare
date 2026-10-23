@@ -1,4 +1,5 @@
 import AppKit
+import ishareCore
 import SwiftUI
 
 struct LinkOptionsDraft: Equatable {
@@ -31,10 +32,12 @@ struct LinkOptionsDraft: Equatable {
     }
 
     var spec: LinkOptionsSpec? {
-        let password = passwordEnabled
+        let password =
+            passwordEnabled
             ? LinkPasswordField(field: passwordField.trimmingCharacters(in: .whitespaces), location: passwordLocation, template: Self.nonEmpty(passwordTemplate))
             : nil
-        let expiry = expiryEnabled
+        let expiry =
+            expiryEnabled
             ? LinkExpiryField(
                 field: expiryField.trimmingCharacters(in: .whitespaces), location: expiryLocation, format: expiryFormat,
                 template: Self.nonEmpty(expiryTemplate)
@@ -92,9 +95,12 @@ struct LinkOptionsSpecSection: View {
                 }
                 TextField("Value template".localized(), text: $draft.expiryTemplate, prompt: Text("{{value}}"))
             }
-            Text("ishare sends the password and expiry you choose for an upload in these fields. Use a value template such as date={{value}} when the service expects a prefix.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "ishare sends the password and expiry you choose for an upload in these fields. Use a value template such as date={{value}} when the service expects a prefix."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         } header: {
             Text("Link Options".localized())
         }

@@ -1,4 +1,5 @@
 import Defaults
+import ishareCore
 import KeyboardShortcuts
 import SwiftUI
 
@@ -189,7 +190,11 @@ struct UploadPresetsSettings: View {
         }
         .confirmationDialog(
             String(format: "Delete “%@”?".localized(), pendingDeletion?.name ?? ""),
-            isPresented: Binding { pendingDeletion != nil } set: { if !$0 { pendingDeletion = nil } }
+            isPresented: Binding {
+                pendingDeletion != nil
+            } set: {
+                if !$0 { pendingDeletion = nil }
+            }
         ) {
             Button("Delete".localized(), role: .destructive) {
                 if let pendingDeletion { UploadPresets.delete(pendingDeletion) }
@@ -229,6 +234,7 @@ struct UploadPresetsSettings: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
+            .helpAndAccessibilityLabel("More".localized())
         }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { editing = preset }

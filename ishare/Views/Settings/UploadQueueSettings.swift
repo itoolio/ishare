@@ -68,20 +68,21 @@ private struct UploadQueueSection: View {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help("Retry".localized())
+            .helpAndAccessibilityLabel("Retry".localized())
             Button {
                 queue.discard(item.id)
             } label: {
                 Image(systemName: "trash")
             }
             .buttonStyle(.borderless)
-            .help("Discard".localized())
+            .helpAndAccessibilityLabel("Discard".localized())
         }
     }
 
     private func status(for item: QueuedUpload) -> String {
         let attempts = String(format: "%@ · %d attempts".localized(), item.destinationName, item.attempts)
-        let next = item.isPaused
+        let next =
+            item.isPaused
             ? "Retrying paused".localized()
             : String(format: "Next try %@".localized(), item.nextAttemptAt.formatted(.relative(presentation: .named)))
         return [attempts, next, item.lastError].compactMap { $0 }.joined(separator: " · ")

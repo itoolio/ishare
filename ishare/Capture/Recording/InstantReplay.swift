@@ -90,10 +90,10 @@ enum PowerSourceReader {
         guard let sources = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef] else { return }
         for source in sources {
             guard let description = IOPSGetPowerSourceDescription(info, source)?.takeUnretainedValue() as? [String: Any],
-                  description[kIOPSTypeKey] as? String == kIOPSInternalBatteryType,
-                  let current = description[kIOPSCurrentCapacityKey] as? Double,
-                  let maximum = description[kIOPSMaxCapacityKey] as? Double,
-                  maximum > 0
+                description[kIOPSTypeKey] as? String == kIOPSInternalBatteryType,
+                let current = description[kIOPSCurrentCapacityKey] as? Double,
+                let maximum = description[kIOPSMaxCapacityKey] as? Double,
+                maximum > 0
             else { continue }
             conditions.batteryLevel = current / maximum
             return
@@ -186,8 +186,8 @@ final class ReplaySegmentWriter: NSObject, SCStreamOutput, SCStreamDelegate, @un
 
     private func appendAudio(_ sampleBuffer: CMSampleBuffer) {
         guard let audioInput, let segmentStart, writer?.status == .writing,
-              sampleBuffer.presentationTimeStamp.seconds >= segmentStart,
-              audioInput.isReadyForMoreMediaData
+            sampleBuffer.presentationTimeStamp.seconds >= segmentStart,
+            audioInput.isReadyForMoreMediaData
         else { return }
         audioInput.append(sampleBuffer)
     }
@@ -196,27 +196,31 @@ final class ReplaySegmentWriter: NSObject, SCStreamOutput, SCStreamDelegate, @un
         guard time.isNumeric else { return }
         let url = directory.appending(path: "segment-\(UUID().uuidString).mov")
         guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mov) else { return }
-        let video = AVAssetWriterInput(mediaType: .video, outputSettings: [
-            AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: Int(videoSize.width),
-            AVVideoHeightKey: Int(videoSize.height),
-            AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: InstantReplayEncoding.bitRate(for: videoSize, frameRate: frameRate),
-                AVVideoMaxKeyFrameIntervalKey: frameRate * 2,
-                AVVideoExpectedSourceFrameRateKey: frameRate,
-            ],
-        ])
+        let video = AVAssetWriterInput(
+            mediaType: .video,
+            outputSettings: [
+                AVVideoCodecKey: AVVideoCodecType.h264,
+                AVVideoWidthKey: Int(videoSize.width),
+                AVVideoHeightKey: Int(videoSize.height),
+                AVVideoCompressionPropertiesKey: [
+                    AVVideoAverageBitRateKey: InstantReplayEncoding.bitRate(for: videoSize, frameRate: frameRate),
+                    AVVideoMaxKeyFrameIntervalKey: frameRate * 2,
+                    AVVideoExpectedSourceFrameRateKey: frameRate,
+                ],
+            ])
         video.expectsMediaDataInRealTime = true
         guard writer.canAdd(video) else { return }
         writer.add(video)
         var audio: AVAssetWriterInput?
         if recordsAudio {
-            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
-                AVFormatIDKey: kAudioFormatMPEG4AAC,
-                AVSampleRateKey: 48000,
-                AVNumberOfChannelsKey: 2,
-                AVEncoderBitRateKey: 128_000,
-            ])
+            let input = AVAssetWriterInput(
+                mediaType: .audio,
+                outputSettings: [
+                    AVFormatIDKey: kAudioFormatMPEG4AAC,
+                    AVSampleRateKey: 48000,
+                    AVNumberOfChannelsKey: 2,
+                    AVEncoderBitRateKey: 128_000,
+                ])
             input.expectsMediaDataInRealTime = true
             if writer.canAdd(input) {
                 writer.add(input)
@@ -270,8 +274,8 @@ final class ReplaySegmentWriter: NSObject, SCStreamOutput, SCStreamDelegate, @un
 
     private static func isCompleteFrame(_ sampleBuffer: CMSampleBuffer) -> Bool {
         guard let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
-              let raw = attachments.first?[SCStreamFrameInfo.status] as? Int,
-              let status = SCFrameStatus(rawValue: raw)
+            let raw = attachments.first?[SCStreamFrameInfo.status] as? Int,
+            let status = SCFrameStatus(rawValue: raw)
         else { return false }
         return status == .complete && sampleBuffer.imageBuffer != nil
     }
@@ -310,7 +314,7 @@ enum InstantReplayExporter {
             cursor = CMTimeAdd(cursor, duration)
         }
         guard cursor.seconds > 0,
-              let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough)
+            let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough)
         else { throw RecordingError.notRecording }
         let start = CMTime(seconds: min(trimStart, cursor.seconds), preferredTimescale: 600)
         session.timeRange = CMTimeRange(start: start, end: cursor)
@@ -340,7 +344,9 @@ final class InstantReplay: ObservableObject {
     func activate() {
         guard settingsTask == nil else { return }
         settingsTask = Task { @MainActor [weak self] in
-            for await _ in Defaults.updates([.instantReplayEnabled, .instantReplayDuration, .instantReplayResolution, .instantReplayFrameRate, .recordAudio, .recordPointer], initial: true) {
+            for await _ in Defaults.updates(
+                [.instantReplayEnabled, .instantReplayDuration, .instantReplayResolution, .instantReplayFrameRate, .recordAudio, .recordPointer], initial: true)
+            {
                 await self?.reconfigure()
             }
         }
@@ -425,7 +431,8 @@ final class InstantReplay: ObservableObject {
 
         let directory = FileManager.default.temporaryDirectory.appending(path: "ishare-instant-replay-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let writer = ReplaySegmentWriter(directory: directory, videoSize: size, frameRate: frameRate.rawValue, recordsAudio: recordsAudio, capacity: Defaults[.instantReplayDuration].seconds)
+        let writer = ReplaySegmentWriter(
+            directory: directory, videoSize: size, frameRate: frameRate.rawValue, recordsAudio: recordsAudio, capacity: Defaults[.instantReplayDuration].seconds)
         let stream = SCStream(filter: filter, configuration: configuration, delegate: writer)
         try stream.addStreamOutput(writer, type: .screen, sampleHandlerQueue: writer.queue)
         if recordsAudio {

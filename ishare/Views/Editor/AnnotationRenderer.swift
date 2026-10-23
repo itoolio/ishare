@@ -37,10 +37,12 @@ enum AnnotationRenderer {
         let width = effected.width
         let height = effected.height
         let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
-        guard let context = CGContext(
-            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-            space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
         context.draw(effected, in: CGRect(x: 0, y: 0, width: width, height: height))
         context.translateBy(x: 0, y: CGFloat(height))
         context.scaleBy(x: 1, y: -1)
@@ -164,7 +166,9 @@ enum AnnotationRenderer {
             context.fillEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
             let label = String(number)
             let size = textSize(label, fontSize: radius * 1.1, weight: .bold)
-            drawText(label, at: CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2), fontSize: radius * 1.1, color: annotation.color.contrastingText, weight: .bold, shadow: false, in: context)
+            drawText(
+                label, at: CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2), fontSize: radius * 1.1, color: annotation.color.contrastingText, weight: .bold,
+                shadow: false, in: context)
         case let .magnify(rect):
             drawMagnifier(rect, source: source, annotation: annotation, in: context)
         case let .cursor(point):

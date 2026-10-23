@@ -90,8 +90,11 @@ private struct AdaptiveGlassModifier<S: InsettableShape>: ViewModifier {
         styled(content, rendering: rendering)
             .overlay {
                 if border > 0 {
-                    shape.strokeBorder(rendering == .material && !contrast.value.isHigh ? Color.white.opacity(border) : Color.primary.opacity(border), lineWidth: rendering == .material && !contrast.value.isHigh ? 0.5 : contrast.value.borderWidth)
-                        .allowsHitTesting(false)
+                    shape.strokeBorder(
+                        rendering == .material && !contrast.value.isHigh ? Color.white.opacity(border) : Color.primary.opacity(border),
+                        lineWidth: rendering == .material && !contrast.value.isHigh ? 0.5 : contrast.value.borderWidth
+                    )
+                    .allowsHitTesting(false)
                 }
             }
     }

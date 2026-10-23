@@ -19,10 +19,11 @@ class AppUITestCase: XCTestCase {
 
     func launch(scene: String, extraArguments: [String] = []) {
         app = XCUIApplication()
-        app.launchArguments = [
-            "-ishareUITestMode", "-ishareSkipOnboarding", "-ishareScene", scene,
-            "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-NSInitialToolTipDelay", "600000",
-        ] + extraArguments
+        app.launchArguments =
+            [
+                "-ishareUITestMode", "-ishareSkipOnboarding", "-ishareScene", scene,
+                "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-NSInitialToolTipDelay", "600000",
+            ] + extraArguments
         app.launch()
         window = app.windows[Self.windowIdentifier]
         XCTAssertTrue(window.waitForExistence(timeout: 20), "The \(scene) test window did not appear")

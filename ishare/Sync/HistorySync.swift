@@ -2,6 +2,7 @@ import AppKit
 import Defaults
 import Foundation
 import ImageIO
+import ishareCore
 import UniformTypeIdentifiers
 
 @MainActor
@@ -37,11 +38,12 @@ final class HistorySync {
 
     func start() {
         guard Self.isAvailable, tasks.isEmpty else { return }
-        tasks.append(Task { @MainActor [weak self] in
-            for await enabled in Defaults.updates(.historySyncEnabled) {
-                self?.setActive(enabled)
-            }
-        })
+        tasks.append(
+            Task { @MainActor [weak self] in
+                for await enabled in Defaults.updates(.historySyncEnabled) {
+                    self?.setActive(enabled)
+                }
+            })
     }
 
     private func setActive(_ active: Bool) {
@@ -53,15 +55,16 @@ final class HistorySync {
             pendingPush?.cancel()
             return
         }
-        observers.append(NotificationCenter.default.addObserver(
-            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: nil, queue: .main
-        ) { [weak self] notification in
-            let keys = notification.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
-            guard keys.isEmpty || keys.contains(where: { $0.hasPrefix(HistorySyncCodec.keyPrefix) }) else { return }
-            Task { @MainActor in
-                self?.syncNow()
-            }
-        })
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: nil, queue: .main
+            ) { [weak self] notification in
+                let keys = notification.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
+                guard keys.isEmpty || keys.contains(where: { $0.hasPrefix(HistorySyncCodec.keyPrefix) }) else { return }
+                Task { @MainActor in
+                    self?.syncNow()
+                }
+            })
         historyUpdates = Task { @MainActor [weak self] in
             for await _ in Defaults.updates(.uploadHistory, initial: false) {
                 guard let self, isEnabled, !isApplyingRemote else { continue }
@@ -170,7 +173,7 @@ enum HistorySyncPreviews {
 
     static func existingURL(for item: HistoryItem) -> URL? {
         guard let link = item.fileUrl, let url = url(for: HistorySyncEntry.identifier(forLink: link)),
-              FileManager.default.fileExists(atPath: url.path)
+            FileManager.default.fileExists(atPath: url.path)
         else { return nil }
         return url
     }

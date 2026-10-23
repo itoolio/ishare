@@ -12,6 +12,8 @@ struct EditorView: View {
     @Default(.editorShowsLayers) private var showsLayers
     @State private var showsAdjustments = false
     @State private var showsBeautify = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     init(document: EditorDocument, onDone: @escaping () -> Void, onDiscard: @escaping () -> Void, onCopy: @escaping () -> Void) {
         self.document = document
@@ -42,7 +44,7 @@ struct EditorView: View {
                 if showsLayers {
                     Divider()
                     LayersSidebar(document: document)
-                        .transition(.move(edge: .trailing))
+                        .transition(MotionPreference.transition(.move(edge: .trailing), reducesMotion: reduceMotion))
                 }
             }
             bottomBar
@@ -122,14 +124,22 @@ struct EditorView: View {
                                 RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.accentColor)
                             }
                         }
+                        .overlay {
+                            if contrast.isHigh, document.tool != tool {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.primary.opacity(contrast.borderOpacity), lineWidth: contrast.borderWidth)
+                            }
+                        }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("\(tool.title.localized()) (\(String(tool.shortcut).uppercased()))")
                 .keyboardShortcut(document.editingText == nil ? KeyboardShortcut(KeyEquivalent(tool.shortcut), modifiers: []) : nil)
+                .accessibilityLabel(tool.accessibilityLabel)
+                .accessibilityAddTraits(document.tool == tool ? .isSelected : [])
                 .accessibilityIdentifier("editor.tool.\(tool.rawValue)")
             }
         }
+        .accessibilityElement(children: .contain)
         .padding(5)
         .adaptiveGlass(cornerRadius: 12)
         .fixedSize()
@@ -139,7 +149,7 @@ struct EditorView: View {
         HStack(spacing: 4) {
             TemplatesButton(document: document, store: templates)
             Button {
-                withAnimation(.easeInOut(duration: 0.18)) { showsLayers.toggle() }
+                withMotionAnimation(.easeInOut(duration: 0.18)) { showsLayers.toggle() }
             } label: {
                 Image(systemName: "sidebar.right")
                     .font(.system(size: 14, weight: .medium))
@@ -156,11 +166,16 @@ struct EditorView: View {
             .keyboardShortcut("l", modifiers: .command)
             .help("Layers".localized() + " (⌘L)")
             .accessibilityLabel("Layers".localized())
+            .accessibilityToggleState(showsLayers)
             .accessibilityIdentifier("editor.layers.toggle")
         }
         .padding(5)
         .adaptiveGlass(cornerRadius: 12)
         .fixedSize()
+    }
+
+    private var contrast: MenuContrast {
+        MenuContrast.resolve(colorSchemeContrast)
     }
 
     private var showsWidthSlider: Bool {
@@ -257,10 +272,13 @@ struct EditorView: View {
                 }
             }
         }
-        ColorPicker("", selection: Binding(
-            get: { Color(nsColor: document.color.nsColor) },
-            set: { document.color = RGBAColor(NSColor($0)) }
-        ))
+        ColorPicker(
+            "",
+            selection: Binding(
+                get: { Color(nsColor: document.color.nsColor) },
+                set: { document.color = RGBAColor(NSColor($0)) }
+            )
+        )
         .labelsHidden()
         .frame(width: 28)
     }
@@ -277,14 +295,22 @@ struct EditorView: View {
 
     private var historyControls: some View {
         HStack(spacing: 8) {
-            Button { document.undo() } label: { Image(systemName: "arrow.uturn.backward") }
-                .keyboardShortcut("z", modifiers: .command)
-                .disabled(!document.canUndo)
-                .help("Undo".localized())
-            Button { document.redo() } label: { Image(systemName: "arrow.uturn.forward") }
-                .keyboardShortcut("z", modifiers: [.command, .shift])
-                .disabled(!document.canRedo)
-                .help("Redo".localized())
+            Button {
+                document.undo()
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
+            }
+            .keyboardShortcut("z", modifiers: .command)
+            .disabled(!document.canUndo)
+            .help("Undo".localized())
+            Button {
+                document.redo()
+            } label: {
+                Image(systemName: "arrow.uturn.forward")
+            }
+            .keyboardShortcut("z", modifiers: [.command, .shift])
+            .disabled(!document.canRedo)
+            .help("Redo".localized())
             Menu {
                 Button("Rotate Left".localized()) { document.apply(.rotateLeft) }
                 Button("Rotate Right".localized()) { document.apply(.rotateRight) }
@@ -304,13 +330,17 @@ struct EditorView: View {
             .fixedSize()
             .help("Transform".localized())
             .accessibilityIdentifier("editor.transform")
-            Button { showsAdjustments.toggle() } label: { Image(systemName: "slider.horizontal.3") }
-                .help("Adjust".localized())
-                .accessibilityLabel("Adjust".localized())
-                .accessibilityIdentifier("editor.adjust")
-                .popover(isPresented: $showsAdjustments, arrowEdge: .top) {
-                    EditorAdjustPanel(document: document)
-                }
+            Button {
+                showsAdjustments.toggle()
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+            }
+            .help("Adjust".localized())
+            .accessibilityLabel("Adjust".localized())
+            .accessibilityIdentifier("editor.adjust")
+            .popover(isPresented: $showsAdjustments, arrowEdge: .top) {
+                EditorAdjustPanel(document: document)
+            }
             imageActionsMenu
         }
     }
@@ -331,7 +361,7 @@ struct EditorView: View {
         }
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Image Actions".localized())
+        .helpAndAccessibilityLabel("Image Actions".localized())
         .accessibilityIdentifier("editor.imageActions")
     }
 
@@ -392,23 +422,33 @@ struct ZoomControls: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Button { viewport.zoomOut(selection: selectionBounds) } label: { Image(systemName: "minus.magnifyingglass") }
-                .keyboardShortcut("-", modifiers: .command)
-                .help("Zoom Out".localized())
-                .accessibilityIdentifier("editor.zoom.out")
-            if showsSlider {
-                Slider(value: Binding(
-                    get: { log2(viewport.effectiveZoom) },
-                    set: { viewport.setZoom(pow(2, $0)) }
-                ), in: log2(CanvasTransform.minimumZoom) ... log2(CanvasTransform.maximumZoom))
-                    .frame(width: 90)
-                    .help("Zoom".localized())
-                    .accessibilityIdentifier("editor.zoom.slider")
+            Button {
+                viewport.zoomOut(selection: selectionBounds)
+            } label: {
+                Image(systemName: "minus.magnifyingglass")
             }
-            Button { viewport.zoomIn(selection: selectionBounds) } label: { Image(systemName: "plus.magnifyingglass") }
-                .keyboardShortcut("+", modifiers: .command)
-                .help("Zoom In".localized())
-                .accessibilityIdentifier("editor.zoom.in")
+            .keyboardShortcut("-", modifiers: .command)
+            .help("Zoom Out".localized())
+            .accessibilityIdentifier("editor.zoom.out")
+            if showsSlider {
+                Slider(
+                    value: Binding(
+                        get: { log2(viewport.effectiveZoom) },
+                        set: { viewport.setZoom(pow(2, $0)) }
+                    ), in: log2(CanvasTransform.minimumZoom) ... log2(CanvasTransform.maximumZoom)
+                )
+                .frame(width: 90)
+                .help("Zoom".localized())
+                .accessibilityIdentifier("editor.zoom.slider")
+            }
+            Button {
+                viewport.zoomIn(selection: selectionBounds)
+            } label: {
+                Image(systemName: "plus.magnifyingglass")
+            }
+            .keyboardShortcut("+", modifiers: .command)
+            .help("Zoom In".localized())
+            .accessibilityIdentifier("editor.zoom.in")
             Button("") { viewport.zoomIn(selection: selectionBounds) }
                 .keyboardShortcut("=", modifiers: .command)
                 .frame(width: 0, height: 0)

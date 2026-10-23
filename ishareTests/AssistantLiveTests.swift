@@ -1,4 +1,5 @@
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
 
@@ -11,7 +12,8 @@ struct AssistantLiveTests {
     @Test(.enabled(if: enabled), .timeLimit(.minutes(3)))
     func buildsAnUploaderFromAConversation() async throws {
         let model = UploaderAssistantChatModel()
-        model.input = "I self-host Zipline at https://share.example.com. Uploads go to /api/upload as multipart with the field file, and my token abc123 goes in the Authorization header. The response looks like {\"files\": [{\"url\": \"https://share.example.com/u/x.png\"}]}"
+        model.input =
+            "I self-host Zipline at https://share.example.com. Uploads go to /api/upload as multipart with the field file, and my token abc123 goes in the Authorization header. The response looks like {\"files\": [{\"url\": \"https://share.example.com/u/x.png\"}]}"
         model.send()
         while model.isResponding {
             try await Task.sleep(for: .milliseconds(200))

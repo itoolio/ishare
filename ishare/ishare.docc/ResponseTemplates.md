@@ -4,7 +4,7 @@ Build the shared link and the deletion URL from the service's response.
 
 ## Overview
 
-`responseURL` and `deletionURL` are templates. Text outside double braces is copied as is, and every `{{placeholder}}` is replaced with a value from the response body. ``ResponseTemplate`` renders them after a successful upload.
+`responseURL` and `deletionURL` are templates. Text outside double braces is copied as is, and every `{{placeholder}}` is replaced with a value from the response body. `ResponseTemplate` renders them after a successful upload.
 
 ### JSON paths
 

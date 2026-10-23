@@ -2,6 +2,7 @@ import CoreGraphics
 import Defaults
 import Foundation
 import ImageIO
+import ishareCore
 import Testing
 import UniformTypeIdentifiers
 @testable import ishare
@@ -44,9 +45,11 @@ enum SyntheticImages {
     }
 
     static func unfilteredPNG(name: String = "shot.png") throws -> URL {
-        try write(image(), type: .png, name: name, properties: [
-            kCGImagePropertyPNGDictionary: [kCGImagePropertyPNGCompressionFilter: PNGFilters.none, kCGImagePropertyPNGDescription: String(repeating: "ishare ", count: 400)],
-        ])
+        try write(
+            image(), type: .png, name: name,
+            properties: [
+                kCGImagePropertyPNGDictionary: [kCGImagePropertyPNGCompressionFilter: PNGFilters.none, kCGImagePropertyPNGDescription: String(repeating: "ishare ", count: 400)]
+            ])
     }
 
     static func properties(_ url: URL) -> [CFString: Any] {
@@ -55,19 +58,21 @@ enum SyntheticImages {
     }
 
     static func photoWithLocation() throws -> URL {
-        try write(image(alpha: false, colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!), type: .jpeg, name: "IMG_0001.JPG", properties: [
-            kCGImagePropertyOrientation: 6,
-            kCGImagePropertyGPSDictionary: [
-                kCGImagePropertyGPSLatitude: 48.2082, kCGImagePropertyGPSLatitudeRef: "N",
-                kCGImagePropertyGPSLongitude: 16.3738, kCGImagePropertyGPSLongitudeRef: "E",
-            ],
-            kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "Apple", kCGImagePropertyTIFFModel: "iPhone 17 Pro", kCGImagePropertyTIFFOrientation: 6],
-            kCGImagePropertyExifDictionary: [
-                kCGImagePropertyExifLensModel: "iPhone 17 Pro back camera", kCGImagePropertyExifBodySerialNumber: "F2LXK0001",
-                kCGImagePropertyExifDateTimeOriginal: "2026:01:01 12:00:00",
-            ],
-            kCGImagePropertyIPTCDictionary: [kCGImagePropertyIPTCByline: ["Jane Doe"], kCGImagePropertyIPTCCity: "Vienna"],
-        ])
+        try write(
+            image(alpha: false, colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!), type: .jpeg, name: "IMG_0001.JPG",
+            properties: [
+                kCGImagePropertyOrientation: 6,
+                kCGImagePropertyGPSDictionary: [
+                    kCGImagePropertyGPSLatitude: 48.2082, kCGImagePropertyGPSLatitudeRef: "N",
+                    kCGImagePropertyGPSLongitude: 16.3738, kCGImagePropertyGPSLongitudeRef: "E",
+                ],
+                kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "Apple", kCGImagePropertyTIFFModel: "iPhone 17 Pro", kCGImagePropertyTIFFOrientation: 6],
+                kCGImagePropertyExifDictionary: [
+                    kCGImagePropertyExifLensModel: "iPhone 17 Pro back camera", kCGImagePropertyExifBodySerialNumber: "F2LXK0001",
+                    kCGImagePropertyExifDateTimeOriginal: "2026:01:01 12:00:00",
+                ],
+                kCGImagePropertyIPTCDictionary: [kCGImagePropertyIPTCByline: ["Jane Doe"], kCGImagePropertyIPTCCity: "Vienna"],
+            ])
     }
 }
 
@@ -130,7 +135,9 @@ struct ImageOptimizerTests {
         #expect(keepFormat.format == .lossless)
         #expect(keepFormat.enabled)
         #expect(!ImageOptimizationSettings.resolved(global: global, override: ImageOptimizationOverride(enabled: false)).enabled)
-        #expect(try CustomUploader.fromJSON(Data(#"{"name": "x", "requestURL": "https://x", "responseURL": "{{url}}", "imageOptimization": {"format": "png"}}"#.utf8)).imageOptimization?.format == .lossless)
+        #expect(
+            try CustomUploader.fromJSON(Data(#"{"name": "x", "requestURL": "https://x", "responseURL": "{{url}}", "imageOptimization": {"format": "png"}}"#.utf8))
+                .imageOptimization?.format == .lossless)
     }
 
     @Test func describesTheSavings() {
@@ -144,7 +151,9 @@ struct ImageOptimizerTests {
         let space = CGColorSpace(name: CGColorSpace.sRGB)!
         var data = [UInt8](repeating: 0, count: image.width * image.height * 4)
         data.withUnsafeMutableBytes { buffer in
-            let context = CGContext(data: buffer.baseAddress, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            let context = CGContext(
+                data: buffer.baseAddress, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
             context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
         }
         return data

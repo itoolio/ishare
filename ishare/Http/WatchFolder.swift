@@ -49,8 +49,8 @@ enum WatchFolderScanner {
         let contents = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles])) ?? []
         return contents.compactMap { url in
             guard isCandidate(url, filter: filter),
-                  let values = try? url.resourceValues(forKeys: Set(keys)),
-                  values.isRegularFile == true, values.isPackage != true
+                let values = try? url.resourceValues(forKeys: Set(keys)),
+                values.isRegularFile == true, values.isPackage != true
             else { return nil }
             return WatchedFile(url: url.standardizedFileURL, size: values.fileSize ?? 0, modified: values.contentModificationDate ?? .distantPast)
         }

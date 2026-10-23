@@ -1,13 +1,14 @@
 import Foundation
 import SwiftyJSON
 import Testing
-@testable import ishare
+@testable import ishareCore
 
 struct ResponseTemplateTests {
-    let json = JSON(parseJSON: """
-    {"url": "https://example.com/a.png", "files": [{"url": "https://cdn.example.com/f.png", "id": 7}],
-     "data": {"link": "https://i.imgur.com/x.png", "nested": {"deep": [1, {"value": true}]}}}
-    """)
+    let json = JSON(
+        parseJSON: """
+            {"url": "https://example.com/a.png", "files": [{"url": "https://cdn.example.com/f.png", "id": 7}],
+             "data": {"link": "https://i.imgur.com/x.png", "nested": {"deep": [1, {"value": true}]}}}
+            """)
 
     @Test func rendersSimpleKey() throws {
         #expect(try ResponseTemplate.render("{{url}}", json: json) == "https://example.com/a.png")

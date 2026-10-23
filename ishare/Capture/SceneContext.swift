@@ -26,7 +26,8 @@ enum SceneLabels {
 
     static func select(_ labels: [SceneLabel], minimumConfidence: Float = minimumConfidence, limit: Int = maximumCount) -> [String] {
         var seen = Set<String>()
-        return labels
+        return
+            labels
             .filter { $0.confidence >= minimumConfidence }
             .sorted { $0.confidence > $1.confidence }
             .map { humanized($0.identifier) }

@@ -22,7 +22,8 @@ enum CodeDetection {
 
     static func uniquePayloads(_ payloads: [String]) -> [String] {
         var seen = Set<String>()
-        return payloads
+        return
+            payloads
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty && seen.insert($0).inserted }
     }

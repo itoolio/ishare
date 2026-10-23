@@ -1,4 +1,5 @@
 import Foundation
+import ishareCore
 import Security
 import Synchronization
 
@@ -56,7 +57,7 @@ enum SharedKeychainGroup {
 
     static func entitledGroups() -> [String] {
         guard let task = SecTaskCreateFromSelf(nil),
-              let value = SecTaskCopyValueForEntitlement(task, entitlement as CFString, nil)
+            let value = SecTaskCopyValueForEntitlement(task, entitlement as CFString, nil)
         else { return [] }
         return (value as? [String]) ?? []
     }
@@ -265,7 +266,9 @@ enum S3SecretError: LocalizedError, Equatable {
         switch self {
         case let .missingSecret(name):
             String(
-                format: "The secret access key for “%@” isn't on this Mac yet. It may still be syncing via iCloud Keychain; if it doesn't appear, edit the uploader and enter it again.".localized(),
+                format:
+                    "The secret access key for “%@” isn't on this Mac yet. It may still be syncing via iCloud Keychain; if it doesn't appear, edit the uploader and enter it again."
+                    .localized(),
                 name
             )
         }

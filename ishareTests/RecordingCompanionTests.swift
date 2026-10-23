@@ -226,11 +226,13 @@ enum SyntheticAudio {
     static func make(seconds: Double) throws -> URL {
         let url = FileManager.default.temporaryDirectory.appending(path: "ishare-audio-\(UUID().uuidString).m4a")
         let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48000, channels: 2))
-        let file = try AVAudioFile(forWriting: url, settings: [
-            AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: 48000,
-            AVNumberOfChannelsKey: 2,
-        ])
+        let file = try AVAudioFile(
+            forWriting: url,
+            settings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: 48000,
+                AVNumberOfChannelsKey: 2,
+            ])
         let frames = AVAudioFrameCount(seconds * 48000)
         let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames))
         buffer.frameLength = frames

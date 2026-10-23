@@ -6,7 +6,9 @@ import Testing
 @MainActor
 struct EditorDocumentTests {
     func image(width: Int = 400, height: Int = 300, gray: CGFloat = 1) -> CGImage {
-        let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         context.setFillColor(CGColor(gray: gray, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         return context.makeImage()!
@@ -14,7 +16,9 @@ struct EditorDocumentTests {
 
     func pixel(_ image: CGImage, x: Int, y: Int) -> [UInt8] {
         var data = [UInt8](repeating: 0, count: 4)
-        let context = CGContext(data: &data, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let context = CGContext(
+            data: &data, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         context.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
         return data
     }
@@ -76,7 +80,9 @@ struct EditorDocumentTests {
     }
 
     @Test func pixelatesOnlyTheSelectedRegion() throws {
-        let context = CGContext(data: nil, width: 200, height: 200, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let context = CGContext(
+            data: nil, width: 200, height: 200, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         for x in 0 ..< 200 {
             context.setFillColor(CGColor(gray: x % 2 == 0 ? 0 : 1, alpha: 1))
             context.fill(CGRect(x: x, y: 0, width: 1, height: 200))
@@ -114,7 +120,9 @@ struct EditorDocumentTests {
 @MainActor
 struct EditorToolTests {
     func checkerboard(width: Int = 200, height: Int = 100) -> CGImage {
-        let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         context.setFillColor(CGColor(gray: 1, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         context.setFillColor(CGColor(srgbRed: 1, green: 0, blue: 0, alpha: 1))
@@ -137,14 +145,18 @@ struct EditorToolTests {
     }
 
     @Test func smartEraserFillsWithTheSurroundingColor() throws {
-        let context = CGContext(data: nil, width: 100, height: 100, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let context = CGContext(
+            data: nil, width: 100, height: 100, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         context.setFillColor(CGColor(srgbRed: 0, green: 0, blue: 1, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: 100, height: 100))
         context.setFillColor(CGColor(gray: 1, alpha: 1))
         context.fill(CGRect(x: 40, y: 40, width: 20, height: 20))
         let erased = ImageProcessing.erase(context.makeImage()!, region: CGRect(x: 35, y: 35, width: 30, height: 30))
         var pixel = [UInt8](repeating: 0, count: 4)
-        let probe = CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let probe = CGContext(
+            data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         probe.draw(erased, in: CGRect(x: -50, y: -50, width: 100, height: 100))
         #expect(pixel[0] < 30)
         #expect(pixel[2] > 220)
@@ -194,7 +206,9 @@ struct EditorToolTests {
         document.add(Annotation(shape: .magnify(CGRect(x: 90, y: 0, width: 100, height: 100)), color: .white, lineWidth: 1))
         let rendered = try #require(document.render())
         var pixel = [UInt8](repeating: 0, count: 4)
-        let probe = CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let probe = CGContext(
+            data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         probe.draw(rendered, in: CGRect(x: -96, y: -50, width: 200, height: 100))
         #expect(pixel[1] > 200, "Expected magnified white content but got \(pixel)")
     }

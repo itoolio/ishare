@@ -49,7 +49,7 @@ enum PDFExporter {
         let data = NSMutableData()
         var mediaBox = CGRect(origin: .zero, size: region.size)
         guard let consumer = CGDataConsumer(data: data as CFMutableData),
-              let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil)
+            let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil)
         else { return nil }
         context.beginPDFPage(nil)
         context.saveGState()
@@ -80,7 +80,9 @@ enum SVGExporter {
         let annotations = input.visibleAnnotations.filter { !$0.isEffect }
         var body: [String] = []
         if let cropped = raster.cropping(to: region), let uri = dataURI(for: cropped) {
-            body.append(#"<image x="\#(number(region.minX))" y="\#(number(region.minY))" width="\#(number(region.width))" height="\#(number(region.height))" preserveAspectRatio="none" xlink:href="\#(uri)"/>"#)
+            body.append(
+                #"<image x="\#(number(region.minX))" y="\#(number(region.minY))" width="\#(number(region.width))" height="\#(number(region.height))" preserveAspectRatio="none" xlink:href="\#(uri)"/>"#
+            )
         }
         let spotlights = annotations.filter(\.isSpotlight)
         if !spotlights.isEmpty {
@@ -92,7 +94,8 @@ enum SVGExporter {
         for annotation in annotations where !annotation.isSpotlight && !annotation.isMagnifier {
             body.append(contentsOf: elements(for: annotation, source: raster))
         }
-        let header = #"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="\#(number(region.width))" height="\#(number(region.height))" viewBox="\#(number(region.minX)) \#(number(region.minY)) \#(number(region.width)) \#(number(region.height))">"#
+        let header =
+            #"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="\#(number(region.width))" height="\#(number(region.height))" viewBox="\#(number(region.minX)) \#(number(region.minY)) \#(number(region.width)) \#(number(region.height))">"#
         return (["<?xml version=\"1.0\" encoding=\"UTF-8\"?>", header] + body.map { "  " + $0 } + ["</svg>"]).joined(separator: "\n") + "\n"
     }
 
@@ -180,20 +183,28 @@ enum SVGExporter {
             return arrowElements(start: start, control: control, end: end, annotation: annotation)
         case let .line(start, end):
             let cap = annotation.dashed ? "butt" : "round"
-            return [#"<line x1="\#(number(start.x))" y1="\#(number(start.y))" x2="\#(number(end.x))" y2="\#(number(end.y))" \#(stroke(annotation.color, width: annotation.lineWidth, cap: cap, dash: dash(for: annotation)))/>"#]
+            return [
+                #"<line x1="\#(number(start.x))" y1="\#(number(start.y))" x2="\#(number(end.x))" y2="\#(number(end.y))" \#(stroke(annotation.color, width: annotation.lineWidth, cap: cap, dash: dash(for: annotation)))/>"#
+            ]
         case let .rectangle(rect):
             let radius = min(6, rect.width / 2, rect.height / 2)
-            let paint = annotation.filled
+            let paint =
+                annotation.filled
                 ? fill(annotation.color)
                 : stroke(annotation.color, width: annotation.lineWidth, cap: annotation.dashed ? "butt" : "round", dash: dash(for: annotation))
-            return [#"<rect x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" rx="\#(number(radius))" ry="\#(number(radius))" \#(paint)/>"#]
+            return [
+                #"<rect x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" rx="\#(number(radius))" ry="\#(number(radius))" \#(paint)/>"#
+            ]
         case let .ellipse(rect):
-            let paint = annotation.filled
+            let paint =
+                annotation.filled
                 ? fill(annotation.color)
                 : stroke(annotation.color, width: annotation.lineWidth, cap: annotation.dashed ? "butt" : "round", dash: dash(for: annotation))
             return [#"<ellipse cx="\#(number(rect.midX))" cy="\#(number(rect.midY))" rx="\#(number(rect.width / 2))" ry="\#(number(rect.height / 2))" \#(paint)/>"#]
         case let .highlight(rect):
-            return [#"<rect x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" \#(fill(annotation.color, opacity: 0.35)) style="mix-blend-mode:multiply"/>"#]
+            return [
+                #"<rect x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" \#(fill(annotation.color, opacity: 0.35)) style="mix-blend-mode:multiply"/>"#
+            ]
         case let .pen(points):
             return [#"<path d="\#(polyline(points))" \#(stroke(annotation.color, width: annotation.lineWidth))/>"#]
         case let .marker(points):
@@ -232,7 +243,8 @@ enum SVGExporter {
         let shaft: String
         if let control {
             let trimmed = ArrowGeometry.trimmed(start: start, control: control, end: end, startBy: startRetraction, endBy: retraction)
-            shaft = "M\(number(trimmed.start.x)) \(number(trimmed.start.y)) Q\(number(trimmed.control.x)) \(number(trimmed.control.y)) \(number(trimmed.end.x)) \(number(trimmed.end.y))"
+            shaft =
+                "M\(number(trimmed.start.x)) \(number(trimmed.start.y)) Q\(number(trimmed.control.x)) \(number(trimmed.control.y)) \(number(trimmed.end.x)) \(number(trimmed.end.y))"
         } else {
             let from = ArrowGeometry.retracted(start, toward: end, by: startRetraction)
             let to = ArrowGeometry.retracted(end, toward: start, by: retraction)
@@ -252,9 +264,11 @@ enum SVGExporter {
         case .filled:
             return #"<path d="M\#(number(tip.x)) \#(number(tip.y)) L\#(number(left.x)) \#(number(left.y)) L\#(number(right.x)) \#(number(right.y)) Z" \#(fill(annotation.color))/>"#
         case .open:
-            return #"<path d="M\#(number(tip.x)) \#(number(tip.y)) L\#(number(left.x)) \#(number(left.y)) L\#(number(right.x)) \#(number(right.y)) Z" \#(stroke(annotation.color, width: annotation.lineWidth))/>"#
+            return
+                #"<path d="M\#(number(tip.x)) \#(number(tip.y)) L\#(number(left.x)) \#(number(left.y)) L\#(number(right.x)) \#(number(right.y)) Z" \#(stroke(annotation.color, width: annotation.lineWidth))/>"#
         case .line:
-            return #"<path d="M\#(number(left.x)) \#(number(left.y)) L\#(number(tip.x)) \#(number(tip.y)) L\#(number(right.x)) \#(number(right.y))" \#(stroke(annotation.color, width: annotation.lineWidth))/>"#
+            return
+                #"<path d="M\#(number(left.x)) \#(number(left.y)) L\#(number(tip.x)) \#(number(tip.y)) L\#(number(right.x)) \#(number(right.y))" \#(stroke(annotation.color, width: annotation.lineWidth))/>"#
         }
     }
 
@@ -293,7 +307,8 @@ enum SVGExporter {
         if !text.isEmpty {
             let padding = annotation.fontSize * 0.4
             let size = AnnotationRenderer.textSize(text, fontSize: annotation.fontSize)
-            result.append(textElement(text, origin: CGPoint(x: rect.minX + padding, y: rect.midY - size.height / 2), fontSize: annotation.fontSize, color: annotation.color.contrastingText))
+            result.append(
+                textElement(text, origin: CGPoint(x: rect.minX + padding, y: rect.midY - size.height / 2), fontSize: annotation.fontSize, color: annotation.color.contrastingText))
         }
         return result
     }
@@ -305,7 +320,8 @@ enum SVGExporter {
         let size = AnnotationRenderer.textSize(label, fontSize: fontSize, weight: .bold)
         return [
             #"<circle cx="\#(number(center.x))" cy="\#(number(center.y))" r="\#(number(radius))" \#(fill(annotation.color))/>"#,
-            textElement(label, origin: CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2), fontSize: fontSize, color: annotation.color.contrastingText, weight: 700),
+            textElement(
+                label, origin: CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2), fontSize: fontSize, color: annotation.color.contrastingText, weight: 700),
         ]
     }
 
@@ -313,10 +329,16 @@ enum SVGExporter {
         let identifier = "lens-" + annotation.id.uuidString.lowercased()
         var result: [String] = []
         if let crop = AnnotationRenderer.magnifiedSource(for: rect, in: source), let uri = dataURI(for: crop) {
-            result.append(#"<clipPath id="\#(identifier)"><ellipse cx="\#(number(rect.midX))" cy="\#(number(rect.midY))" rx="\#(number(rect.width / 2))" ry="\#(number(rect.height / 2))"/></clipPath>"#)
-            result.append(#"<image x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" preserveAspectRatio="none" clip-path="url(#\#(identifier))" xlink:href="\#(uri)"/>"#)
+            result.append(
+                #"<clipPath id="\#(identifier)"><ellipse cx="\#(number(rect.midX))" cy="\#(number(rect.midY))" rx="\#(number(rect.width / 2))" ry="\#(number(rect.height / 2))"/></clipPath>"#
+            )
+            result.append(
+                #"<image x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" preserveAspectRatio="none" clip-path="url(#\#(identifier))" xlink:href="\#(uri)"/>"#
+            )
         }
-        result.append(#"<ellipse cx="\#(number(rect.midX))" cy="\#(number(rect.midY))" rx="\#(number(rect.width / 2))" ry="\#(number(rect.height / 2))" \#(stroke(annotation.color, width: max(3, annotation.lineWidth)))/>"#)
+        result.append(
+            #"<ellipse cx="\#(number(rect.midX))" cy="\#(number(rect.midY))" rx="\#(number(rect.width / 2))" ry="\#(number(rect.height / 2))" \#(stroke(annotation.color, width: max(3, annotation.lineWidth)))/>"#
+        )
         return result
     }
 
@@ -329,7 +351,8 @@ enum SVGExporter {
 
     private static func imageElement(_ image: CGImage?, in rect: CGRect) -> String? {
         guard let image, let uri = dataURI(for: image) else { return nil }
-        return #"<image x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" preserveAspectRatio="none" xlink:href="\#(uri)"/>"#
+        return
+            #"<image x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" preserveAspectRatio="none" xlink:href="\#(uri)"/>"#
     }
 
     static func dataURI(for image: CGImage) -> String? {
@@ -340,10 +363,12 @@ enum SVGExporter {
     private static func rasterized(_ image: NSImage, size: CGSize) -> CGImage? {
         let width = max(1, Int(size.width.rounded(.up)))
         let height = max(1, Int(size.height.rounded(.up)))
-        guard let context = CGContext(
-            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
         image.draw(in: CGRect(x: 0, y: 0, width: width, height: height), from: .zero, operation: .sourceOver, fraction: 1)

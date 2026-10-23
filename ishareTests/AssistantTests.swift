@@ -1,4 +1,5 @@
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
 
@@ -18,7 +19,8 @@ struct UploaderAssistantMapperTests {
     }
 
     @Test func prefersTheUsersAnswersOverTheModel() {
-        let answers = AssistantAnswers(service: "Zipline", endpoint: "https://share.example.com/api/upload", authHeaderName: "authorization", authHeaderValue: "real-token", fileFieldName: "upload")
+        let answers = AssistantAnswers(
+            service: "Zipline", endpoint: "https://share.example.com/api/upload", authHeaderName: "authorization", authHeaderValue: "real-token", fileFieldName: "upload")
         let uploader = UploaderAssistantMapper.uploader(from: spec, answers: answers)
         #expect(uploader.requestURL == "https://share.example.com/api/upload")
         #expect(uploader.headers?["authorization"] == "real-token")

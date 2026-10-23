@@ -38,65 +38,6 @@ enum TestImages {
     }
 }
 
-struct SelectionMeasurementTests {
-    @Test func measuresLengthInPointsAndPixels() {
-        let measurement = SelectionMeasurement(start: CGPoint(x: 10, y: 10), end: CGPoint(x: 40, y: 50))
-        #expect(measurement.length == 50)
-        #expect(measurement.pixelLength(scale: 2) == 100)
-        #expect(measurement.delta == CGVector(dx: 30, dy: 40))
-        #expect(measurement.label(scale: 2) == "50 pt · 100 px   Δx 30  Δy 40")
-    }
-
-    @Test func locksToTheDominantAxis() {
-        let horizontal = SelectionMeasurement(start: .zero, end: CGPoint(x: 80, y: 12)).lockedToAxis()
-        #expect(horizontal.end == CGPoint(x: 80, y: 0))
-        let vertical = SelectionMeasurement(start: .zero, end: CGPoint(x: -5, y: -60)).lockedToAxis()
-        #expect(vertical.end == CGPoint(x: 0, y: -60))
-    }
-
-    @Test func formatsFractionalValuesWithOneDecimal() {
-        #expect(SelectionMeasurement.format(12) == "12")
-        #expect(SelectionMeasurement.format(12.34) == "12.3")
-        #expect(SelectionMeasurement.format(1.999) == "2")
-    }
-
-    @Test func convertsViewLocationsToTopLeftDisplayCoordinates() {
-        let bounds = CGRect(x: 0, y: 0, width: 1440, height: 900)
-        #expect(DisplayCoordinates.topLeftPoint(for: CGPoint(x: 100.7, y: 800.2), in: bounds) == CGPoint(x: 100, y: 99))
-        #expect(DisplayCoordinates.pixel(for: CGPoint(x: 100, y: 800), in: bounds, scale: 2) == CGPoint(x: 200, y: 200))
-        #expect(DisplayCoordinates.label(for: CGPoint(x: 0, y: 900), in: bounds) == "0, 0")
-    }
-}
-
-struct MagnifierLayoutTests {
-    let bounds = CGRect(x: 0, y: 0, width: 1440, height: 900)
-
-    @Test func sitsBelowAndRightOfTheCursorByDefault() {
-        let frame = MagnifierLayout.cardFrame(for: CGPoint(x: 400, y: 500), in: bounds)
-        #expect(frame.minX == 400 + MagnifierLayout.cursorOffset)
-        #expect(frame.maxY == 500 - MagnifierLayout.cursorOffset)
-        #expect(frame.size == MagnifierLayout.cardSize)
-    }
-
-    @Test func flipsAwayFromTheRightAndBottomEdges() {
-        let frame = MagnifierLayout.cardFrame(for: CGPoint(x: 1430, y: 20), in: bounds)
-        #expect(frame.maxX == 1430 - MagnifierLayout.cursorOffset)
-        #expect(frame.minY == 20 + MagnifierLayout.cursorOffset)
-    }
-
-    @Test(arguments: [CGPoint(x: 0, y: 0), CGPoint(x: 1440, y: 900), CGPoint(x: 0, y: 900), CGPoint(x: 1440, y: 0), CGPoint(x: 720, y: 450), CGPoint(x: 5, y: 120)])
-    func alwaysStaysOnScreen(location: CGPoint) {
-        let frame = MagnifierLayout.cardFrame(for: location, in: bounds)
-        #expect(bounds.contains(frame))
-    }
-
-    @Test func staysOnScreenOnTinyDisplays() {
-        let small = CGRect(x: 0, y: 0, width: 300, height: 240)
-        let frame = MagnifierLayout.cardFrame(for: CGPoint(x: 150, y: 120), in: small)
-        #expect(small.contains(frame))
-    }
-}
-
 struct PixelColorTests {
     @Test func readsTheColorUnderAPixel() {
         let image = TestImages.make(width: 4, height: 4) { context in
@@ -184,7 +125,9 @@ struct BeautifierTests {
         #expect(style.shadowRadius == 0)
         #expect(style.fill == .solid(sampleColor))
         #expect(BeautifyStyle(background: .transparent, solidColor: sampleColor, padding: 24, cornerRadius: 10, shadow: true, scale: 2).shadowRadius > 0)
-        #expect(BeautifyStyle(background: .forest, solidColor: sampleColor, padding: 0, cornerRadius: 0, shadow: false, scale: 1).fill == .gradient(BeautifyBackground.forest.gradientColors!))
+        #expect(
+            BeautifyStyle(background: .forest, solidColor: sampleColor, padding: 0, cornerRadius: 0, shadow: false, scale: 1).fill
+                == .gradient(BeautifyBackground.forest.gradientColors!))
     }
 
     @Test func everyGradientHasTwoStops() {
@@ -261,8 +204,12 @@ struct PrivacyRedactionTests {
 
     @Test func cropsTheMenuBarFromTheTopOfACapture() {
         let size = CGSize(width: 2880, height: 1800)
-        #expect(PrivacyRedaction.menuBarCrop(region: CGRect(x: 0, y: 0, width: 1440, height: 900), menuBarHeight: 33, scale: 2, pixelSize: size) == CGRect(x: 0, y: 66, width: 2880, height: 1734))
-        #expect(PrivacyRedaction.menuBarCrop(region: CGRect(x: 100, y: 20, width: 200, height: 100), menuBarHeight: 33, scale: 2, pixelSize: CGSize(width: 400, height: 200)) == CGRect(x: 0, y: 26, width: 400, height: 174))
+        #expect(
+            PrivacyRedaction.menuBarCrop(region: CGRect(x: 0, y: 0, width: 1440, height: 900), menuBarHeight: 33, scale: 2, pixelSize: size)
+                == CGRect(x: 0, y: 66, width: 2880, height: 1734))
+        #expect(
+            PrivacyRedaction.menuBarCrop(region: CGRect(x: 100, y: 20, width: 200, height: 100), menuBarHeight: 33, scale: 2, pixelSize: CGSize(width: 400, height: 200))
+                == CGRect(x: 0, y: 26, width: 400, height: 174))
     }
 
     @Test func keepsCapturesThatDoNotTouchOrOnlyContainTheMenuBar() {

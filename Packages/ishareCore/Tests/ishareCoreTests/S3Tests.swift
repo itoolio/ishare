@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ishare
+@testable import ishareCore
 
 struct SigV4SignerTests {
     let signer = SigV4Signer(
@@ -30,7 +30,10 @@ struct SigV4SignerTests {
         )
         #expect(result.signedHeaders == "host;range;x-amz-content-sha256;x-amz-date")
         #expect(result.signature == "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41")
-        #expect(result.authorization == "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41")
+        #expect(
+            result.authorization
+                == "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
+        )
     }
 
     @Test func matchesAWSPutObjectExample() {
@@ -127,7 +130,8 @@ struct S3KeyTemplateTests {
 
 struct S3RequestBuilderTests {
     @Test func signsUploadRequestsWithACLAndContentType() throws {
-        let configuration = S3Configuration(endpoint: "https://s3.us-east-1.amazonaws.com", region: "us-east-1", bucket: "b", accessKeyId: "AK", secretAccessKey: "SK", acl: "public-read")
+        let configuration = S3Configuration(
+            endpoint: "https://s3.us-east-1.amazonaws.com", region: "us-east-1", bucket: "b", accessKeyId: "AK", secretAccessKey: "SK", acl: "public-read")
         let request = try S3RequestBuilder.upload(
             configuration: configuration, fileURL: URL(fileURLWithPath: "/tmp/x.png"), contentType: "image/png",
             payloadHash: "abc", context: S3KeyContext(fileName: "x.png"), date: Date(timeIntervalSince1970: 0)

@@ -108,9 +108,11 @@ final class StubUploadServer: Sendable {
             body = Data(#"{"error":"not found"}"#.utf8)
         }
         let head = "HTTP/1.1 \(status)\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
-        connection.send(content: Data(head.utf8) + body, completion: .contentProcessed { _ in
-            connection.cancel()
-        })
+        connection.send(
+            content: Data(head.utf8) + body,
+            completion: .contentProcessed { _ in
+                connection.cancel()
+            })
     }
 }
 
@@ -123,7 +125,7 @@ struct HTTPRequest {
     init?(parsing data: Data) {
         let separator = Data("\r\n\r\n".utf8)
         guard let headerEnd = data.range(of: separator),
-              let head = String(data: data[data.startIndex ..< headerEnd.lowerBound], encoding: .utf8)
+            let head = String(data: data[data.startIndex ..< headerEnd.lowerBound], encoding: .utf8)
         else { return nil }
         var lines = head.components(separatedBy: "\r\n")
         let requestLine = lines.removeFirst().split(separator: " ")
@@ -153,8 +155,8 @@ struct HTTPRequest {
         let lineEnd = Data("\r\n".utf8)
         while true {
             guard let sizeEnd = data[index...].range(of: lineEnd),
-                  let sizeLine = String(data: data[index ..< sizeEnd.lowerBound], encoding: .ascii),
-                  let size = Int(sizeLine.split(separator: ";").first.map(String.init) ?? "", radix: 16)
+                let sizeLine = String(data: data[index ..< sizeEnd.lowerBound], encoding: .ascii),
+                let size = Int(sizeLine.split(separator: ";").first.map(String.init) ?? "", radix: 16)
             else { return nil }
             let start = sizeEnd.upperBound
             if size == 0 { return body }

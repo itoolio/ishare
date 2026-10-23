@@ -30,5 +30,3 @@ This documentation covers two audiences:
 - ``UploadOutcome``
 - ``UploadTarget``
 - ``UploadFailure``
-- ``CustomUploader``
-- ``UploaderKind``

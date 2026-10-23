@@ -43,7 +43,8 @@ final class UploadQueue: ObservableObject {
     }
 
     static var defaultDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let base =
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return base.appending(path: "ishare/UploadQueue", directoryHint: .isDirectory)
     }

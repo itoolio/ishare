@@ -74,7 +74,8 @@ enum AppCommandRegistry {
             guard let best = [titleScore, keywordScore].compactMap({ $0 }).max() else { return nil }
             return (index, AppCommandMatch(command: command, score: best))
         }
-        return scored
+        return
+            scored
             .sorted { $0.1.score != $1.1.score ? $0.1.score > $1.1.score : $0.0 < $1.0 }
             .map(\.1)
     }
@@ -91,39 +92,52 @@ extension AppCommand {
 
     @MainActor private static func captureCommands() -> [AppCommand] {
         [
-            AppCommand(id: "capture.region", title: "Capture Region", keywords: ["screenshot", "area", "selection"], symbol: "rectangle.dashed",
-                       perform: afterDismissing { await CaptureSession.captureImage(.REGION) }),
-            AppCommand(id: "capture.window", title: "Capture Window", keywords: ["screenshot", "app"], symbol: "macwindow",
-                       perform: afterDismissing { await CaptureSession.captureImage(.WINDOW) }),
-            AppCommand(id: "capture.screen", title: "Capture Screen", keywords: ["screenshot", "display", "fullscreen"], symbol: "display",
-                       perform: afterDismissing { await CaptureSession.captureImage(.SCREEN) }),
-            AppCommand(id: "capture.scrolling", title: "Scrolling Capture", keywords: ["screenshot", "long", "scroll"], symbol: "arrow.up.and.down.text.horizontal",
-                       perform: afterDismissing { await CaptureSession.captureImage(.SCROLLING) }),
-            AppCommand(id: "capture.lastRegion", title: "Capture Last Region", keywords: ["screenshot", "repeat", "again"], symbol: "arrow.counterclockwise",
-                       perform: afterDismissing { await CaptureSession.captureImage(.LAST_REGION) }),
-            AppCommand(id: "capture.text", title: "Capture Text", keywords: ["ocr", "recognize", "copy text"], symbol: "text.viewfinder",
-                       perform: afterDismissing { await CaptureSession.captureImage(.TEXT) }),
-            AppCommand(id: "capture.timer", title: "Capture Region in 5 Seconds", keywords: ["timer", "delay", "countdown", "self-timer"], symbol: "timer",
-                       perform: afterDismissing { await CaptureSession.captureImage(.REGION, options: CaptureOptions(delay: 5)) }),
-            AppCommand(id: "capture.interval", title: IntervalCapture.isRunning ? "Stop Interval Capture" : "Interval Capture", keywords: ["burst", "time-lapse", "repeat"], symbol: "stopwatch",
-                       perform: afterDismissing { await IntervalCapture.toggle() }),
-            AppCommand(id: "capture.translate", title: "Capture and Translate", keywords: ["translation", "ocr", "language", "text"], symbol: "translate",
-                       perform: afterDismissing { await CaptureTranslateFlow.run() }),
+            AppCommand(
+                id: "capture.region", title: "Capture Region", keywords: ["screenshot", "area", "selection"], symbol: "rectangle.dashed",
+                perform: afterDismissing { await CaptureSession.captureImage(.REGION) }),
+            AppCommand(
+                id: "capture.window", title: "Capture Window", keywords: ["screenshot", "app"], symbol: "macwindow",
+                perform: afterDismissing { await CaptureSession.captureImage(.WINDOW) }),
+            AppCommand(
+                id: "capture.screen", title: "Capture Screen", keywords: ["screenshot", "display", "fullscreen"], symbol: "display",
+                perform: afterDismissing { await CaptureSession.captureImage(.SCREEN) }),
+            AppCommand(
+                id: "capture.scrolling", title: "Scrolling Capture", keywords: ["screenshot", "long", "scroll"], symbol: "arrow.up.and.down.text.horizontal",
+                perform: afterDismissing { await CaptureSession.captureImage(.SCROLLING) }),
+            AppCommand(
+                id: "capture.lastRegion", title: "Capture Last Region", keywords: ["screenshot", "repeat", "again"], symbol: "arrow.counterclockwise",
+                perform: afterDismissing { await CaptureSession.captureImage(.LAST_REGION) }),
+            AppCommand(
+                id: "capture.text", title: "Capture Text", keywords: ["ocr", "recognize", "copy text"], symbol: "text.viewfinder",
+                perform: afterDismissing { await CaptureSession.captureImage(.TEXT) }),
+            AppCommand(
+                id: "capture.timer", title: "Capture Region in 5 Seconds", keywords: ["timer", "delay", "countdown", "self-timer"], symbol: "timer",
+                perform: afterDismissing { await CaptureSession.captureImage(.REGION, options: CaptureOptions(delay: 5)) }),
+            AppCommand(
+                id: "capture.interval", title: IntervalCapture.isRunning ? "Stop Interval Capture" : "Interval Capture", keywords: ["burst", "time-lapse", "repeat"],
+                symbol: "stopwatch",
+                perform: afterDismissing { await IntervalCapture.toggle() }),
+            AppCommand(
+                id: "capture.translate", title: "Capture and Translate", keywords: ["translation", "ocr", "language", "text"], symbol: "translate",
+                perform: afterDismissing { await CaptureTranslateFlow.run() }),
         ] + askCommands() + presetCommands()
     }
 
     @MainActor private static func askCommands() -> [AppCommand] {
         guard CaptureAskFlow.isAvailable else { return [] }
         return [
-            AppCommand(id: "capture.ask", title: "Capture and Ask", keywords: ["apple intelligence", "question", "describe", "summarize", "explain"], symbol: "sparkles",
-                       perform: afterDismissing { await CaptureAskFlow.run() }),
+            AppCommand(
+                id: "capture.ask", title: "Capture and Ask", keywords: ["apple intelligence", "question", "describe", "summarize", "explain"], symbol: "sparkles",
+                perform: afterDismissing { await CaptureAskFlow.run() })
         ]
     }
 
     @MainActor private static func presetCommands() -> [AppCommand] {
         UploadPresets.all.map { preset in
-            AppCommand(id: "preset.\(preset.id.uuidString)", title: String(format: "Capture with %@".localized(), preset.name), keywords: ["preset", "upload", preset.name], symbol: "square.stack.3d.up",
-                       perform: afterDismissing { await UploadPresets.capture(preset, type: .REGION) })
+            AppCommand(
+                id: "preset.\(preset.id.uuidString)", title: String(format: "Capture with %@".localized(), preset.name), keywords: ["preset", "upload", preset.name],
+                symbol: "square.stack.3d.up",
+                perform: afterDismissing { await UploadPresets.capture(preset, type: .REGION) })
         }
     }
 
@@ -145,37 +159,48 @@ extension AppCommand {
             ] + recordingExtraCommands()
         }
         return recordingExtraCommands() + [
-            AppCommand(id: "record.screen", title: "Record Screen", keywords: ["video", "movie", "screencast"], symbol: "record.circle",
-                       perform: afterDismissing { CaptureSession.toggleRecording() }),
-            AppCommand(id: "record.region", title: "Record Region", keywords: ["video", "area"], symbol: "rectangle.dashed.badge.record",
-                       perform: afterDismissing { CaptureSession.toggleRecording(region: true) }),
-            AppCommand(id: "record.gif", title: "Record GIF", keywords: ["animation", "video"], symbol: "photo.stack",
-                       perform: afterDismissing { CaptureSession.toggleRecording(gif: true) }),
-            AppCommand(id: "record.regionGif", title: "Record Region as GIF", keywords: ["animation", "area"], symbol: "photo.stack",
-                       perform: afterDismissing { CaptureSession.toggleRecording(gif: true, region: true) }),
+            AppCommand(
+                id: "record.screen", title: "Record Screen", keywords: ["video", "movie", "screencast"], symbol: "record.circle",
+                perform: afterDismissing { CaptureSession.toggleRecording() }),
+            AppCommand(
+                id: "record.region", title: "Record Region", keywords: ["video", "area"], symbol: "rectangle.dashed.badge.record",
+                perform: afterDismissing { CaptureSession.toggleRecording(region: true) }),
+            AppCommand(
+                id: "record.gif", title: "Record GIF", keywords: ["animation", "video"], symbol: "photo.stack",
+                perform: afterDismissing { CaptureSession.toggleRecording(gif: true) }),
+            AppCommand(
+                id: "record.regionGif", title: "Record Region as GIF", keywords: ["animation", "area"], symbol: "photo.stack",
+                perform: afterDismissing { CaptureSession.toggleRecording(gif: true, region: true) }),
         ]
     }
 
     @MainActor private static func recordingExtraCommands() -> [AppCommand] {
         var commands = [
-            AppCommand(id: "record.notes", title: RecordingNotesController.shared.isVisible ? "Hide Notes" : "Show Notes", keywords: ["teleprompter", "script", "notes"], symbol: "list.bullet.rectangle") {
+            AppCommand(
+                id: "record.notes", title: RecordingNotesController.shared.isVisible ? "Hide Notes" : "Show Notes", keywords: ["teleprompter", "script", "notes"],
+                symbol: "list.bullet.rectangle"
+            ) {
                 MenuController.shared.dismiss()
                 AppModel.shared.recorder.toggleNotes()
-            },
+            }
         ]
         if InstantReplay.isRunning {
-            commands.append(AppCommand(id: "record.instantReplay", title: "Save Instant Replay", keywords: ["replay", "buffer", "clip", "last"], symbol: "gobackward",
-                                       perform: afterDismissing { await InstantReplay.shared.save() }))
+            commands.append(
+                AppCommand(
+                    id: "record.instantReplay", title: "Save Instant Replay", keywords: ["replay", "buffer", "clip", "last"], symbol: "gobackward",
+                    perform: afterDismissing { await InstantReplay.shared.save() }))
         }
         return commands
     }
 
     @MainActor private static func toolCommands() -> [AppCommand] {
         [
-            AppCommand(id: "editor.open", title: "Edit Image…", keywords: ["editor", "annotate", "markup"], symbol: "pencil.and.scribble",
-                       perform: afterDismissing { await ImageEditor.chooseAndEdit() }),
-            AppCommand(id: "upload.clipboard", title: "Upload Clipboard", keywords: ["pasteboard", "paste"], symbol: "doc.on.clipboard",
-                       perform: afterDismissing { await AppState.uploadPasteboard() }),
+            AppCommand(
+                id: "editor.open", title: "Edit Image…", keywords: ["editor", "annotate", "markup"], symbol: "pencil.and.scribble",
+                perform: afterDismissing { await ImageEditor.chooseAndEdit() }),
+            AppCommand(
+                id: "upload.clipboard", title: "Upload Clipboard", keywords: ["pasteboard", "paste"], symbol: "doc.on.clipboard",
+                perform: afterDismissing { await AppState.uploadPasteboard() }),
             AppCommand(id: "history.open", title: "Open History Window", keywords: ["uploads", "recent", "links"], symbol: "square.grid.2x2") {
                 MenuController.shared.dismiss()
                 openHistoryWindow(uploadHistory: Defaults[.uploadHistory])
@@ -187,12 +212,16 @@ extension AppCommand {
         guard let latest = Defaults[.uploadHistory].first else { return [] }
         var commands: [AppCommand] = []
         if latest.preferredURL.map({ !$0.isFileURL }) == true {
-            commands.append(AppCommand(id: "history.qr", title: "Show QR Code for Last Upload", keywords: ["qr", "scan", "phone", "link"], symbol: "qrcode",
-                                       perform: afterDismissing { QRCodePanel.show(for: latest) }))
+            commands.append(
+                AppCommand(
+                    id: "history.qr", title: "Show QR Code for Last Upload", keywords: ["qr", "scan", "phone", "link"], symbol: "qrcode",
+                    perform: afterDismissing { QRCodePanel.show(for: latest) }))
         }
         if HistoryActions.canShareOnLocalNetwork(latest) {
-            commands.append(AppCommand(id: "history.localNetwork", title: "Share Last Capture on Local Network", keywords: ["lan", "wi-fi", "local", "qr", "phone"], symbol: "wifi",
-                                       perform: afterDismissing { HistoryActions.shareOnLocalNetwork(latest) }))
+            commands.append(
+                AppCommand(
+                    id: "history.localNetwork", title: "Share Last Capture on Local Network", keywords: ["lan", "wi-fi", "local", "qr", "phone"], symbol: "wifi",
+                    perform: afterDismissing { HistoryActions.shareOnLocalNetwork(latest) }))
         }
         return commands
     }

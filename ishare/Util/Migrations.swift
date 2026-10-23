@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 
 enum Migrations {
     static let currentVersion = 5
@@ -58,7 +59,8 @@ enum Migrations {
     static func migrateStoredLanguage(defaults: UserDefaults) {
         let key = "storedlanguage"
         if let code = defaults.string(forKey: key), AppLanguage.override(in: defaults) == nil,
-           let language = LanguageTypes(rawValue: code), language != .english {
+            let language = LanguageTypes(rawValue: code), language != .english
+        {
             defaults.set([language.rawValue], forKey: AppLanguage.preferenceKey)
         }
         defaults.removeObject(forKey: key)

@@ -58,8 +58,9 @@ struct CountdownHUD: View {
             }
             .buttonStyle(.borderless)
             .keyboardShortcut(.cancelAction)
-            .help("Cancel".localized())
+            .helpAndAccessibilityLabel("Cancel".localized())
         }
+        .accessibilityElement(children: .contain)
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .adaptiveGlass(cornerRadius: 14)
@@ -126,7 +127,7 @@ final class CountdownKeyKeeper {
 
     private func restoreFocus() {
         guard let processID = focus.appToRestore,
-              let app = NSRunningApplication(processIdentifier: processID), !app.isTerminated
+            let app = NSRunningApplication(processIdentifier: processID), !app.isTerminated
         else { return }
         if NSApp.isActive {
             NSApp.yieldActivation(to: app)
@@ -156,7 +157,7 @@ enum CaptureCountdown {
                 try? await Task.sleep(for: .milliseconds(100))
             }
             if !model.cancelled {
-                withAnimation { model.remaining -= 1 }
+                withMotionAnimation { model.remaining -= 1 }
             }
         }
         keeper.finish()

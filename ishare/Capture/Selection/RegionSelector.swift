@@ -1,4 +1,5 @@
 import AppKit
+import ishareCore
 
 @MainActor
 final class RegionSelector {
@@ -288,12 +289,13 @@ final class RegionSelectionView: NSView {
     }
 
     private func nudge(keyCode: UInt16, step: CGFloat) {
-        let delta: CGVector = switch keyCode {
-        case KeyCode.left: CGVector(dx: -step, dy: 0)
-        case KeyCode.right: CGVector(dx: step, dy: 0)
-        case KeyCode.up: CGVector(dx: 0, dy: step)
-        default: CGVector(dx: 0, dy: -step)
-        }
+        let delta: CGVector =
+            switch keyCode {
+            case KeyCode.left: CGVector(dx: -step, dy: 0)
+            case KeyCode.right: CGVector(dx: step, dy: 0)
+            case KeyCode.up: CGVector(dx: 0, dy: step)
+            default: CGVector(dx: 0, dy: -step)
+            }
         if anchor != nil {
             current = clampToBounds(CGPoint(x: current.x + delta.dx, y: current.y + delta.dy))
             updateSelection()

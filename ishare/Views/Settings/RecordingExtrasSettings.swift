@@ -43,9 +43,12 @@ private struct InputOverlaySettingsSection: View {
         } header: {
             Text("Clicks & Keystrokes".localized())
         } footer: {
-            Text("Clicks and keystrokes are drawn on screen in full-screen and region recordings. In window and app recordings they are added to the video, together with the webcam, after you stop recording. Keystrokes need Input Monitoring permission; with “Only show shortcuts” on, plain typing such as passwords is never shown.".localized())
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "Clicks and keystrokes are drawn on screen in full-screen and region recordings. In window and app recordings they are added to the video, together with the webcam, after you stop recording. Keystrokes need Input Monitoring permission; with “Only show shortcuts” on, plain typing such as passwords is never shown."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
         .onAppear { inputMonitoringGranted = InputMonitoringPermission.isGranted }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -260,10 +263,12 @@ private struct AudioAppsPicker: View {
     var body: some View {
         VStack(spacing: 0) {
             List(choices) { choice in
-                Toggle(isOn: Binding(
-                    get: { bundleIDs.contains(choice.id) },
-                    set: { _ in bundleIDs = AudioAppChoice.toggled(choice.id, in: bundleIDs) }
-                )) {
+                Toggle(
+                    isOn: Binding(
+                        get: { bundleIDs.contains(choice.id) },
+                        set: { _ in bundleIDs = AudioAppChoice.toggled(choice.id, in: bundleIDs) }
+                    )
+                ) {
                     HStack {
                         Text(choice.name)
                         if !choice.isRunning {
@@ -326,9 +331,12 @@ private struct InstantReplaySettingsSection: View {
         } header: {
             Text("Instant Replay".localized())
         } footer: {
-            Text("Keeps recording your main display in the background and saves the last moments when you press the Save Instant Replay shortcut. The clip is kept in a few small temporary files on this Mac, never uploaded until you save it, and recording all the time uses extra CPU and battery. It pauses while the screen is locked and when the battery is below 20%.".localized())
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "Keeps recording your main display in the background and saves the last moments when you press the Save Instant Replay shortcut. The clip is kept in a few small temporary files on this Mac, never uploaded until you save it, and recording all the time uses extra CPU and battery. It pauses while the screen is locked and when the battery is below 20%."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -349,9 +357,12 @@ private struct NotesSettingsSection: View {
         } header: {
             Text("Notes".localized())
         } footer: {
-            Text("A floating notes panel, with an optional teleprompter, that only you can see: it is left out of every recording and screenshot. Show or hide it from the recording controls or with a shortcut.".localized())
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "A floating notes panel, with an optional teleprompter, that only you can see: it is left out of every recording and screenshot. Show or hide it from the recording controls or with a shortcut."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 }

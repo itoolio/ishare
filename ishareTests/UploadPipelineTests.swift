@@ -1,4 +1,5 @@
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
 
@@ -118,7 +119,9 @@ extension NetworkSuite {
 
         @Test func reportsStatusHeadersPrettyBodyAndParsedURLs() async throws {
             StubURLProtocol.reset { _ in
-                StubResponse(status: 201, headers: ["Content-Type": "application/json", "X-Request-Id": "42"], body: Data(#"{"url":"https://cdn.example.com/t.png","del":"https://cdn.example.com/d/1"}"#.utf8))
+                StubResponse(
+                    status: 201, headers: ["Content-Type": "application/json", "X-Request-Id": "42"],
+                    body: Data(#"{"url":"https://cdn.example.com/t.png","del":"https://cdn.example.com/d/1"}"#.utf8))
             }
             let uploader = TestUploaders.http(name: "t", host: "up.example.com").withTemplates(response: "{{url}}", deletion: "{{del}}")
             let report = await UploadTester.run(uploader)
@@ -256,7 +259,9 @@ struct TextSnippetTests {
         #expect(try String(contentsOf: url, encoding: .utf8) == "héllo wörld")
     }
 
-    @Test(arguments: [("txt", "text/plain; charset=utf-8"), ("md", "text/markdown; charset=utf-8"), ("json", "application/json; charset=utf-8"), ("swift", "text/plain; charset=utf-8")])
+    @Test(arguments: [
+        ("txt", "text/plain; charset=utf-8"), ("md", "text/markdown; charset=utf-8"), ("json", "application/json; charset=utf-8"), ("swift", "text/plain; charset=utf-8"),
+    ])
     func mapsTextMimeTypes(pair: (String, String)) {
         #expect(MimeType.forExtension(pair.0) == pair.1)
     }

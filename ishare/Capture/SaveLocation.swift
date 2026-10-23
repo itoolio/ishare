@@ -76,7 +76,8 @@ enum CaptureFileName {
 
     static func sanitize(_ component: String) -> String {
         let forbidden = CharacterSet(charactersIn: "/:\\?%*|\"<>")
-        return component
+        return
+            component
             .lowercased()
             .components(separatedBy: forbidden)
             .joined(separator: "-")

@@ -1,6 +1,7 @@
 import AppIntents
 import Defaults
 import Foundation
+import ishareCore
 import Testing
 import UniformTypeIdentifiers
 @testable import ishare

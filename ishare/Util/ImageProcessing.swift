@@ -54,15 +54,17 @@ enum ImageProcessing {
         let x = Int(pixel.x.rounded(.down))
         let y = Int(pixel.y.rounded(.down))
         guard x >= 0, y >= 0, x < image.width, y < image.height,
-              let single = image.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)),
-              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)
+            let single = image.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)),
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)
         else { return nil }
         var bytes = [UInt8](repeating: 0, count: 4)
         let drawn = bytes.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
-                space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return false }
+            guard
+                let context = CGContext(
+                    data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                    space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )
+            else { return false }
             context.setBlendMode(.copy)
             context.draw(single, in: CGRect(x: 0, y: 0, width: 1, height: 1))
             return true
@@ -96,12 +98,14 @@ enum ImageProcessing {
             filter.extent = strip
             guard let output = filter.outputImage else { continue }
             var pixel = [UInt8](repeating: 0, count: 4)
-            context.render(output, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+            context.render(
+                output, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
             for index in 0 ..< 4 {
                 totals[index] += Double(pixel[index]) / 255
             }
         }
-        return CIColor(red: totals[0] / 4, green: totals[1] / 4, blue: totals[2] / 4, alpha: 1, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!) ?? CIColor(red: 1, green: 1, blue: 1)
+        return CIColor(red: totals[0] / 4, green: totals[1] / 4, blue: totals[2] / 4, alpha: 1, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+            ?? CIColor(red: 1, green: 1, blue: 1)
     }
 
     static func erase(_ image: CGImage, region: CGRect) -> CGImage {

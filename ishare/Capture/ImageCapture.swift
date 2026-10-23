@@ -96,7 +96,8 @@ enum ImageCaptureFlow {
         let frontmost = frontmostAppName()
         let source = frontmostSource(in: content)
         let rawBackdrops = await ScreenshotEngine.backdrops(for: content)
-        let backdrops = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
+        let backdrops =
+            CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
             ? PrivacyFilter.redactBackdrops(rawBackdrops, content: content)
             : rawBackdrops
         let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
@@ -137,8 +138,8 @@ enum ImageCaptureFlow {
     static func captureLastRegion(displayID: CGDirectDisplayID?, content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
         let displayIDs = content.displays.map(\.displayID)
         guard let target = displayID ?? LastRegionStore.preferredDisplay(among: displayIDs, underMouse: NSScreen.underMouse?.displayID),
-              displayIDs.contains(target),
-              let rect = LastRegionStore.region(for: target)
+            displayIDs.contains(target),
+            let rect = LastRegionStore.region(for: target)
         else {
             return try await captureRegion(content: content, delay: delay)
         }
@@ -193,7 +194,8 @@ enum ImageCaptureFlow {
         let source = source ?? frontmostSource(in: content)
         let image = try await ScreenshotEngine.captureDisplay(display, region: region, in: content)
         let geometry = PrivacyFilter.geometry(displayID: displayID, region: region, image: image)
-        let redacted = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
+        let redacted =
+            CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
             ? PrivacyFilter.redact(image, geometry: geometry, content: content)
             : image
         return CapturedImage(image: redacted, suffix: suffix, geometry: geometry, source: source)

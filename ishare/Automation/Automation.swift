@@ -1,6 +1,7 @@
 import AppKit
 import Defaults
 import Foundation
+import ishareCore
 
 enum AutomationError: Error, Equatable, Sendable {
     case cancelled
@@ -179,11 +180,12 @@ enum AutomationUploaders {
         let current = UploadDestinationSwitcher.current
         let uploaders = CustomUploader.allCases
         let configured = UploadDestinationSwitcher.destinations.map { destination in
-            let kind: String = switch destination {
-            case let .custom(id): uploaders.first { $0.id == id }?.kind.rawValue ?? "custom"
-            case .localNetwork: "localNetwork"
-            case .builtIn: "imgur"
-            }
+            let kind: String =
+                switch destination {
+                case let .custom(id): uploaders.first { $0.id == id }?.kind.rawValue ?? "custom"
+                case .localNetwork: "localNetwork"
+                case .builtIn: "imgur"
+                }
             return CLIUploaderInfo(
                 id: UploadDestinationSwitcher.identifier(for: destination), name: UploadDestinationSwitcher.title(for: destination),
                 kind: kind, selected: destination == current
@@ -219,7 +221,7 @@ final class URLSchemeRouter {
         case let .failure(error):
             Log.app.error("Rejected URL action: \(error.message, privacy: .public)")
             if case let .success(callback) = URLSchemeParser.callbacks(from: URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []),
-               let errorURL = callback.errorURL(code: error.code, message: error.message)
+                let errorURL = callback.errorURL(code: error.code, message: error.message)
             {
                 actions.openCallback(errorURL)
             }

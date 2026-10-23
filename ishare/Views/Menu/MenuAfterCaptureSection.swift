@@ -22,6 +22,7 @@ struct MenuAfterCaptureSection: View {
                         .menuFocusRing(.chip(index), shape: .circle)
                 }
             }
+            .accessibilityElement(children: .contain)
             if density == .comfortable {
                 MenuSecondaryText(text: summary)
             }

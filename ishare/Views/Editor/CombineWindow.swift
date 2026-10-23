@@ -202,13 +202,15 @@ struct CombineView: View {
                 ForEach(BeautifyBackground.allCases) { Text($0.title).tag($0) }
             }
             if model.background == .solid {
-                ColorPicker("Color".localized(), selection: Binding(
-                    get: { Color(cgColor: model.solidColor.cgColor) },
-                    set: { color in
-                        guard let srgb = NSColor(color).usingColorSpace(.sRGB) else { return }
-                        model.solidColor = CaptureColor(red: srgb.redComponent, green: srgb.greenComponent, blue: srgb.blueComponent)
-                    }
-                ), supportsOpacity: false)
+                ColorPicker(
+                    "Color".localized(),
+                    selection: Binding(
+                        get: { Color(cgColor: model.solidColor.cgColor) },
+                        set: { color in
+                            guard let srgb = NSColor(color).usingColorSpace(.sRGB) else { return }
+                            model.solidColor = CaptureColor(red: srgb.redComponent, green: srgb.greenComponent, blue: srgb.blueComponent)
+                        }
+                    ), supportsOpacity: false)
             }
         }
     }

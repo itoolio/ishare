@@ -19,10 +19,11 @@ struct QRCodeTests {
         let image = try #require(QRCodeRenderer.image(for: "https://example.com/crisp", targetPixels: 300))
         let width = image.width
         var pixels = [UInt8](repeating: 0, count: width * image.height)
-        let context = try #require(CGContext(
-            data: &pixels, width: width, height: image.height, bitsPerComponent: 8, bytesPerRow: width,
-            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
-        ))
+        let context = try #require(
+            CGContext(
+                data: &pixels, width: width, height: image.height, bitsPerComponent: 8, bytesPerRow: width,
+                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
+            ))
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: image.height))
         #expect(pixels.allSatisfy { $0 == 0 || $0 == 255 })
         #expect(pixels.contains(0))

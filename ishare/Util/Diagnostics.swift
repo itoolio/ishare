@@ -43,7 +43,8 @@ struct DiagnosticsStore: Sendable {
     static let shared = DiagnosticsStore(directory: defaultDirectory)
 
     static var defaultDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let base =
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return base.appending(path: "ishare/Diagnostics", directoryHint: .isDirectory)
     }
@@ -75,7 +76,8 @@ struct DiagnosticsStore: Sendable {
 
     func reports() -> [DiagnosticReport] {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
-        return files
+        return
+            files
             .filter { $0.pathExtension == "json" }
             .compactMap(Self.report(at:))
             .sorted { ($0.date, $0.url.lastPathComponent) > ($1.date, $1.url.lastPathComponent) }
@@ -83,9 +85,9 @@ struct DiagnosticsStore: Sendable {
 
     static func report(at url: URL) -> DiagnosticReport? {
         guard let data = try? Data(contentsOf: url),
-              let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let kind = (envelope["kind"] as? String).flatMap(DiagnosticKind.init(rawValue:)),
-              let date = (envelope["date"] as? String).flatMap({ ISO8601DateFormatter().date(from: $0) })
+            let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let kind = (envelope["kind"] as? String).flatMap(DiagnosticKind.init(rawValue:)),
+            let date = (envelope["date"] as? String).flatMap({ ISO8601DateFormatter().date(from: $0) })
         else { return nil }
         return DiagnosticReport(
             url: url, kind: kind, date: date, summary: envelope["summary"] as? String ?? "",

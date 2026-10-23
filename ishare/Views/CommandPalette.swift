@@ -54,7 +54,7 @@ struct CommandPaletteView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Close".localized())
+            .helpAndAccessibilityLabel("Close".localized())
             .accessibilityIdentifier("menu.palette.close")
         }
         .padding(.horizontal, 9)

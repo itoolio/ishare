@@ -1,51 +1,8 @@
 import Foundation
+import ishareCore
 import Photos
 import Synchronization
 import UniformTypeIdentifiers
-
-struct PhotosDestination: Codable, Hashable, Sendable {
-    static let defaultAlbumName = "ishare"
-
-    var albumName: String
-    var albumIdentifier: String?
-
-    init(albumName: String = PhotosDestination.defaultAlbumName, albumIdentifier: String? = nil) {
-        self.albumName = albumName
-        self.albumIdentifier = albumIdentifier
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case albumName = "album"
-        case albumIdentifier = "albumidentifier"
-    }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
-        albumName = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "album")) ?? Self.defaultAlbumName
-        albumIdentifier = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "albumidentifier"))
-    }
-
-    var target: PhotosAlbumTarget {
-        let name = albumName.trimmingCharacters(in: .whitespaces)
-        if let albumIdentifier, !albumIdentifier.isEmpty {
-            return .existing(identifier: albumIdentifier, fallbackName: name.isEmpty ? nil : name)
-        }
-        if !name.isEmpty {
-            return .named(name)
-        }
-        return .library
-    }
-}
-
-enum PhotosAlbumTarget: Equatable, Sendable {
-    case library
-    case named(String)
-    case existing(identifier: String, fallbackName: String?)
-
-    var needsFullAccess: Bool {
-        self != .library
-    }
-}
 
 struct PhotosAlbum: Hashable, Identifiable, Sendable {
     let id: String
@@ -99,10 +56,11 @@ struct SystemPhotoLibrary: PhotoLibraryClient {
     func save(fileURL: URL, kind: PhotosMediaKind, to album: PhotosAlbumTarget) async throws -> String {
         let box = CreatedAssetBox()
         try await PHPhotoLibrary.shared().performChanges {
-            let request: PHAssetChangeRequest? = switch kind {
-            case .image: PHAssetChangeRequest.creationRequestForAssetFromImage(atFileURL: fileURL)
-            case .video: PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
-            }
+            let request: PHAssetChangeRequest? =
+                switch kind {
+                case .image: PHAssetChangeRequest.creationRequestForAssetFromImage(atFileURL: fileURL)
+                case .video: PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+                }
             guard let placeholder = request?.placeholderForCreatedAsset else { return }
             box.identifier = placeholder.localIdentifier
             Self.albumRequest(for: album)?.addAssets([placeholder] as NSArray)

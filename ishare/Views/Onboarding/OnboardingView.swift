@@ -119,8 +119,10 @@ struct OnboardingView: View {
                 .foregroundStyle(.white)
                 .frame(width: 56, height: 56)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.menuAccent.gradient))
+                .accessibilityHidden(true)
             Text(step.title.localized())
                 .font(.system(size: 22, weight: .bold))
+                .accessibilityAddTraits(.isHeader)
             Text(step.subtitle.localized())
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
@@ -147,16 +149,16 @@ struct OnboardingView: View {
             .accessibilityHidden(true)
             Spacer()
             if step.trial.map({ !trials.isCompleted($0) }) == true, let next = OnboardingStep(rawValue: step.rawValue + 1) {
-                Button("Skip This Step".localized()) { withAnimation(.snappy) { step = next } }
+                Button("Skip This Step".localized()) { withMotionAnimation(.snappy) { step = next } }
                     .buttonStyle(.link)
                     .accessibilityIdentifier("onboarding.skipStep")
             }
             if let previous = OnboardingStep(rawValue: step.rawValue - 1) {
-                Button("Back".localized()) { withAnimation(.snappy) { step = previous } }
+                Button("Back".localized()) { withMotionAnimation(.snappy) { step = previous } }
                     .accessibilityIdentifier("onboarding.back")
             }
             if let next = OnboardingStep(rawValue: step.rawValue + 1) {
-                Button("Continue".localized()) { withAnimation(.snappy) { step = next } }
+                Button("Continue".localized()) { withMotionAnimation(.snappy) { step = next } }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier("onboarding.next")
             } else {
@@ -187,6 +189,7 @@ struct OnboardingPermissionStep: View {
                         .font(.system(size: 24))
                         .foregroundStyle(granted ? Color.green : Color.menuAccent)
                         .frame(width: 36)
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(granted ? "Screen recording is allowed".localized() : "Screen recording is not allowed yet".localized())
                             .font(.system(size: 13, weight: .semibold))
@@ -253,9 +256,10 @@ struct OnboardingUploaderStep: View {
             } preAction: {
                 app.settings.pane = .uploaders
                 NSApp.activate(ignoringOtherApps: true)
-            } postAction: {}
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("onboarding.uploader.settings")
+            } postAction: {
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("onboarding.uploader.settings")
         }
     }
 
@@ -295,6 +299,7 @@ struct OnboardingShortcutsStep: View {
                         Image(systemName: entry.0)
                             .frame(width: 22)
                             .foregroundStyle(Color.menuAccent)
+                            .accessibilityHidden(true)
                         Text(entry.1.localized())
                             .font(.system(size: 13))
                         Spacer()
@@ -325,10 +330,16 @@ struct OnboardingAfterCaptureStep: View {
         OnboardingCard {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(AfterCaptureStep.allCases.filter { $0.group != .share }) { step in
-                    Toggle(step.title.localized(), isOn: Binding(
-                        get: { _ = (copyToClipboard, saveToDisk, openInFinder, uploadMedia, openEditorAfterCapture); return step.isEnabled },
-                        set: { step.isEnabled = $0 }
-                    ))
+                    Toggle(
+                        step.title.localized(),
+                        isOn: Binding(
+                            get: {
+                                _ = (copyToClipboard, saveToDisk, openInFinder, uploadMedia, openEditorAfterCapture)
+                                return step.isEnabled
+                            },
+                            set: { step.isEnabled = $0 }
+                        )
+                    )
                     .disabled(step.dependsOn.map { !$0.isEnabled } ?? false)
                 }
             }
@@ -340,13 +351,17 @@ struct OnboardingAfterCaptureStep: View {
 
 struct OnboardingCard<Content: View>: View {
     @ViewBuilder var content: Content
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     var body: some View {
+        let contrast = MenuContrast.resolve(colorSchemeContrast)
         content
             .padding(14)
             .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.05)))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(contrast.isHigh ? contrast.fillOpacity : 0.05)))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(
+                    Color.primary.opacity(contrast.isHigh ? contrast.borderOpacity : 0.08), lineWidth: contrast.borderWidth))
     }
 }
 
@@ -363,6 +378,7 @@ struct OnboardingChoiceLabel: View {
                 .foregroundStyle(isSelected ? Color.white : Color.menuAccent)
                 .frame(width: 36, height: 36)
                 .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(isSelected ? Color.menuAccent : Color.menuAccent.opacity(0.12)))
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title.localized())
                     .font(.system(size: 13, weight: .semibold))
@@ -374,9 +390,11 @@ struct OnboardingChoiceLabel: View {
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.menuAccent)
+                    .accessibilityHidden(true)
             } else {
                 Image(systemName: "chevron.right")
                     .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
         }
         .padding(12)
@@ -399,6 +417,8 @@ struct OnboardingChoice: View {
             OnboardingChoiceLabel(symbol: symbol, title: title, detail: detail, isSelected: isSelected)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier(identifier)
     }
 }

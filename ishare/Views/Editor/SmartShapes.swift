@@ -1,4 +1,5 @@
 import CoreGraphics
+import ishareCore
 
 enum SmartShapes {
     static let snapDistance: CGFloat = 8

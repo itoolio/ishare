@@ -7,7 +7,9 @@ import UniformTypeIdentifiers
 @MainActor
 struct ClipboardTests {
     func capture(as fileType: FileType) throws -> URL {
-        let context = CGContext(data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let context = CGContext(
+            data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
         let url = FileManager.default.temporaryDirectory.appending(path: "clipboard-\(UUID().uuidString).\(fileType.rawValue)")

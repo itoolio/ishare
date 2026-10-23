@@ -1,22 +1,22 @@
 import CryptoKit
 import Foundation
 
-struct S3Configuration: Codable, Hashable, Sendable {
-    var endpoint: String
-    var region: String
-    var bucket: String
-    var accessKeyId: String
-    var secretAccessKey: String
-    var pathStyle: Bool?
-    var keyTemplate: String?
-    var acl: String?
-    var publicURL: String?
-    var presignedExpiry: Int?
+public struct S3Configuration: Codable, Hashable, Sendable {
+    public var endpoint: String
+    public var region: String
+    public var bucket: String
+    public var accessKeyId: String
+    public var secretAccessKey: String
+    public var pathStyle: Bool?
+    public var keyTemplate: String?
+    public var acl: String?
+    public var publicURL: String?
+    public var presignedExpiry: Int?
 
     static let defaultKeyTemplate = "{{filename}}"
     static let presignedExpiryRange = 1 ... 604_800
 
-    init(
+    public init(
         endpoint: String, region: String, bucket: String, accessKeyId: String, secretAccessKey: String,
         pathStyle: Bool? = nil, keyTemplate: String? = nil, acl: String? = nil, publicURL: String? = nil,
         presignedExpiry: Int? = nil
@@ -46,7 +46,7 @@ struct S3Configuration: Codable, Hashable, Sendable {
         case presignedExpiry = "presignedexpiry"
     }
 
-    init(from decoder: any Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: DynamicCodingKey.self)
         endpoint = try container.decodeDynamic(String.self, forKey: .key(named: "endpoint"))
         region = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "region")) ?? "us-east-1"
@@ -60,18 +60,18 @@ struct S3Configuration: Codable, Hashable, Sendable {
         presignedExpiry = try container.decodeDynamicIfPresent(Int.self, forKey: .key(named: "presignedexpiry"))
     }
 
-    var usesPathStyle: Bool { pathStyle ?? true }
+    public var usesPathStyle: Bool { pathStyle ?? true }
 
-    var endpointURL: URL? {
+    public var endpointURL: URL? {
         let trimmed = endpoint.trimmingCharacters(in: .whitespaces)
         let normalized = trimmed.contains("://") ? trimmed : "https://\(trimmed)"
         guard let url = URL(string: normalized), url.host() != nil else { return nil }
         return url
     }
 
-    func objectURL(for key: String) -> URL? {
+    public func objectURL(for key: String) -> URL? {
         guard let endpointURL, var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false),
-              let host = components.host
+            let host = components.host
         else { return nil }
         let basePath = components.path.hasSuffix("/") ? String(components.path.dropLast()) : components.path
         let encodedKey = S3Path.encode(key)
@@ -84,7 +84,7 @@ struct S3Configuration: Codable, Hashable, Sendable {
         return components.url
     }
 
-    func publicURL(for key: String) throws -> URL? {
+    public func publicURL(for key: String) throws -> URL? {
         guard let template = publicURL?.trimmingCharacters(in: .whitespaces), !template.isEmpty else {
             return objectURL(for: key)
         }
@@ -104,27 +104,36 @@ struct S3Configuration: Codable, Hashable, Sendable {
     }
 }
 
-enum S3Path {
+public enum S3Path {
     static let unreserved = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
-    static func encodeSegment(_ segment: String) -> String {
+    public static func encodeSegment(_ segment: String) -> String {
         segment.addingPercentEncoding(withAllowedCharacters: unreserved) ?? segment
     }
 
-    static func encode(_ key: String) -> String {
+    public static func encode(_ key: String) -> String {
         key.split(separator: "/", omittingEmptySubsequences: false).map { encodeSegment(String($0)) }.joined(separator: "/")
     }
 }
 
-struct S3KeyContext: Sendable {
-    var fileName: String
-    var date: Date = .init()
-    var uuid: UUID = .init()
+public struct S3KeyContext: Sendable {
+    public var fileName: String
+    public var date: Date = .init()
+    public var uuid: UUID = .init()
     var randomToken: String = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8)).lowercased()
+
+    public init(
+        fileName: String, date: Date = .init(), uuid: UUID = .init(), randomToken: String = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8)).lowercased()
+    ) {
+        self.fileName = fileName
+        self.date = date
+        self.uuid = uuid
+        self.randomToken = randomToken
+    }
 }
 
 enum S3KeyTemplate {
-    static func render(_ template: String?, context: S3KeyContext) throws -> String {
+    public static func render(_ template: String?, context: S3KeyContext) throws -> String {
         let source = (template?.isEmpty ?? true) ? S3Configuration.defaultKeyTemplate : template!
         let fileURL = URL(fileURLWithPath: context.fileName)
         let ext = fileURL.pathExtension.lowercased()
@@ -153,13 +162,13 @@ enum S3KeyTemplate {
     }
 }
 
-struct SigV4Signer: Sendable {
-    let accessKeyId: String
-    let secretAccessKey: String
-    let region: String
-    let service: String
+public struct SigV4Signer: Sendable {
+    public let accessKeyId: String
+    public let secretAccessKey: String
+    public let region: String
+    public let service: String
 
-    init(accessKeyId: String, secretAccessKey: String, region: String, service: String = "s3") {
+    public init(accessKeyId: String, secretAccessKey: String, region: String, service: String = "s3") {
         self.accessKeyId = accessKeyId
         self.secretAccessKey = secretAccessKey
         self.region = region
@@ -168,11 +177,11 @@ struct SigV4Signer: Sendable {
 
     static let emptyPayloadHash = sha256Hex(Data())
 
-    static func sha256Hex(_ data: Data) -> String {
+    public static func sha256Hex(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    static func sha256Hex(fileAt url: URL) throws -> String {
+    public static func sha256Hex(fileAt url: URL) throws -> String {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var hasher = SHA256()
@@ -191,15 +200,23 @@ struct SigV4Signer: Sendable {
         return (amzDate, String(amzDate.prefix(8)))
     }
 
-    struct Signature: Equatable {
-        let canonicalRequest: String
+    public struct Signature: Equatable {
+        public let canonicalRequest: String
         let stringToSign: String
-        let signature: String
-        let signedHeaders: String
-        let authorization: String
+        public let signature: String
+        public let signedHeaders: String
+        public let authorization: String
+
+        public init(canonicalRequest: String, stringToSign: String, signature: String, signedHeaders: String, authorization: String) {
+            self.canonicalRequest = canonicalRequest
+            self.stringToSign = stringToSign
+            self.signature = signature
+            self.signedHeaders = signedHeaders
+            self.authorization = authorization
+        }
     }
 
-    func signature(method: String, url: URL, headers: [String: String], payloadHash: String, date: Date) -> Signature {
+    public func signature(method: String, url: URL, headers: [String: String], payloadHash: String, date: Date) -> Signature {
         let (amzDate, shortDate) = Self.timestamps(for: date)
         var allHeaders = headers.reduce(into: [String: String]()) { result, entry in
             result[entry.key.lowercased()] = entry.value
@@ -241,7 +258,7 @@ struct SigV4Signer: Sendable {
         )
     }
 
-    func signedHeaders(method: String, url: URL, headers: [String: String], payloadHash: String, date: Date = .init()) -> [String: String] {
+    public func signedHeaders(method: String, url: URL, headers: [String: String], payloadHash: String, date: Date = .init()) -> [String: String] {
         let result = signature(method: method, url: url, headers: headers, payloadHash: payloadHash, date: date)
         var signed = headers
         signed["x-amz-date"] = Self.timestamps(for: date).amzDate
@@ -252,7 +269,7 @@ struct SigV4Signer: Sendable {
 
     static let unsignedPayload = "UNSIGNED-PAYLOAD"
 
-    func presignedURL(method: String = "GET", url: URL, expires: Int, date: Date = .init()) -> URL? {
+    public func presignedURL(method: String = "GET", url: URL, expires: Int, date: Date = .init()) -> URL? {
         let (amzDate, shortDate) = Self.timestamps(for: date)
         let scope = "\(shortDate)/\(region)/\(service)/aws4_request"
         let authItems = [
@@ -330,19 +347,26 @@ struct SigV4Signer: Sendable {
     }
 }
 
-struct S3UploadRequest: Sendable {
-    let url: URL
-    let key: String
-    let headers: [String: String]
-    let publicURL: URL
+public struct S3UploadRequest: Sendable {
+    public let url: URL
+    public let key: String
+    public let headers: [String: String]
+    public let publicURL: URL
+
+    public init(url: URL, key: String, headers: [String: String], publicURL: URL) {
+        self.url = url
+        self.key = key
+        self.headers = headers
+        self.publicURL = publicURL
+    }
 }
 
-enum S3RequestBuilder {
+public enum S3RequestBuilder {
     enum BuildError: LocalizedError {
         case invalidEndpoint
         case invalidPublicURL
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .invalidEndpoint: "The S3 endpoint is not a valid URL"
             case .invalidPublicURL: "The public URL template did not produce a valid URL"
@@ -350,7 +374,7 @@ enum S3RequestBuilder {
         }
     }
 
-    static func upload(
+    public static func upload(
         configuration: S3Configuration, fileURL: URL, contentType: String, payloadHash: String,
         context: S3KeyContext? = nil, date: Date = .init()
     ) throws -> S3UploadRequest {
@@ -372,7 +396,7 @@ enum S3RequestBuilder {
         return S3UploadRequest(url: objectURL, key: key, headers: signed, publicURL: publicURL)
     }
 
-    static func resultURL(configuration: S3Configuration, key: String, objectURL: URL, date: Date) throws -> URL? {
+    public static func resultURL(configuration: S3Configuration, key: String, objectURL: URL, date: Date) throws -> URL? {
         guard let expiry = configuration.presignedExpiry else { return try configuration.publicURL(for: key) }
         return presignedGetURL(configuration: configuration, objectURL: objectURL, expiry: expiry, date: date)
     }
@@ -386,7 +410,7 @@ enum S3RequestBuilder {
         return signer.presignedURL(url: objectURL, expires: clamped, date: date)
     }
 
-    static func delete(configuration: S3Configuration, key: String, date: Date = .init()) throws -> (URL, [String: String]) {
+    public static func delete(configuration: S3Configuration, key: String, date: Date = .init()) throws -> (URL, [String: String]) {
         guard let objectURL = configuration.objectURL(for: key) else { throw BuildError.invalidEndpoint }
         let signer = SigV4Signer(
             accessKeyId: configuration.accessKeyId, secretAccessKey: configuration.secretAccessKey,

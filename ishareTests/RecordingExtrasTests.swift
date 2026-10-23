@@ -24,9 +24,12 @@ struct KeystrokeFormatterTests {
     }
 
     @Test func showsTypedCharactersWhenAllKeysAreShown() {
-        #expect(KeystrokeFormatter.keystroke(keyCode: kVK_ANSI_A, characters: "A", baseCharacters: "a", modifiers: [.shift], shortcutsOnly: false) == Keystroke(text: "A", kind: .typed))
+        #expect(
+            KeystrokeFormatter.keystroke(keyCode: kVK_ANSI_A, characters: "A", baseCharacters: "a", modifiers: [.shift], shortcutsOnly: false) == Keystroke(text: "A", kind: .typed)
+        )
         #expect(KeystrokeFormatter.keystroke(keyCode: kVK_Space, characters: " ", baseCharacters: " ", modifiers: [], shortcutsOnly: false) == Keystroke(text: " ", kind: .typed))
-        #expect(KeystrokeFormatter.keystroke(keyCode: kVK_Return, characters: "\r", baseCharacters: "\r", modifiers: [], shortcutsOnly: false) == Keystroke(text: "↩", kind: .shortcut))
+        #expect(
+            KeystrokeFormatter.keystroke(keyCode: kVK_Return, characters: "\r", baseCharacters: "\r", modifiers: [], shortcutsOnly: false) == Keystroke(text: "↩", kind: .shortcut))
     }
 
     @Test func alwaysShowsEscapeAndFunctionKeys() {
@@ -267,18 +270,22 @@ enum SyntheticVideo {
         let url = directory.appending(path: "clip.mov")
 
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
-        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
-            AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: Int(size.width),
-            AVVideoHeightKey: Int(size.height),
-            AVVideoCompressionPropertiesKey: [AVVideoMaxKeyFrameIntervalKey: 1],
-        ])
+        let input = AVAssetWriterInput(
+            mediaType: .video,
+            outputSettings: [
+                AVVideoCodecKey: AVVideoCodecType.h264,
+                AVVideoWidthKey: Int(size.width),
+                AVVideoHeightKey: Int(size.height),
+                AVVideoCompressionPropertiesKey: [AVVideoMaxKeyFrameIntervalKey: 1],
+            ])
         input.expectsMediaDataInRealTime = false
-        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferWidthKey as String: Int(size.width),
-            kCVPixelBufferHeightKey as String: Int(size.height),
-        ])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+            assetWriterInput: input,
+            sourcePixelBufferAttributes: [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                kCVPixelBufferWidthKey as String: Int(size.width),
+                kCVPixelBufferHeightKey as String: Int(size.height),
+            ])
         writer.add(input)
         #expect(writer.startWriting())
         writer.startSession(atSourceTime: .zero)

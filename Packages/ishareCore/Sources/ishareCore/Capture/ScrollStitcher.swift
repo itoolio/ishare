@@ -1,26 +1,28 @@
 import CoreGraphics
 import Foundation
 
-struct GrayFrame: Sendable {
-    let width: Int
-    let height: Int
-    let pixels: [UInt8]
+public struct GrayFrame: Sendable {
+    public let width: Int
+    public let height: Int
+    public let pixels: [UInt8]
 
-    init(width: Int, height: Int, pixels: [UInt8]) {
+    public init(width: Int, height: Int, pixels: [UInt8]) {
         self.width = width
         self.height = height
         self.pixels = pixels
     }
 
-    init?(image: CGImage) {
+    public init?(image: CGImage) {
         let width = image.width
         let height = image.height
         var pixels = [UInt8](repeating: 0, count: width * height)
         let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
-                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
-            ) else { return false }
+            guard
+                let context = CGContext(
+                    data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
+                    space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
+                )
+            else { return false }
             context.interpolationQuality = .none
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
             return true
@@ -32,15 +34,20 @@ struct GrayFrame: Sendable {
     }
 }
 
-enum ScrollStitcher {
-    struct Match: Equatable {
-        let offset: Int
-        let score: Double
+public enum ScrollStitcher {
+    public struct Match: Equatable {
+        public let offset: Int
+        public let score: Double
+
+        public init(offset: Int, score: Double) {
+            self.offset = offset
+            self.score = score
+        }
     }
 
     static let matchThreshold = 8.0
 
-    static func score(previous: GrayFrame, next: GrayFrame, offset: Int, rowStep: Int, columnStep: Int, ignoreTop: Int, ignoreBottom: Int) -> Double {
+    public static func score(previous: GrayFrame, next: GrayFrame, offset: Int, rowStep: Int, columnStep: Int, ignoreTop: Int, ignoreBottom: Int) -> Double {
         let height = min(previous.height, next.height)
         let width = min(previous.width, next.width)
         let firstRow = ignoreTop
@@ -68,7 +75,7 @@ enum ScrollStitcher {
         return count == 0 ? .infinity : Double(total) / Double(count)
     }
 
-    static func verticalOffset(previous: GrayFrame, next: GrayFrame) -> Match? {
+    public static func verticalOffset(previous: GrayFrame, next: GrayFrame) -> Match? {
         let height = min(previous.height, next.height)
         guard height >= 32 else { return nil }
         let ignoreTop = height / 8
@@ -110,17 +117,19 @@ enum ScrollStitcher {
         return refined
     }
 
-    static func stitch(frames: [CGImage], offsets: [Int]) -> CGImage? {
+    public static func stitch(frames: [CGImage], offsets: [Int]) -> CGImage? {
         guard let first = frames.first else { return nil }
         let width = first.width
         let frameHeight = first.height
         let appended = zip(frames.dropFirst(), offsets).map { min($0.1, $0.0.height) }.filter { $0 > 0 }
         let totalHeight = frameHeight + appended.reduce(0, +)
-        guard let context = CGContext(
-            data: nil, width: width, height: totalHeight, bitsPerComponent: 8, bytesPerRow: 0,
-            space: first.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: width, height: totalHeight, bitsPerComponent: 8, bytesPerRow: 0,
+                space: first.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
         context.interpolationQuality = .none
         context.draw(first, in: CGRect(x: 0, y: totalHeight - frameHeight, width: width, height: frameHeight))
         var cursor = frameHeight

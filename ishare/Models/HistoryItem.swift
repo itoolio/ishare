@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 
 struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var fileUrl: String?

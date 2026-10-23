@@ -4,7 +4,9 @@ import Testing
 @testable import ishare
 
 private func solidImage(width: Int = 400, height: Int = 300, gray: CGFloat = 1) -> CGImage {
-    let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let context = CGContext(
+        data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     context.setFillColor(CGColor(gray: gray, alpha: 1))
     context.fill(CGRect(x: 0, y: 0, width: width, height: height))
     return context.makeImage()!
@@ -12,7 +14,9 @@ private func solidImage(width: Int = 400, height: Int = 300, gray: CGFloat = 1) 
 
 private func pixel(_ image: CGImage, x: Int, y: Int) -> [UInt8] {
     var data = [UInt8](repeating: 0, count: 4)
-    let context = CGContext(data: &data, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let context = CGContext(
+        data: &data, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     context.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
     return data
 }

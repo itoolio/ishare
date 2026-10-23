@@ -43,7 +43,7 @@ struct ThumbnailKey: Hashable, Sendable {
             return ThumbnailKey(source: .file(URL(fileURLWithPath: path).standardizedFileURL.path), requestedPixelSize: pixels)
         }
         guard item.kind != .video, let string = item.fileUrl, let url = URL(string: string), let scheme = url.scheme?.lowercased(),
-              ["http", "https"].contains(scheme)
+            ["http", "https"].contains(scheme)
         else {
             return HistorySyncPreviews.existingURL(for: item).map { ThumbnailKey(source: .file($0.path), requestedPixelSize: pixels) }
         }
@@ -143,7 +143,7 @@ final class ThumbnailCache {
 
     nonisolated static func fetchThumbnail(from url: URL, pixelSize: Int, session: URLSession) async -> NSImage? {
         guard let (data, response) = try? await session.data(from: url),
-              (response as? HTTPURLResponse).map({ (200 ..< 300).contains($0.statusCode) }) ?? true
+            (response as? HTTPURLResponse).map({ (200 ..< 300).contains($0.statusCode) }) ?? true
         else { return nil }
         return downsampled(data, pixelSize: pixelSize)
     }

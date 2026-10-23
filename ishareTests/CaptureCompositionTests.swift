@@ -1,6 +1,7 @@
 import CoreGraphics
 import CoreText
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
 
@@ -22,63 +23,7 @@ private func isClose(_ first: CaptureColor, _ second: CaptureColor, tolerance: C
         && abs(first.blue - second.blue) <= tolerance && abs(first.alpha - second.alpha) <= tolerance
 }
 
-struct DeviceFrameTests {
-    @Test func letterboxScreenContainsTheWholeImage() {
-        let size = DeviceFrameLayout.screenSize(for: CGSize(width: 1000, height: 1000), aspect: 16.0 / 9.0, fit: .letterbox)
-        #expect(size == CGSize(width: 1778, height: 1000))
-        let tall = DeviceFrameLayout.screenSize(for: CGSize(width: 1600, height: 400), aspect: 2, fit: .letterbox)
-        #expect(tall == CGSize(width: 1600, height: 800))
-    }
-
-    @Test func cropScreenFitsInsideTheImage() {
-        let size = DeviceFrameLayout.screenSize(for: CGSize(width: 1000, height: 1000), aspect: 16.0 / 9.0, fit: .crop)
-        #expect(size == CGSize(width: 1000, height: 563))
-        #expect(DeviceFrameLayout.screenSize(for: CGSize(width: 300, height: 200), aspect: nil, fit: .crop) == CGSize(width: 300, height: 200))
-    }
-
-    @Test func placementPreservesAspectRatio() {
-        let screen = CGRect(x: 10, y: 20, width: 200, height: 100)
-        let fit = DeviceFrameLayout.placement(of: CGSize(width: 100, height: 100), in: screen, fit: .letterbox)
-        #expect(fit == CGRect(x: 60, y: 20, width: 100, height: 100))
-        let fill = DeviceFrameLayout.placement(of: CGSize(width: 100, height: 100), in: screen, fit: .crop)
-        #expect(fill == CGRect(x: 10, y: -30, width: 200, height: 200))
-    }
-
-    @Test(arguments: [DeviceFrame.laptop, .display, .phone, .browser])
-    func layoutKeepsTheScreenInsideTheCanvas(kind: DeviceFrame) throws {
-        let imageSize = CGSize(width: 1200, height: 800)
-        let layout = try #require(DeviceFrameLayout.make(for: imageSize, style: DeviceFrameStyle(kind: kind)))
-        let canvas = CGRect(origin: .zero, size: layout.canvasSize)
-        #expect(canvas.contains(layout.bodyRect))
-        #expect(layout.bodyRect.contains(layout.screenRect))
-        #expect(layout.screenRect.contains(layout.imageRect.insetBy(dx: 0.5, dy: 0.5)))
-        if let aspect = kind.screenAspect(for: imageSize) {
-            #expect(abs(layout.screenRect.width / layout.screenRect.height - aspect) < 0.01)
-        } else {
-            #expect(layout.screenRect.size == imageSize)
-        }
-    }
-
-    @Test func phoneTurnsLandscapeForWideCaptures() throws {
-        let landscape = try #require(DeviceFrameLayout.make(for: CGSize(width: 1950, height: 900), style: DeviceFrameStyle(kind: .phone)))
-        #expect(landscape.screenRect.width > landscape.screenRect.height)
-        let portrait = try #require(DeviceFrameLayout.make(for: CGSize(width: 900, height: 1950), style: DeviceFrameStyle(kind: .phone)))
-        #expect(portrait.screenRect.height > portrait.screenRect.width)
-        #expect(portrait.islandRect.map(portrait.screenRect.contains) == true)
-        #expect(portrait.buttons.count == 4)
-        #expect(portrait.buttons.allSatisfy { !$0.intersects(portrait.bodyRect) })
-    }
-
-    @Test func browserReservesAToolbarAboveTheCapture() throws {
-        let layout = try #require(DeviceFrameLayout.make(for: CGSize(width: 1000, height: 600), style: DeviceFrameStyle(kind: .browser)))
-        let toolbar = try #require(layout.toolbarRect)
-        #expect(toolbar.height == 45)
-        #expect(layout.screenRect.minY == toolbar.maxY)
-        #expect(layout.canvasSize == CGSize(width: 1000, height: 645))
-        #expect(layout.trafficLights.count == 3)
-        #expect(layout.addressRect.map(toolbar.contains) == true)
-    }
-
+struct DeviceFrameRenderingTests {
     @Test func noFrameHasNoLayout() {
         #expect(DeviceFrameLayout.make(for: CGSize(width: 10, height: 10), style: DeviceFrameStyle(kind: .none)) == nil)
         #expect(BeautifyStyle(padding: 0, cornerRadius: 0, shadowRadius: 0, fill: .transparent, frame: DeviceFrameStyle(kind: .none)).frame == nil)
@@ -158,7 +103,8 @@ struct ImageCombinerTests {
 
     @Test func combineDrawsEveryImageOverTheBackground() throws {
         let images = [TestImages.solid(width: 40, height: 40, color: red), TestImages.solid(width: 40, height: 20, color: blue)]
-        let combined = try #require(ImageCombiner.combine(images, style: CombineStyle(layout: .horizontal, alignment: .leading, spacing: 10, padding: 10, cornerRadius: 0, fill: .solid(white))))
+        let combined = try #require(
+            ImageCombiner.combine(images, style: CombineStyle(layout: .horizontal, alignment: .leading, spacing: 10, padding: 10, cornerRadius: 0, fill: .solid(white))))
         #expect(combined.width == 110)
         #expect(combined.height == 60)
         #expect(isClose(TestImages.color(combined, 20, 20), red))
@@ -246,12 +192,13 @@ struct EditorGeometryTests {
         let marker = CGRect(x: 20, y: 10, width: 12, height: 8)
         let image = marked(width: 200, height: 100, marker: marker)
         let mapping = CanvasMapping.orientation(change, size: CGSize(width: 200, height: 100))
-        let transformed: CGImage = switch change {
-        case .rotateLeft: ImageProcessing.rotated(image, clockwise: false)
-        case .rotateRight: ImageProcessing.rotated(image, clockwise: true)
-        case .flipHorizontal: ImageProcessing.flipped(image, horizontally: true)
-        case .flipVertical: ImageProcessing.flipped(image, horizontally: false)
-        }
+        let transformed: CGImage =
+            switch change {
+            case .rotateLeft: ImageProcessing.rotated(image, clockwise: false)
+            case .rotateRight: ImageProcessing.rotated(image, clockwise: true)
+            case .flipHorizontal: ImageProcessing.flipped(image, horizontally: true)
+            case .flipVertical: ImageProcessing.flipped(image, horizontally: false)
+            }
         #expect(CGSize(width: transformed.width, height: transformed.height) == mapping.outputSize)
         let mapped = mapping.map(marker)
         #expect(mapped.size == (change == .rotateLeft || change == .rotateRight ? CGSize(width: 8, height: 12) : marker.size))

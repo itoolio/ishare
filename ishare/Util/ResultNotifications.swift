@@ -95,7 +95,7 @@ final class ResultNotifier: NSObject, UNUserNotificationCenterDelegate {
 
     private static func attachment(for image: NSImage) -> UNNotificationAttachment? {
         guard let tiff = image.tiffRepresentation,
-              let data = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:])
+            let data = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:])
         else { return nil }
         let url = FileManager.default.temporaryDirectory.appending(path: "notification-\(UUID().uuidString).png")
         do {
@@ -182,10 +182,11 @@ enum ResultPresenter {
 
     static func postNotification(for model: ToastModel) async {
         let payload = ResultNotificationPayload(url: model.historyItem?.fileUrl, path: model.fileURL?.path)
-        let body: String = switch model.uploadState {
-        case .failed: "Upload failed".localized()
-        default: model.historyItem?.fileUrl ?? (Defaults[.saveToDisk] ? "Saved to disk".localized() : "Captured".localized())
-        }
+        let body: String =
+            switch model.uploadState {
+            case .failed: "Upload failed".localized()
+            default: model.historyItem?.fileUrl ?? (Defaults[.saveToDisk] ? "Saved to disk".localized() : "Captured".localized())
+            }
         await ResultNotifier.shared.post(title: model.fileName, body: body, payload: payload, thumbnail: model.thumbnail)
     }
 }

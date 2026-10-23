@@ -96,7 +96,7 @@ enum WidgetSharedContainer {
 
     private static func signedGroupIdentifiers() -> [String] {
         guard let task = SecTaskCreateFromSelf(nil),
-              let value = SecTaskCopyValueForEntitlement(task, "com.apple.security.application-groups" as CFString, nil)
+            let value = SecTaskCopyValueForEntitlement(task, "com.apple.security.application-groups" as CFString, nil)
         else { return [] }
         return value as? [String] ?? []
     }

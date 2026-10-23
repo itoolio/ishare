@@ -1,22 +1,22 @@
 import CoreGraphics
 import Foundation
 
-struct SelectionMeasurement: Hashable {
-    var start: CGPoint
-    var end: CGPoint
+public struct SelectionMeasurement: Hashable {
+    public var start: CGPoint
+    public var end: CGPoint
 
-    func lockedToAxis() -> SelectionMeasurement {
+    public func lockedToAxis() -> SelectionMeasurement {
         let dx = abs(end.x - start.x)
         let dy = abs(end.y - start.y)
         let lockedEnd = dx >= dy ? CGPoint(x: end.x, y: start.y) : CGPoint(x: start.x, y: end.y)
         return SelectionMeasurement(start: start, end: lockedEnd)
     }
 
-    var delta: CGVector {
+    public var delta: CGVector {
         CGVector(dx: end.x - start.x, dy: end.y - start.y)
     }
 
-    var length: CGFloat {
+    public var length: CGFloat {
         hypot(delta.dx, delta.dy)
     }
 
@@ -24,7 +24,7 @@ struct SelectionMeasurement: Hashable {
         length * scale
     }
 
-    func label(scale: CGFloat) -> String {
+    public func label(scale: CGFloat) -> String {
         let points = Self.format(length)
         let pixels = Self.format(pixelLength(scale: scale))
         let dx = Self.format(abs(delta.dx))
@@ -32,39 +32,44 @@ struct SelectionMeasurement: Hashable {
         return "\(points) pt · \(pixels) px   Δx \(dx)  Δy \(dy)"
     }
 
-    static func format(_ value: CGFloat) -> String {
+    public static func format(_ value: CGFloat) -> String {
         let rounded = (value * 10).rounded() / 10
         return rounded == rounded.rounded() ? String(Int(rounded)) : String(format: "%.1f", rounded)
     }
+
+    public init(start: CGPoint, end: CGPoint) {
+        self.start = start
+        self.end = end
+    }
 }
 
-enum DisplayCoordinates {
+public enum DisplayCoordinates {
     static func topLeftPoint(for location: CGPoint, in bounds: CGRect) -> CGPoint {
         CGPoint(x: location.x.rounded(.down), y: (bounds.height - location.y).rounded(.down))
     }
 
-    static func pixel(for location: CGPoint, in bounds: CGRect, scale: CGFloat) -> CGPoint {
+    public static func pixel(for location: CGPoint, in bounds: CGRect, scale: CGFloat) -> CGPoint {
         CGPoint(x: (location.x * scale).rounded(.down), y: ((bounds.height - location.y) * scale).rounded(.down))
     }
 
-    static func label(for location: CGPoint, in bounds: CGRect) -> String {
+    public static func label(for location: CGPoint, in bounds: CGRect) -> String {
         let point = topLeftPoint(for: location, in: bounds)
         return "\(Int(point.x)), \(Int(point.y))"
     }
 }
 
-enum MagnifierLayout {
-    static let sampleCount = 15
-    static let loupeSide: CGFloat = 180
-    static let infoHeight: CGFloat = 44
+public enum MagnifierLayout {
+    public static let sampleCount = 15
+    public static let loupeSide: CGFloat = 180
+    public static let infoHeight: CGFloat = 44
     static let cursorOffset: CGFloat = 24
-    static let margin: CGFloat = 6
+    public static let margin: CGFloat = 6
 
-    static var cardSize: CGSize {
+    public static var cardSize: CGSize {
         CGSize(width: loupeSide, height: loupeSide + infoHeight)
     }
 
-    static func cardFrame(for location: CGPoint, in bounds: CGRect, size: CGSize = cardSize) -> CGRect {
+    public static func cardFrame(for location: CGPoint, in bounds: CGRect, size: CGSize = cardSize) -> CGRect {
         var origin = CGPoint(x: location.x + cursorOffset, y: location.y - cursorOffset - size.height)
         if origin.x + size.width > bounds.maxX - margin {
             origin.x = location.x - cursorOffset - size.width

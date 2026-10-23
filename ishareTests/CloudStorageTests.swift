@@ -1,20 +1,7 @@
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
-
-struct PKCETests {
-    @Test func derivesTheRFC7636Challenge() {
-        let pkce = PKCE(verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
-        #expect(pkce.challenge == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
-    }
-
-    @Test func generatesURLSafeVerifiersOfAValidLength() {
-        let pkce = PKCE.generate()
-        #expect((43 ... 128).contains(pkce.verifier.count))
-        #expect(pkce.verifier.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" })
-        #expect(PKCE.generate().verifier != pkce.verifier)
-    }
-}
 
 struct OAuthRequestTests {
     func query(_ url: URL) -> [String: String] {
@@ -95,7 +82,9 @@ struct CloudRequestTests {
 
     @Test func turnsDropboxLinksIntoDirectLinks() {
         #expect(DropboxAPI.directURL("https://www.dropbox.com/scl/fi/x/a.png?rlkey=k&dl=0") == "https://www.dropbox.com/scl/fi/x/a.png?rlkey=k&raw=1")
-        #expect(DropboxAPI.existingLink(fromConflict: #"{"error": {".tag": "shared_link_already_exists", "shared_link_already_exists": {"metadata": {"url": "https://db.tt/x"}}}}"#) == "https://db.tt/x")
+        #expect(
+            DropboxAPI.existingLink(fromConflict: #"{"error": {".tag": "shared_link_already_exists", "shared_link_already_exists": {"metadata": {"url": "https://db.tt/x"}}}}"#)
+                == "https://db.tt/x")
     }
 
     @Test func splitsLargeOneDriveUploadsIntoAlignedChunks() {
@@ -103,8 +92,9 @@ struct CloudRequestTests {
         #expect(ranges.count == 3)
         #expect(ranges.dropLast().allSatisfy { $0.count % (320 * 1024) == 0 })
         #expect(OneDriveAPI.contentRange(ranges[0], total: 25 * 1024 * 1024) == "bytes 0-10485759/26214400")
-        #expect(OneDriveAPI.simpleUploadURL(path: "ishare/a b.png").absoluteString
-            == "https://graph.microsoft.com/v1.0/me/drive/root:/ishare/a%20b.png:/content?@microsoft.graph.conflictBehavior=rename")
+        #expect(
+            OneDriveAPI.simpleUploadURL(path: "ishare/a b.png").absoluteString
+                == "https://graph.microsoft.com/v1.0/me/drive/root:/ishare/a%20b.png:/content?@microsoft.graph.conflictBehavior=rename")
     }
 
     @Test func escapesDriveFolderQueries() throws {
@@ -167,7 +157,10 @@ extension NetworkSuite {
                 case "/2/files/upload":
                     StubResponse(body: Data(#"{"id": "id:abc", "path_display": "/ishare/shot.png"}"#.utf8))
                 default:
-                    StubResponse(status: 409, body: Data(#"{"error": {".tag": "shared_link_already_exists", "shared_link_already_exists": {"metadata": {"url": "https://www.dropbox.com/s/old"}}}}"#.utf8))
+                    StubResponse(
+                        status: 409,
+                        body: Data(#"{"error": {".tag": "shared_link_already_exists", "shared_link_already_exists": {"metadata": {"url": "https://www.dropbox.com/s/old"}}}}"#.utf8)
+                    )
                 }
             }
             let file = try Fixtures.temporaryFile(named: "shot.png", contents: TestUploaders.png)

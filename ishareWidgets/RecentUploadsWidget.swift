@@ -9,9 +9,10 @@ struct RecentUploadsEntry: TimelineEntry {
 
     static let placeholder = RecentUploadsEntry(
         date: .now,
-        snapshot: WidgetSnapshot(items: (0 ..< 4).map {
-            WidgetSnapshot.Item(id: "\($0)", url: nil, name: "ishare-\($0).png", date: .now, thumbnail: nil, isVideo: false)
-        }),
+        snapshot: WidgetSnapshot(
+            items: (0 ..< 4).map {
+                WidgetSnapshot.Item(id: "\($0)", url: nil, name: "ishare-\($0).png", date: .now, thumbnail: nil, isVideo: false)
+            }),
         thumbnails: [:]
     )
 

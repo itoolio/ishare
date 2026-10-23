@@ -13,7 +13,10 @@ struct WidgetSnapshotTests {
         ])
         let data = try snapshot.encoded()
         let json = String(decoding: data, as: UTF8.self)
-        #expect(json == #"{"items":[{"d":1800000000,"id":"a1","n":"a.png","t":"a1.jpg","u":"https://img.example.com/a.png"},{"id":"b2","n":"b.mp4","u":"https://img.example.com/b.mp4","v":true}],"version":1}"#)
+        #expect(
+            json
+                == #"{"items":[{"d":1800000000,"id":"a1","n":"a.png","t":"a1.jpg","u":"https://img.example.com/a.png"},{"id":"b2","n":"b.mp4","u":"https://img.example.com/b.mp4","v":true}],"version":1}"#
+        )
         #expect(try WidgetSnapshot.decode(data) == snapshot)
     }
 

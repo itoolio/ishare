@@ -23,11 +23,13 @@ enum SnapshotRenderer {
         hosting.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(settle))
         hosting.layoutSubtreeIfNeeded()
-        guard let rep = NSBitmapImageRep(
-            bitmapDataPlanes: nil, pixelsWide: Int(size.width * scale), pixelsHigh: Int(size.height * scale),
-            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-            colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0
-        ) else { return nil }
+        guard
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: Int(size.width * scale), pixelsHigh: Int(size.height * scale),
+                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0
+            )
+        else { return nil }
         rep.size = size
         hosting.cacheDisplay(in: hosting.bounds, to: rep)
         window.contentView = nil
@@ -51,10 +53,12 @@ struct PixelBuffer: Equatable {
         self.height = height
         var bytes = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = bytes.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
-                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return false }
+            guard
+                let context = CGContext(
+                    data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                    space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )
+            else { return false }
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
             return true
         }
@@ -125,7 +129,8 @@ enum LanguageOverride {
 
     static func bundle(for language: String) -> Bundle? {
         if language == "en" {
-            return Bundle.main.path(forResource: "en", ofType: "lproj").flatMap(Bundle.init(path:)) ?? Bundle.main.path(forResource: "Base", ofType: "lproj").flatMap(Bundle.init(path:))
+            return Bundle.main.path(forResource: "en", ofType: "lproj").flatMap(Bundle.init(path:))
+                ?? Bundle.main.path(forResource: "Base", ofType: "lproj").flatMap(Bundle.init(path:))
         }
         return Bundle.main.path(forResource: language, ofType: "lproj").flatMap(Bundle.init(path:))
     }
@@ -184,10 +189,10 @@ enum SnapshotStore {
         }
         let actualPath = try writeFailure(image, named: name)
         guard let source = CGImageSourceCreateWithURL(reference as CFURL, nil),
-              let expected = CGImageSourceCreateImageAtIndex(source, 0, nil)
+            let expected = CGImageSourceCreateImageAtIndex(source, 0, nil)
         else { return .missingReference(actualPath) }
         guard let actualPixels = PixelBuffer(image), let expectedPixels = PixelBuffer(expected),
-              let different = actualPixels.differentPixels(from: expectedPixels, channelTolerance: tolerance, searchRadius: searchRadius)
+            let different = actualPixels.differentPixels(from: expectedPixels, channelTolerance: tolerance, searchRadius: searchRadius)
         else { return .sizeChanged(actualPath) }
         if Double(different) <= Double(actualPixels.width * actualPixels.height) * maximumDifferentFraction {
             try? FileManager.default.removeItem(atPath: actualPath)

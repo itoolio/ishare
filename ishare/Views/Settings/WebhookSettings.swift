@@ -1,4 +1,5 @@
 import Defaults
+import ishareCore
 import SwiftUI
 
 struct WebhookSettings: View {
@@ -29,14 +30,14 @@ struct WebhookSettings: View {
                         Image(systemName: "pencil")
                     }
                     .buttonStyle(.borderless)
-                    .help("Edit Webhook".localized())
+                    .helpAndAccessibilityLabel("Edit Webhook".localized())
                     Button {
                         remove(webhook)
                     } label: {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
-                    .help("Delete Webhook".localized())
+                    .helpAndAccessibilityLabel("Delete Webhook".localized())
                 }
             }
             Button {
@@ -45,9 +46,12 @@ struct WebhookSettings: View {
                 Label("Add Webhook".localized(), systemImage: "plus")
             }
             .settingsEntry(Self.entry)
-            Text("After every successful upload ishare sends a POST request with the link, deletion link, file name, size, type, uploader, time and alt text. With a secret, the body is signed with HMAC-SHA256 in the X-ishare-Signature header. Failed deliveries are retried in the background and never delay the upload.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "After every successful upload ishare sends a POST request with the link, deletion link, file name, size, type, uploader, time and alt text. With a secret, the body is signed with HMAC-SHA256 in the X-ishare-Signature header. Failed deliveries are retried in the background and never delay the upload."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         } header: {
             Text("Webhooks".localized())
         }

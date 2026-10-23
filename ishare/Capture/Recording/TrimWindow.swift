@@ -3,6 +3,7 @@ import AVFoundation
 import AVKit
 import BezelNotification
 import Defaults
+import ishareCore
 import SwiftUI
 
 enum TrimOutcome: Equatable {
@@ -65,7 +66,7 @@ final class TrimModel: ObservableObject {
         }
         previewTask = Task { @MainActor [weak self] in
             guard let composition = try? await OverlayCompositor.previewComposition(for: item.asset, camera: camera),
-                  !Task.isCancelled, let self, player.currentItem === item, pendingZoom != nil
+                !Task.isCancelled, let self, player.currentItem === item, pendingZoom != nil
             else { return }
             item.videoComposition = composition
             seek(to: playhead)
@@ -463,11 +464,21 @@ struct TrimRangeSlider: View {
                 }
                 handle(systemImage: "chevron.compact.left")
                     .offset(x: startX - handleWidth / 2)
-                    .gesture(dragGesture(width: width) { selection.setStart($0); onScrub(selection.start) })
+                    .gesture(
+                        dragGesture(width: width) {
+                            selection.setStart($0)
+                            onScrub(selection.start)
+                        }
+                    )
                     .accessibilityLabel(Text("Start".localized()))
                 handle(systemImage: "chevron.compact.right")
                     .offset(x: endX - handleWidth / 2)
-                    .gesture(dragGesture(width: width) { selection.setEnd($0); onScrub(selection.end) })
+                    .gesture(
+                        dragGesture(width: width) {
+                            selection.setEnd($0)
+                            onScrub(selection.end)
+                        }
+                    )
                     .accessibilityLabel(Text("End".localized()))
             }
             .frame(width: width, height: height)

@@ -75,7 +75,9 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
     private var didFinishRecording = false
     private var recordingError: (any Error)?
 
-    @MainActor func startCapture(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL, showsNativeClicks: Bool, showsCursor: Bool, audioPlan: RecordingAudioPlan) -> AsyncThrowingStream<CapturedFrame, any Error> {
+    @MainActor func startCapture(
+        configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL, showsNativeClicks: Bool, showsCursor: Bool, audioPlan: RecordingAudioPlan
+    ) -> AsyncThrowingStream<CapturedFrame, any Error> {
         let recordMP4 = Defaults[.recordMP4]
         let useHEVC = Defaults[.useHEVC]
         let recordMic = Defaults[.recordMic]
@@ -259,16 +261,16 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDeleg
 
     private nonisolated func createFrame(for sampleBuffer: CMSampleBuffer) -> CapturedFrame? {
         guard let attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
-              let attachments = attachmentsArray.first,
-              let statusRawValue = attachments[SCStreamFrameInfo.status] as? Int,
-              let status = SCFrameStatus(rawValue: statusRawValue),
-              status == .complete,
-              let pixelBuffer = sampleBuffer.imageBuffer,
-              let surfaceRef = CVPixelBufferGetIOSurface(pixelBuffer)?.takeUnretainedValue(),
-              let contentRectDict = attachments[.contentRect],
-              let contentRect = CGRect(dictionaryRepresentation: contentRectDict as! CFDictionary),
-              let contentScale = attachments[.contentScale] as? CGFloat,
-              let scaleFactor = attachments[.scaleFactor] as? CGFloat
+            let attachments = attachmentsArray.first,
+            let statusRawValue = attachments[SCStreamFrameInfo.status] as? Int,
+            let status = SCFrameStatus(rawValue: statusRawValue),
+            status == .complete,
+            let pixelBuffer = sampleBuffer.imageBuffer,
+            let surfaceRef = CVPixelBufferGetIOSurface(pixelBuffer)?.takeUnretainedValue(),
+            let contentRectDict = attachments[.contentRect],
+            let contentRect = CGRect(dictionaryRepresentation: contentRectDict as! CFDictionary),
+            let contentScale = attachments[.contentScale] as? CGFloat,
+            let scaleFactor = attachments[.scaleFactor] as? CGFloat
         else { return nil }
         let surface = unsafeBitCast(surfaceRef, to: IOSurface.self)
         return CapturedFrame(surface: surface, contentRect: contentRect, contentScale: contentScale, scaleFactor: scaleFactor)

@@ -7,7 +7,7 @@ enum ShareXImportError: LocalizedError, Equatable {
     case unsupportedDestination(String)
     case unsupportedSyntax(field: String, token: String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .missingRequestURL:
             "The ShareX uploader has no request URL"
@@ -23,20 +23,20 @@ enum ShareXImportError: LocalizedError, Equatable {
     }
 }
 
-struct ShareXUploader: Decodable {
-    var name: String?
+public struct ShareXUploader: Decodable {
+    public var name: String?
     var destinationType: String?
-    var requestMethod: String?
-    var requestURL: String?
-    var parameters: [String: String]?
-    var headers: [String: String]?
-    var body: String?
-    var arguments: [String: String]?
-    var fileFormName: String?
-    var url: String?
-    var deletionURL: String?
+    public var requestMethod: String?
+    public var requestURL: String?
+    public var parameters: [String: String]?
+    public var headers: [String: String]?
+    public var body: String?
+    public var arguments: [String: String]?
+    public var fileFormName: String?
+    public var url: String?
+    public var deletionURL: String?
 
-    init(from decoder: any Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: DynamicCodingKey.self)
         name = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "name"))
         destinationType = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "destinationtype"))
@@ -52,16 +52,16 @@ struct ShareXUploader: Decodable {
     }
 }
 
-enum ShareXImport {
-    static let fileExtension = "sxcu"
+public enum ShareXImport {
+    public static let fileExtension = "sxcu"
 
-    static func uploader(from data: Data, fallbackName: String? = nil) throws -> CustomUploader {
+    public static func uploader(from data: Data, fallbackName: String? = nil) throws -> CustomUploader {
         let decoder = JSONDecoder()
         decoder.allowsJSON5 = true
         return try convert(decoder.decode(ShareXUploader.self, from: data), fallbackName: fallbackName)
     }
 
-    static func convert(_ source: ShareXUploader, fallbackName: String? = nil) throws -> CustomUploader {
+    public static func convert(_ source: ShareXUploader, fallbackName: String? = nil) throws -> CustomUploader {
         guard let rawRequestURL = source.requestURL?.trimmingCharacters(in: .whitespaces), !rawRequestURL.isEmpty else {
             throw ShareXImportError.missingRequestURL
         }
@@ -100,7 +100,7 @@ enum ShareXImport {
         )
     }
 
-    static func requestMethod(_ raw: String?) throws -> UploadRequestMethod {
+    public static func requestMethod(_ raw: String?) throws -> UploadRequestMethod {
         guard let raw, !raw.isEmpty else { return .post }
         guard let method = UploadRequestMethod(rawValue: raw.uppercased()) else {
             throw ShareXImportError.unsupportedMethod(raw.uppercased())
@@ -108,7 +108,7 @@ enum ShareXImport {
         return method
     }
 
-    static func bodyType(_ raw: String?) throws -> RequestBodyType {
+    public static func bodyType(_ raw: String?) throws -> RequestBodyType {
         switch raw?.lowercased() {
         case nil, "", "multipartformdata": .multipartFormData
         case "binary": .binary
@@ -180,10 +180,10 @@ enum ShareXImport {
     }
 }
 
-enum UploaderFile {
+public enum UploaderFile {
     static let iscuExtension = "iscu"
 
-    static func decode(_ data: Data, fileExtension: String, fallbackName: String? = nil) throws -> CustomUploader {
+    public static func decode(_ data: Data, fileExtension: String, fallbackName: String? = nil) throws -> CustomUploader {
         switch fileExtension.lowercased() {
         case ShareXImport.fileExtension:
             try ShareXImport.uploader(from: data, fallbackName: fallbackName)
@@ -192,7 +192,7 @@ enum UploaderFile {
         }
     }
 
-    static func decode(contentsOf url: URL) throws -> CustomUploader {
+    public static func decode(contentsOf url: URL) throws -> CustomUploader {
         try decode(Data(contentsOf: url), fileExtension: url.pathExtension, fallbackName: url.deletingPathExtension().lastPathComponent)
     }
 }

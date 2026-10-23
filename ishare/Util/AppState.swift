@@ -101,9 +101,10 @@ final class AppState: ObservableObject {
             return
         }
         if let image = pasteboard.imageFromData,
-           let tiff = image.tiffRepresentation,
-           let bitmap = NSBitmapImageRep(data: tiff),
-           let data = bitmap.representation(using: .png, properties: [:]) {
+            let tiff = image.tiffRepresentation,
+            let bitmap = NSBitmapImageRep(data: tiff),
+            let data = bitmap.representation(using: .png, properties: [:])
+        {
             let url = FileManager.default.temporaryDirectory.appending(path: CaptureFileName.make(prefix: Defaults[.captureFileName], suffix: "pasteboard", ext: "png"))
             try? data.write(to: url)
             await UploadCoordinator.upload(fileURL: url)

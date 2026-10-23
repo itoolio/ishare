@@ -1,5 +1,6 @@
 import Alamofire
 import Foundation
+import ishareCore
 import UniformTypeIdentifiers
 
 struct UploadOutcome: Sendable, Equatable {
@@ -153,14 +154,6 @@ enum MimeType {
         default:
             return UTType(filenameExtension: ext.lowercased())?.preferredMIMEType ?? "application/octet-stream"
         }
-    }
-}
-
-enum UploadFileName {
-    static func lowercasingExtension(of url: URL) -> String {
-        let ext = url.pathExtension
-        guard !ext.isEmpty else { return url.lastPathComponent }
-        return url.deletingPathExtension().lastPathComponent + "." + ext.lowercased()
     }
 }
 

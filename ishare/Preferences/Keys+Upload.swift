@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 
 extension Defaults.Keys {
     static let imgurClientId = Key<String>("imgurClientId", default: "867afe9433c0a53", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

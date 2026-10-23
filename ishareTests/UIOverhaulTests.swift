@@ -82,7 +82,8 @@ struct MenuFavoritesTests {
 
     @MainActor @Test func menuTileIDsExistAsCommands() {
         let ids = Set(AppCommand.all().map(\.id))
-        let tiles = (0 ..< 4).compactMap(MenuFavoriteCommandID.capture)
+        let tiles =
+            (0 ..< 4).compactMap(MenuFavoriteCommandID.capture)
             + [MenuFavoriteCommandID.footer(0), MenuFavoriteCommandID.footer(1), MenuFavoriteCommandID.history]
             + [false, true].flatMap { gif in [0, 1].map { MenuFavoriteCommandID.record($0, gif: gif) } }
         #expect(tiles.count == 11)
@@ -240,7 +241,10 @@ struct SettingsAnchorSearchTests {
 
     @MainActor @Test func extraEntriesCanDeclareTheirOwnAnchors() {
         let entries = [SettingsSearchEntry("Telemetry", pane: .advanced, anchor: "advanced.telemetry")]
-        #expect(SettingsSearchIndex.matches(for: "telemetry", entries: entries, localize: { $0 }) == [SettingsSearchMatch(pane: .advanced, keyword: "Telemetry", anchor: "advanced.telemetry")])
+        #expect(
+            SettingsSearchIndex.matches(for: "telemetry", entries: entries, localize: { $0 }) == [
+                SettingsSearchMatch(pane: .advanced, keyword: "Telemetry", anchor: "advanced.telemetry")
+            ])
     }
 
     @MainActor @Test func everyGeneralEntryIsAnchoredUniquely() {
@@ -304,37 +308,37 @@ struct OnboardingProgressTests {
 
 struct WhatsNewTests {
     static let changelog = """
-    ## [5.3.0](https://github.com/itoolio/ishare/compare/v5.2.1...v5.3.0) (2026-11-01)
+        ## [5.3.0](https://github.com/itoolio/ishare/compare/v5.2.1...v5.3.0) (2026-11-01)
 
-    ### Features
+        ### Features
 
-    * **menu:** favourites and drag reorder ([abc1234](https://github.com/itoolio/ishare/commit/abc1234def))
-    * quick annotate on the toast, closes [#12](https://github.com/itoolio/ishare/issues/12)
+        * **menu:** favourites and drag reorder ([abc1234](https://github.com/itoolio/ishare/commit/abc1234def))
+        * quick annotate on the toast, closes [#12](https://github.com/itoolio/ishare/issues/12)
 
-    ### Bug Fixes
+        ### Bug Fixes
 
-    * **toast:** keep the [link](https://example.com) readable ([0123456](https://github.com/itoolio/ishare/commit/0123456))
+        * **toast:** keep the [link](https://example.com) readable ([0123456](https://github.com/itoolio/ishare/commit/0123456))
 
-    ### Miscellaneous Chores
+        ### Miscellaneous Chores
 
-    * bump dependencies
+        * bump dependencies
 
-    ## [5.2.1](https://github.com/itoolio/ishare/compare/v5.2.0...v5.2.1) (2026-10-23)
+        ## [5.2.1](https://github.com/itoolio/ishare/compare/v5.2.0...v5.2.1) (2026-10-23)
 
-    ### Bug Fixes
+        ### Bug Fixes
 
-    * **app-store:** declare the keychain group ([bc5e28b](https://github.com/itoolio/ishare/commit/bc5e28b))
+        * **app-store:** declare the keychain group ([bc5e28b](https://github.com/itoolio/ishare/commit/bc5e28b))
 
-    ## 5.2.0 (2026-10-22)
+        ## 5.2.0 (2026-10-22)
 
-    ### Features
+        ### Features
 
-    * text capture
+        * text capture
 
-    ### ⚠ BREAKING CHANGES
+        ### ⚠ BREAKING CHANGES
 
-    * nothing user facing
-    """
+        * nothing user facing
+        """
 
     @Test func parsesOnlyUserFacingSectionsWithoutHashesOrLinks() {
         let releases = ChangelogParser.parse(Self.changelog)

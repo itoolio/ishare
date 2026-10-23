@@ -36,14 +36,20 @@ struct CanvasEventMonitor: NSViewRepresentable {
             super.viewDidMoveToWindow()
             removeMonitors()
             guard window != nil else { return }
-            if let scroll = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel, handler: { [weak self] event in
-                self?.handleScroll(event) ?? event
-            }) {
+            if let scroll = NSEvent.addLocalMonitorForEvents(
+                matching: .scrollWheel,
+                handler: { [weak self] event in
+                    self?.handleScroll(event) ?? event
+                })
+            {
                 monitors.append(scroll)
             }
-            if let keys = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp], handler: { [weak self] event in
-                self?.handleKey(event) ?? event
-            }) {
+            if let keys = NSEvent.addLocalMonitorForEvents(
+                matching: [.keyDown, .keyUp],
+                handler: { [weak self] event in
+                    self?.handleKey(event) ?? event
+                })
+            {
                 monitors.append(keys)
             }
         }
@@ -64,8 +70,8 @@ struct CanvasEventMonitor: NSViewRepresentable {
 
         private func handleKey(_ event: NSEvent) -> NSEvent? {
             guard event.window === window, event.keyCode == Self.spaceKeyCode,
-                  event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.capsLock).isEmpty,
-                  !(window?.firstResponder is NSText)
+                event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.capsLock).isEmpty,
+                !(window?.firstResponder is NSText)
             else { return event }
             let handled = onSpace?(event.type == .keyDown) ?? false
             return handled ? nil : event

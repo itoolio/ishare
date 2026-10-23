@@ -85,7 +85,7 @@ enum KeystrokeFormatter {
 
     private static func printable(_ characters: String?) -> String? {
         guard let characters, !characters.isEmpty,
-              characters.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) && !(0xF700 ... 0xF8FF).contains($0.value) })
+            characters.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) && !(0xF700 ... 0xF8FF).contains($0.value) })
         else { return nil }
         return characters
     }

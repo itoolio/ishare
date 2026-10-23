@@ -1,50 +1,6 @@
 import Alamofire
 import Foundation
-
-struct CloudStorageConfiguration: Codable, Hashable, Sendable {
-    var folder: String?
-    var pathTemplate: String?
-    var clientID: String?
-    var account: String?
-    var directLink: Bool?
-
-    static let defaultFolder = "ishare"
-    static let defaultPathTemplate = "{{filename}}"
-
-    init(folder: String? = nil, pathTemplate: String? = nil, clientID: String? = nil, account: String? = nil, directLink: Bool? = nil) {
-        self.folder = folder
-        self.pathTemplate = pathTemplate
-        self.clientID = clientID
-        self.account = account
-        self.directLink = directLink
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case folder
-        case pathTemplate = "pathtemplate"
-        case clientID = "clientid"
-        case account
-        case directLink = "directlink"
-    }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
-        folder = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "folder"))
-        pathTemplate = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "pathtemplate"))
-        clientID = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "clientid"))
-        account = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "account"))
-        directLink = try container.decodeDynamicIfPresent(Bool.self, forKey: .key(named: "directlink"))
-    }
-
-    var folderPath: String {
-        FolderPaths.sanitized(folder ?? Self.defaultFolder)
-    }
-
-    func remotePath(fileName: String, date: Date = .init(), uuid: UUID = .init()) throws -> String {
-        let relative = try RemotePath.render(pathTemplate ?? Self.defaultPathTemplate, fileName: fileName, date: date, uuid: uuid)
-        return folderPath.isEmpty ? relative : "\(folderPath)/\(relative)"
-    }
-}
+import ishareCore
 
 enum CloudStorageError: LocalizedError, Equatable {
     case missingField(String)
@@ -215,9 +171,11 @@ enum GoogleDriveAPI {
     }
 
     static func startUploadRequest(name: String, parent: String, mimeType: String, size: Int, token: String) -> APIRequest {
-        .json("POST", resumableUpload, token: token, body: ["name": name, "parents": [parent]], headers: [
-            "X-Upload-Content-Type": mimeType, "X-Upload-Content-Length": String(size),
-        ])
+        .json(
+            "POST", resumableUpload, token: token, body: ["name": name, "parents": [parent]],
+            headers: [
+                "X-Upload-Content-Type": mimeType, "X-Upload-Content-Length": String(size),
+            ])
     }
 
     static func permissionRequest(fileID: String, token: String) -> APIRequest {
@@ -433,9 +391,11 @@ struct CloudStorageUploader: Uploader {
         for range in OneDriveAPI.chunkRanges(size: size) {
             try handle.seek(toOffset: UInt64(range.lowerBound))
             let chunk = try handle.read(upToCount: range.count) ?? Data()
-            let request = UploadService.session.upload(chunk, to: uploadURL, method: .put, headers: [
-                "Content-Range": OneDriveAPI.contentRange(range, total: size),
-            ])
+            let request = UploadService.session.upload(
+                chunk, to: uploadURL, method: .put,
+                headers: [
+                    "Content-Range": OneDriveAPI.contentRange(range, total: size)
+                ])
             last = try await UploadService.perform(request) { _ in }
             progress(Double(range.upperBound) / Double(max(size, 1)))
         }

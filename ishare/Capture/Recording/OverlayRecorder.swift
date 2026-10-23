@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import Defaults
+import ishareCore
 import ScreenCaptureKit
 
 struct OverlaySource: Sendable {
@@ -24,8 +25,8 @@ struct OverlaySource: Sendable {
     func currentRect() -> CGRect? {
         guard let windowID else { return sourceRect }
         guard let info = CGWindowListCopyWindowInfo([.optionIncludingWindow], windowID) as? [[String: Any]],
-              let bounds = info.first?[kCGWindowBounds as String] as? NSDictionary,
-              let rect = CGRect(dictionaryRepresentation: bounds)
+            let bounds = info.first?[kCGWindowBounds as String] as? NSDictionary,
+            let rect = CGRect(dictionaryRepresentation: bounds)
         else { return sourceRect }
         return rect
     }
@@ -115,13 +116,13 @@ final class OverlayEventRecorder {
 
     private func recordKey(_ event: RawKeyEvent) {
         guard !event.isRepeat,
-              let keystroke = KeystrokeFormatter.keystroke(
-                  keyCode: event.keyCode,
-                  characters: event.characters,
-                  baseCharacters: event.baseCharacters,
-                  modifiers: event.modifiers,
-                  shortcutsOnly: shortcutsOnly
-              )
+            let keystroke = KeystrokeFormatter.keystroke(
+                keyCode: event.keyCode,
+                characters: event.characters,
+                baseCharacters: event.baseCharacters,
+                modifiers: event.modifiers,
+                shortcutsOnly: shortcutsOnly
+            )
         else { return }
         log.recordKey(keystroke, time: RecordingClock.now)
     }
@@ -148,8 +149,8 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
     func start(deviceID: String?) async -> Bool {
         guard await CaptureDevices.requestAccess(for: .video),
-              let device = CaptureDevices.camera(id: deviceID),
-              let deviceInput = try? AVCaptureDeviceInput(device: device)
+            let device = CaptureDevices.camera(id: deviceID),
+            let deviceInput = try? AVCaptureDeviceInput(device: device)
         else { return false }
         let output = AVCaptureVideoDataOutput()
         output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
@@ -203,12 +204,14 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
         let scale = min(1, Self.maximumShortSide / max(1, min(size.width, size.height)))
         let output = ScreenGeometry.evenPixelSize(CGSize(width: size.width * scale, height: size.height * scale))
         guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mov) else { return }
-        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
-            AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: Int(output.width),
-            AVVideoHeightKey: Int(output.height),
-            AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill,
-        ])
+        let input = AVAssetWriterInput(
+            mediaType: .video,
+            outputSettings: [
+                AVVideoCodecKey: AVVideoCodecType.h264,
+                AVVideoWidthKey: Int(output.width),
+                AVVideoHeightKey: Int(output.height),
+                AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill,
+            ])
         input.expectsMediaDataInRealTime = true
         guard writer.canAdd(input) else { return }
         writer.add(input)

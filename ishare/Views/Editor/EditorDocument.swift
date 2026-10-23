@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Defaults
+import ishareCore
 
 @MainActor
 final class EditorDocument: ObservableObject {
@@ -225,12 +226,13 @@ final class EditorDocument: ObservableObject {
     func apply(_ transform: Transform) {
         commitPendingEdits()
         let mapping = CanvasMapping.orientation(transform, size: imageSize)
-        let transformed: CGImage = switch transform {
-        case .rotateLeft: ImageProcessing.rotated(base, clockwise: false)
-        case .rotateRight: ImageProcessing.rotated(base, clockwise: true)
-        case .flipHorizontal: ImageProcessing.flipped(base, horizontally: true)
-        case .flipVertical: ImageProcessing.flipped(base, horizontally: false)
-        }
+        let transformed: CGImage =
+            switch transform {
+            case .rotateLeft: ImageProcessing.rotated(base, clockwise: false)
+            case .rotateRight: ImageProcessing.rotated(base, clockwise: true)
+            case .flipHorizontal: ImageProcessing.flipped(base, horizontally: true)
+            case .flipVertical: ImageProcessing.flipped(base, horizontally: false)
+            }
         commit {
             base = transformed
             annotations = annotations.map { $0.mapped(by: mapping) }
@@ -435,23 +437,24 @@ final class EditorDocument: ObservableObject {
 
     func makeAnnotation(tool: EditorTool, from start: CGPoint, to end: CGPoint, points: [CGPoint]) -> Annotation? {
         let rect = ScreenGeometry.rect(from: start, to: end)
-        let shape: Annotation.Shape? = switch tool {
-        case .arrow: arrowPath == .curved ? .curvedArrow(start, ArrowGeometry.defaultControl(from: start, to: end), end) : .arrow(start, end)
-        case .line: .line(start, end)
-        case .rectangle: .rectangle(rect)
-        case .ellipse: .ellipse(rect)
-        case .highlight: .highlight(rect)
-        case .pen: .pen(points)
-        case .marker: .marker(points)
-        case .blur: .blur(rect)
-        case .pixelate: .pixelate(rect)
-        case .eraser: .eraser(rect)
-        case .spotlight: .spotlight(rect)
-        case .magnify: .magnify(ScreenGeometry.squareRect(from: start, to: end))
-        case .callout: .callout(start, CGRect(x: end.x, y: end.y, width: max(fontSize * 5, 160), height: fontSize * 1.9), "")
-        case .stamp: .stamp(stampRect(from: start, to: end), stamp)
-        case .select, .text, .step, .crop, .cursor: nil
-        }
+        let shape: Annotation.Shape? =
+            switch tool {
+            case .arrow: arrowPath == .curved ? .curvedArrow(start, ArrowGeometry.defaultControl(from: start, to: end), end) : .arrow(start, end)
+            case .line: .line(start, end)
+            case .rectangle: .rectangle(rect)
+            case .ellipse: .ellipse(rect)
+            case .highlight: .highlight(rect)
+            case .pen: .pen(points)
+            case .marker: .marker(points)
+            case .blur: .blur(rect)
+            case .pixelate: .pixelate(rect)
+            case .eraser: .eraser(rect)
+            case .spotlight: .spotlight(rect)
+            case .magnify: .magnify(ScreenGeometry.squareRect(from: start, to: end))
+            case .callout: .callout(start, CGRect(x: end.x, y: end.y, width: max(fontSize * 5, 160), height: fontSize * 1.9), "")
+            case .stamp: .stamp(stampRect(from: start, to: end), stamp)
+            case .select, .text, .step, .crop, .cursor: nil
+            }
         return shape.map {
             var annotation = Annotation(shape: $0, color: color, lineWidth: lineWidth, fontSize: fontSize, filled: filled && tool.supportsFill)
             annotation.arrowHead = arrowHead

@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 
 @MainActor
 enum UploaderStore {

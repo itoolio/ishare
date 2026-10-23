@@ -1,69 +1,8 @@
 import Defaults
 import Foundation
 import ImageIO
+import ishareCore
 import UniformTypeIdentifiers
-
-enum ImageOptimizationFormat: String, Codable, CaseIterable, Identifiable, Sendable, Defaults.Serializable {
-    case lossless
-    case avif
-    case webp
-
-    var id: Self { self }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let rawValue = try container.decode(String.self).lowercased()
-        switch rawValue {
-        case "lossless", "png", "original": self = .lossless
-        case "avif": self = .avif
-        case "webp": self = .webp
-        default: throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid image format: \(rawValue)")
-        }
-    }
-
-    var titleKey: String {
-        switch self {
-        case .lossless: "Keep the format (lossless PNG recompression)"
-        case .avif: "Convert to AVIF"
-        case .webp: "Convert to WebP"
-        }
-    }
-}
-
-struct ImageOptimizationOverride: Codable, Hashable, Sendable {
-    var enabled: Bool?
-    var format: ImageOptimizationFormat?
-
-    init(enabled: Bool? = nil, format: ImageOptimizationFormat? = nil) {
-        self.enabled = enabled
-        self.format = format
-    }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
-        enabled = try container.decodeDynamicIfPresent(Bool.self, forKey: .key(named: "enabled"))
-        format = try container.decodeDynamicIfPresent(ImageOptimizationFormat.self, forKey: .key(named: "format"))
-    }
-
-    var isEmpty: Bool { enabled == nil && format == nil }
-}
-
-struct ImageOptimizationSettings: Equatable, Sendable {
-    var enabled: Bool
-    var format: ImageOptimizationFormat
-    var quality: Double
-
-    static func resolved(global: ImageOptimizationSettings, override: ImageOptimizationOverride?) -> ImageOptimizationSettings {
-        var settings = global
-        if let enabled = override?.enabled {
-            settings.enabled = enabled
-        }
-        if let format = override?.format {
-            settings.format = format
-        }
-        return settings
-    }
-}
 
 struct ImageOptimizationResult: Equatable, Sendable {
     let url: URL
@@ -123,13 +62,13 @@ enum ImageOptimizer {
         guard settings.enabled else { return nil }
         let ext = fileURL.pathExtension.lowercased()
         guard convertibleExtensions.contains(ext),
-              let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
-              CGImageSourceGetCount(source) == 1
+            let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
+            CGImageSourceGetCount(source) == 1
         else { return nil }
         let original = fileSize(fileURL)
         var candidates: [URL] = []
         if let target = ImageEncoders.conversionTarget(for: settings.format),
-           let converted = convert(source, to: target, quality: settings.quality, name: fileURL.deletingPathExtension().lastPathComponent, in: directory)
+            let converted = convert(source, to: target, quality: settings.quality, name: fileURL.deletingPathExtension().lastPathComponent, in: directory)
         {
             candidates.append(converted)
         }
@@ -194,10 +133,12 @@ enum ImageOptimizer {
         guard width * height <= 40_000_000, let space = CGColorSpace(name: CGColorSpace.sRGB) else { return false }
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let drawn: Bool = pixels.withUnsafeMutableBytes { buffer in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: space,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return false }
+            guard
+                let context = CGContext(
+                    data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: space,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )
+            else { return false }
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
             return true
         }
@@ -209,10 +150,12 @@ enum ImageOptimizer {
         guard let space = image.colorSpace, space.model == .rgb || space.model == .monochrome else { return nil }
         let bitsPerComponent = image.bitsPerComponent == 16 ? 16 : 8
         let bitmapInfo = CGImageAlphaInfo.noneSkipLast.rawValue | (bitsPerComponent == 16 ? CGBitmapInfo.byteOrder16Little.rawValue : 0)
-        guard space.model == .rgb, let context = CGContext(
-            data: nil, width: image.width, height: image.height, bitsPerComponent: bitsPerComponent, bytesPerRow: 0, space: space,
-            bitmapInfo: bitmapInfo
-        ) else { return nil }
+        guard space.model == .rgb,
+            let context = CGContext(
+                data: nil, width: image.width, height: image.height, bitsPerComponent: bitsPerComponent, bytesPerRow: 0, space: space,
+                bitmapInfo: bitmapInfo
+            )
+        else { return nil }
         context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
         return context.makeImage()
     }
@@ -227,3 +170,5 @@ enum ByteSavings {
         return String(format: "Saved %@ (%d%%)".localized(), formatter.string(fromByteCount: Int64(saved)), percent)
     }
 }
+
+extension ImageOptimizationFormat: @retroactive Defaults.Serializable {}

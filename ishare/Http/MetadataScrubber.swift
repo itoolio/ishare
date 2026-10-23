@@ -1,5 +1,6 @@
 import Foundation
 import ImageIO
+import ishareCore
 import UniformTypeIdentifiers
 
 enum MetadataScrubber {
@@ -7,29 +8,29 @@ enum MetadataScrubber {
 
     static var sensitiveDictionaries: [CFString] {
         [
-        kCGImagePropertyGPSDictionary, kCGImagePropertyIPTCDictionary, kCGImagePropertyMakerAppleDictionary,
-        kCGImagePropertyMakerCanonDictionary, kCGImagePropertyMakerNikonDictionary, kCGImagePropertyExifAuxDictionary,
+            kCGImagePropertyGPSDictionary, kCGImagePropertyIPTCDictionary, kCGImagePropertyMakerAppleDictionary,
+            kCGImagePropertyMakerCanonDictionary, kCGImagePropertyMakerNikonDictionary, kCGImagePropertyExifAuxDictionary,
         ]
     }
 
     static var identifyingTIFFKeys: [CFString] {
         [
-        kCGImagePropertyTIFFMake, kCGImagePropertyTIFFModel, kCGImagePropertyTIFFArtist, kCGImagePropertyTIFFSoftware,
-        kCGImagePropertyTIFFHostComputer, kCGImagePropertyTIFFCopyright,
+            kCGImagePropertyTIFFMake, kCGImagePropertyTIFFModel, kCGImagePropertyTIFFArtist, kCGImagePropertyTIFFSoftware,
+            kCGImagePropertyTIFFHostComputer, kCGImagePropertyTIFFCopyright,
         ]
     }
 
     static var identifyingExifKeys: [CFString] {
         [
-        kCGImagePropertyExifMakerNote, kCGImagePropertyExifBodySerialNumber, kCGImagePropertyExifCameraOwnerName,
-        kCGImagePropertyExifLensMake, kCGImagePropertyExifLensModel, kCGImagePropertyExifLensSerialNumber,
-        kCGImagePropertyExifUserComment, kCGImagePropertyExifImageUniqueID, kCGImagePropertyExifDateTimeOriginal,
+            kCGImagePropertyExifMakerNote, kCGImagePropertyExifBodySerialNumber, kCGImagePropertyExifCameraOwnerName,
+            kCGImagePropertyExifLensMake, kCGImagePropertyExifLensModel, kCGImagePropertyExifLensSerialNumber,
+            kCGImagePropertyExifUserComment, kCGImagePropertyExifImageUniqueID, kCGImagePropertyExifDateTimeOriginal,
         ]
     }
 
     static func containsSensitiveMetadata(_ url: URL) -> Bool {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
         else { return false }
         if sensitiveDictionaries.contains(where: { properties[$0] != nil }) { return true }
         let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
@@ -37,7 +38,7 @@ enum MetadataScrubber {
         let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
         if identifyingExifKeys.contains(where: { exif[$0] != nil }) { return true }
         guard let metadata = CGImageSourceCopyMetadataAtIndex(source, 0, nil),
-              let tags = CGImageMetadataCopyTags(metadata) as? [CGImageMetadataTag]
+            let tags = CGImageMetadataCopyTags(metadata) as? [CGImageMetadataTag]
         else { return false }
         return tags.contains { tag in
             let namespace = CGImageMetadataTagCopyNamespace(tag) as String? ?? ""
@@ -53,8 +54,8 @@ enum MetadataScrubber {
     static func scrubbed(_ fileURL: URL, in directory: URL) -> URL? {
         let ext = fileURL.pathExtension.lowercased()
         guard scrubbableExtensions.contains(ext), containsSensitiveMetadata(fileURL),
-              let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
-              let type = CGImageSourceGetType(source)
+            let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
+            let type = CGImageSourceGetType(source)
         else { return nil }
         let output = directory.appending(path: UploadFileName.lowercasingExtension(of: fileURL), directoryHint: .notDirectory)
         if copyWithoutMetadata(source, type: type, to: output), !containsSensitiveMetadata(output) {
@@ -93,7 +94,7 @@ enum MetadataScrubber {
 
     static func reencodeWithoutMetadata(_ source: CGImageSource, type: CFString, to url: URL) -> Bool {
         guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
-              let destination = CGImageDestinationCreateWithURL(url as CFURL, type, 1, nil)
+            let destination = CGImageDestinationCreateWithURL(url as CFURL, type, 1, nil)
         else { return false }
         var properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 1.0]
         if let orientation = orientation(of: source) {

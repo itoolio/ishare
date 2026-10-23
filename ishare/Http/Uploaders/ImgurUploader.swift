@@ -1,5 +1,6 @@
 import Alamofire
 import Foundation
+import ishareCore
 
 struct ImgurUploader: Uploader {
     let clientID: String

@@ -34,7 +34,7 @@ struct HistorySyncEntry: Codable, Equatable, Sendable {
 
     static func isSyncable(_ item: HistoryItem) -> Bool {
         guard let link = item.fileUrl, let url = URL(string: link), let scheme = url.scheme?.lowercased(),
-              ["http", "https"].contains(scheme), let host = url.host(), !LocalNetworkAddress.isPrivateHost(host)
+            ["http", "https"].contains(scheme), let host = url.host(), !LocalNetworkAddress.isPrivateHost(host)
         else { return false }
         return true
     }

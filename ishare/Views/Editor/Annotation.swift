@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import ishareCore
 
 struct RGBAColor: Codable, Hashable, Sendable {
     var red: Double
@@ -236,7 +237,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
         case let .stamp(rect, _):
             rect
         case let .rectangle(rect), let .ellipse(rect), let .highlight(rect), let .blur(rect), let .pixelate(rect),
-             let .magnify(rect), let .spotlight(rect), let .eraser(rect):
+            let .magnify(rect), let .spotlight(rect), let .eraser(rect):
             rect
         case let .callout(tail, rect, _):
             rect.union(CGRect(origin: tail, size: .zero))
@@ -272,26 +273,27 @@ struct Annotation: Identifiable, Hashable, Sendable {
         var copy = self
         func move(_ point: CGPoint) -> CGPoint { CGPoint(x: point.x + delta.dx, y: point.y + delta.dy) }
         func move(_ rect: CGRect) -> CGRect { rect.offsetBy(dx: delta.dx, dy: delta.dy) }
-        copy.shape = switch shape {
-        case let .arrow(start, end): .arrow(move(start), move(end))
-        case let .line(start, end): .line(move(start), move(end))
-        case let .curvedArrow(start, control, end): .curvedArrow(move(start), move(control), move(end))
-        case let .stamp(rect, stamp): .stamp(move(rect), stamp)
-        case let .rectangle(rect): .rectangle(move(rect))
-        case let .ellipse(rect): .ellipse(move(rect))
-        case let .highlight(rect): .highlight(move(rect))
-        case let .pen(points): .pen(points.map(move))
-        case let .marker(points): .marker(points.map(move))
-        case let .text(origin, string): .text(move(origin), string)
-        case let .callout(tail, rect, string): .callout(move(tail), move(rect), string)
-        case let .step(center, number): .step(move(center), number)
-        case let .magnify(rect): .magnify(move(rect))
-        case let .spotlight(rect): .spotlight(move(rect))
-        case let .blur(rect): .blur(move(rect))
-        case let .pixelate(rect): .pixelate(move(rect))
-        case let .eraser(rect): .eraser(move(rect))
-        case let .cursor(point): .cursor(move(point))
-        }
+        copy.shape =
+            switch shape {
+            case let .arrow(start, end): .arrow(move(start), move(end))
+            case let .line(start, end): .line(move(start), move(end))
+            case let .curvedArrow(start, control, end): .curvedArrow(move(start), move(control), move(end))
+            case let .stamp(rect, stamp): .stamp(move(rect), stamp)
+            case let .rectangle(rect): .rectangle(move(rect))
+            case let .ellipse(rect): .ellipse(move(rect))
+            case let .highlight(rect): .highlight(move(rect))
+            case let .pen(points): .pen(points.map(move))
+            case let .marker(points): .marker(points.map(move))
+            case let .text(origin, string): .text(move(origin), string)
+            case let .callout(tail, rect, string): .callout(move(tail), move(rect), string)
+            case let .step(center, number): .step(move(center), number)
+            case let .magnify(rect): .magnify(move(rect))
+            case let .spotlight(rect): .spotlight(move(rect))
+            case let .blur(rect): .blur(move(rect))
+            case let .pixelate(rect): .pixelate(move(rect))
+            case let .eraser(rect): .eraser(move(rect))
+            case let .cursor(point): .cursor(move(point))
+            }
         return copy
     }
 

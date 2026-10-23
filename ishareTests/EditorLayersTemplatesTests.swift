@@ -4,14 +4,18 @@ import Testing
 @testable import ishare
 
 private func makeImage(width: Int = 400, height: Int = 300, gray: CGFloat = 1) -> CGImage {
-    let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let context = CGContext(
+        data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     context.setFillColor(CGColor(gray: gray, alpha: 1))
     context.fill(CGRect(x: 0, y: 0, width: width, height: height))
     return context.makeImage()!
 }
 
 private func stripedImage(width: Int = 400, height: Int = 300) -> CGImage {
-    let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let context = CGContext(
+        data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     for x in 0 ..< width {
         context.setFillColor(CGColor(srgbRed: x % 4 < 2 ? 0 : 1, green: CGFloat(x) / CGFloat(width), blue: x % 6 < 3 ? 0.2 : 0.9, alpha: 1))
         context.fill(CGRect(x: x, y: 0, width: 1, height: height))
@@ -21,14 +25,18 @@ private func stripedImage(width: Int = 400, height: Int = 300) -> CGImage {
 
 private func pixels(of image: CGImage) -> [UInt8] {
     var data = [UInt8](repeating: 0, count: image.width * image.height * 4)
-    let context = CGContext(data: &data, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let context = CGContext(
+        data: &data, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
     return data
 }
 
 private func pixel(_ image: CGImage, x: Int, y: Int) -> [UInt8] {
     var data = [UInt8](repeating: 0, count: 4)
-    let context = CGContext(data: &data, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let context = CGContext(
+        data: &data, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     context.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
     return data
 }
@@ -74,7 +82,8 @@ struct AnnotationTemplateTests {
             Annotation(shape: .step(CGPoint(x: 300, y: 200), 2), color: .red, lineWidth: 2),
             Annotation(shape: .ellipse(CGRect(x: 0, y: 0, width: 10, height: 10)), color: .white, lineWidth: 1, filled: true),
         ]
-        let template = AnnotationTemplate(name: "Review", annotations: source, frame: CGRect(x: 0, y: 0, width: 400, height: 300), createdAt: Date(timeIntervalSince1970: 1_700_000_000))
+        let template = AnnotationTemplate(
+            name: "Review", annotations: source, frame: CGRect(x: 0, y: 0, width: 400, height: 300), createdAt: Date(timeIntervalSince1970: 1_700_000_000))
         let decoded = try AnnotationTemplate.decode(template.encoded())
         #expect(decoded.id == template.id)
         #expect(decoded.name == "Review")
@@ -139,7 +148,8 @@ struct AnnotationTemplateTests {
     }
 
     @Test func placesTemplatesInsideAnOffsetFrame() {
-        let template = AnnotationTemplate(name: "D", annotations: [Annotation(shape: .step(CGPoint(x: 50, y: 50), 1), color: .red, lineWidth: 2)], frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let template = AnnotationTemplate(
+            name: "D", annotations: [Annotation(shape: .step(CGPoint(x: 50, y: 50), 1), color: .red, lineWidth: 2)], frame: CGRect(x: 0, y: 0, width: 100, height: 100))
         let placed = template.annotations(fittedTo: CGRect(x: 200, y: 100, width: 100, height: 100))
         #expect(placed[0].shape == .step(CGPoint(x: 250, y: 150), 1))
         let mapping = TemplateMapping(source: CGRect(x: 10, y: 20, width: 100, height: 50), target: TemplateMapping.unit)
@@ -158,7 +168,8 @@ struct TemplateStoreTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = TemplateStore(directory: directory)
         #expect(store.templates.isEmpty)
-        let saved = try store.save(name: "  Bug report  ", annotations: [rectangle(CGRect(x: 10, y: 10, width: 20, height: 20))], frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let saved = try store.save(
+            name: "  Bug report  ", annotations: [rectangle(CGRect(x: 10, y: 10, width: 20, height: 20))], frame: CGRect(x: 0, y: 0, width: 100, height: 100))
         #expect(saved.name == "Bug report")
         #expect(FileManager.default.fileExists(atPath: store.fileURL(for: saved.id).path(percentEncoded: false)))
 

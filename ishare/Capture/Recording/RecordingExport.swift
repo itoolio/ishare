@@ -2,6 +2,7 @@ import AVFoundation
 import CoreGraphics
 import Defaults
 import Foundation
+import ishareCore
 
 enum RecordingExportFormat: String, CaseIterable, Identifiable, Sendable {
     case mp4H264
@@ -251,9 +252,11 @@ enum RecordingTranscoder {
         let naturalSize = try await track.load(.naturalSize)
         let transform = try await track.load(.preferredTransform)
         let frameRate = Double(try await track.load(.nominalFrameRate))
-        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-        ])
+        let output = AVAssetReaderTrackOutput(
+            track: track,
+            outputSettings: [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+            ])
         output.alwaysCopiesSampleData = false
         guard reader.canAdd(output) else { return nil }
         reader.add(output)
@@ -271,20 +274,23 @@ enum RecordingTranscoder {
         var channelCount = 2
         var sampleRate = 48000.0
         if let description = try await tracks[0].load(.formatDescriptions).first,
-           let basic = description.audioStreamBasicDescription {
+            let basic = description.audioStreamBasicDescription
+        {
             channelCount = Int(basic.mChannelsPerFrame)
             sampleRate = basic.mSampleRate
         }
-        let output = AVAssetReaderAudioMixOutput(audioTracks: tracks, audioSettings: [
-            AVFormatIDKey: kAudioFormatLinearPCM,
-            AVLinearPCMBitDepthKey: 16,
-            AVLinearPCMIsFloatKey: false,
-            AVLinearPCMIsBigEndianKey: false,
-            AVLinearPCMIsNonInterleaved: false,
-        ])
+        let output = AVAssetReaderAudioMixOutput(
+            audioTracks: tracks,
+            audioSettings: [
+                AVFormatIDKey: kAudioFormatLinearPCM,
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsBigEndianKey: false,
+                AVLinearPCMIsNonInterleaved: false,
+            ])
         output.alwaysCopiesSampleData = false
         guard reader.canAdd(output),
-              let audioSettings = settings.audioOutputSettings(channelCount: channelCount, sampleRate: sampleRate)
+            let audioSettings = settings.audioOutputSettings(channelCount: channelCount, sampleRate: sampleRate)
         else { return nil }
         reader.add(output)
         let input = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)

@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 import SwiftUI
 
 #if canImport(FoundationModels)
@@ -106,7 +107,6 @@ enum AssistantError: LocalizedError {
         "Apple Intelligence is not available on this Mac"
     }
 }
-
 
 enum AssistantRefinement {
     static func jsonObjects(in text: String) -> [Any] {

@@ -1,6 +1,7 @@
 import CoreGraphics
 import Defaults
 import Foundation
+import ishareCore
 
 enum BeautifyBackground: String, CaseIterable, Identifiable, Sendable, Defaults.Serializable {
     case ocean
@@ -96,11 +97,12 @@ struct BeautifyStyle: Hashable, Sendable {
         background: BeautifyBackground, solidColor: CaptureColor, padding: CGFloat, cornerRadius: CGFloat, shadow: Bool, scale: CGFloat,
         frame: DeviceFrameStyle? = nil
     ) {
-        let fill: Fill = switch background {
-        case .solid: .solid(solidColor)
-        case .transparent: .transparent
-        default: .gradient(background.gradientColors ?? [solidColor])
-        }
+        let fill: Fill =
+            switch background {
+            case .solid: .solid(solidColor)
+            case .transparent: .transparent
+            default: .gradient(background.gradientColors ?? [solidColor])
+            }
         let scaledPadding = padding * scale
         self.init(
             padding: scaledPadding,
@@ -157,11 +159,11 @@ enum Beautifier {
         let imageSize = CGSize(width: image.width, height: image.height)
         let canvasSize = outputSize(for: imageSize, style: style)
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(
-                  data: nil, width: Int(canvasSize.width), height: Int(canvasSize.height),
-                  bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
-                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              )
+            let context = CGContext(
+                data: nil, width: Int(canvasSize.width), height: Int(canvasSize.height),
+                bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
         else { return nil }
         context.interpolationQuality = .high
         let canvas = CGRect(origin: .zero, size: canvasSize)

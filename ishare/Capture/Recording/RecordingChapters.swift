@@ -153,15 +153,19 @@ enum ChapterTextSample {
             kCMTextFormatDescriptionExtension_FontTable as String: ["1": "Sans-Serif"],
         ]
         var description: CMFormatDescription?
-        let status = CMFormatDescriptionCreate(allocator: nil, mediaType: kCMMediaType_Text, mediaSubType: kCMTextFormatType_3GText, extensions: extensions as CFDictionary, formatDescriptionOut: &description)
+        let status = CMFormatDescriptionCreate(
+            allocator: nil, mediaType: kCMMediaType_Text, mediaSubType: kCMTextFormatType_3GText, extensions: extensions as CFDictionary, formatDescriptionOut: &description)
         return status == noErr ? description : nil
     }
 
     static func sampleBuffer(for chapter: RecordingChapter, format: CMFormatDescription) -> CMSampleBuffer? {
         let data = payload(for: chapter.title)
         var block: CMBlockBuffer?
-        guard CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: nil, blockLength: data.count, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: data.count, flags: kCMBlockBufferAssureMemoryNowFlag, blockBufferOut: &block) == noErr,
-              let block
+        guard
+            CMBlockBufferCreateWithMemoryBlock(
+                allocator: nil, memoryBlock: nil, blockLength: data.count, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: data.count,
+                flags: kCMBlockBufferAssureMemoryNowFlag, blockBufferOut: &block) == noErr,
+            let block
         else { return nil }
         let copied = data.withUnsafeBytes { bytes in
             CMBlockBufferReplaceDataBytes(with: bytes.baseAddress!, blockBuffer: block, offsetIntoDestination: 0, dataLength: data.count)
@@ -170,7 +174,9 @@ enum ChapterTextSample {
         var timing = CMSampleTimingInfo(duration: chapter.timeRange.duration, presentationTimeStamp: chapter.timeRange.start, decodeTimeStamp: .invalid)
         var size = data.count
         var sampleBuffer: CMSampleBuffer?
-        let status = CMSampleBufferCreate(allocator: nil, dataBuffer: block, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: format, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timing, sampleSizeEntryCount: 1, sampleSizeArray: &size, sampleBufferOut: &sampleBuffer)
+        let status = CMSampleBufferCreate(
+            allocator: nil, dataBuffer: block, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: format, sampleCount: 1, sampleTimingEntryCount: 1,
+            sampleTimingArray: &timing, sampleSizeEntryCount: 1, sampleSizeArray: &size, sampleBufferOut: &sampleBuffer)
         return status == noErr ? sampleBuffer : nil
     }
 }
@@ -211,13 +217,15 @@ enum ChapterRemuxer {
         primaryInput.addTrackAssociation(withTrackOf: chapterInput, type: AVAssetTrack.AssociationType.chapterList.rawValue)
 
         let range = CMTimeRange(start: .zero, duration: duration)
-        try await MediaPump.run(reader: reader, writer: writer, lanes: lanes, timeRange: range, prepareSession: { _ in
-            for chapter in chapters {
-                if let sample = ChapterTextSample.sampleBuffer(for: chapter, format: format) {
-                    chapterInput.append(sample)
+        try await MediaPump.run(
+            reader: reader, writer: writer, lanes: lanes, timeRange: range,
+            prepareSession: { _ in
+                for chapter in chapters {
+                    if let sample = ChapterTextSample.sampleBuffer(for: chapter, format: format) {
+                        chapterInput.append(sample)
+                    }
                 }
-            }
-            chapterInput.markAsFinished()
-        })
+                chapterInput.markAsFinished()
+            })
     }
 }

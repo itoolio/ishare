@@ -24,7 +24,7 @@ enum LocalCaptureCleanup {
             let digits = rest.prefix { $0.isASCII && $0.isNumber }
             let remainder = rest.dropFirst(digits.count)
             guard (9 ... 11).contains(digits.count), remainder.isEmpty || remainder.hasPrefix("-"),
-                  let seconds = TimeInterval(String(digits))
+                let seconds = TimeInterval(String(digits))
             else { continue }
             return Date(timeIntervalSince1970: seconds)
         }
@@ -40,10 +40,11 @@ enum LocalCaptureCleanup {
         var seen = Set<String>()
         var result: [URL] = []
         for directory in plan.directories {
-            let contents = (try? fileManager.contentsOfDirectory(
-                at: directory, includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey, .isSymbolicLinkKey],
-                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-            )) ?? []
+            let contents =
+                (try? fileManager.contentsOfDirectory(
+                    at: directory, includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey, .isSymbolicLinkKey],
+                    options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+                )) ?? []
             for url in contents {
                 let path = url.standardizedFileURL.resolvingSymlinksInPath().path
                 guard !seen.contains(path), isExpired(url, plan: plan) else { continue }
@@ -56,8 +57,8 @@ enum LocalCaptureCleanup {
 
     private static func isExpired(_ url: URL, plan: LocalCaptureCleanupPlan) -> Bool {
         guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .contentModificationDateKey, .isSymbolicLinkKey]),
-              values.isRegularFile == true, values.isSymbolicLink != true,
-              let captured = captureDate(ofFileNamed: url.lastPathComponent, prefixes: plan.prefixes)
+            values.isRegularFile == true, values.isSymbolicLink != true,
+            let captured = captureDate(ofFileNamed: url.lastPathComponent, prefixes: plan.prefixes)
         else { return false }
         if plan.protectedPaths.contains(url.standardizedFileURL.resolvingSymlinksInPath().path) {
             return false
@@ -67,10 +68,11 @@ enum LocalCaptureCleanup {
     }
 
     static func protectedPaths(in history: [HistoryItem]) -> Set<String> {
-        Set(history.compactMap { item in
-            guard item.remoteURL != nil, let url = item.localFileURL else { return nil }
-            return url.standardizedFileURL.resolvingSymlinksInPath().path
-        })
+        Set(
+            history.compactMap { item in
+                guard item.remoteURL != nil, let url = item.localFileURL else { return nil }
+                return url.standardizedFileURL.resolvingSymlinksInPath().path
+            })
     }
 
     @discardableResult

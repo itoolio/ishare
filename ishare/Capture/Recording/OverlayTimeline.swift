@@ -84,7 +84,7 @@ struct OverlayEventLog: Sendable {
         let mappedClicks = clicks.compactMap { click -> OverlayClick? in
             let time = click.time - recordingStart
             guard time >= 0, time <= duration,
-                  let point = OverlayCoordinateMapper.videoPoint(click.point, sourceRect: click.sourceRect, videoSize: videoSize)
+                let point = OverlayCoordinateMapper.videoPoint(click.point, sourceRect: click.sourceRect, videoSize: videoSize)
             else { return nil }
             return OverlayClick(time: time, point: point)
         }

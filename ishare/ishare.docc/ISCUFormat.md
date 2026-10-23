@@ -6,7 +6,7 @@ The structure of an `.iscu` file and how ishare reads it.
 
 An `.iscu` file is a JSON object that describes one uploader. ishare opens it when you double-click the file, drop it on the import sheet in **Settings → Uploaders**, or paste it into the importer. You can also build an uploader in the editor in the same pane and export it as an `.iscu` file, or let the Apple Intelligence assistant write one from a conversation.
 
-ishare decodes the file into a ``CustomUploader``. The parser is lenient so that hand-written files keep working:
+ishare decodes the file into a `CustomUploader` from the `ishareCore` package. The parser is lenient so that hand-written files keep working:
 
 - Property names are case-insensitive: `requestURL`, `requesturl` and `RequestUrl` are the same property.
 - Trailing commas and comments are accepted.
@@ -15,7 +15,7 @@ ishare decodes the file into a ``CustomUploader``. The parser is lenient so that
 
 ### Choosing the kind of uploader
 
-The optional `uploaderType` property selects what kind of destination the file describes. It maps to ``UploaderKind``.
+The optional `uploaderType` property selects what kind of destination the file describes. It maps to `UploaderKind`.
 
 | `uploaderType` | Destination | Required block | Article |
 | --- | --- | --- | --- |

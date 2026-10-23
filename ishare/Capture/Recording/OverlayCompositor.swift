@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import CoreImage
+import ishareCore
 
 final class OverlayCompositionInstruction: NSObject, AVVideoCompositionInstructionProtocol, @unchecked Sendable {
     let timeRange: CMTimeRange
@@ -25,10 +26,10 @@ final class OverlayCompositionInstruction: NSObject, AVVideoCompositionInstructi
 
 final class OverlayVideoCompositor: NSObject, AVVideoCompositing, @unchecked Sendable {
     let sourcePixelBufferAttributes: [String: any Sendable]? = [
-        kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_32BGRA],
+        kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_32BGRA]
     ]
     let requiredPixelBufferAttributesForRenderContext: [String: any Sendable] = [
-        kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_32BGRA],
+        kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_32BGRA]
     ]
 
     private let queue = DispatchQueue(label: "dev.adrian.ishare.OverlayVideoCompositor")
@@ -40,8 +41,8 @@ final class OverlayVideoCompositor: NSObject, AVVideoCompositing, @unchecked Sen
     func startRequest(_ request: AVAsynchronousVideoCompositionRequest) {
         queue.async { [self] in
             guard let instruction = request.videoCompositionInstruction as? OverlayCompositionInstruction,
-                  let screen = request.sourceFrame(byTrackID: instruction.screenTrackID),
-                  let output = request.renderContext.newPixelBuffer()
+                let screen = request.sourceFrame(byTrackID: instruction.screenTrackID),
+                let output = request.renderContext.newPixelBuffer()
             else {
                 request.finish(with: VideoTrimError.exportUnavailable)
                 return
@@ -109,7 +110,8 @@ final class OverlayImageRenderer: @unchecked Sendable {
     private func zoomed(_ image: CIImage, to visibleRect: CGRect, videoSize: CGSize) -> CIImage {
         guard visibleRect.width > 0, visibleRect.height > 0, visibleRect.width < videoSize.width - 0.5 || visibleRect.height < videoSize.height - 0.5 else { return image }
         let flipped = CGRect(x: visibleRect.minX, y: videoSize.height - visibleRect.maxY, width: visibleRect.width, height: visibleRect.height)
-        return image
+        return
+            image
             .clampedToExtent()
             .transformed(by: CGAffineTransform(translationX: -flipped.minX, y: -flipped.minY))
             .transformed(by: CGAffineTransform(scaleX: videoSize.width / flipped.width, y: videoSize.height / flipped.height))
@@ -118,9 +120,14 @@ final class OverlayImageRenderer: @unchecked Sendable {
 
     private func pointerImage(scale: CGFloat, tip: CGPoint, opacity: Double) -> CIImage {
         let base = cachedPointer(scale: scale)
-        let faded = opacity >= 0.99 ? base : base.applyingFilter("CIColorMatrix", parameters: [
-            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(opacity)),
-        ])
+        let faded =
+            opacity >= 0.99
+            ? base
+            : base.applyingFilter(
+                "CIColorMatrix",
+                parameters: [
+                    "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(opacity))
+                ])
         let inset = PointerGlyph.padding * cachedPointerKey(scale)
         return faded.transformed(by: CGAffineTransform(translationX: tip.x - inset, y: tip.y - base.extent.height + inset))
     }
@@ -174,28 +181,35 @@ final class OverlayImageRenderer: @unchecked Sendable {
         guard extent.width > 0, extent.height > 0 else { return CIImage.empty() }
         let side = frame.width
         let scale = max(side / extent.width, side / extent.height)
-        let mirrored = webcam
+        let mirrored =
+            webcam
             .transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
             .transformed(by: CGAffineTransform(scaleX: -scale, y: scale))
             .transformed(by: CGAffineTransform(translationX: extent.width * scale, y: 0))
         let scaledWidth = extent.width * scale
         let scaledHeight = extent.height * scale
-        let cropped = mirrored
+        let cropped =
+            mirrored
             .cropped(to: CGRect(x: (scaledWidth - side) / 2, y: (scaledHeight - side) / 2, width: side, height: side))
             .transformed(by: CGAffineTransform(translationX: -(scaledWidth - side) / 2 + frame.minX, y: -(scaledHeight - side) / 2 + frame.minY))
         let radius = side / 2
-        let mask = CIFilter(name: "CIRadialGradient", parameters: [
-            "inputCenter": CIVector(x: frame.midX, y: frame.midY),
-            "inputRadius0": max(0, radius - 1),
-            "inputRadius1": radius,
-            "inputColor0": CIColor.white,
-            "inputColor1": CIColor.clear,
-        ])?.outputImage?.cropped(to: frame) ?? CIImage.empty()
+        let mask =
+            CIFilter(
+                name: "CIRadialGradient",
+                parameters: [
+                    "inputCenter": CIVector(x: frame.midX, y: frame.midY),
+                    "inputRadius0": max(0, radius - 1),
+                    "inputRadius1": radius,
+                    "inputColor0": CIColor.white,
+                    "inputColor1": CIColor.clear,
+                ])?.outputImage?.cropped(to: frame) ?? CIImage.empty()
         let background = CIImage(color: .black).cropped(to: frame)
-        return cropped.composited(over: background).applyingFilter("CIBlendWithAlphaMask", parameters: [
-            kCIInputBackgroundImageKey: CIImage.empty(),
-            kCIInputMaskImageKey: mask,
-        ])
+        return cropped.composited(over: background).applyingFilter(
+            "CIBlendWithAlphaMask",
+            parameters: [
+                kCIInputBackgroundImageKey: CIImage.empty(),
+                kCIInputMaskImageKey: mask,
+            ])
     }
 
     private func ring(diameter: CGFloat, scale: CGFloat) -> CIImage {
@@ -258,7 +272,8 @@ final class OverlayImageRenderer: @unchecked Sendable {
         let width = max(1, Int(size.width.rounded(.up)))
         let height = max(1, Int(size.height.rounded(.up)))
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return CIImage.empty() }
         body(context)
         guard let image = context.makeImage() else { return CIImage.empty() }
@@ -288,7 +303,10 @@ enum PointerGlyph {
 
 enum OverlayCompositor {
     @discardableResult
-    static func composite(_ url: URL, capture: OverlayCapture?, effects: RecordingEffectsCapture?, recordingStart: Double, hevc: Bool, defersZoom: Bool = false, progress: (@Sendable (Double) -> Void)? = nil) async throws -> CameraPath? {
+    static func composite(
+        _ url: URL, capture: OverlayCapture?, effects: RecordingEffectsCapture?, recordingStart: Double, hevc: Bool, defersZoom: Bool = false,
+        progress: (@Sendable (Double) -> Void)? = nil
+    ) async throws -> CameraPath? {
         let asset = AVURLAsset(url: url)
         guard let screenTrack = try await asset.loadTracks(withMediaType: .video).first else { throw RecordingExportError.noVideoTrack }
         let duration = try await asset.load(.duration)
@@ -321,7 +339,8 @@ enum OverlayCompositor {
         guard let screenTrack = try await asset.loadTracks(withMediaType: .video).first else { throw RecordingExportError.noVideoTrack }
         let duration = try await asset.load(.duration)
         let videoSize = try await screenTrack.load(.naturalSize)
-        try await composite(asset, screenTrack: screenTrack, duration: duration, timeline: cameraTimeline(camera), layout: cameraLayout(videoSize), replacing: url, hevc: hevc, progress: progress)
+        try await composite(
+            asset, screenTrack: screenTrack, duration: duration, timeline: cameraTimeline(camera), layout: cameraLayout(videoSize), replacing: url, hevc: hevc, progress: progress)
     }
 
     static func previewComposition(for asset: AVAsset, camera: CameraPath) async throws -> AVVideoComposition {
@@ -347,7 +366,10 @@ enum OverlayCompositor {
         OverlayCompositionLayout(videoSize: videoSize, pixelsPerPoint: 1, webcamFrame: nil)
     }
 
-    static func composite(_ asset: AVAsset, screenTrack: AVAssetTrack, duration: CMTime, timeline: OverlayTimeline, layout: OverlayCompositionLayout, replacing url: URL, hevc: Bool, progress: (@Sendable (Double) -> Void)?) async throws {
+    static func composite(
+        _ asset: AVAsset, screenTrack: AVAssetTrack, duration: CMTime, timeline: OverlayTimeline, layout: OverlayCompositionLayout, replacing url: URL, hevc: Bool,
+        progress: (@Sendable (Double) -> Void)?
+    ) async throws {
         let composition = AVMutableComposition()
         let fullRange = CMTimeRange(start: .zero, duration: duration)
         guard let screen = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) else { throw VideoTrimError.exportUnavailable }
@@ -363,18 +385,22 @@ enum OverlayCompositor {
         try await VideoCompositionExporter.export(composition, videoComposition: videoComposition, replacing: url, hevc: hevc, progress: progress)
     }
 
-    private static func videoComposition(trackID: CMPersistentTrackID, webcamTrackID: CMPersistentTrackID?, range: CMTimeRange, frameRate: Float, timeline: OverlayTimeline, layout: OverlayCompositionLayout) -> AVMutableVideoComposition {
+    private static func videoComposition(
+        trackID: CMPersistentTrackID, webcamTrackID: CMPersistentTrackID?, range: CMTimeRange, frameRate: Float, timeline: OverlayTimeline, layout: OverlayCompositionLayout
+    ) -> AVMutableVideoComposition {
         let videoComposition = AVMutableVideoComposition()
         videoComposition.customVideoCompositorClass = OverlayVideoCompositor.self
         videoComposition.renderSize = layout.videoSize
         videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(frameRate > 1 ? frameRate.rounded() : 60))
-        videoComposition.instructions = [OverlayCompositionInstruction(
-            timeRange: range,
-            screenTrackID: trackID,
-            webcamTrackID: webcamTrackID,
-            timeline: timeline,
-            layout: layout
-        )]
+        videoComposition.instructions = [
+            OverlayCompositionInstruction(
+                timeRange: range,
+                screenTrackID: trackID,
+                webcamTrackID: webcamTrackID,
+                timeline: timeline,
+                layout: layout
+            )
+        ]
         return videoComposition
     }
 
@@ -382,7 +408,7 @@ enum OverlayCompositor {
         guard let clip else { return nil }
         let webcamAsset = AVURLAsset(url: clip.url)
         guard let webcamTrack = try await webcamAsset.loadTracks(withMediaType: .video).first,
-              let track = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
+            let track = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
         else { return nil }
         let webcamDuration = try await webcamAsset.load(.duration).seconds
         let sourceStart = max(0, -clip.offset)

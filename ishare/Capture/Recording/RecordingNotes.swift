@@ -195,11 +195,15 @@ struct RecordingNotesView: View {
                 }
                 .help("Back to the top".localized())
             }
-            Button { fontSize = RecordingNotesLayout.steppedFontSize(fontSize, by: -2) } label: {
+            Button {
+                fontSize = RecordingNotesLayout.steppedFontSize(fontSize, by: -2)
+            } label: {
                 Image(systemName: "textformat.size.smaller")
             }
             .help("Smaller text".localized())
-            Button { fontSize = RecordingNotesLayout.steppedFontSize(fontSize, by: 2) } label: {
+            Button {
+                fontSize = RecordingNotesLayout.steppedFontSize(fontSize, by: 2)
+            } label: {
                 Image(systemName: "textformat.size.larger")
             }
             .help("Larger text".localized())

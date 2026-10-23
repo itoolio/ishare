@@ -1,5 +1,6 @@
 import Alamofire
 import Foundation
+import ishareCore
 
 struct S3Uploader: Uploader {
     let uploader: CustomUploader

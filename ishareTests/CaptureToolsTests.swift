@@ -308,7 +308,8 @@ struct CaptureProfileTests {
     }
 
     @Test func overridesOnlyTheFieldsAProfileSets() {
-        let profile = CaptureProfile(bundleIdentifier: "com.tinyspeck.slackmacgap", appName: "Slack", blursPrivateApps: false, includesWindowShadow: false, fileNamePrefix: " slack ")
+        let profile = CaptureProfile(
+            bundleIdentifier: "com.tinyspeck.slackmacgap", appName: "Slack", blursPrivateApps: false, includesWindowShadow: false, fileNamePrefix: " slack ")
         let resolved = CaptureProfileMatcher.settings(for: "com.tinyspeck.slackmacgap", global: global, profiles: [profile])
         #expect(resolved == CaptureSettings(addsBackground: false, blursPrivateApps: false, includesWindowShadow: false, fileNamePrefix: "slack"))
     }

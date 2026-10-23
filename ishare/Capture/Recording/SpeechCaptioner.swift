@@ -50,7 +50,7 @@ enum SpeechCaptioner {
     private static func extractAudio(from url: URL) async throws -> URL? {
         let asset = AVURLAsset(url: url)
         guard try await !asset.loadTracks(withMediaType: .audio).isEmpty,
-              let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A)
+            let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A)
         else { return nil }
         let output = FileManager.default.temporaryDirectory.appending(path: "ishare-captions-\(UUID().uuidString).m4a")
         try await session.export(to: output, as: .m4a)
@@ -109,8 +109,8 @@ private enum AnalyzerTranscription {
 private enum RecognizerTranscription {
     static func segments(for audioURL: URL) async throws -> [TranscriptSegment] {
         guard let recognizer = SFSpeechRecognizer(locale: Locale.current) ?? SFSpeechRecognizer(),
-              recognizer.isAvailable,
-              recognizer.supportsOnDeviceRecognition
+            recognizer.isAvailable,
+            recognizer.supportsOnDeviceRecognition
         else { throw SpeechCaptionError.unavailable }
         let request = SFSpeechURLRecognitionRequest(url: audioURL)
         request.requiresOnDeviceRecognition = true
@@ -121,9 +121,10 @@ private enum RecognizerTranscription {
             try await withCheckedThrowingContinuation { continuation in
                 collector.task = recognizer.recognitionTask(with: request) { result, error in
                     if let result, result.isFinal {
-                        collector.append(result.bestTranscription.segments.map {
-                            TranscriptSegment(text: $0.substring, start: $0.timestamp, end: $0.timestamp + $0.duration)
-                        })
+                        collector.append(
+                            result.bestTranscription.segments.map {
+                                TranscriptSegment(text: $0.substring, start: $0.timestamp, end: $0.timestamp + $0.duration)
+                            })
                         if collector.finish() { continuation.resume(returning: collector.segments) }
                     } else if let error {
                         let nsError = error as NSError

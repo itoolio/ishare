@@ -43,7 +43,8 @@ enum Stamp: Hashable, Codable, Sendable {
                 return true
             }
         case let .symbol(name):
-            let palette: [NSColor] = name.contains(".circle.fill") || name.contains(".triangle.fill")
+            let palette: [NSColor] =
+                name.contains(".circle.fill") || name.contains(".triangle.fill")
                 ? [color.contrastingText.nsColor, color.nsColor]
                 : [color.nsColor]
             let configuration = NSImage.SymbolConfiguration(pointSize: size, weight: .semibold)

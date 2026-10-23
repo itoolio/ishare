@@ -3,7 +3,8 @@ import Foundation
 enum SettingsStorage {
     static let screenshotSuiteName = "dev.adrian.ishare.screenshots"
     static let testSuiteName = "dev.adrian.ishare.tests"
-    static let syncsToCloud = !ScreenshotMode.isActive
+    static let syncsToCloud =
+        !ScreenshotMode.isActive
         && !RuntimeEnvironment.isRunningTests
         && !ProcessInfo.processInfo.arguments.contains("-ishareDisableCloudSync")
 

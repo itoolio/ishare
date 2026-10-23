@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import BezelNotification
 import Defaults
+import ishareCore
 import SwiftUI
 
 struct RecordingSidecar: Sendable {

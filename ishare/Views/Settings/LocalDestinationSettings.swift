@@ -1,4 +1,5 @@
 import AppKit
+import ishareCore
 import SwiftUI
 
 struct FolderDraft: Equatable {
@@ -85,9 +86,12 @@ struct FolderDestinationSection: View {
             }
             TextField("Subfolder".localized(), text: $draft.subfolderTemplate, prompt: Text("{{date}}"))
             TextField("Public URL".localized(), text: $draft.publicURL, prompt: Text("https://example.com/{{filename}}"))
-            Text("Subfolder placeholders: {{date}}, {{year}}, {{month}}, {{day}}, {{name}}, {{ext}}, {{uuid}}, {{random}}, {{timestamp}}. Without a public URL, ishare copies the file URL. Public URL placeholders: {{filename}}, {{path}}, {{subfolder}}.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "Subfolder placeholders: {{date}}, {{year}}, {{month}}, {{day}}, {{name}}, {{ext}}, {{uuid}}, {{random}}, {{timestamp}}. Without a public URL, ishare copies the file URL. Public URL placeholders: {{filename}}, {{path}}, {{subfolder}}."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         } header: {
             Text("Folder".localized())
         }
@@ -188,9 +192,12 @@ struct PhotosDestinationSection: View {
             case .library:
                 EmptyView()
             }
-            Text("ishare creates the album if it doesn't exist. Apps can't create shared albums or add to them, so captures go into a regular album that you can share from Photos. Photos uploads have no link; the history keeps a reference to the photo.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "ishare creates the album if it doesn't exist. Apps can't create shared albums or add to them, so captures go into a regular album that you can share from Photos. Photos uploads have no link; the history keeps a reference to the photo."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         } header: {
             Text("Photos".localized())
         }

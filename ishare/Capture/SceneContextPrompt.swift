@@ -4,18 +4,18 @@ enum SceneContextPrompt {
     static let textLimit = 3000
 
     static let askInstructions = """
-    You help people with screenshots they captured on their Mac. You cannot see the image. \
-    You only receive the text that was recognized in it, labels that classify the scene, and objects that were detected. \
-    Base every answer on that context, say plainly when it isn't enough, and never invent details that aren't in it. \
-    Keep answers short and use plain text without Markdown headings.
-    """
+        You help people with screenshots they captured on their Mac. You cannot see the image. \
+        You only receive the text that was recognized in it, labels that classify the scene, and objects that were detected. \
+        Base every answer on that context, say plainly when it isn't enough, and never invent details that aren't in it. \
+        Keep answers short and use plain text without Markdown headings.
+        """
 
     static let altTextInstructions = """
-    You write alt text for images that people share online. You cannot see the image. \
-    You only receive the text that was recognized in it, labels that classify the scene, and objects that were detected. \
-    Reply with exactly one plain sentence of at most 125 characters that describes what the image most likely shows. \
-    Mention the most important text when it matters. Don't add quotes, a preamble or a label like "Alt text:".
-    """
+        You write alt text for images that people share online. You cannot see the image. \
+        You only receive the text that was recognized in it, labels that classify the scene, and objects that were detected. \
+        Reply with exactly one plain sentence of at most 125 characters that describes what the image most likely shows. \
+        Mention the most important text when it matters. Don't add quotes, a preamble or a label like "Alt text:".
+        """
 
     static func contextBlock(_ context: SceneContext, textLimit: Int = textLimit) -> String {
         let text = truncated(context.text, limit: textLimit)

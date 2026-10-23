@@ -41,10 +41,11 @@ struct RecordingSettingsView: View {
                 Toggle("Use HDR".localized(), isOn: $useHDR)
             }
             Section("Content".localized()) {
-                AudioSourceSettingsRows(audioSource: Binding(
-                    get: { RecordingAudioSource.resolved(recordAudio: recordAudio, source: audioSource) },
-                    set: { RecordingAudioSource.store($0) }
-                ))
+                AudioSourceSettingsRows(
+                    audioSource: Binding(
+                        get: { RecordingAudioSource.resolved(recordAudio: recordAudio, source: audioSource) },
+                        set: { RecordingAudioSource.store($0) }
+                    ))
                 Toggle("Record microphone".localized(), isOn: $recordMic)
                     .onChange(of: recordMic) { _, enabled in
                         guard enabled else { return }
@@ -99,34 +100,50 @@ struct RecordingSettingsView: View {
 
 extension RecordingSettingsView: SettingsSearchable {
     static let searchEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry("Video", pane: .recording, keywords: [
-            "Resolution", "Frame rate", "FPS", "MP4", "MOV", "HEVC", "HDR", "Record audio", "Audio", "Record microphone",
-            "Microphone", "Record pointer", "Record clicks", "Excluded applications", "GIF", "GIF frame rate", "Compress large recordings before upload",
-            "Compression", "Video path",
-        ]),
-        SettingsSearchEntry("Clicks & Keystrokes", pane: .recording, keywords: [
-            "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera", "Input level", "Trim recordings before saving",
-            "Trim", "GIF size", "Meter",
-        ]),
-        SettingsSearchEntry("Captions", pane: .recording, keywords: [
-            "Generate captions", "Subtitles", "SRT", "Transcription", "Speech", "Burn into the video", "Markers", "Chapters",
-            "Export",
-        ]),
-        SettingsSearchEntry("Audio source", pane: .recording, keywords: [
-            "All system audio", "Only selected apps", "App audio", "Notes", "Teleprompter", "Script", "Instant replay",
-            "Replay", "Buffer", "Keep the last",
-        ]),
-        SettingsSearchEntry("Auto Zoom", pane: .recording, keywords: [
-            "Auto zoom", "Zoom level", "Zoom speed", "Stay zoomed for", "Follow the pointer while zoomed", "Zoom in on typing", "Pan",
-        ]),
-        SettingsSearchEntry("Pointer", pane: .recording, keywords: [
-            "Smooth pointer movement", "Pointer size", "Cursor", "Hide the pointer when idle", "Hide after", "Click ripples", "Ripple color",
-        ]),
-        SettingsSearchEntry("Draw on Screen", pane: .recording, keywords: [
-            "Draw on Screen", "Drawing", "Pen", "Highlighter", "Arrow", "Annotate", "Fade marks",
-        ]),
-        SettingsSearchEntry("Limits", pane: .recording, keywords: [
-            "Stop after", "Stop at file size", "Time limit", "Size limit", "Disk space", "Warn when free space is below",
-        ]),
+        SettingsSearchEntry(
+            "Video", pane: .recording,
+            keywords: [
+                "Resolution", "Frame rate", "FPS", "MP4", "MOV", "HEVC", "HDR", "Record audio", "Audio", "Record microphone",
+                "Microphone", "Record pointer", "Record clicks", "Excluded applications", "GIF", "GIF frame rate", "Compress large recordings before upload",
+                "Compression", "Video path",
+            ]),
+        SettingsSearchEntry(
+            "Clicks & Keystrokes", pane: .recording,
+            keywords: [
+                "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera", "Input level", "Trim recordings before saving",
+                "Trim", "GIF size", "Meter",
+            ]),
+        SettingsSearchEntry(
+            "Captions", pane: .recording,
+            keywords: [
+                "Generate captions", "Subtitles", "SRT", "Transcription", "Speech", "Burn into the video", "Markers", "Chapters",
+                "Export",
+            ]),
+        SettingsSearchEntry(
+            "Audio source", pane: .recording,
+            keywords: [
+                "All system audio", "Only selected apps", "App audio", "Notes", "Teleprompter", "Script", "Instant replay",
+                "Replay", "Buffer", "Keep the last",
+            ]),
+        SettingsSearchEntry(
+            "Auto Zoom", pane: .recording,
+            keywords: [
+                "Auto zoom", "Zoom level", "Zoom speed", "Stay zoomed for", "Follow the pointer while zoomed", "Zoom in on typing", "Pan",
+            ]),
+        SettingsSearchEntry(
+            "Pointer", pane: .recording,
+            keywords: [
+                "Smooth pointer movement", "Pointer size", "Cursor", "Hide the pointer when idle", "Hide after", "Click ripples", "Ripple color",
+            ]),
+        SettingsSearchEntry(
+            "Draw on Screen", pane: .recording,
+            keywords: [
+                "Draw on Screen", "Drawing", "Pen", "Highlighter", "Arrow", "Annotate", "Fade marks",
+            ]),
+        SettingsSearchEntry(
+            "Limits", pane: .recording,
+            keywords: [
+                "Stop after", "Stop at file size", "Time limit", "Size limit", "Disk space", "Warn when free space is below",
+            ]),
     ]
 }
