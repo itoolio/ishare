@@ -2,7 +2,7 @@ import Defaults
 import Foundation
 
 enum Migrations {
-    static let currentVersion = 4
+    static let currentVersion = 5
     static let versionKey = "ishareMigrationVersion"
     static let removedKeys = ["captureBinary"]
     static let removedInVersion2 = ["showMainMenu"]
@@ -27,6 +27,11 @@ enum Migrations {
         }
         if version < 4 {
             makeS3SecretsSynchronizable(defaults: defaults)
+        }
+        if version < 5, defaults === UserDefaults.ishare, Thread.isMainThread {
+            MainActor.assumeIsolated {
+                UploaderStore.separateLocalUploaders()
+            }
         }
         defaults.set(currentVersion, forKey: versionKey)
     }

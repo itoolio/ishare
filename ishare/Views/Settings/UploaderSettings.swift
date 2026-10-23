@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct UploaderSettingsView: View {
     @Default(.activeCustomUploader) var activeCustomUploader
     @Default(.savedCustomUploaders) var savedCustomUploaders
+    @Default(.savedLocalUploaders) var savedLocalUploaders
     @Default(.uploadType) var uploadType
     @Default(.uploadDestination) var uploadDestination
 
@@ -569,6 +570,7 @@ struct EntrySection: View {
 struct ImportCustomUploaderView: View {
     @Environment(\.dismiss) private var dismiss
     @Default(.savedCustomUploaders) var savedCustomUploaders
+    @Default(.savedLocalUploaders) var savedLocalUploaders
     @Default(.activeCustomUploader) var activeCustomUploader
     @Default(.uploadType) var uploadType
     @Default(.uploadDestination) var uploadDestination

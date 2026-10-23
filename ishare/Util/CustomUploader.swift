@@ -217,7 +217,12 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
     }
 
     static var allCases: [CustomUploader] {
-        Defaults[.savedCustomUploaders]?.sorted(by: { $0.name.localizedStandardCompare($1.name) == .orderedAscending }) ?? []
+        (Defaults[.savedCustomUploaders] ?? []).union(Defaults[.savedLocalUploaders])
+            .sorted(by: { $0.name.localizedStandardCompare($1.name) == .orderedAscending })
+    }
+
+    var isLocalOnly: Bool {
+        kind == .folder || kind == .photos
     }
 
     static func == (lhs: CustomUploader, rhs: CustomUploader) -> Bool {

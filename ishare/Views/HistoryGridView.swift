@@ -41,12 +41,13 @@ struct HistoryThumbnail: View {
 struct HistoryGridView: View {
     @Default(.uploadHistory) var uploadHistory
     @Default(.savedCustomUploaders) var savedCustomUploaders
+    @Default(.savedLocalUploaders) var savedLocalUploaders
     @State private var filter = HistoryFilter()
     @State private var selection = HistorySelection()
     @State private var shareAnchor = ViewAnchor()
 
     private var uploaders: [CustomUploader] {
-        Array(savedCustomUploaders ?? [])
+        Array((savedCustomUploaders ?? []).union(savedLocalUploaders))
     }
 
     private var filteredHistory: [HistoryItem] {
