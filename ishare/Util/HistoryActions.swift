@@ -13,6 +13,12 @@ enum HistoryActions {
         }
     }
 
+    static func copy(_ text: String, announcing message: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        BezelNotification.show(messageText: message.localized(), icon: ToastIcon)
+    }
+
     static func open(_ item: HistoryItem) {
         if let url = item.remoteURL {
             NSWorkspace.shared.open(url)
@@ -170,6 +176,12 @@ struct HistoryItemMenuItems: View {
     var body: some View {
         Button("Copy URL".localized()) { HistoryActions.copyURL(item) }
             .disabled(item.fileUrl == nil)
+        if let altText = item.altText, !altText.isEmpty {
+            Button("Copy Alt Text".localized()) { HistoryActions.copy(altText, announcing: "Copied Alt Text") }
+        }
+        if let markdown = item.markdownImage {
+            Button("Copy Markdown".localized()) { HistoryActions.copy(markdown, announcing: "Copied Markdown") }
+        }
         Button("Open in Browser".localized()) { HistoryActions.open(item) }
             .disabled(item.remoteURL == nil)
         if HistoryActions.canEdit(item) {

@@ -144,6 +144,9 @@ enum SettingsTransfer {
         .captureProfiles, .nameFilesAfterWindowTitle, .generateCaptions, .captionOutput, .urlShortener, .uploadPresets,
         .editorShowsLayers, .menuSectionOrder, .hiddenMenuSections, .menuDensity, .menuTheme, .highContrastMenu,
         .toastCorner, .toastScreen, .resultPresentation,
+        .recordingAudioSource, .recordingAudioBundleIDs, .instantReplayDuration, .instantReplayResolution, .instantReplayFrameRate, .recordingNotesFontSize,
+        .recordingNotesScrollSpeed, .recordingNotesOpacity, .translationTargetLanguage, .generateAltText, .linkOptionPreferences, .menuFavorites,
+        .showsWhatsNew,
     ]
 
     static var preferenceNames: Set<String> {

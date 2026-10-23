@@ -430,6 +430,17 @@ private struct ToastCardContent: View {
     private var actions: some View {
         HStack(spacing: 6) {
             ToastActionButton(symbol: "doc.on.doc", title: "Copy", identifier: "toast.copy") { copy() }
+                .contextMenu {
+                    if let item = model.historyItem {
+                        Button("Copy URL".localized()) { HistoryActions.copyURL(item) }
+                        if let altText = item.altText, !altText.isEmpty {
+                            Button("Copy Alt Text".localized()) { HistoryActions.copy(altText, announcing: "Copied Alt Text") }
+                        }
+                        if let markdown = item.markdownImage {
+                            Button("Copy Markdown".localized()) { HistoryActions.copy(markdown, announcing: "Copied Markdown") }
+                        }
+                    }
+                }
             ToastActionButton(symbol: "arrow.up.forward.app", title: "Open", iconOnly: model.canUndo, identifier: "toast.open") { open() }
                 .disabled(model.historyItem == nil && !fileExists)
             if model.isImage {
