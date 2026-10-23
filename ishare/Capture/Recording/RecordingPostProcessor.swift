@@ -9,6 +9,7 @@ struct RecordingSidecar: Sendable {
 
     var markers: [RecordingMarker] = []
     var overlay: OverlayCapture?
+    var effects: RecordingEffectsCapture?
     var recordingStart: Double?
     var appAudio: AppAudioClip?
 }
@@ -81,18 +82,23 @@ enum RecordingPostProcessor {
         }
     }
 
-    static func compositeOverlays(_ url: URL, sidecar: RecordingSidecar) async {
-        guard let capture = sidecar.overlay, let start = sidecar.recordingStart else { return }
+    @discardableResult
+    static func compositeOverlays(_ url: URL, sidecar: RecordingSidecar) async -> CameraPath? {
+        let capture = sidecar.overlay
+        let effects = sidecar.effects
         defer {
-            if let webcam = capture.webcam { try? FileManager.default.removeItem(at: webcam.url) }
+            if let webcam = capture?.webcam { try? FileManager.default.removeItem(at: webcam.url) }
         }
+        guard capture != nil || effects != nil, let start = sidecar.recordingStart, videoExtensions.contains(url.pathExtension.lowercased()) else { return nil }
         let hevc = Defaults[.useHEVC]
+        let defersZoom = Defaults[.trimBeforeSaving]
         do {
-            try await ProcessingHUDPresenter.run("Processing…".localized()) { progress in
-                try await OverlayCompositor.composite(url, capture: capture, recordingStart: start, hevc: hevc, progress: progress)
+            return try await ProcessingHUDPresenter.run("Processing…".localized()) { progress in
+                try await OverlayCompositor.composite(url, capture: capture, effects: effects, recordingStart: start, hevc: hevc, defersZoom: defersZoom, progress: progress)
             }
         } catch {
             Log.capture.error("Compositing overlays failed, keeping the original: \(error.localizedDescription, privacy: .public)")
+            return nil
         }
     }
 

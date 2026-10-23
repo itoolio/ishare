@@ -59,6 +59,7 @@ final class AppState: ObservableObject {
         KeyboardShortcuts.onKeyUp(for: .addRecordingMarker) { Task { @MainActor in AppModel.shared.recorder.addMarker() } }
         KeyboardShortcuts.onKeyUp(for: .toggleRecordingNotes) { Task { @MainActor in AppModel.shared.recorder.toggleNotes() } }
         KeyboardShortcuts.onKeyUp(for: .saveInstantReplay) { Task { @MainActor in await InstantReplay.shared.save() } }
+        KeyboardShortcuts.onKeyUp(for: .toggleRecordingDrawing) { Task { @MainActor in AppModel.shared.recorder.toggleDrawing() } }
 
         KeyboardShortcuts.onKeyUp(for: .toggleMainMenu) {
             Task { @MainActor in

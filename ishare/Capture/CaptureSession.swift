@@ -116,12 +116,12 @@ enum CaptureSession {
 
     private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions, sidecar: RecordingSidecar) async {
         await RecordingPostProcessor.mergeAppAudio(url, sidecar: sidecar)
-        await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
+        let deferredZoom = await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
         var fileURL = url
         var markers = sidecar.markers
         var isGIF = false
         if Defaults[.trimBeforeSaving] {
-            switch await RecordingTrimWindow.present(url, markers: markers) {
+            switch await RecordingTrimWindow.present(url, markers: markers, autoZoom: deferredZoom) {
             case .keepOriginal:
                 break
             case let .trimmed(trimmedURL, range):

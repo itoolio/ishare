@@ -1,3 +1,4 @@
+import BezelNotification
 import Combine
 import Defaults
 import Foundation
@@ -20,6 +21,9 @@ final class RecordingHUDModel: ObservableObject {
     @Published var showsMicrophone = Defaults[.recordMic]
     @Published var markerCount = 0
     @Published var showsNotes = RecordingNotesController.shared.isVisible
+    @Published var remainingTime: Double?
+    @Published var canDraw = false
+    @Published var isDrawing = false
 }
 
 struct RecordingHUD: View {
@@ -27,6 +31,7 @@ struct RecordingHUD: View {
     @ObservedObject var levels: AudioLevelsProvider
     var onMarker: () -> Void
     var onNotes: () -> Void = {}
+    var onDraw: () -> Void = {}
     var onStop: () -> Void
 
     var body: some View {
@@ -37,6 +42,13 @@ struct RecordingHUD: View {
             TimelineView(.periodic(from: model.startDate, by: 1)) { context in
                 Text(Duration.seconds(context.date.timeIntervalSince(model.startDate)).formatted(.time(pattern: .minuteSecond)))
                     .font(.system(size: 13, weight: .semibold).monospacedDigit())
+            }
+            if let remaining = model.remainingTime {
+                Text("−" + Duration.seconds(remaining.rounded(.up)).formatted(.time(pattern: .minuteSecond)))
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
+                    .foregroundStyle(remaining < 30 ? .red : .secondary)
+                    .help("Time left before the recording stops automatically".localized())
+                    .accessibilityIdentifier("recording.remaining")
             }
             if model.showsSystemAudio || model.showsMicrophone {
                 VStack(alignment: .leading, spacing: 3) {
@@ -66,6 +78,16 @@ struct RecordingHUD: View {
             .help("Show or hide your notes. Only you can see them.".localized())
             .accessibilityLabel(Text("Notes".localized()))
             .accessibilityIdentifier("recording.notes")
+            if model.canDraw {
+                Button(action: onDraw) {
+                    Image(systemName: model.isDrawing ? "pencil.tip.crop.circle.fill" : "pencil.tip.crop.circle")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .adaptiveGlassButtonStyle(prominent: false)
+                .help("Draw on the screen".localized())
+                .accessibilityLabel(Text("Draw on Screen".localized()))
+                .accessibilityIdentifier("recording.draw")
+            }
             Button(action: onStop) {
                 Label("Stop".localized(), systemImage: "stop.fill")
                     .font(.system(size: 12, weight: .semibold))
@@ -92,6 +114,10 @@ final class ScreenRecorder: ObservableObject {
     private let inputOverlay = InputOverlayController()
     private let webcamBubble = WebcamBubbleController()
     private let overlayRecorder = OverlayEventRecorder()
+    private let pointerRecorder = PointerActivityRecorder()
+    private let drawing = LiveDrawingController()
+    private let limitMonitor = RecordingLimitMonitor()
+    @Published private(set) var remainingTime: Double?
     private var hudModel = RecordingHUDModel()
     private var markerLog = RecordingMarkerLog()
     private var sidecar = RecordingSidecar.empty
@@ -100,13 +126,26 @@ final class ScreenRecorder: ObservableObject {
 
     private var captureOverlayWindowIDs: Set<CGWindowID> {
         RecordingCaptureExclusion.capturedOverlayIDs(
-            overlays: inputOverlay.windowIDs + [webcamBubble.windowID].compactMap(\.self),
+            overlays: inputOverlay.windowIDs + drawing.windowIDs + [webcamBubble.windowID].compactMap(\.self),
             privateWindows: [RecordingNotesController.shared.windowID]
         )
     }
 
+    private var showsClicks: Bool {
+        Defaults[.recordClicks] && !Defaults[.clickRipples]
+    }
+
     private var showsNativeClicks: Bool {
-        Defaults[.recordClicks] && !inputOverlay.drawsClicks && !overlayRecorder.capturesClicks
+        showsClicks && !inputOverlay.drawsClicks && !overlayRecorder.capturesClicks
+    }
+
+    private var showsSystemCursor: Bool {
+        Defaults[.recordPointer] && !PointerEffectSettings.current.rendersPointer
+    }
+
+    init() {
+        pointerRecorder.isSuspended = { [weak drawing] in drawing?.isDrawing ?? false }
+        drawing.onChange = { [weak self] isDrawing in self?.hudModel.isDrawing = isDrawing }
     }
 
     var canRecord: Bool {
@@ -181,6 +220,7 @@ final class ScreenRecorder: ObservableObject {
             let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
             configuration.sourceRect = rect
             showRegionOverlay(screen: screen, rect: rect)
+            startPointerRecording(source: Self.regionSource(rect, on: screen))
             isRunning = true
             await prepareAudio(style: .display, screen: screen, content: content)
             await run(configuration: configuration, filter: filter, fileURL: fileURL)
@@ -190,6 +230,17 @@ final class ScreenRecorder: ObservableObject {
             hideCaptureOverlays()
             isRunning = false
         }
+    }
+
+    private static func regionSource(_ rect: CGRect, on screen: NSScreen) -> OverlaySource {
+        let bounds = screen.displayID.map(CGDisplayBounds) ?? CGRect(origin: .zero, size: screen.frame.size)
+        let global = CGRect(x: bounds.minX + rect.minX, y: bounds.minY + rect.minY, width: rect.width, height: rect.height)
+        return OverlaySource(windowID: nil, sourceRect: global, contentSize: rect.size)
+    }
+
+    private func startPointerRecording(source: OverlaySource) {
+        guard PointerActivityRecorder.isRequested else { return }
+        pointerRecorder.start(source: source)
     }
 
     private func makeConfiguration(pixelSize: CGSize) -> SCStreamConfiguration {
@@ -225,6 +276,8 @@ final class ScreenRecorder: ObservableObject {
             self?.addMarker()
         }, onNotes: { [weak self] in
             self?.toggleNotes()
+        }, onDraw: { [weak self] in
+            self?.toggleDrawing()
         }, onStop: {
             CaptureSession.stopRecording()
         }), near: rect, on: screen)
@@ -233,10 +286,12 @@ final class ScreenRecorder: ObservableObject {
     private func showCaptureOverlays(areas: [RecordingArea], bubbleArea: CGRect?) async {
         inputOverlay.start(
             areas: areas,
-            showsClicks: Defaults[.recordClicks],
+            showsClicks: showsClicks,
             showsKeystrokes: Defaults[.showKeystrokes],
             shortcutsOnly: Defaults[.keystrokesShortcutsOnly]
         )
+        drawing.prepare(screens: Self.uniqueScreens(areas.map(\.screen)))
+        hudModel.canDraw = drawing.isPrepared
         if Defaults[.showWebcam], let bubbleArea {
             await webcamBubble.show(in: bubbleArea)
         }
@@ -245,6 +300,14 @@ final class ScreenRecorder: ObservableObject {
     private func hideCaptureOverlays() {
         inputOverlay.stop()
         webcamBubble.hide()
+        drawing.tearDown()
+        hudModel.canDraw = false
+    }
+
+    private static func uniqueScreens(_ screens: [NSScreen]) -> [NSScreen] {
+        screens.reduce(into: [NSScreen]()) { result, screen in
+            if !result.contains(where: { $0 === screen }) { result.append(screen) }
+        }
     }
 
     private func recordedScreen(for filter: SCContentFilter) -> NSScreen? {
@@ -268,6 +331,15 @@ final class ScreenRecorder: ObservableObject {
         Log.capture.info("Added \(marker.title, privacy: .public) at \(marker.time)s")
     }
 
+    func toggleDrawing() {
+        guard isRunning else { return }
+        guard drawing.isPrepared else {
+            BezelNotification.show(messageText: "Drawing is available in full-screen and region recordings".localized(), icon: ToastIcon)
+            return
+        }
+        drawing.toggle()
+    }
+
     func toggleNotes() {
         RecordingNotesController.shared.toggle()
         hudModel.showsNotes = RecordingNotesController.shared.isVisible
@@ -280,18 +352,37 @@ final class ScreenRecorder: ObservableObject {
 
     func stop() async -> Result<URL, any Error> {
         removeOverlay()
+        limitMonitor.stop()
+        drawing.endDrawing()
         let result = await captureEngine.stopCapture()
         hideCaptureOverlays()
         RecordingNotesController.shared.recordingDidStop()
         let overlay = await overlayRecorder.stop()
+        let effects = pointerRecorder.stop()
         let appAudio = await appAudioRecorder?.stop()
         appAudioRecorder = nil
-        sidecar = RecordingSidecar(markers: markerLog.markers, overlay: overlay, recordingStart: captureEngine.startClock.time, appAudio: appAudio)
+        remainingTime = nil
+        sidecar = RecordingSidecar(markers: markerLog.markers, overlay: overlay, effects: effects, recordingStart: captureEngine.startClock.time, appAudio: appAudio)
         markerLog = RecordingMarkerLog()
         stopAudioMetering()
         isRunning = false
         startDate = nil
         return result
+    }
+
+    private func startLimitMonitor(fileURL: URL, startDate: Date) {
+        let engine = captureEngine
+        limitMonitor.bytesWritten = { engine.recordedFileSize }
+        limitMonitor.onRemainingTime = { [weak self] remaining in
+            self?.remainingTime = remaining
+            self?.hudModel.remainingTime = remaining
+        }
+        limitMonitor.onStop = { [weak self] reason in
+            guard self?.isRunning == true else { return }
+            BezelNotification.show(messageText: reason.message.localized(), icon: ToastIcon)
+            CaptureSession.stopRecording()
+        }
+        limitMonitor.start(fileURL: fileURL, startDate: startDate)
     }
 
     private func startAudioMetering() {
@@ -315,23 +406,30 @@ final class ScreenRecorder: ObservableObject {
             RecordingAudioFilter.apply(audioPlan, to: configuration)
             configuration.captureMicrophone = Defaults[.recordMic]
             configuration.microphoneCaptureDeviceID = Defaults[.recordMic] ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
-            configuration.showsCursor = Defaults[.recordPointer]
+            configuration.showsCursor = showsSystemCursor
             configuration.showMouseClicks = showsNativeClicks
             if overlayRecorder.isActive {
                 overlayRecorder.update(source: OverlaySource.make(for: pickedFilter))
+            }
+            if pointerRecorder.isActive {
+                pointerRecorder.update(source: OverlaySource.make(for: pickedFilter))
             }
             await captureEngine.update(configuration: configuration, filter: filter)
             return
         }
         isRunning = true
         let style = RecordingContentStyle(pickedFilter.style)
+        startPointerRecording(source: OverlaySource.make(for: pickedFilter))
         if style == .display, let screen = recordedScreen(for: pickedFilter) {
             await showCaptureOverlays(areas: [.fullScreen(screen)], bubbleArea: screen.visibleFrame)
+            if RecordingLimits.current.hasRecordingLimit {
+                showPickerHUD()
+            }
         } else {
             let source = OverlaySource.make(for: pickedFilter)
             await overlayRecorder.start(
                 source: source,
-                showsClicks: Defaults[.recordClicks],
+                showsClicks: showsClicks,
                 showsKeystrokes: Defaults[.showKeystrokes],
                 shortcutsOnly: Defaults[.keystrokesShortcutsOnly],
                 recordsWebcam: Defaults[.showWebcam]
@@ -387,10 +485,12 @@ final class ScreenRecorder: ObservableObject {
     private func run(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL) async {
         RecordingNotesController.shared.recordingDidStart()
         hudModel.showsNotes = RecordingNotesController.shared.isVisible
-        startDate = Date()
+        let startDate = Date()
+        self.startDate = startDate
         startAudioMetering()
+        startLimitMonitor(fileURL: fileURL, startDate: startDate)
         do {
-            for try await _ in captureEngine.startCapture(configuration: configuration, filter: filter, fileURL: fileURL, showsNativeClicks: showsNativeClicks, audioPlan: audioPlan) {}
+            for try await _ in captureEngine.startCapture(configuration: configuration, filter: filter, fileURL: fileURL, showsNativeClicks: showsNativeClicks, showsCursor: showsSystemCursor, audioPlan: audioPlan) {}
         } catch {
             NSLog("Capture stream ended: %@", error.localizedDescription)
         }

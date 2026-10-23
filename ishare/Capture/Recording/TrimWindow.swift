@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import AVKit
 import BezelNotification
+import Defaults
 import SwiftUI
 
 enum TrimOutcome: Equatable {
@@ -16,6 +17,8 @@ final class TrimModel: ObservableObject {
     let url: URL
     let player: AVPlayer
     let markers: [RecordingMarker]
+    let autoZoom: CameraPath?
+    @Published private(set) var appliesAutoZoom: Bool
     @Published var selection = TrimSelection(duration: 0)
     @Published private(set) var playhead: Double = 0
     @Published private(set) var isPlaying = false
@@ -27,12 +30,53 @@ final class TrimModel: ObservableObject {
 
     var onFinish: ((TrimOutcome) -> Void)?
     private var timeObserver: Any?
+    private var zoomIsBaked = false
+    private var previewTask: Task<Void, Never>?
 
-    init(url: URL, markers: [RecordingMarker] = []) {
+    init(url: URL, markers: [RecordingMarker] = [], autoZoom: CameraPath? = nil) {
         self.url = url
         self.markers = markers
+        self.autoZoom = autoZoom
+        appliesAutoZoom = autoZoom != nil
         player = AVPlayer(url: url)
         player.actionAtItemEnd = .pause
+    }
+
+    var offersAutoZoom: Bool {
+        autoZoom != nil && !zoomIsBaked
+    }
+
+    private var pendingZoom: CameraPath? {
+        appliesAutoZoom && !zoomIsBaked ? autoZoom : nil
+    }
+
+    func setAutoZoom(_ enabled: Bool) {
+        appliesAutoZoom = enabled
+        refreshZoomPreview()
+    }
+
+    private func refreshZoomPreview() {
+        previewTask?.cancel()
+        guard let item = player.currentItem else { return }
+        guard let camera = pendingZoom else {
+            item.videoComposition = nil
+            seek(to: playhead)
+            return
+        }
+        previewTask = Task { @MainActor [weak self] in
+            guard let composition = try? await OverlayCompositor.previewComposition(for: item.asset, camera: camera),
+                  !Task.isCancelled, let self, player.currentItem === item, pendingZoom != nil
+            else { return }
+            item.videoComposition = composition
+            seek(to: playhead)
+        }
+    }
+
+    private func bakeZoomIfNeeded(progress: @escaping @Sendable (Double) -> Void) async throws {
+        guard let camera = pendingZoom else { return }
+        let hevc = Defaults[.useHEVC]
+        try await OverlayCompositor.applyCamera(camera, to: url, hevc: hevc, progress: progress)
+        zoomIsBaked = true
     }
 
     func load() async {
@@ -40,6 +84,7 @@ final class TrimModel: ObservableObject {
         guard let duration = try? await asset.load(.duration).seconds, duration.isFinite, duration > 0 else { return }
         selection = TrimSelection(duration: duration)
         observePlayback()
+        refreshZoomPreview()
         thumbnails = await Self.thumbnails(for: asset, duration: duration, count: 12)
     }
 
@@ -66,14 +111,17 @@ final class TrimModel: ObservableObject {
     }
 
     func save() {
-        guard !selection.isFullLength else {
+        guard !selection.isFullLength || pendingZoom != nil else {
             finish(.keepOriginal)
             return
         }
+        let isFullLength = selection.isFullLength
         let range = selection.timeRange
         let bounds = selection.start ... selection.end
-        perform { [url] _ in
-            .trimmed(try await VideoTrimmer.trimInPlace(url, range: range), range: bounds)
+        perform { [url] progress in
+            try await self.bakeZoomIfNeeded(progress: progress)
+            guard !isFullLength else { return .trimmed(url, range: bounds) }
+            return .trimmed(try await VideoTrimmer.trimInPlace(url, range: range), range: bounds)
         }
     }
 
@@ -82,12 +130,15 @@ final class TrimModel: ObservableObject {
         let bounds = selection.isFullLength ? nil : selection.start ... selection.end
         let settings = exportSettings
         perform { [url] progress in
+            try await self.bakeZoomIfNeeded(progress: progress)
             let output = try await RecordingConversions.export(url, settings: settings, range: range, deletingSource: true, progress: progress)
             return settings.format == .gif ? .exportedGIF(output) : .exported(output, range: bounds)
         }
     }
 
     func tearDown() {
+        previewTask?.cancel()
+        previewTask = nil
         if let timeObserver {
             player.removeTimeObserver(timeObserver)
         }
@@ -115,6 +166,7 @@ final class TrimModel: ObservableObject {
                 isWorking = false
                 player.replaceCurrentItem(with: AVPlayerItem(url: url))
                 observePlayback()
+                refreshZoomPreview()
             }
         }
     }
@@ -168,12 +220,12 @@ final class RecordingTrimWindow: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var continuation: CheckedContinuation<TrimOutcome, Never>?
 
-    private init(url: URL, markers: [RecordingMarker]) {
-        model = TrimModel(url: url, markers: markers)
+    private init(url: URL, markers: [RecordingMarker], autoZoom: CameraPath?) {
+        model = TrimModel(url: url, markers: markers, autoZoom: autoZoom)
     }
 
-    static func present(_ url: URL, markers: [RecordingMarker] = []) async -> TrimOutcome {
-        let controller = RecordingTrimWindow(url: url, markers: markers)
+    static func present(_ url: URL, markers: [RecordingMarker] = [], autoZoom: CameraPath? = nil) async -> TrimOutcome {
+        let controller = RecordingTrimWindow(url: url, markers: markers, autoZoom: autoZoom)
         open.append(controller)
         let outcome = await controller.run()
         open.removeAll { $0 === controller }
@@ -272,6 +324,13 @@ struct TrimView: View {
             HStack {
                 Button("Keep Original".localized(), action: model.cancel)
                     .keyboardShortcut(.cancelAction)
+                if model.offersAutoZoom {
+                    Toggle("Auto zoom".localized(), isOn: Binding(get: { model.appliesAutoZoom }, set: model.setAutoZoom))
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .help("Zooms in on clicks and typing. The player shows a preview at the current position; Save or Export applies it.".localized())
+                        .accessibilityIdentifier("trim.autoZoom")
+                }
                 Spacer()
                 if model.isWorking {
                     if let progress = model.progress {

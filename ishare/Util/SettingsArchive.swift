@@ -146,7 +146,9 @@ enum SettingsTransfer {
         .toastCorner, .toastScreen, .resultPresentation,
         .recordingAudioSource, .recordingAudioBundleIDs, .instantReplayDuration, .instantReplayResolution, .instantReplayFrameRate, .recordingNotesFontSize,
         .recordingNotesScrollSpeed, .recordingNotesOpacity, .translationTargetLanguage, .generateAltText, .linkOptionPreferences, .menuFavorites,
-        .showsWhatsNew,
+        .showsWhatsNew, .autoZoomEnabled, .autoZoomLevel, .autoZoomEaseDuration, .autoZoomHoldTime, .autoZoomFollowsPointer, .autoZoomOnTyping,
+        .pointerSmoothing, .pointerScale, .clickRipples, .clickRippleColor, .hidesIdlePointer, .pointerIdleSeconds,
+        .liveDrawingTool, .liveDrawingColor, .liveDrawingFadeDelay, .recordingMaxMinutes, .recordingMaxMegabytes, .recordingLowDiskWarningMB,
         .beautifyFrame, .beautifyFrameAppearance, .beautifyFrameFit, .beautifyFrameTitle, .editorSmartShapes,
     ]
 

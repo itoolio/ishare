@@ -49,6 +49,15 @@ enum RecordingError: LocalizedError {
 final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDelegate {
     private var stream: SCStream?
     private var fileURL: URL?
+    private var recordingOutput: SCRecordingOutput?
+
+    var recordedFileSize: Int64 {
+        if let recordingOutput, recordingOutput.recordedFileSize > 0 {
+            return Int64(recordingOutput.recordedFileSize)
+        }
+        guard let fileURL, let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return 0 }
+        return Int64(size)
+    }
     private let videoSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.VideoSampleBufferQueue")
     private let audioSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.AudioSampleBufferQueue")
     private let micAudioSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.MicAudioSampleBufferQueue")
@@ -66,11 +75,10 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
     private var didFinishRecording = false
     private var recordingError: (any Error)?
 
-    @MainActor func startCapture(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL, showsNativeClicks: Bool, audioPlan: RecordingAudioPlan) -> AsyncThrowingStream<CapturedFrame, any Error> {
+    @MainActor func startCapture(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL, showsNativeClicks: Bool, showsCursor: Bool, audioPlan: RecordingAudioPlan) -> AsyncThrowingStream<CapturedFrame, any Error> {
         let recordMP4 = Defaults[.recordMP4]
         let useHEVC = Defaults[.useHEVC]
         let recordMic = Defaults[.recordMic]
-        let recordPointer = Defaults[.recordPointer]
         let microphoneID = recordMic ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
         finishLock.withLock {
             didFinishRecording = false
@@ -90,7 +98,7 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
                 RecordingAudioFilter.apply(audioPlan, to: configuration)
                 configuration.captureMicrophone = recordMic
                 configuration.microphoneCaptureDeviceID = microphoneID
-                configuration.showsCursor = recordPointer
+                configuration.showsCursor = showsCursor
                 configuration.showMouseClicks = showsNativeClicks
 
                 let stream = SCStream(filter: filter, configuration: configuration, delegate: output)
@@ -108,6 +116,7 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
 
                 let recordingOutput = SCRecordingOutput(configuration: recordingConfiguration, delegate: self)
                 try stream.addRecordingOutput(recordingOutput)
+                self.recordingOutput = recordingOutput
                 stream.startCapture()
             } catch {
                 continuation.finish(throwing: error)
@@ -120,6 +129,7 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
         let activeStream = stream
         stream = nil
         fileURL = nil
+        recordingOutput = nil
         try? await activeStream?.stopCapture()
         do {
             try await waitForRecordingToFinish(timeout: .seconds(8))

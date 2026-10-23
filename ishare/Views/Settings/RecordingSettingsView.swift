@@ -116,5 +116,17 @@ extension RecordingSettingsView: SettingsSearchable {
             "All system audio", "Only selected apps", "App audio", "Notes", "Teleprompter", "Script", "Instant replay",
             "Replay", "Buffer", "Keep the last",
         ]),
+        SettingsSearchEntry("Auto Zoom", pane: .recording, keywords: [
+            "Auto zoom", "Zoom level", "Zoom speed", "Stay zoomed for", "Follow the pointer while zoomed", "Zoom in on typing", "Pan",
+        ]),
+        SettingsSearchEntry("Pointer", pane: .recording, keywords: [
+            "Smooth pointer movement", "Pointer size", "Cursor", "Hide the pointer when idle", "Hide after", "Click ripples", "Ripple color",
+        ]),
+        SettingsSearchEntry("Draw on Screen", pane: .recording, keywords: [
+            "Draw on Screen", "Drawing", "Pen", "Highlighter", "Arrow", "Annotate", "Fade marks",
+        ]),
+        SettingsSearchEntry("Limits", pane: .recording, keywords: [
+            "Stop after", "Stop at file size", "Time limit", "Size limit", "Disk space", "Warn when free space is below",
+        ]),
     ]
 }

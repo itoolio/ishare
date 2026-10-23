@@ -65,16 +65,21 @@ final class OverlayVideoCompositor: NSObject, AVVideoCompositing, @unchecked Sen
 final class OverlayImageRenderer: @unchecked Sendable {
     private var badgeCache: [String: CIImage] = [:]
     private var ringCache: [CGFloat: CIImage] = [:]
+    private var pointerCache: [CGFloat: CIImage] = [:]
 
     func compose(screen: CIImage, webcam: CIImage?, time: Double, timeline: OverlayTimeline, layout: OverlayCompositionLayout) -> CIImage {
         var image = screen
-        if let webcam, let frame = layout.webcamFrame {
-            image = bubble(from: webcam, in: frame).composited(over: image)
-            image = ring(diameter: frame.width, scale: layout.pixelsPerPoint).transformed(by: CGAffineTransform(translationX: frame.minX, y: frame.minY)).composited(over: image)
-        }
         for ripple in timeline.ripples(at: time) {
             let point = OverlayCoordinateMapper.flipped(ripple.point, videoHeight: layout.videoSize.height)
             image = rippleImage(progress: ripple.progress, at: point, scale: layout.pixelsPerPoint).composited(over: image)
+        }
+        image = drawEffects(timeline.effects, over: image, time: time, layout: layout)
+        if let camera = timeline.effects.camera {
+            image = zoomed(image, to: camera.visibleRect(at: time), videoSize: layout.videoSize)
+        }
+        if let webcam, let frame = layout.webcamFrame {
+            image = bubble(from: webcam, in: frame).composited(over: image)
+            image = ring(diameter: frame.width, scale: layout.pixelsPerPoint).transformed(by: CGAffineTransform(translationX: frame.minX, y: frame.minY)).composited(over: image)
         }
         if let text = timeline.keystroke(at: time) {
             let badge = badgeImage(text, scale: layout.pixelsPerPoint)
@@ -83,6 +88,85 @@ final class OverlayImageRenderer: @unchecked Sendable {
             image = badge.transformed(by: CGAffineTransform(translationX: origin.x, y: origin.y)).composited(over: image)
         }
         return image.cropped(to: CGRect(origin: .zero, size: layout.videoSize))
+    }
+
+    private func drawEffects(_ effects: RecordingEffectsPlan, over base: CIImage, time: Double, layout: OverlayCompositionLayout) -> CIImage {
+        var image = base
+        for ripple in ClickRippleAnimation.active(effects.ripples, at: time) {
+            let point = OverlayCoordinateMapper.flipped(ripple.point, videoHeight: layout.videoSize.height)
+            image = coloredRipple(ripple.frame, color: effects.rippleColor, at: point, scale: layout.pixelsPerPoint).composited(over: image)
+        }
+        if let track = effects.pointer, let position = track.position(at: time) {
+            let opacity = track.opacity(at: time)
+            if opacity > 0.01 {
+                let tip = OverlayCoordinateMapper.flipped(position, videoHeight: layout.videoSize.height)
+                image = pointerImage(scale: layout.pixelsPerPoint * CGFloat(track.scale), tip: tip, opacity: opacity).composited(over: image)
+            }
+        }
+        return image
+    }
+
+    private func zoomed(_ image: CIImage, to visibleRect: CGRect, videoSize: CGSize) -> CIImage {
+        guard visibleRect.width > 0, visibleRect.height > 0, visibleRect.width < videoSize.width - 0.5 || visibleRect.height < videoSize.height - 0.5 else { return image }
+        let flipped = CGRect(x: visibleRect.minX, y: videoSize.height - visibleRect.maxY, width: visibleRect.width, height: visibleRect.height)
+        return image
+            .clampedToExtent()
+            .transformed(by: CGAffineTransform(translationX: -flipped.minX, y: -flipped.minY))
+            .transformed(by: CGAffineTransform(scaleX: videoSize.width / flipped.width, y: videoSize.height / flipped.height))
+            .cropped(to: CGRect(origin: .zero, size: videoSize))
+    }
+
+    private func pointerImage(scale: CGFloat, tip: CGPoint, opacity: Double) -> CIImage {
+        let base = cachedPointer(scale: scale)
+        let faded = opacity >= 0.99 ? base : base.applyingFilter("CIColorMatrix", parameters: [
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(opacity)),
+        ])
+        let inset = PointerGlyph.padding * cachedPointerKey(scale)
+        return faded.transformed(by: CGAffineTransform(translationX: tip.x - inset, y: tip.y - base.extent.height + inset))
+    }
+
+    private func cachedPointerKey(_ scale: CGFloat) -> CGFloat {
+        max(0.25, (scale * 100).rounded() / 100)
+    }
+
+    private func cachedPointer(scale: CGFloat) -> CIImage {
+        let key = cachedPointerKey(scale)
+        if let cached = pointerCache[key] { return cached }
+        let size = CGSize(width: (PointerGlyph.size.width + PointerGlyph.padding * 2) * key, height: (PointerGlyph.size.height + PointerGlyph.padding * 2) * key)
+        let image = Self.draw(size: size) { context in
+            context.translateBy(x: PointerGlyph.padding * key, y: size.height - PointerGlyph.padding * key)
+            context.scaleBy(x: key, y: -key)
+            let path = PointerGlyph.path()
+            context.setShadow(offset: CGSize(width: 0, height: -1), blur: 2, color: NSColor.black.withAlphaComponent(0.35).cgColor)
+            context.addPath(path)
+            context.setFillColor(NSColor.black.cgColor)
+            context.fillPath()
+            context.setShadow(offset: .zero, blur: 0, color: nil)
+            context.addPath(path)
+            context.setStrokeColor(NSColor.white.cgColor)
+            context.setLineWidth(1.4)
+            context.setLineJoin(.round)
+            context.strokePath()
+        }
+        if pointerCache.count > 16 { pointerCache.removeAll() }
+        pointerCache[key] = image
+        return image
+    }
+
+    private func coloredRipple(_ frame: ClickRippleFrame, color: CaptureColor, at point: CGPoint, scale: CGFloat) -> CIImage {
+        let diameter = ClickRippleAnimation.baseDiameter * scale * CGFloat(frame.diameterScale)
+        let alpha = CGFloat(frame.alpha)
+        let lineWidth = ClickRippleAnimation.lineWidth * scale
+        let canvas = ceil(diameter + lineWidth * 2)
+        let image = Self.draw(size: CGSize(width: canvas, height: canvas)) { context in
+            let circle = CGRect(x: (canvas - diameter) / 2, y: (canvas - diameter) / 2, width: diameter, height: diameter)
+            context.setFillColor(color.cgColor.copy(alpha: 0.25 * alpha) ?? color.cgColor)
+            context.fillEllipse(in: circle)
+            context.setStrokeColor(color.cgColor.copy(alpha: alpha) ?? color.cgColor)
+            context.setLineWidth(lineWidth)
+            context.strokeEllipse(in: circle.insetBy(dx: lineWidth / 2, dy: lineWidth / 2))
+        }
+        return image.transformed(by: CGAffineTransform(translationX: point.x - canvas / 2, y: point.y - canvas / 2))
     }
 
     private func bubble(from webcam: CIImage, in frame: CGRect) -> CIImage {
@@ -182,22 +266,85 @@ final class OverlayImageRenderer: @unchecked Sendable {
     }
 }
 
+enum PointerGlyph {
+    static let size = CGSize(width: 12, height: 19)
+    static let padding: CGFloat = 3
+
+    static func path() -> CGPath {
+        let path = CGMutablePath()
+        path.addLines(between: [
+            CGPoint(x: 0, y: 0),
+            CGPoint(x: 0, y: 16.5),
+            CGPoint(x: 4, y: 12.8),
+            CGPoint(x: 6.6, y: 18.6),
+            CGPoint(x: 9.2, y: 17.5),
+            CGPoint(x: 6.7, y: 11.8),
+            CGPoint(x: 11.8, y: 11.8),
+        ])
+        path.closeSubpath()
+        return path
+    }
+}
+
 enum OverlayCompositor {
-    static func composite(_ url: URL, capture: OverlayCapture, recordingStart: Double, hevc: Bool, progress: (@Sendable (Double) -> Void)? = nil) async throws {
+    @discardableResult
+    static func composite(_ url: URL, capture: OverlayCapture?, effects: RecordingEffectsCapture?, recordingStart: Double, hevc: Bool, defersZoom: Bool = false, progress: (@Sendable (Double) -> Void)? = nil) async throws -> CameraPath? {
         let asset = AVURLAsset(url: url)
         guard let screenTrack = try await asset.loadTracks(withMediaType: .video).first else { throw RecordingExportError.noVideoTrack }
         let duration = try await asset.load(.duration)
         let videoSize = try await screenTrack.load(.naturalSize)
-        let webcamClip = capture.webcam.map { OverlayWebcamClip(url: $0.url, offset: $0.startTime - recordingStart) }
-        let timeline = capture.log.timeline(recordingStart: recordingStart, videoSize: videoSize, webcam: webcamClip, duration: duration.seconds)
-        guard !timeline.isEmpty else { return }
+        let webcamClip = capture?.webcam.map { OverlayWebcamClip(url: $0.url, offset: $0.startTime - recordingStart) }
+        var timeline = capture?.log.timeline(recordingStart: recordingStart, videoSize: videoSize, webcam: webcamClip, duration: duration.seconds) ?? OverlayTimeline()
+        var deferredCamera: CameraPath?
+        if let effects {
+            let activity = effects.log.activity(recordingStart: recordingStart, videoSize: videoSize, duration: duration.seconds)
+            var plan = RecordingEffectsPlan.make(activity: activity, pointer: effects.pointer, autoZoom: effects.autoZoom, videoSize: videoSize, duration: duration.seconds)
+            if defersZoom {
+                deferredCamera = plan.camera
+                plan = plan.withoutCamera()
+            }
+            timeline.effects = plan
+        }
+        guard !timeline.isEmpty else { return deferredCamera }
         let layout = OverlayCompositionLayout.make(
             videoSize: videoSize,
-            sourceSize: capture.contentSize,
-            webcamDiameter: webcamClip == nil ? nil : capture.webcamDiameter,
-            corner: capture.webcamCorner
+            sourceSize: capture?.contentSize ?? effects?.contentSize ?? videoSize,
+            webcamDiameter: webcamClip == nil ? nil : capture?.webcamDiameter,
+            corner: capture?.webcamCorner ?? .bottomRight
         )
         try await composite(asset, screenTrack: screenTrack, duration: duration, timeline: timeline, layout: layout, replacing: url, hevc: hevc, progress: progress)
+        return deferredCamera
+    }
+
+    static func applyCamera(_ camera: CameraPath, to url: URL, hevc: Bool, progress: (@Sendable (Double) -> Void)?) async throws {
+        let asset = AVURLAsset(url: url)
+        guard let screenTrack = try await asset.loadTracks(withMediaType: .video).first else { throw RecordingExportError.noVideoTrack }
+        let duration = try await asset.load(.duration)
+        let videoSize = try await screenTrack.load(.naturalSize)
+        try await composite(asset, screenTrack: screenTrack, duration: duration, timeline: cameraTimeline(camera), layout: cameraLayout(videoSize), replacing: url, hevc: hevc, progress: progress)
+    }
+
+    static func previewComposition(for asset: AVAsset, camera: CameraPath) async throws -> AVVideoComposition {
+        guard let screenTrack = try await asset.loadTracks(withMediaType: .video).first else { throw RecordingExportError.noVideoTrack }
+        let duration = try await asset.load(.duration)
+        let videoSize = try await screenTrack.load(.naturalSize)
+        let frameRate = try await screenTrack.load(.nominalFrameRate)
+        return videoComposition(
+            trackID: screenTrack.trackID,
+            webcamTrackID: nil,
+            range: CMTimeRange(start: .zero, duration: duration),
+            frameRate: frameRate,
+            timeline: cameraTimeline(camera),
+            layout: cameraLayout(videoSize)
+        )
+    }
+
+    private static func cameraTimeline(_ camera: CameraPath) -> OverlayTimeline {
+        OverlayTimeline(effects: RecordingEffectsPlan(camera: camera))
+    }
+
+    private static func cameraLayout(_ videoSize: CGSize) -> OverlayCompositionLayout {
+        OverlayCompositionLayout(videoSize: videoSize, pixelsPerPoint: 1, webcamFrame: nil)
     }
 
     static func composite(_ asset: AVAsset, screenTrack: AVAssetTrack, duration: CMTime, timeline: OverlayTimeline, layout: OverlayCompositionLayout, replacing url: URL, hevc: Bool, progress: (@Sendable (Double) -> Void)?) async throws {
@@ -212,18 +359,23 @@ enum OverlayCompositor {
         let webcamTrackID = try await insertWebcam(timeline.webcam, into: composition, duration: duration)
 
         let frameRate = try await screenTrack.load(.nominalFrameRate)
+        let videoComposition = videoComposition(trackID: screen.trackID, webcamTrackID: webcamTrackID, range: fullRange, frameRate: frameRate, timeline: timeline, layout: layout)
+        try await VideoCompositionExporter.export(composition, videoComposition: videoComposition, replacing: url, hevc: hevc, progress: progress)
+    }
+
+    private static func videoComposition(trackID: CMPersistentTrackID, webcamTrackID: CMPersistentTrackID?, range: CMTimeRange, frameRate: Float, timeline: OverlayTimeline, layout: OverlayCompositionLayout) -> AVMutableVideoComposition {
         let videoComposition = AVMutableVideoComposition()
         videoComposition.customVideoCompositorClass = OverlayVideoCompositor.self
         videoComposition.renderSize = layout.videoSize
         videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(frameRate > 1 ? frameRate.rounded() : 60))
         videoComposition.instructions = [OverlayCompositionInstruction(
-            timeRange: fullRange,
-            screenTrackID: screen.trackID,
+            timeRange: range,
+            screenTrackID: trackID,
             webcamTrackID: webcamTrackID,
             timeline: timeline,
             layout: layout
         )]
-        try await VideoCompositionExporter.export(composition, videoComposition: videoComposition, replacing: url, hevc: hevc, progress: progress)
+        return videoComposition
     }
 
     private static func insertWebcam(_ clip: OverlayWebcamClip?, into composition: AVMutableComposition, duration: CMTime) async throws -> CMPersistentTrackID? {

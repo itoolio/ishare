@@ -27,6 +27,7 @@ struct KeybindSettingsView: View {
             ("Add Recording Marker:", .addRecordingMarker),
             ("Show or Hide Notes:", .toggleRecordingNotes),
             ("Save Instant Replay:", .saveInstantReplay),
+            ("Draw on Screen:", .toggleRecordingDrawing),
         ]),
         ("Capture and Upload", [
             ("Capture Region:", .captureRegionForceUpload),
