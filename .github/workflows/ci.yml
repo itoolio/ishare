@@ -77,6 +77,18 @@ jobs:
             - name: Show compiler errors
               if: failure()
               run: grep -h -B2 -A6 -E "error:|Command .* failed|Stack dump" "$RUNNER_TEMP"/*.log | head -200 || true
+            - name: Find the source file that crashes the compiler
+              if: failure()
+              run: |
+                  xcodebuild build \
+                    -project ishare.xcodeproj \
+                    -scheme ishare \
+                    -configuration Release \
+                    -destination "generic/platform=macOS" \
+                    SWIFT_COMPILATION_MODE=singlefile \
+                    SWIFT_ENABLE_BATCH_MODE=NO \
+                    CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/singlefile.log" 2>&1 || true
+                  grep -B12 -E "Stack dump:" "$RUNNER_TEMP/singlefile.log" | grep -E "SwiftCompile|Compiling|emitting|-primary-file" | sed -E 's/.*-primary-file ([^ ]+).*/primary file: \1/' | sort -u | head -40 || true
             - name: Collect the snapshot renderings that differ from their references
               if: failure()
               run: |
