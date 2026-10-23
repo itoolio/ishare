@@ -1,0 +1,64 @@
+name: Coverage Comment
+
+on:
+    workflow_run:
+        workflows: [CI]
+        types: [completed]
+
+permissions:
+    contents: read
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    comment:
+        if: github.event.workflow_run.event == 'pull_request'
+        runs-on: ubuntu-24.04
+        permissions:
+            actions: read
+            pull-requests: write
+        steps:
+            - name: Download the coverage summary
+              id: download
+              continue-on-error: true
+              uses: actions/download-artifact@v8
+              with:
+                  name: coverage-summary
+                  path: coverage
+                  run-id: ${{ github.event.workflow_run.id }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Post or update the coverage comment
+              if: steps.download.outcome == 'success'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+              run: |
+                  PR_NUMBER="$(tr -cd '0-9' < coverage/pr-number)"
+                  if [ -z "$PR_NUMBER" ]; then
+                      echo "No pull request number in the artifact"
+                      exit 0
+                  fi
+                  PR_HEAD="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .head.sha)"
+                  if [ "$PR_HEAD" != "$HEAD_SHA" ]; then
+                      echo "Coverage is for $HEAD_SHA but the pull request is at $PR_HEAD"
+                      exit 0
+                  fi
+                  if [ "$(head -n 1 coverage/summary.md)" != "### Code coverage" ]; then
+                      echo "The coverage summary does not start with the expected heading"
+                      exit 1
+                  fi
+                  {
+                      head -c 60000 coverage/summary.md
+                      printf '\n_Measured on %s._\n' "$HEAD_SHA"
+                  } | jq -Rs '{body: .}' > "$RUNNER_TEMP/body.json"
+                  COMMENT_ID="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+                      --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("### Code coverage"))) | .id' | head -n 1)"
+                  if [ -n "$COMMENT_ID" ]; then
+                      gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID" --input "$RUNNER_TEMP/body.json" > /dev/null
+                      echo "Updated comment $COMMENT_ID"
+                  else
+                      gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --input "$RUNNER_TEMP/body.json" > /dev/null
+                      echo "Posted a new coverage comment"
+                  fi
