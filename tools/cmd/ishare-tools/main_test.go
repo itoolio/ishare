@@ -90,3 +90,18 @@ func TestScreenshotsRejectsInvalidLocales(t *testing.T) {
 		t.Fatalf("exit code %d", code)
 	}
 }
+
+func TestAppStorePlanPrintsOutputs(t *testing.T) {
+	directory := t.TempDir()
+	report := filepath.Join(directory, "status.json")
+	releases := filepath.Join(directory, "releases.json")
+	os.WriteFile(report, []byte(`{"live":{"version":"5.1.0","state":"READY_FOR_SALE"},"builds":{"5.1.1":"400"}}`), 0o644)
+	os.WriteFile(releases, []byte(`[{"tagName":"v5.1.1"},{"tagName":"v5.1.0"}]`), 0o644)
+	code, stdout, stderr := execute(t, "", "app-store-plan", "--report", report, "--releases", releases)
+	if code != 0 || !strings.HasPrefix(stdout, "action=submit\nversion=5.1.1\nbuild=400\n") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	if code, _, _ := execute(t, "", "app-store-plan", "--report", report); code != 2 {
+		t.Fatalf("missing --releases exited with %d", code)
+	}
+}

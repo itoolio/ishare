@@ -35,6 +35,8 @@ var sectionTitles = map[string]string{
 	"reverts":                  "Reverts",
 }
 
+var sectionOrder = []string{"Breaking Changes", "Features", "Bug Fixes", "Performance Improvements", "Reverts"}
+
 func Render(markdown string) string {
 	if notes := Convert(markdown); notes != "" {
 		return notes
@@ -43,9 +45,9 @@ func Render(markdown string) string {
 }
 
 func Convert(markdown string) string {
-	var lines []string
+	sections := map[string][]string{}
 	seen := map[string]bool{}
-	include := false
+	current := ""
 	scanner := bufio.NewScanner(strings.NewReader(markdown))
 	for scanner.Scan() {
 		line := strings.TrimRight(scanner.Text(), " ")
@@ -54,30 +56,32 @@ func Convert(markdown string) string {
 			continue
 		case sectionHeading.MatchString(line):
 			title, known := sectionTitle(sectionHeading.FindStringSubmatch(line)[1])
-			include = known
-			if !include {
-				continue
+			current = ""
+			if known {
+				current = title
 			}
-			if len(lines) > 0 {
-				lines = append(lines, "")
-			}
-			lines = append(lines, title+":")
-		case !include, trailer.MatchString(strings.TrimSpace(line)):
+		case current == "", trailer.MatchString(strings.TrimSpace(line)):
 			continue
 		case bullet.MatchString(line):
 			text := bullet.FindStringSubmatch(line)[1]
 			text = upperFirst(clean(scope.ReplaceAllString(text, "")))
 			if text != "" && !seen[text] {
 				seen[text] = true
-				lines = append(lines, "• "+text)
+				sections[current] = append(sections[current], "• "+text)
 			}
 		default:
 			if text := clean(line); text != "" {
-				lines = append(lines, text)
+				sections[current] = append(sections[current], text)
 			}
 		}
 	}
-	return truncate(strings.TrimSpace(strings.Join(lines, "\n")), appStoreLimit)
+	var blocks []string
+	for _, title := range sectionOrder {
+		if lines := sections[title]; len(lines) > 0 {
+			blocks = append(blocks, title+":\n"+strings.Join(lines, "\n"))
+		}
+	}
+	return truncate(strings.Join(blocks, "\n\n"), appStoreLimit)
 }
 
 func sectionTitle(heading string) (string, bool) {

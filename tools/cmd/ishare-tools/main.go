@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/itoolio/ishare/tools/internal/appstore"
+	"github.com/itoolio/ishare/tools/internal/appstoreplan"
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
 	"github.com/itoolio/ishare/tools/internal/repo"
@@ -36,6 +37,7 @@ var commands = map[string]command{
 	"register-bundle-id": {"register-bundle-id [identifier...]", registerBundleID},
 	"merge-translations": {"merge-translations <base.xcstrings> <incoming.xcstrings> <output.xcstrings>", mergeTranslations},
 	"screenshots":        {"screenshots [--ci] [locale[:language]...]", captureScreenshots},
+	"app-store-plan":     {"app-store-plan --report status.json --releases releases.json", appStorePlan},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir]", releaseCheck},
 }
 
@@ -169,5 +171,33 @@ func releaseCheck(env environment, arguments []string) error {
 		return errUsage
 	}
 	_, err := releasecheck.Run(options)
+	return err
+}
+
+func appStorePlan(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("app-store-plan", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	reportPath := flags.String("report", "", "")
+	releasesPath := flags.String("releases", "", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 || *reportPath == "" || *releasesPath == "" {
+		return errUsage
+	}
+	reportData, err := os.ReadFile(*reportPath)
+	if err != nil {
+		return err
+	}
+	report, err := appstoreplan.ParseReport(reportData)
+	if err != nil {
+		return err
+	}
+	releaseData, err := os.ReadFile(*releasesPath)
+	if err != nil {
+		return err
+	}
+	releases, err := appstoreplan.ParseReleases(releaseData)
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(env.stdout, appstoreplan.Decide(report, releases).Outputs())
 	return err
 }

@@ -1,0 +1,169 @@
+name: App Store Sync
+
+on:
+    workflow_call:
+        inputs:
+            wait-for-version:
+                description: Wait until the build of this version has finished processing before deciding
+                type: string
+                default: ""
+    workflow_dispatch:
+        inputs:
+            wait-for-version:
+                description: Wait until the build of this version has finished processing before deciding
+                type: string
+                default: ""
+    schedule:
+        - cron: "17 */3 * * *"
+
+permissions:
+    contents: read
+    issues: write
+
+defaults:
+    run:
+        shell: bash
+
+env:
+    REVIEW_PAGE: https://appstoreconnect.apple.com/apps/6499066314/distribution/reviewsubmissions
+    ISSUE_PREFIX: App Store rejected
+    LC_ALL: en_US.UTF-8
+    LANG: en_US.UTF-8
+
+jobs:
+    sync:
+        runs-on: ubuntu-latest
+        timeout-minutes: 150
+        concurrency:
+            group: app-store-sync
+            cancel-in-progress: false
+        env:
+            APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+            APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+            APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: ${{ github.event.repository.default_branch }}
+                  path: main
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: main/tools/go.mod
+                  cache-dependency-path: main/tools/go.mod
+            - uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: "3.4"
+                  bundler-cache: true
+                  working-directory: main
+
+            - name: Read the App Store state
+              working-directory: main
+              env:
+                  WAIT_FOR: ${{ inputs.wait-for-version }}
+              run: bundle exec fastlane mac status output:"$RUNNER_TEMP/status.json" wait_for:"$WAIT_FOR"
+
+            - name: List the GitHub releases
+              run: gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft,isPrerelease > "$RUNNER_TEMP/releases.json"
+
+            - name: Decide what to do
+              id: plan
+              working-directory: main
+              run: |
+                  go run ./tools/cmd/ishare-tools app-store-plan --report "$RUNNER_TEMP/status.json" --releases "$RUNNER_TEMP/releases.json" | tee "$RUNNER_TEMP/plan.txt"
+                  cat "$RUNNER_TEMP/plan.txt" >> "$GITHUB_OUTPUT"
+                  {
+                    echo "## App Store sync"
+                    echo
+                    echo "### Decision"
+                    echo
+                    echo '```'
+                    cat "$RUNNER_TEMP/plan.txt"
+                    echo '```'
+                    echo
+                    echo "### App Store Connect"
+                    echo
+                    echo '```json'
+                    cat "$RUNNER_TEMP/status.json"
+                    echo '```'
+                  } >> "$GITHUB_STEP_SUMMARY"
+
+            - name: Open or update the rejection issue
+              if: steps.plan.outputs.action == 'rejected'
+              env:
+                  VERSION: ${{ steps.plan.outputs.version }}
+              run: |
+                  TITLE="$ISSUE_PREFIX $VERSION"
+                  BODY="App Review rejected ishare $VERSION. Read the review and reply in App Store Connect: $REVIEW_PAGE
+
+                  Fix the problem and publish a new release; the App Store sync submits it automatically and closes this issue once $VERSION is approved or superseded."
+                  NUMBER=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$TITLE\" in:title" --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -n 1)
+                  if [ -n "$NUMBER" ]; then
+                    gh issue edit "$NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+                  else
+                    gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+                  fi
+
+            - name: Close resolved rejection issues
+              env:
+                  ACTION: ${{ steps.plan.outputs.action }}
+                  VERSION: ${{ steps.plan.outputs.version }}
+                  LIVE: ${{ steps.plan.outputs.live }}
+              run: |
+                  KEEP=""
+                  if [ "$ACTION" = "rejected" ]; then KEEP="$ISSUE_PREFIX $VERSION"; fi
+                  gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$ISSUE_PREFIX\" in:title" --json number,title \
+                    --jq ".[] | select(.title | startswith(\"$ISSUE_PREFIX \")) | select(.title != \"$KEEP\") | .number" |
+                    while read -r NUMBER; do
+                      gh issue close "$NUMBER" --repo "$GITHUB_REPOSITORY" --comment "The rejected version was approved or superseded (live: ${LIVE:-none}, sync decision: $ACTION $VERSION)."
+                    done
+
+            - uses: actions/checkout@v7
+              if: steps.plan.outputs.action == 'submit'
+              with:
+                  ref: v${{ steps.plan.outputs.version }}
+                  path: release
+            - uses: ruby/setup-ruby@v1
+              if: steps.plan.outputs.action == 'submit'
+              with:
+                  ruby-version: "3.4"
+                  bundler-cache: true
+                  working-directory: release
+
+            - name: Write the combined App Store release notes
+              if: steps.plan.outputs.action == 'submit'
+              env:
+                  RELEASES: ${{ steps.plan.outputs.releases }}
+              run: |
+                  for TAG in $RELEASES; do
+                    gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body
+                    echo
+                  done | (cd main && go run ./tools/cmd/ishare-tools release-notes "$GITHUB_WORKSPACE/release/fastlane/metadata/en-US/release_notes.txt")
+                  cat release/fastlane/metadata/en-US/release_notes.txt
+                  echo "### Release notes" >> "$GITHUB_STEP_SUMMARY"
+                  sed 's/^/    /' release/fastlane/metadata/en-US/release_notes.txt >> "$GITHUB_STEP_SUMMARY"
+
+            - name: Check screenshots, review notes and release notes
+              if: steps.plan.outputs.action == 'submit'
+              working-directory: main
+              run: |
+                  REVIEW_NOTES="$GITHUB_WORKSPACE/release/fastlane/review_notes.txt"
+                  [ -f "$REVIEW_NOTES" ] || REVIEW_NOTES="$GITHUB_WORKSPACE/main/fastlane/review_notes.txt"
+                  go run ./tools/cmd/ishare-tools release-check \
+                    --screenshots "$GITHUB_WORKSPACE/release/fastlane/screenshots" \
+                    --review-notes "$REVIEW_NOTES" \
+                    --release-notes "$GITHUB_WORKSPACE/release/fastlane/metadata/en-US/release_notes.txt"
+
+            - name: Submit for review
+              if: steps.plan.outputs.action == 'submit'
+              working-directory: release
+              env:
+                  REVIEW_CONTACT_FIRST_NAME: ${{ secrets.REVIEW_CONTACT_FIRST_NAME }}
+                  REVIEW_CONTACT_LAST_NAME: ${{ secrets.REVIEW_CONTACT_LAST_NAME }}
+                  REVIEW_CONTACT_EMAIL: ${{ secrets.REVIEW_CONTACT_EMAIL }}
+                  REVIEW_CONTACT_PHONE: ${{ secrets.REVIEW_CONTACT_PHONE }}
+                  VERSION: ${{ steps.plan.outputs.version }}
+                  BUILD: ${{ steps.plan.outputs.build }}
+              run: |
+                  bundle exec fastlane mac release version:"$VERSION" build:"$BUILD"
+                  echo "Submitted $VERSION ($BUILD) for review." >> "$GITHUB_STEP_SUMMARY"
