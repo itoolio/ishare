@@ -9,6 +9,8 @@ extension Defaults.Keys {
     static let screenshotShowsCursor = Key<Bool>("screenshotShowsCursor", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let windowShadow = Key<Bool>("windowShadow", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showMagnifier = Key<Bool>("showMagnifier", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let showSelectionGuides = Key<Bool>("showSelectionGuides", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let showLastRegionOutline = Key<Bool>("showLastRegionOutline", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let scrollingAutoScroll = Key<Bool>("scrollingAutoScroll", default: ScrollingCapture.autoScrollsByDefault, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let capturePathBookmark = Key<Data?>("capturePathBookmark", default: nil, suite: .ishare)
     static let ignoredBundleIdentifiers = Key<[String]>("ignoredApps", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

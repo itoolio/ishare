@@ -10,6 +10,8 @@ struct CaptureSettingsView: View {
     @Default(.screenshotShowsCursor) var showsCursor
     @Default(.windowShadow) var windowShadow
     @Default(.showMagnifier) var showMagnifier
+    @Default(.showSelectionGuides) var showSelectionGuides
+    @Default(.showLastRegionOutline) var showLastRegionOutline
     @Default(.openEditorAfterCapture) var openEditorAfterCapture
     @Default(.editorSmartShapes) var editorSmartShapes
     @Default(.scrollingAutoScroll) var scrollingAutoScroll
@@ -31,6 +33,8 @@ struct CaptureSettingsView: View {
                 Toggle("Show pointer in screenshots".localized(), isOn: $showsCursor)
                 Toggle("Include window shadow".localized(), isOn: $windowShadow)
                 Toggle("Show magnifier while selecting".localized(), isOn: $showMagnifier)
+                Toggle("Show crosshair guides while selecting".localized(), isOn: $showSelectionGuides)
+                Toggle("Outline the last region while selecting".localized(), isOn: $showLastRegionOutline)
                 Toggle("Open editor after capture".localized(), isOn: $openEditorAfterCapture)
                 Toggle("Snap editor shapes to detected elements".localized(), isOn: $editorSmartShapes)
             }
@@ -84,6 +88,7 @@ extension CaptureSettingsView: SettingsSearchable {
             keywords: [
                 "Format", "PNG", "JPG", "HEIC", "WebP", "TIFF", "File prefix", "Image path", "Folder", "Show pointer in screenshots",
                 "Pointer", "Cursor", "Include window shadow", "Shadow", "Show magnifier while selecting", "Magnifier",
+                "Show crosshair guides while selecting", "Crosshair", "Guides", "Outline the last region while selecting",
                 "Open editor after capture", "Editor", "Snap editor shapes to detected elements", "Smart shapes", "Snapping", "Scrolling Capture", "Scroll automatically",
                 "Permissions", "Screen recording",
             ]),

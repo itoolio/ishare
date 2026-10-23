@@ -130,7 +130,7 @@ struct ShortcutStore {
 enum SettingsTransfer {
     static let preferenceKeys: [Defaults.Keys] = [
         .copyToClipboard, .openInFinder, .saveToDisk, .uploadMedia, .builtInShare, .openEditorAfterCapture, .forceUploadModifier,
-        .capturePath, .captureFileType, .captureFileName, .screenshotShowsCursor, .windowShadow, .showMagnifier,
+        .capturePath, .captureFileType, .captureFileName, .screenshotShowsCursor, .windowShadow, .showMagnifier, .showSelectionGuides, .showLastRegionOutline,
         .scrollingAutoScroll, .ignoredBundleIdentifiers,
         .toastTimeout, .menuBarIcon, .aussieMode, .copyImageToClipboard, .menuRecordsGIF,
         .recordingPath, .recordingFileName, .recordMP4, .useHEVC, .useHDR, .recordAudio, .recordMic, .recordPointer, .recordClicks,

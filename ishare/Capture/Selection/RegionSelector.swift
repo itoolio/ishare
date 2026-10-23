@@ -1,4 +1,5 @@
 import AppKit
+import Defaults
 import ishareCore
 
 @MainActor
@@ -55,6 +56,17 @@ final class RegionSelector {
         }
     }
 
+    static func provide(backdrops: [CGDirectDisplayID: CGImage]) {
+        active?.provide(backdrops: backdrops)
+    }
+
+    private func provide(backdrops: [CGDirectDisplayID: CGImage]) {
+        for panel in panels {
+            guard let view = panel.contentView as? RegionSelectionView, let displayID = view.displayID, let backdrop = backdrops[displayID] else { continue }
+            view.backdrop = backdrop
+        }
+    }
+
     private func finish(_ outcome: Outcome) {
         guard let continuation else { return }
         self.continuation = nil
@@ -70,7 +82,9 @@ final class RegionSelector {
 
 final class RegionSelectionView: NSView {
     private let screen: NSScreen
-    private let backdrop: CGImage?
+    fileprivate var backdrop: CGImage? {
+        didSet { needsDisplay = true }
+    }
     private let options: RegionSelector.Options
     private let onFinish: (RegionSelector.Outcome) -> Void
 
@@ -115,6 +129,10 @@ final class RegionSelectionView: NSView {
     private var scale: CGFloat {
         guard let backdrop else { return screen.backingScaleFactor }
         return CGFloat(backdrop.width) / max(1, bounds.width)
+    }
+
+    fileprivate var displayID: CGDirectDisplayID? {
+        screen.displayID
     }
 
     private var lastRegion: CGRect? {
@@ -240,7 +258,13 @@ final class RegionSelectionView: NSView {
         case KeyCode.left, KeyCode.right, KeyCode.up, KeyCode.down:
             nudge(keyCode: event.keyCode, step: event.modifierFlags.contains(.shift) ? 10 : 1)
         default:
-            if event.charactersIgnoringModifiers?.lowercased() == "l", !event.isARepeat, selectLastRegion() {
+            let character = event.charactersIgnoringModifiers?.lowercased()
+            if character == "l", !event.isARepeat, selectLastRegion() {
+                return
+            }
+            if character == "g", !event.isARepeat {
+                Defaults[.showSelectionGuides].toggle()
+                needsDisplay = true
                 return
             }
             super.keyDown(with: event)
@@ -327,6 +351,7 @@ final class RegionSelectionView: NSView {
         if lastRegion != nil {
             parts.append("L for last region".localized())
         }
+        parts.append("G for guides".localized())
         parts.append("Return for full screen".localized())
         return parts.joined(separator: "  ·  ")
     }
@@ -343,7 +368,7 @@ final class RegionSelectionView: NSView {
         if let selection, !selection.isEmpty {
             drawSelection(selection)
         } else {
-            if let lastRegion {
+            if let lastRegion, Defaults[.showLastRegionOutline] {
                 drawLastRegionGhost(lastRegion)
             }
             if isOnThisScreen, measurement == nil {
@@ -359,8 +384,9 @@ final class RegionSelectionView: NSView {
         }
 
         guard let location = mouseLocation else { return }
-        if isMeasureModifierHeld || isMeasuring {
-            drawGuides(at: location)
+        let isMeasuringGuides = isMeasureModifierHeld || isMeasuring
+        if isMeasuringGuides || Defaults[.showSelectionGuides] {
+            drawGuides(at: location, labelled: isMeasuringGuides)
         }
         if options.showsMagnifier, let backdrop {
             drawMagnifier(backdrop: backdrop, at: location, context: context)
@@ -401,7 +427,7 @@ final class RegionSelectionView: NSView {
         path.stroke()
     }
 
-    private func drawGuides(at location: CGPoint) {
+    private func drawGuides(at location: CGPoint, labelled: Bool) {
         let x = location.x.rounded(.down) + 0.5
         let y = location.y.rounded(.down) + 0.5
         let guides = NSBezierPath()
@@ -415,7 +441,7 @@ final class RegionSelectionView: NSView {
         guides.setLineDash([4, 4], count: 2, phase: 0)
         SelectionStyle.accentColor.setStroke()
         guides.stroke()
-        if !options.showsMagnifier || backdrop == nil {
+        if labelled, !options.showsMagnifier || backdrop == nil {
             SelectionStyle.drawPill(DisplayCoordinates.label(for: location, in: bounds), near: CGPoint(x: location.x + 8, y: location.y + 4), in: bounds)
         }
     }
