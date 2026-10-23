@@ -10,6 +10,14 @@ struct UploadOutcome: Sendable, Equatable {
     var shortURL: URL? = nil
     var localIdentifier: String? = nil
     var isShareable = true
+    var clipboardText: String? = nil
+    var originalBytes: Int? = nil
+    var uploadedBytes: Int? = nil
+
+    var savedBytes: Int? {
+        guard let originalBytes, let uploadedBytes, uploadedBytes < originalBytes else { return nil }
+        return originalBytes - uploadedBytes
+    }
 
     var deliveredURL: URL? {
         isShareable ? shortURL ?? url : nil
@@ -42,6 +50,12 @@ enum UploadTarget: Sendable {
             case .folder: FolderUploader(uploader: uploader)
             case .photos: PhotosUploader(uploader: uploader)
             case .custom: HTTPUploader(uploader: uploader, linkChoice: linkChoice)
+            case .webdav: WebDAVUploader(uploader: uploader)
+            case .sftp: SFTPUploader(uploader: uploader)
+            case .dropbox: CloudStorageUploader(uploader: uploader, provider: .dropbox)
+            case .googleDrive: CloudStorageUploader(uploader: uploader, provider: .googleDrive)
+            case .oneDrive: CloudStorageUploader(uploader: uploader, provider: .oneDrive)
+            case .github: GitHubUploader(uploader: uploader)
             }
         }
     }
@@ -176,6 +190,19 @@ enum UploadService {
             throw UploadFailure.http(status: status, body: String(data: data, encoding: .utf8))
         }
         return data
+    }
+
+    static func responseWithHeaders(of request: DataRequest) async throws -> (Data, HTTPURLResponse) {
+        let response = await request.serializingData(emptyResponseCodes: successCodes, emptyRequestMethods: [.put, .delete, .post, .get]).response
+        let data = response.data ?? Data()
+        UploadDiagnostics.recorder?.record(response.response, body: data)
+        guard let http = response.response else {
+            throw UploadFailure.transport(response.error?.underlyingError?.localizedDescription ?? response.error?.localizedDescription ?? "No response")
+        }
+        guard successCodes.contains(http.statusCode) else {
+            throw UploadFailure.http(status: http.statusCode, body: String(data: data, encoding: .utf8))
+        }
+        return (data, http)
     }
 
     static func deletionRequest(for deletionURL: String, uploader: CustomUploader?) -> URLRequest? {

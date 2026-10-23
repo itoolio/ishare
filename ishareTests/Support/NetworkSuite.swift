@@ -11,6 +11,7 @@ final class UploadEnvironmentSpy: UploadEnvironment {
     var notifications: [String] = []
     var enqueued: [(URL, UploadDestination)] = []
     var delivered: [URL] = []
+    var copiedText: [String] = []
     var linkChoice: LinkChoiceResolution = .use(.none)
     let showsProgress = false
 
@@ -28,6 +29,10 @@ final class UploadEnvironmentSpy: UploadEnvironment {
 
     func deliver(_ url: URL) {
         delivered.append(url)
+    }
+
+    func copyText(_ text: String) {
+        copiedText.append(text)
     }
 
     func resolveLinkChoice(for _: UploadTarget) async -> LinkChoiceResolution {

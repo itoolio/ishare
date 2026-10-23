@@ -16,12 +16,21 @@ enum UploaderIssue: Equatable, Sendable {
     case linkOptionFormWithBinaryBody(String)
     case missingFolder
     case invalidFolderPublicURL
+    case missingRemoteConfiguration
+    case invalidWebDAVURL
+    case missingRemoteField(String)
+    case invalidPort
+    case missingSFTPCredentials
+    case invalidPublicURLTemplate
+    case invalidGitHubRepository
+    case missingCloudClientID
 
     static let malformedTemplateFormat = "The %@ template has unbalanced {{ }} placeholders"
     static let missingS3FieldFormat = "The S3 %@ is required"
     static let missingLinkOptionFieldFormat = "The %@ link option needs a field name"
     static let linkOptionTemplateWithoutValueFormat = "The %@ link option template must contain {{value}}"
     static let linkOptionFormWithBinaryBodyFormat = "The %@ link option can't be sent as form data with a binary body"
+    static let missingRemoteFieldFormat = "The %@ is required"
 
     var messageKey: String {
         switch self {
@@ -40,6 +49,14 @@ enum UploaderIssue: Equatable, Sendable {
         case .linkOptionFormWithBinaryBody: Self.linkOptionFormWithBinaryBodyFormat
         case .missingFolder: "Choose a folder to save uploads to"
         case .invalidFolderPublicURL: "The public URL must start with http:// or https://"
+        case .missingRemoteConfiguration: "This uploader is missing its connection settings"
+        case .invalidWebDAVURL: "The WebDAV URL must be a valid http or https URL"
+        case .missingRemoteField: Self.missingRemoteFieldFormat
+        case .invalidPort: "The port must be between 1 and 65535"
+        case .missingSFTPCredentials: "Enter a password or a private key for the SFTP server"
+        case .invalidPublicURLTemplate: "The public URL must start with http:// or https://"
+        case .invalidGitHubRepository: "Enter the repository as owner/name"
+        case .missingCloudClientID: "Paste the client ID of your own app to use this provider"
         }
     }
 
@@ -75,8 +92,76 @@ enum UploaderValidator {
             issues += folderIssues(for: uploader.folder)
         case .photos:
             break
+        case .webdav:
+            issues += webdavIssues(for: uploader.webdav)
+        case .sftp:
+            issues += sftpIssues(for: uploader.sftp)
+        case .github:
+            issues += githubIssues(for: uploader.github)
+        case .dropbox, .googleDrive, .oneDrive:
+            issues += cloudIssues(for: uploader.cloud, provider: uploader.kind.cloudProvider)
         }
         return issues
+    }
+
+    static func pathTemplateIssues(_ template: String?) -> [UploaderIssue] {
+        guard let template, !isWellFormedTemplate(template) else { return [] }
+        return [.malformedTemplate(field: "path")]
+    }
+
+    static func publicURLIssues(_ template: String?) -> [UploaderIssue] {
+        guard let template = template?.trimmingCharacters(in: .whitespaces), !template.isEmpty else { return [] }
+        guard isWellFormedTemplate(template) else { return [.malformedTemplate(field: "public URL")] }
+        let lowered = template.lowercased()
+        return lowered.hasPrefix("http://") || lowered.hasPrefix("https://") ? [] : [.invalidPublicURLTemplate]
+    }
+
+    private static func webdavIssues(for configuration: WebDAVConfiguration?) -> [UploaderIssue] {
+        guard let configuration else { return [.missingRemoteConfiguration] }
+        var issues: [UploaderIssue] = []
+        if configuration.baseURL == nil {
+            issues.append(.invalidWebDAVURL)
+        }
+        return issues + pathTemplateIssues(configuration.pathTemplate) + publicURLIssues(configuration.publicURL)
+    }
+
+    private static func sftpIssues(for configuration: SFTPConfiguration?) -> [UploaderIssue] {
+        guard let configuration else { return [.missingRemoteConfiguration] }
+        var issues: [UploaderIssue] = []
+        if configuration.trimmedHost.isEmpty {
+            issues.append(.missingRemoteField("host"))
+        }
+        if configuration.username.trimmingCharacters(in: .whitespaces).isEmpty {
+            issues.append(.missingRemoteField("username"))
+        }
+        if let port = configuration.port, !(1 ... 65535).contains(port) {
+            issues.append(.invalidPort)
+        }
+        if !configuration.usesPrivateKey, (configuration.password ?? "").isEmpty {
+            issues.append(.missingSFTPCredentials)
+        }
+        return issues + pathTemplateIssues(configuration.pathTemplate) + publicURLIssues(configuration.publicURL)
+    }
+
+    private static func githubIssues(for configuration: GitHubConfiguration?) -> [UploaderIssue] {
+        guard let configuration else { return [.missingRemoteConfiguration] }
+        var issues: [UploaderIssue] = []
+        if configuration.ownerAndName == nil {
+            issues.append(.invalidGitHubRepository)
+        }
+        if (configuration.token ?? "").isEmpty {
+            issues.append(.missingRemoteField("access token"))
+        }
+        return issues + pathTemplateIssues(configuration.pathTemplate)
+    }
+
+    private static func cloudIssues(for configuration: CloudStorageConfiguration?, provider: CloudProvider?) -> [UploaderIssue] {
+        var issues: [UploaderIssue] = []
+        let customClientID = configuration?.clientID?.trimmingCharacters(in: .whitespaces) ?? ""
+        if let provider, !provider.hasBuiltInClientID, customClientID.isEmpty {
+            issues.append(.missingCloudClientID)
+        }
+        return issues + pathTemplateIssues(configuration?.pathTemplate)
     }
 
     static func isWellFormedTemplate(_ template: String) -> Bool {

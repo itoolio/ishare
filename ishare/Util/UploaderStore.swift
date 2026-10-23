@@ -29,7 +29,7 @@ enum UploaderStore {
     }
 
     static func prepared(_ uploader: CustomUploader, at date: Date = .init()) -> CustomUploader {
-        S3SecretStore.movingSecretToKeychain(uploader).touched(at: date)
+        UploaderSecrets.movingSecretsToKeychain(S3SecretStore.movingSecretToKeychain(uploader)).touched(at: date)
     }
 
     @discardableResult
@@ -62,7 +62,10 @@ enum UploaderStore {
     }
 
     static func duplicate(_ uploader: CustomUploader, key: StorageKey = .savedCustomUploaders) {
-        let copy = uploader.withID(UUID())
+        let copy = UploaderSecrets.revealingSecrets(uploader).withID(UUID())
+        if let token = UploaderSecrets.read(.oauthToken, for: uploader.id) {
+            try? UploaderSecrets.write(token, .oauthToken, for: copy.id)
+        }
         if uploader.kind == .s3, let secret = S3SecretStore.secret(for: uploader), var configuration = copy.s3 {
             configuration.secretAccessKey = secret
             var resolved = copy
@@ -79,11 +82,13 @@ enum UploaderStore {
             Defaults[.savedLocalUploaders] = Defaults[.savedLocalUploaders].filter { $0.id != uploader.id }
         }
         S3SecretStore.removeSecret(for: uploader.id)
+        UploaderSecrets.removeSecrets(for: uploader.id)
     }
 
     static func deleteAll(key: StorageKey = .savedCustomUploaders) {
         for uploader in Defaults[key] ?? [] {
             S3SecretStore.removeSecret(for: uploader.id)
+            UploaderSecrets.removeSecrets(for: uploader.id)
         }
         Defaults[key] = nil
         if isDefaultStorage(key) {

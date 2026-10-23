@@ -95,6 +95,7 @@ final class UploaderSyncMonitor {
         guard result.changesIncoming else { return }
         for conflict in result.conflicts {
             S3SecretStore.copySecret(from: conflict.incomingID, to: conflict.incomingCopy.id)
+            UploaderSecrets.copySecrets(from: conflict.incomingID, to: conflict.incomingCopy.id)
         }
         isApplyingMerge = true
         Defaults[.savedCustomUploaders] = Set(result.merged)
