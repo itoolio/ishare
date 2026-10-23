@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/itoolio/ishare/tools/internal/appcast"
 	"github.com/itoolio/ishare/tools/internal/appstore"
 	"github.com/itoolio/ishare/tools/internal/appstoreplan"
 	"github.com/itoolio/ishare/tools/internal/buildlog"
@@ -41,6 +42,7 @@ var commands = map[string]command{
 	"screenshots":        {"screenshots [--ci] [all | locale[:language]...]", captureScreenshots},
 	"metadata":           {"metadata [--check] [--metadata dir] [--catalog Metadata.xcstrings] [--release-notes en-US/release_notes.txt]", renderMetadata},
 	"app-store-plan":     {"app-store-plan --report status.json --releases releases.json", appStorePlan},
+	"appcast-hardware":   {"appcast-hardware <requirement> <appcast.xml>", appcastHardware},
 	"build-warnings":     {"build-warnings [--ignore fragment]... <xcodebuild.log>...", buildWarnings},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
@@ -261,5 +263,24 @@ func buildWarnings(env environment, arguments []string) error {
 		return fmt.Errorf("%d build warnings", count)
 	}
 	fmt.Fprintf(env.stdout, "no build warnings in %d logs\n", len(logs))
+	return nil
+}
+
+func appcastHardware(env environment, arguments []string) error {
+	if len(arguments) != 2 {
+		return errUsage
+	}
+	data, err := os.ReadFile(arguments[1])
+	if err != nil {
+		return err
+	}
+	updated, changed, err := appcast.RequireHardware(string(data), arguments[0])
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(arguments[1], []byte(updated), 0o644); err != nil {
+		return err
+	}
+	fmt.Fprintf(env.stdout, "required %s on %d appcast items\n", arguments[0], changed)
 	return nil
 }

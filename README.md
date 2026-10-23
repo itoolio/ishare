@@ -25,6 +25,8 @@
 brew install --cask ishare
 ```
 
+ishare 5.3 and later require a Mac with Apple silicon running macOS 15 or later. Intel Macs stay on 5.2.1, and the update feed only offers newer versions to Apple silicon Macs.
+
 ![ishare](website/public/screenshots/01_menu.jpg)
 
 <table>
