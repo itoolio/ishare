@@ -1,10 +1,23 @@
 import Foundation
 
+private final class FixturesBundleToken {}
+
 enum Fixtures {
-    static let repositoryRoot = URL(fileURLWithPath: #filePath)
+    static let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+
+    static let sourceRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()
         .deletingLastPathComponent()
+
+    static let bundledRoot = Bundle(for: FixturesBundleToken.self).resourceURL?.appending(path: "Fixtures", directoryHint: .isDirectory)
+
+    static let repositoryRoot: URL = {
+        if isSandboxed, let bundledRoot, FileManager.default.fileExists(atPath: bundledRoot.path) {
+            return bundledRoot
+        }
+        return sourceRoot
+    }()
 
     static func url(_ relativePath: String) -> URL {
         repositoryRoot.appending(path: relativePath)

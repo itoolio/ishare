@@ -57,6 +57,35 @@ jobs:
                     -destination "platform=macOS" \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
 
+    app-store-tests:
+        runs-on: macos-26
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - run: xcodegen generate
+            - name: Run the unit tests inside the sandboxed App Store app
+              run: |
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme AppStoreTests \
+                    -destination "platform=macOS" \
+                    -derivedDataPath build/DerivedData \
+                    -resultBundlePath build/AppStoreTests.xcresult \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
+                    ISHARE_APP_STORE_ENTITLEMENTS=ishareTests/SandboxedTestHost.entitlements | xcbeautify
+            - name: Check that the test host really was sandboxed
+              run: codesign -d --entitlements - --xml build/DerivedData/Build/Products/Debug/ishare.app | grep -q com.apple.security.app-sandbox
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: app-store-tests-xcresult
+                  path: build/AppStoreTests.xcresult
+
     ui-tests:
         runs-on: macos-26
         timeout-minutes: 60

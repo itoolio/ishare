@@ -112,7 +112,7 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: ishare/Info.plist
-        CODE_SIGN_ENTITLEMENTS: ishare/ishare.entitlements
+        CODE_SIGN_ENTITLEMENTS: $(ISHARE_APP_STORE_ENTITLEMENTS:default=ishare/ishare.entitlements)
         ENABLE_APP_SANDBOX: YES
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) APP_STORE
       configs:
@@ -187,11 +187,44 @@ targets:
     platform: macOS
     sources:
       - path: ishareTests
+        excludes:
+          - Snapshots
+          - "**/*.entitlements"
     dependencies:
       - target: ishare - GitHub
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/ishare.app/Contents/MacOS/ishare
+        BUNDLE_LOADER: $(TEST_HOST)
+  ishareAppStoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: ishareTests
+        excludes:
+          - Snapshots
+          - "**/*.entitlements"
+      - path: examples
+        type: folder
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: Fixtures
+      - path: ishare
+        type: folder
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: Fixtures
+    dependencies:
+      - target: ishare
+    settings:
+      base:
+        PRODUCT_NAME: ishareAppStoreTests
+        PRODUCT_MODULE_NAME: ishareAppStoreTests
+        PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.appstoretests
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/ishare.app/Contents/MacOS/ishare
         BUNDLE_LOADER: $(TEST_HOST)
@@ -230,6 +263,15 @@ schemes:
         - ishareTests
     archive:
       config: Release
+  AppStoreTests:
+    build:
+      targets:
+        ishare: all
+        ishareAppStoreTests: [test]
+    test:
+      config: Debug
+      targets:
+        - ishareAppStoreTests
   Screenshots:
     build:
       targets:
