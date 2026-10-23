@@ -80,6 +80,16 @@ jobs:
                     echo '```'
                     cat "$RUNNER_TEMP/plan.txt"
                     echo '```'
+                    PENDING=$(sed -n 's/^pending=//p' "$RUNNER_TEMP/plan.txt")
+                    SUPERSEDES=$(sed -n 's/^supersedes=//p' "$RUNNER_TEMP/plan.txt")
+                    if [ -n "$SUPERSEDES" ]; then
+                      echo
+                      echo "The queued review of $SUPERSEDES is withdrawn so the latest release goes through review instead."
+                    fi
+                    if [ -n "$PENDING" ]; then
+                      echo
+                      echo "The newer release $PENDING is pending and is submitted as soon as App Review and build processing allow."
+                    fi
                     echo
                     echo "### App Store Connect"
                     echo
@@ -164,6 +174,11 @@ jobs:
                   REVIEW_CONTACT_PHONE: ${{ secrets.REVIEW_CONTACT_PHONE }}
                   VERSION: ${{ steps.plan.outputs.version }}
                   BUILD: ${{ steps.plan.outputs.build }}
+                  SUPERSEDES: ${{ steps.plan.outputs.supersedes }}
               run: |
                   bundle exec fastlane mac release version:"$VERSION" build:"$BUILD"
-                  echo "Submitted $VERSION ($BUILD) for review." >> "$GITHUB_STEP_SUMMARY"
+                  if [ -n "$SUPERSEDES" ]; then
+                    echo "Withdrew the queued review of $SUPERSEDES and submitted $VERSION ($BUILD) for review in its place." >> "$GITHUB_STEP_SUMMARY"
+                  else
+                    echo "Submitted $VERSION ($BUILD) for review." >> "$GITHUB_STEP_SUMMARY"
+                  fi

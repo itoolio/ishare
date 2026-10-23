@@ -85,7 +85,7 @@ platform :mac do
     submission.cancel_submission
     deadline = Time.now + timeout
     loop do
-      current = app.get_edit_app_store_version(platform: platform)
+      current = app.get_edit_app_store_version(platform: platform) || app.get_in_review_app_store_version(platform: platform)
       state = current&.app_store_state
       UI.message("Version #{version}: #{state}")
       break if app.get_in_progress_review_submission(platform: platform).nil? && %w[DEVELOPER_REJECTED PREPARE_FOR_SUBMISSION REJECTED].include?(state)

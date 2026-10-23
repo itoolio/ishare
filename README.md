@@ -75,7 +75,7 @@ open ishare.xcodeproj
   - signs and notarizes the DMG;
   - updates the Sparkle appcast;
   - uploads the App Store build to App Store Connect and runs the release checklist.
-- Submitting for review is decoupled from releases: the App Store Sync workflow runs after every release and every three hours. It never interrupts an active review, submits the newest processed release with the combined notes of every release since the live version (superseding an unsubmitted or rejected version), and opens an "App Store rejected <version>" issue when a rejection has no newer release yet; the issue closes itself once that version is approved or superseded.
+- Submitting for review is decoupled from releases: the App Store Sync workflow runs after every release and every three hours. It always submits the newest processed release with the combined notes of every release since the live version, superseding an unsubmitted, rejected or still queued version (a submission waiting for review is withdrawn first, and kept until the newer build has finished processing); reviews that have started and approved versions awaiting release are never interrupted, and the job summary notes the pending release instead. It opens an "App Store rejected <version>" issue when a rejection has no newer release yet; the issue closes itself once that version is approved or superseded.
 - Translations are managed on [Crowdin](https://crowdin.com/project/isharemac), and its pull requests are merged automatically.
 
 ## Contributors
