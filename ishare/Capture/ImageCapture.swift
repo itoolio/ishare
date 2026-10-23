@@ -97,8 +97,10 @@ enum ImageCaptureFlow {
         let source = frontmostSource(in: content)
         let blursPrivateApps = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
         let backdropLoading = Task {
-            let rawBackdrops = await ScreenshotEngine.backdrops(for: content)
-            let backdrops = blursPrivateApps ? PrivacyFilter.redactBackdrops(rawBackdrops, content: content) : rawBackdrops
+            // Starts once the selector panels are on screen; a snapshot taken now lets the filter exclude them.
+            let live = (try? await ScreenshotEngine.shareableContent()) ?? content
+            let rawBackdrops = await ScreenshotEngine.backdrops(for: live)
+            let backdrops = blursPrivateApps ? PrivacyFilter.redactBackdrops(rawBackdrops, content: live) : rawBackdrops
             RegionSelector.provide(backdrops: backdrops)
             return backdrops
         }
