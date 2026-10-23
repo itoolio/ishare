@@ -10,4 +10,5 @@ extension Defaults.Keys {
     static let captureSound = Key<SoundChoice>("captureSound", default: .beep, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let uploadCompleteSound = Key<SoundChoice>("uploadCompleteSound", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let hasCompletedOnboarding = Key<Bool>("hasCompletedOnboarding", default: false, suite: .ishare)
+    static let editorShowsLayers = Key<Bool>("editorShowsLayers", default: false, suite: .ishare)
 }

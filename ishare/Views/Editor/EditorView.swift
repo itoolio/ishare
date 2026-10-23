@@ -8,6 +8,8 @@ struct EditorView: View {
     var onCopy: () -> Void
 
     @StateObject private var viewport: EditorViewport
+    @ObservedObject private var templates = TemplateStore.shared
+    @Default(.editorShowsLayers) private var showsLayers
 
     init(document: EditorDocument, onDone: @escaping () -> Void, onDiscard: @escaping () -> Void, onCopy: @escaping () -> Void) {
         self.document = document
@@ -23,8 +25,15 @@ struct EditorView: View {
                 .padding(.horizontal, 14)
                 .padding(.top, 10)
                 .padding(.bottom, 8)
-            EditorCanvas(document: document, viewport: viewport)
-                .background(Color.black.opacity(0.18))
+            HStack(spacing: 0) {
+                EditorCanvas(document: document, viewport: viewport)
+                    .background(Color.black.opacity(0.18))
+                if showsLayers {
+                    Divider()
+                    LayersSidebar(document: document)
+                        .transition(.move(edge: .trailing))
+                }
+            }
             bottomBar
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -52,14 +61,27 @@ struct EditorView: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
                     toolButtons
+                    panelButtons
+                    if EditorToolOptions.hasOptions(for: document.tool) {
+                        EditorToolOptions(document: document)
+                    }
+                }
+                VStack(spacing: 6) {
+                    HStack(spacing: 8) {
+                        toolButtons
+                        panelButtons
+                    }
                     if EditorToolOptions.hasOptions(for: document.tool) {
                         EditorToolOptions(document: document)
                     }
                 }
                 VStack(spacing: 6) {
                     toolButtons
-                    if EditorToolOptions.hasOptions(for: document.tool) {
-                        EditorToolOptions(document: document)
+                    HStack(spacing: 8) {
+                        panelButtons
+                        if EditorToolOptions.hasOptions(for: document.tool) {
+                            EditorToolOptions(document: document)
+                        }
                     }
                 }
             }
@@ -94,6 +116,34 @@ struct EditorView: View {
         .fixedSize()
     }
 
+    private var panelButtons: some View {
+        HStack(spacing: 4) {
+            TemplatesButton(document: document, store: templates)
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) { showsLayers.toggle() }
+            } label: {
+                Image(systemName: "sidebar.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 32, height: 28)
+                    .foregroundStyle(showsLayers ? Color.white : Color.primary)
+                    .background {
+                        if showsLayers {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.accentColor)
+                        }
+                    }
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("l", modifiers: .command)
+            .help("Layers".localized() + " (⌘L)")
+            .accessibilityLabel("Layers".localized())
+            .accessibilityIdentifier("editor.layers.toggle")
+        }
+        .padding(5)
+        .adaptiveGlass(cornerRadius: 12)
+        .fixedSize()
+    }
+
     private var showsWidthSlider: Bool {
         switch document.tool {
         case .stamp, .spotlight, .crop, .blur, .pixelate, .eraser: false
@@ -109,8 +159,8 @@ struct EditorView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             ViewThatFits(in: .horizontal) {
-                ZoomControls(viewport: viewport, showsSlider: true)
-                ZoomControls(viewport: viewport, showsSlider: false)
+                ZoomControls(viewport: viewport, selectionBounds: document.selectionBounds, showsSlider: true)
+                ZoomControls(viewport: viewport, selectionBounds: document.selectionBounds, showsSlider: false)
             }
             .fixedSize(horizontal: false, vertical: true)
             actionButtons
@@ -267,11 +317,12 @@ struct EditorView: View {
 
 struct ZoomControls: View {
     @ObservedObject var viewport: EditorViewport
+    var selectionBounds: CGRect?
     var showsSlider: Bool
 
     var body: some View {
         HStack(spacing: 6) {
-            Button { viewport.zoomOut() } label: { Image(systemName: "minus.magnifyingglass") }
+            Button { viewport.zoomOut(selection: selectionBounds) } label: { Image(systemName: "minus.magnifyingglass") }
                 .keyboardShortcut("-", modifiers: .command)
                 .help("Zoom Out".localized())
                 .accessibilityIdentifier("editor.zoom.out")
@@ -284,11 +335,11 @@ struct ZoomControls: View {
                     .help("Zoom".localized())
                     .accessibilityIdentifier("editor.zoom.slider")
             }
-            Button { viewport.zoomIn() } label: { Image(systemName: "plus.magnifyingglass") }
+            Button { viewport.zoomIn(selection: selectionBounds) } label: { Image(systemName: "plus.magnifyingglass") }
                 .keyboardShortcut("+", modifiers: .command)
                 .help("Zoom In".localized())
                 .accessibilityIdentifier("editor.zoom.in")
-            Button("") { viewport.zoomIn() }
+            Button("") { viewport.zoomIn(selection: selectionBounds) }
                 .keyboardShortcut("=", modifiers: .command)
                 .frame(width: 0, height: 0)
                 .opacity(0)

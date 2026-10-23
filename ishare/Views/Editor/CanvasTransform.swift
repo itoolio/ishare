@@ -83,6 +83,18 @@ struct CanvasTransform: Equatable {
         return .make(visibleRect: visibleRect, container: container, scale: scale, center: moved)
     }
 
+    func zoomAnchor(pointer: CGPoint?, selection: CGRect?, in container: CGSize) -> CGPoint {
+        let bounds = CGRect(origin: .zero, size: container)
+        if let pointer, bounds.contains(pointer) {
+            return pointer
+        }
+        if let selection, !selection.isNull, !selection.isInfinite {
+            let center = toView(CGPoint(x: selection.midX, y: selection.midY))
+            return CGPoint(x: min(max(center.x, bounds.minX), bounds.maxX), y: min(max(center.y, bounds.minY), bounds.maxY))
+        }
+        return CGPoint(x: bounds.midX, y: bounds.midY)
+    }
+
     func zoomed(to newScale: CGFloat, anchor: CGPoint, in container: CGSize) -> CanvasTransform {
         let pinned = toImage(anchor)
         let newOrigin = CGPoint(x: anchor.x - (pinned.x - visibleRect.minX) * newScale, y: anchor.y - (pinned.y - visibleRect.minY) * newScale)
