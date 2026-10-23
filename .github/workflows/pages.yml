@@ -6,6 +6,7 @@ on:
         paths:
             - "website/**"
             - "examples/**"
+            - "ishare/ishare.docc/**"
             - "CHANGELOG.md"
             - ".github/workflows/pages.yml"
     workflow_dispatch:
@@ -25,7 +26,59 @@ concurrency:
     cancel-in-progress: false
 
 jobs:
+    documentation:
+        runs-on: macos-26
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: main
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - run: xcodegen generate
+            - name: Extract the symbol graph
+              shell: bash
+              run: |
+                  xcodebuild docbuild \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "generic/platform=macOS" \
+                    -derivedDataPath build/DerivedData \
+                    CODE_SIGNING_ALLOWED=NO | xcbeautify
+                  go run ./tools/cmd/ishare-tools docc-symbols build/DerivedData/Build/Intermediates.noindex build/symbol-graphs
+            - name: Build the documentation
+              shell: bash
+              run: |
+                  xcrun docc convert ishare/ishare.docc \
+                    --additional-symbol-graph-dir build/symbol-graphs \
+                    --fallback-display-name ishare \
+                    --fallback-bundle-identifier dev.adrian.ishare \
+                    --transform-for-static-hosting \
+                    --hosting-base-path docs \
+                    --warnings-as-errors \
+                    --output-path build/documentation
+                  rm -f build/documentation/index.html
+                  for page in "" iscuformat httpuploaders responsetemplates linkoptions s3uploaders localdestinations examples writinganuploader uploader; do
+                      if [ ! -f "build/documentation/documentation/ishare/$page/index.html" ]; then
+                          echo "::error::The documentation has no page at documentation/ishare/$page"
+                          exit 1
+                      fi
+                  done
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: documentation
+                  path: build/documentation
+                  if-no-files-found: error
+
     build:
+        needs: documentation
         runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v7
@@ -40,6 +93,11 @@ jobs:
               working-directory: website
             - run: npm run build
               working-directory: website
+            - name: Add the DocC documentation
+              uses: actions/download-artifact@v8
+              with:
+                  name: documentation
+                  path: website/dist/docs
             - name: Download the new appcast
               if: inputs.appcast-artifact != ''
               uses: actions/download-artifact@v8
