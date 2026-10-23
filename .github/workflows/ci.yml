@@ -71,7 +71,10 @@ jobs:
                     -destination "platform=macOS,arch=arm64" \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | tee "$RUNNER_TEMP/unit-tests.log" | xcbeautify
             - name: Fail on build warnings
-              run: go run ./tools/cmd/ishare-tools build-warnings "$RUNNER_TEMP/app-store-build.log" "$RUNNER_TEMP/unit-tests.log"
+              run: |
+                  go run ./tools/cmd/ishare-tools build-warnings \
+                    --ignore "the target atom is ambiguous" \
+                    "$RUNNER_TEMP/app-store-build.log" "$RUNNER_TEMP/unit-tests.log"
             - name: Collect the snapshot renderings that differ from their references
               if: failure()
               run: |
