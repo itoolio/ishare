@@ -112,4 +112,25 @@ struct OffscreenRenderingTests {
         let smaller = try #require(ScreenshotMode.sampleImage(size: CGSize(width: 32, height: 20), hue: 0.3, title: ""))
         #expect(first.differentPixels(from: try #require(PixelBuffer(smaller)), channelTolerance: 24) == nil)
     }
+
+    @Test func pixelComparisonForgivesOnePixelShifts() throws {
+        let reference = try #require(Self.stripe(at: 20))
+        let shifted = try #require(Self.stripe(at: 21))
+        #expect((shifted.differentPixels(from: reference, channelTolerance: 24) ?? 0) > 0)
+        #expect(shifted.differentPixels(from: reference, channelTolerance: 24, searchRadius: SnapshotStore.searchRadius) == 0)
+        let moved = try #require(Self.stripe(at: 30))
+        #expect((moved.differentPixels(from: reference, channelTolerance: 24, searchRadius: SnapshotStore.searchRadius) ?? 0) > 0)
+    }
+
+    private static func stripe(at x: Int) -> PixelBuffer? {
+        guard let context = CGContext(
+            data: nil, width: 64, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 64, height: 40))
+        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: x, y: 0, width: 2, height: 40))
+        return context.makeImage().flatMap(PixelBuffer.init)
+    }
 }
