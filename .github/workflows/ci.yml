@@ -241,7 +241,7 @@ jobs:
         env:
             MINIO_ROOT_USER: ishare-ci
             MINIO_ROOT_PASSWORD: ishare-ci-secret
-            MINIO_DOMAIN: s3.local
+            MINIO_DOMAIN: localhost
         steps:
             - uses: actions/checkout@v7
             - uses: maxim-lobanov/setup-xcode@v1
@@ -249,17 +249,15 @@ jobs:
                   xcode-version: latest-stable
             - name: Install XcodeGen and MinIO
               run: brew install xcodegen minio
-            - name: Resolve the virtual-hosted bucket names locally
+            - name: Check that bucket subdomains of localhost resolve to loopback
               run: |
-                  for host in s3.local ishare-integration.s3.local ishare-integration-private.s3.local; do
-                      printf '127.0.0.1 %s\n' "$host" | sudo tee -a /etc/hosts
+                  for host in ishare-integration.localhost ishare-integration-private.localhost; do
+                      dscacheutil -q host -a name "$host"
                   done
-                  sudo dscacheutil -flushcache
-                  sudo killall -HUP mDNSResponder || true
             - name: Start MinIO
               run: |
                   mkdir -p "$RUNNER_TEMP/minio"
-                  nohup minio server "$RUNNER_TEMP/minio" --address ":9000" > "$RUNNER_TEMP/minio.log" 2>&1 &
+                  nohup minio server "$RUNNER_TEMP/minio" --address "[::]:9000" > "$RUNNER_TEMP/minio.log" 2>&1 &
                   for _ in $(seq 1 60); do
                       if curl -sf http://127.0.0.1:9000/minio/health/live; then
                           exit 0
@@ -272,7 +270,7 @@ jobs:
             - name: Run the S3 integration tests against MinIO
               env:
                   TEST_RUNNER_ISHARE_S3_ENDPOINT: http://127.0.0.1:9000
-                  TEST_RUNNER_ISHARE_S3_VIRTUAL_HOST_ENDPOINT: http://s3.local:9000
+                  TEST_RUNNER_ISHARE_S3_VIRTUAL_HOST_ENDPOINT: http://localhost:9000
                   TEST_RUNNER_ISHARE_S3_ACCESS_KEY: ishare-ci
                   TEST_RUNNER_ISHARE_S3_SECRET_KEY: ishare-ci-secret
               run: |
