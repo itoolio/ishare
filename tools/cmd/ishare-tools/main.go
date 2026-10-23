@@ -14,6 +14,7 @@ import (
 	"github.com/itoolio/ishare/tools/internal/appstoreplan"
 	"github.com/itoolio/ishare/tools/internal/buildlog"
 	"github.com/itoolio/ishare/tools/internal/coverage"
+	"github.com/itoolio/ishare/tools/internal/docc"
 	"github.com/itoolio/ishare/tools/internal/metadata"
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
@@ -47,6 +48,7 @@ var commands = map[string]command{
 	"appcast-hardware":   {"appcast-hardware <requirement> <appcast.xml>", appcastHardware},
 	"build-warnings":     {"build-warnings [--ignore fragment]... <xcodebuild.log>...", buildWarnings},
 	"coverage":           {"coverage [--root dir] [--min Area=percent]... [--output summary.md] [--summary-file path] <xccov.json>", coverageReport},
+	"docc-symbols":       {"docc-symbols [--module ishare] [--keep Type]... <derived-data-or-symbol-graph-dir> <output-dir>", doccSymbols},
 	"package-dsyms":      {"package-dsyms <archive.xcarchive> <output.zip>", packageDSYMs},
 	"symbolicate":        {"symbolicate <crash.ips|crash> --dsyms <dSYMs.zip|dir> [--output file]", symbolicate},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
@@ -431,5 +433,26 @@ func packageDSYMs(env environment, arguments []string) error {
 	}
 	fmt.Fprintf(env.stdout, "packaged %s into %s, UUIDs verified for %s\n",
 		strings.Join(result.Bundles, ", "), arguments[1], strings.Join(result.Verified, ", "))
+	return nil
+}
+
+func doccSymbols(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("docc-symbols", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	module := flags.String("module", "ishare", "")
+	var kept fragments
+	flags.Var(&kept, "keep", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() != 2 {
+		return errUsage
+	}
+	types := []string(kept)
+	if len(types) == 0 {
+		types = docc.DocumentedTypes
+	}
+	result, err := docc.FilterFile(flags.Arg(0), *module, flags.Arg(1), types)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(env.stdout, "kept %d symbols and %d relationships of %d types\n", result.Symbols, result.Relationships, len(result.Types))
 	return nil
 }
