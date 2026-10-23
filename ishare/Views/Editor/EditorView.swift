@@ -10,6 +10,8 @@ struct EditorView: View {
     @StateObject private var viewport: EditorViewport
     @ObservedObject private var templates = TemplateStore.shared
     @Default(.editorShowsLayers) private var showsLayers
+    @State private var showsAdjustments = false
+    @State private var showsBeautify = false
 
     init(document: EditorDocument, onDone: @escaping () -> Void, onDiscard: @escaping () -> Void, onCopy: @escaping () -> Void) {
         self.document = document
@@ -28,6 +30,15 @@ struct EditorView: View {
             HStack(spacing: 0) {
                 EditorCanvas(document: document, viewport: viewport)
                     .background(Color.black.opacity(0.18))
+                    .overlay {
+                        if document.isProcessing {
+                            ProgressView()
+                                .controlSize(.large)
+                                .padding(18)
+                                .adaptiveGlass(cornerRadius: 14)
+                                .accessibilityIdentifier("editor.processing")
+                        }
+                    }
                 if showsLayers {
                     Divider()
                     LayersSidebar(document: document)
@@ -40,6 +51,14 @@ struct EditorView: View {
         }
         .frame(minWidth: 980, minHeight: 560)
         .background(.background)
+        .sheet(isPresented: $showsBeautify) {
+            EditorBeautifySheet(document: document) { showsBeautify = false }
+        }
+        .onChange(of: showsAdjustments) { _, shown in
+            if !shown {
+                document.straightenAngle = 0
+            }
+        }
         .onDeleteCommand {
             if document.editingText == nil {
                 document.deleteSelection()
@@ -272,6 +291,8 @@ struct EditorView: View {
                 Divider()
                 Button("Flip Horizontally".localized()) { document.apply(.flipHorizontal) }
                 Button("Flip Vertically".localized()) { document.apply(.flipVertical) }
+                Divider()
+                Button("Straighten…".localized()) { showsAdjustments = true }
                 if document.crop != nil {
                     Divider()
                     Button("Reset Crop".localized()) { document.resetCrop() }
@@ -282,7 +303,55 @@ struct EditorView: View {
             .menuIndicator(.hidden)
             .fixedSize()
             .help("Transform".localized())
+            .accessibilityIdentifier("editor.transform")
+            Button { showsAdjustments.toggle() } label: { Image(systemName: "slider.horizontal.3") }
+                .help("Adjust".localized())
+                .accessibilityLabel("Adjust".localized())
+                .accessibilityIdentifier("editor.adjust")
+                .popover(isPresented: $showsAdjustments, arrowEdge: .top) {
+                    EditorAdjustPanel(document: document)
+                }
+            imageActionsMenu
         }
+    }
+
+    private var imageActionsMenu: some View {
+        Menu {
+            Button("Beautify…".localized()) {
+                document.commitPendingEdits()
+                showsBeautify = true
+            }
+            Button("Lift Subject".localized()) {
+                Task { await document.liftSubject() }
+            }
+            .disabled(document.isProcessing)
+            Button("Combine with…".localized()) { combineWithFiles() }
+        } label: {
+            Image(systemName: "wand.and.stars")
+        }
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Image Actions".localized())
+        .accessibilityIdentifier("editor.imageActions")
+    }
+
+    private var exportMenu: some View {
+        Menu {
+            ForEach(EditorExportFormat.allCases) { format in
+                Button(format.title) { EditorExport.export(document, as: format) }
+            }
+        } label: {
+            Label("Export".localized(), systemImage: "square.and.arrow.up")
+        }
+        .fixedSize()
+        .accessibilityIdentifier("editor.export")
+    }
+
+    private func combineWithFiles() {
+        document.commitPendingEdits()
+        let urls = NewCaptureDocument.chooseImages(message: "Choose images to combine with this capture".localized())
+        guard !urls.isEmpty, let current = document.render() else { return }
+        CombineWindowController.present(urls: urls, leading: [current])
     }
 
     private var actionButtons: some View {
@@ -292,6 +361,7 @@ struct EditorView: View {
             }
             .keyboardShortcut(.delete, modifiers: .command)
             .accessibilityIdentifier("editor.discard")
+            exportMenu
             Button(action: onCopy) {
                 Label("Copy".localized(), systemImage: "doc.on.doc")
             }
