@@ -22,7 +22,7 @@ jobs:
         env:
             GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
             PR_NUMBER: ${{ github.event.pull_request.number }}
-            CATALOG: ishare/Localizable.xcstrings
+            CATALOGS: ishare/Localizable.xcstrings fastlane/metadata/Metadata.xcstrings
         steps:
             - uses: actions/checkout@v7
               with:
@@ -52,7 +52,25 @@ jobs:
               working-directory: base
               run: |
                   set -o pipefail
-                  go run ./tools/cmd/ishare-tools merge-translations "$CATALOG" "../head/$CATALOG" ../merged.xcstrings | tee -a "$GITHUB_OUTPUT"
+                  TOTAL=0
+                  LANGUAGES=""
+                  for CATALOG in $CATALOGS; do
+                      [ -f "$CATALOG" ] || continue
+                      MERGED="../merged/$CATALOG"
+                      mkdir -p "$(dirname "$MERGED")"
+                      if [ ! -f "../head/$CATALOG" ]; then
+                          cp "$CATALOG" "$MERGED"
+                          continue
+                      fi
+                      SUMMARY=$(go run ./tools/cmd/ishare-tools merge-translations "$CATALOG" "../head/$CATALOG" "$MERGED")
+                      echo "$CATALOG: $SUMMARY" | tr '\n' ' '
+                      echo
+                      TOTAL=$((TOTAL + $(echo "$SUMMARY" | sed -n 's/^added=//p')))
+                      LANGUAGES="$LANGUAGES,$(echo "$SUMMARY" | sed -n 's/^languages=//p')"
+                  done
+                  LANGUAGES=$(echo "$LANGUAGES" | tr ',' '\n' | sed '/^$/d' | sort -u | paste -sd, -)
+                  echo "added=$TOTAL" >> "$GITHUB_OUTPUT"
+                  echo "languages=$LANGUAGES" >> "$GITHUB_OUTPUT"
             - name: Close pull request without new translations
               if: steps.own.outputs.skip != '1' && steps.merge.outputs.added == '0'
               run: >-
@@ -71,7 +89,12 @@ jobs:
                   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
                   git fetch -q origin "$BASE_SHA"
                   git read-tree --reset -u "$BASE_SHA"
-                  cp ../merged.xcstrings "$CATALOG"
+                  for CATALOG in $CATALOGS; do
+                      if [ -f "../merged/$CATALOG" ]; then cp "../merged/$CATALOG" "$CATALOG"; fi
+                  done
+                  if [ -f fastlane/metadata/Metadata.xcstrings ]; then
+                      (cd ../base && go run ./tools/cmd/ishare-tools metadata --metadata "$GITHUB_WORKSPACE/head/fastlane/metadata")
+                  fi
                   git add -A
                   git commit -q -m "fix(i18n): add $ADDED translations from Crowdin ($LANGUAGES)"
                   git push -q origin "HEAD:$HEAD_REF"
