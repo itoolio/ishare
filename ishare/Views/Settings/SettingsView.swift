@@ -83,9 +83,11 @@ struct SettingsView: View {
             .navigationSplitViewColumnWidth(min: 180, ideal: 190, max: 220)
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 2) {
-                    Text("v" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if !ScreenshotMode.isCapturingScreenshots {
+                        Text("v" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     Link("ishare.itoolio.dev", destination: URL(string: "https://ishare.itoolio.dev")!)
                         .font(.caption)
                 }

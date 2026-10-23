@@ -14,7 +14,8 @@
       "com.apple.security.device.camera": "Shows the optional webcam bubble over screen recordings.",
       "com.apple.security.files.bookmarks.app-scope": "Remembers save and watch folders the user picked outside Pictures.",
       "com.apple.security.files.user-selected.read-write": "Opens, uploads and saves files the user picks.",
-      "com.apple.security.network.client": "Uploads captures to Imgur, the user's server or S3-compatible storage."
+      "com.apple.security.network.client": "Uploads captures to Imgur, the user's server or S3-compatible storage.",
+      "keychain-access-groups": "Stores the S3 secret access keys the user enters as iCloud Keychain items so they reach the user's other Macs; no other data is kept in the shared keychain group."
     },
     "dev.adrian.ishare.sharemenuext": {
       "com.apple.security.app-sandbox": "Required for every Mac App Store extension.",
@@ -30,30 +31,43 @@
     {
       "topic": "the camera entitlement",
       "entitlement": "com.apple.security.device.camera",
-      "mentions": ["com.apple.security.device.camera"]
+      "mentions": [
+        "com.apple.security.device.camera"
+      ]
     },
     {
       "topic": "the microphone entitlement",
       "entitlement": "com.apple.security.device.audio-input",
-      "mentions": ["com.apple.security.device.audio-input"]
+      "mentions": [
+        "com.apple.security.device.audio-input"
+      ]
     },
     {
       "topic": "Input Monitoring",
-      "mentions": ["Input Monitoring"]
+      "mentions": [
+        "Input Monitoring"
+      ]
     },
     {
       "topic": "Accessibility",
-      "mentions": ["Accessibility"]
+      "mentions": [
+        "Accessibility"
+      ]
     },
     {
       "topic": "keychain access groups",
       "entitlement": "keychain-access-groups",
-      "mentions": ["keychain-access-groups", "keychain group"]
+      "mentions": [
+        "keychain-access-groups",
+        "keychain group"
+      ]
     },
     {
       "topic": "the app group shared with the widget and Share extension",
       "entitlement": "com.apple.security.application-groups",
-      "mentions": ["app group"]
+      "mentions": [
+        "app group"
+      ]
     }
   ]
 }
