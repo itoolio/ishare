@@ -73,10 +73,12 @@ jobs:
                           exit 1
                       fi
                   done
+            - name: Pack the documentation
+              run: tar -czf build/documentation.tar.gz -C build/documentation .
             - uses: actions/upload-artifact@v7
               with:
                   name: documentation
-                  path: build/documentation
+                  path: build/documentation.tar.gz
                   if-no-files-found: error
 
     build:
@@ -95,11 +97,15 @@ jobs:
               working-directory: website
             - run: npm run build
               working-directory: website
-            - name: Add the DocC documentation
+            - name: Download the DocC documentation
               uses: actions/download-artifact@v8
               with:
                   name: documentation
-                  path: website/dist/docs
+                  path: ${{ runner.temp }}/documentation
+            - name: Add the DocC documentation
+              run: |
+                  mkdir -p website/dist/docs
+                  tar -xzf "$RUNNER_TEMP/documentation/documentation.tar.gz" -C website/dist/docs
             - name: Download the new appcast
               if: inputs.appcast-artifact != ''
               uses: actions/download-artifact@v8
