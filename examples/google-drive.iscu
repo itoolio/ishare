@@ -1,0 +1,7 @@
+{
+  "name": "Google Drive",
+  "uploaderType": "googledrive",
+  "cloud": {
+    "folder": "ishare/Screenshots"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Dropbox",
+  "uploaderType": "dropbox",
+  "cloud": {
+    "folder": "ishare",
+    "pathTemplate": "{{date}}/{{filename}}",
+    "directLink": false
+  }
+}
