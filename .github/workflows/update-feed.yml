@@ -1,0 +1,75 @@
+name: Update Feed
+
+on:
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: Release tag to publish in the update feed, for example v5.3.0
+                required: true
+    workflow_call:
+        inputs:
+            tag:
+                type: string
+                required: true
+        secrets:
+            EDDSA_PRIVATE_KEY:
+                required: true
+
+permissions:
+    contents: read
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    appcast:
+        runs-on: macos-26
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
+            - name: Download the release disk image
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ inputs.tag }}
+              run: |
+                  mkdir -p update
+                  gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "ishare.dmg" --dir update
+            - name: Render release notes
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ inputs.tag }}
+              run: |
+                  gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > RELEASE.md
+                  gh api markdown -f text="$(cat RELEASE.md)" -f mode=gfm -f context="$GITHUB_REPOSITORY" > update/ishare.html
+            - name: Generate appcast.xml
+              env:
+                  EDDSA_PRIVATE_KEY: ${{ secrets.EDDSA_PRIVATE_KEY }}
+              run: |
+                  curl -fsSL -o sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.10.0/Sparkle-2.10.0.tar.xz
+                  mkdir sparkle && tar -xJf sparkle.tar.xz -C sparkle
+                  echo "$EDDSA_PRIVATE_KEY" | ./sparkle/bin/generate_appcast \
+                    --ed-key-file - \
+                    --link https://ishare.itoolio.dev \
+                    --embed-release-notes \
+                    --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/" \
+                    update/
+                  go run ./tools/cmd/ishare-tools appcast-hardware arm64 update/appcast.xml
+                  grep -E "shortVersionString|hardwareRequirements" update/appcast.xml
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: appcast
+                  path: update/appcast.xml
+
+    pages:
+        needs: [appcast]
+        uses: ./.github/workflows/pages.yml
+        with:
+            appcast-artifact: appcast
+        permissions:
+            contents: read
+            pages: write
+            id-token: write

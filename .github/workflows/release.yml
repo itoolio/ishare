@@ -305,39 +305,17 @@ jobs:
                   $SEMANTIC_RELEASE
                   echo "tag=v${{ needs.version.outputs.version }}" >> "$GITHUB_OUTPUT"
 
-    appcast:
+    update-feed:
         needs: [version, publish]
-        runs-on: macos-26
-        steps:
-            - uses: actions/checkout@v7
-            - uses: actions/download-artifact@v8
-              with:
-                  name: dmg
-                  path: update
-            - name: Render release notes
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  TAG: ${{ needs.publish.outputs.tag }}
-              run: |
-                  gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > RELEASE.md
-                  gh api markdown -f text="$(cat RELEASE.md)" -f mode=gfm -f context="$GITHUB_REPOSITORY" > update/ishare.html
-            - name: Generate appcast.xml
-              env:
-                  EDDSA_PRIVATE_KEY: ${{ secrets.EDDSA_PRIVATE_KEY }}
-              run: |
-                  curl -fsSL -o sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.10.0/Sparkle-2.10.0.tar.xz
-                  mkdir sparkle && tar -xJf sparkle.tar.xz -C sparkle
-                  echo "$EDDSA_PRIVATE_KEY" | ./sparkle/bin/generate_appcast \
-                    --ed-key-file - \
-                    --link https://ishare.itoolio.dev \
-                    --embed-release-notes \
-                    --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/" \
-                    update/
-                  go run ./tools/cmd/ishare-tools appcast-hardware arm64 update/appcast.xml
-            - uses: actions/upload-artifact@v7
-              with:
-                  name: appcast
-                  path: update/appcast.xml
+        uses: ./.github/workflows/update-feed.yml
+        with:
+            tag: ${{ needs.publish.outputs.tag }}
+        secrets:
+            EDDSA_PRIVATE_KEY: ${{ secrets.EDDSA_PRIVATE_KEY }}
+        permissions:
+            contents: read
+            pages: write
+            id-token: write
 
     release-check:
         needs: [version, publish, app-store]
@@ -356,13 +334,3 @@ jobs:
             contents: read
             issues: write
         secrets: inherit
-
-    pages:
-        needs: [appcast]
-        uses: ./.github/workflows/pages.yml
-        with:
-            appcast-artifact: appcast
-        permissions:
-            contents: read
-            pages: write
-            id-token: write
