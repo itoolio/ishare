@@ -62,7 +62,8 @@ open ishare.xcodeproj
 ```
 
 - The `ishare` scheme builds the sandboxed App Store app, and the `GitHub` scheme builds the direct download app with Sparkle and runs the unit tests.
-- The `UITests` scheme runs the menu and editor UI tests against a deterministic test mode of the app.
+- The `UITests` scheme runs the menu, editor and upload flow UI tests against a deterministic test mode of the app; the upload flow captures a generated fixture image (`-ishareUITestCaptureSource fixture`, no screen recording permission needed), uploads it to a stub HTTP server the test starts on `127.0.0.1` and checks the toast, the clipboard and the history.
+- Snapshot tests compare the menu, toast, editor toolbar and General settings with references in `ishareTests/Snapshots/macOS<major>/` and skip on macOS versions without references. Run the CI workflow manually with "record snapshots" to render the references on the macOS runner and commit them straight to `dev`.
 - Release and maintenance tasks live in one Go CLI, `go run ./tools/cmd/ishare-tools <command>`:
   - `set-version <version>` writes the marketing version and build number to `Config.xcconfig`;
   - `release-notes [file]` turns release markdown on stdin into App Store release notes, merging several releases into one set of notes;
