@@ -1,0 +1,1 @@
+screenshot,enregistrement,vidéo,GIF,envoi,upload,annoter,ShareX,S3,Imgur,webcam,partage

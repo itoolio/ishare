@@ -1,0 +1,44 @@
+ishare ist das ultimative Bildschirmfoto-Tool für macOS, entwickelt für Einfachheit und Effizienz.
+
+ALLES AUFNEHMEN
+• Nimm eine Region mit präziser Auswahl auf, mit Pixel-Lupe samt Koordinaten und Farben sowie einem Messwerkzeug
+• Nimm jedes Fenster mit oder ohne Schatten oder einen ganzen Bildschirm auf und wiederhole deine letzte Region per Tastenkürzel
+• Die scrollende Aufnahme fügt lange Seiten und Dokumente zu einem einzigen Bild zusammen
+• Versieh Fensteraufnahmen mit einem Verlaufshintergrund samt Innenabstand, abgerundeten Ecken und Schatten
+• Mache ausgewählte Apps unkenntlich und blende die Menüleiste automatisch aus, für mehr Privatsphäre
+• Kopiere Text von überall auf dem Bildschirm per Texterkennung direkt auf dem Gerät, dazu Links aus QR-Codes
+• Selbstauslöser, Intervallaufnahmen und Aufnahmeprofile pro App
+• Alles basiert auf ScreenCaptureKit, schnell und privat
+
+AUFZEICHNEN
+• Zeichne einen Bildschirm, ein Fenster oder eine selbst gezogene Region auf
+• Zeige Klicks, Tastenanschläge und eine Webcam-Blase in deinen Aufzeichnungen
+• Nimm Systemaudio und dein Mikrofon mit Live-Pegelanzeigen auf
+• Kürze Aufzeichnungen vor dem Sichern, setze Kapitelmarken und exportiere als MP4, MOV, GIF oder Audio
+• Erzeuge Untertitel direkt auf dem Gerät, als .srt-Datei oder fest ins Video eingebrannt
+• Wähle Auflösung, Bildrate, HEVC, HDR und automatische Komprimierung vor dem Upload
+
+ANNOTIEREN
+• Pfeile in verschiedenen Stilen, Linien, Formen, Hervorhebungen, Stift, Marker und Text
+• Nummerierte Schritte, Emoji- und Symbolstempel, Spotlight, Weichzeichner und Verpixeln
+• Zuschneiden mit Griffen und Seitenverhältnis-Vorgaben, Zoomen und Schwenken, eine Ebenen-Seitenleiste und wiederverwendbare Vorlagen
+• Klicke auf „Fertig“ und deine Aktionen nach der Aufnahme laufen ab: kopieren, sichern, teilen und hochladen
+
+ÜBERALL HOCHLADEN
+• Imgur ohne jede Einrichtung
+• Eigene Uploader für chibisafe, Zipline, copyparty, Discord-Webhooks und deinen eigenen Server, dazu der Import von ShareX-.sxcu-Dateien
+• Jeder S3-kompatible Speicher, optional mit ablaufenden Links, und Geheimnisse sicher im Schlüsselbund
+• Lade an mehrere Ziele gleichzeitig hoch oder wähle pro Aufnahme eines aus
+• Lade Textausschnitte hoch, überwache einen Ordner auf neue Dateien und wiederhole fehlgeschlagene Uploads automatisch
+• Upload-Voreinstellungen mit eigenen Tastenkürzeln, ein URL-Kürzer und automatisches Schwärzen sensibler Texte
+• Auf Macs mit Apple Intelligence erstellt ein Assistent Uploader im Gespräch mit dir
+
+IMMER DEN ÜBERBLICK BEHALTEN
+• Ein kompaktes, anpassbares Menü mit Befehlspalette, letzten Uploads und Vorschauen
+• Ein Widget „Letzte Uploads“ und eine Aufnahme-Steuerung im Kontrollzentrum
+• Zieh Dateien auf das Symbol in der Menüleiste oder nutze „Mit ishare hochladen“ im Finder
+• Durchsuchbarer Upload-Verlauf mit Filtern und serverseitigem Löschen
+• Globale Tastenkürzel, Aktionen für Kurzbefehle und eine Teilen-Erweiterung
+• Alle Einstellungen und Uploader in einer einzigen Datei sichern und wiederherstellen
+
+Ein Design mit Liquid Glass unter macOS 26, Sound-Optionen, eine Einführung und Übersetzungen in 11 Sprachen runden alles ab.

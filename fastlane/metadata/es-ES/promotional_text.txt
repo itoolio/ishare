@@ -1,0 +1,1 @@
+Ahora con superposición de cámara web y teclas, recorte de grabaciones, sellos y foco, subidas a varios destinos, carpeta vigilada e historial con búsqueda.
