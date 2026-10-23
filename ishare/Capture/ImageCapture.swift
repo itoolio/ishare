@@ -95,13 +95,16 @@ enum ImageCaptureFlow {
     static func captureRegion(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
         let frontmost = frontmostAppName()
         let source = frontmostSource(in: content)
-        let rawBackdrops = await ScreenshotEngine.backdrops(for: content)
-        let backdrops =
-            CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
-            ? PrivacyFilter.redactBackdrops(rawBackdrops, content: content)
-            : rawBackdrops
+        let blursPrivateApps = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
+        let backdropLoading = Task {
+            let rawBackdrops = await ScreenshotEngine.backdrops(for: content)
+            let backdrops = blursPrivateApps ? PrivacyFilter.redactBackdrops(rawBackdrops, content: content) : rawBackdrops
+            RegionSelector.provide(backdrops: backdrops)
+            return backdrops
+        }
         let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
-        let outcome = await RegionSelector.select(options: .init(backdrops: backdrops, showsMagnifier: Defaults[.showMagnifier], lastRegions: lastRegions))
+        let outcome = await RegionSelector.select(options: .init(showsMagnifier: Defaults[.showMagnifier], lastRegions: lastRegions))
+        let backdrops = await backdropLoading.value
         switch outcome {
         case let .region(screen, rect):
             guard let displayID = screen.displayID else { return nil }

@@ -113,13 +113,21 @@ enum ScreenshotEngine {
     }
 
     static func backdrops(for content: SCShareableContent) async -> [CGDirectDisplayID: CGImage] {
+        let captures = content.displays.map { display in
+            (display.displayID, Task { @MainActor in try? await captureDisplay(display, in: content, showsCursor: false) })
+        }
         var images: [CGDirectDisplayID: CGImage] = [:]
-        for display in content.displays {
-            if let image = try? await captureDisplay(display, in: content, showsCursor: false) {
-                images[display.displayID] = image
-            }
+        for (displayID, capture) in captures {
+            images[displayID] = await capture.value
         }
         return images
+    }
+
+    static func prewarm() {
+        guard hasPermission else { return }
+        Task {
+            _ = try? await shareableContent()
+        }
     }
 
     static func candidateWindows(in content: SCShareableContent) -> [SCWindow] {

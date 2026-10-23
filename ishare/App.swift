@@ -87,6 +87,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LocalShareManager.shared.stopAll()
         if !ScreenshotMode.isActive, !RuntimeEnvironment.isRunningTests {
             HistorySync.shared.start()
+            ScreenshotEngine.prewarm()
+            NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
+                Task { @MainActor in
+                    ScreenshotEngine.prewarm()
+                }
+            }
         }
     }
 
