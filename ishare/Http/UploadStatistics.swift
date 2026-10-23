@@ -273,6 +273,7 @@ extension UploadTarget {
         switch self {
         case .imgur: "imgur"
         case let .custom(uploader): uploader.id.uuidString
+        case .localNetwork: "localNetwork"
         }
     }
 }
