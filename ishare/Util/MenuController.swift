@@ -3,7 +3,7 @@ import Combine
 
 @MainActor
 final class MenuController: ObservableObject {
-    static let shared = MenuController()
+    static var shared: MenuController { AppModel.shared.menu }
 
     @Published var isPresented = false
     @Published var showsCommandPalette = false

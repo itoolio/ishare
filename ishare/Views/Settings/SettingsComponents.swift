@@ -127,10 +127,10 @@ extension View {
 
 private struct SettingsAnchorModifier: ViewModifier {
     let anchor: String
-    @ObservedObject private var navigator = SettingsNavigator.shared
+    @EnvironmentObject private var app: AppModel
 
     func body(content: Content) -> some View {
-        let isHighlighted = navigator.highlightedAnchor == anchor
+        let isHighlighted = app.settings.highlightedAnchor == anchor
         content
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)

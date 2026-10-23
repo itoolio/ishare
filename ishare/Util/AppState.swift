@@ -56,8 +56,8 @@ final class AppState: ObservableObject {
         onRecord(.recordScreenForceUpload, gif: false, forceUpload: true)
         onRecord(.recordGifForceUpload, gif: true, forceUpload: true)
 
-        KeyboardShortcuts.onKeyUp(for: .addRecordingMarker) { Task { @MainActor in AppDelegate.shared.screenRecorder.addMarker() } }
-        KeyboardShortcuts.onKeyUp(for: .toggleRecordingNotes) { Task { @MainActor in AppDelegate.shared.screenRecorder.toggleNotes() } }
+        KeyboardShortcuts.onKeyUp(for: .addRecordingMarker) { Task { @MainActor in AppModel.shared.recorder.addMarker() } }
+        KeyboardShortcuts.onKeyUp(for: .toggleRecordingNotes) { Task { @MainActor in AppModel.shared.recorder.toggleNotes() } }
         KeyboardShortcuts.onKeyUp(for: .saveInstantReplay) { Task { @MainActor in await InstantReplay.shared.save() } }
 
         KeyboardShortcuts.onKeyUp(for: .toggleMainMenu) {

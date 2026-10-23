@@ -6,6 +6,7 @@ struct MenuRecentUploadsSection: View {
     let onHoverItem: (HistoryItem?) -> Void
     let onHoverPreview: (Bool) -> Void
     let onClosePreview: () -> Void
+    @EnvironmentObject private var app: AppModel
     @Environment(\.menuMetrics) private var metrics
 
     static let visibleCount = 5
@@ -22,7 +23,7 @@ struct MenuRecentUploadsSection: View {
             }
             Spacer(minLength: 0)
             Button {
-                MenuActions.openHistory(history)
+                app.menuActions.openHistory(history)
             } label: {
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 14, weight: .medium))

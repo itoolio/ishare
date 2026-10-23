@@ -3,8 +3,7 @@ import SwiftUI
 
 struct MainMenuView: View {
     var isPreview = false
-    @ObservedObject private var recorder = AppDelegate.shared.screenRecorder
-    @ObservedObject private var menu = MenuController.shared
+    @EnvironmentObject private var app: AppModel
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings: OpenSettingsAction
     @FocusState private var hasKeyboardFocus: Bool
@@ -27,6 +26,12 @@ struct MainMenuView: View {
     @Default(.menuFavorites) private var favoriteIDs
 
     private var metrics: MenuMetrics { density.metrics }
+
+    private var recorder: ScreenRecorder { app.recorder }
+
+    private var menu: MenuController { app.menu }
+
+    private var actions: MenuActions { app.menuActions }
 
     private var layout: MenuLayout {
         MenuLayout(order: sectionOrder, hidden: hiddenSections)
@@ -62,7 +67,7 @@ struct MainMenuView: View {
         }
         .onAppear {
             guard !isPreview else { return }
-            MenuController.shared.openSettingsAction = { [openSettings] in openSettings() }
+            menu.openSettingsAction = { [openSettings] in openSettings() }
             prepareKeyboardFocus()
         }
         .onChange(of: menu.isPresented) { _, presented in
@@ -165,7 +170,7 @@ struct MainMenuView: View {
             return .handled
         }
         if press.key == .escape {
-            MenuActions.dismiss()
+            actions.dismiss()
             return .handled
         }
         if press.key == .return || press.key == .space {
@@ -175,12 +180,12 @@ struct MainMenuView: View {
         }
         guard press.modifiers.isDisjoint(with: [.command, .control, .option]), let character = press.characters.first else { return .ignored }
         if let index = MenuFocusNavigator.captureIndex(forKey: character) {
-            MenuActions.triggerCapture(index)
+            actions.triggerCapture(index)
             return .handled
         }
         if MenuFocusNavigator.isRecentLinksKey(character) {
             guard !isPreview else { return .handled }
-            MenuActions.showRecentLinksMenu(history: uploadHistory, from: moreAnchor)
+            actions.showRecentLinksMenu(history: uploadHistory, from: moreAnchor)
             return .handled
         }
         return .ignored
@@ -190,33 +195,33 @@ struct MainMenuView: View {
         switch target {
         case .destination:
             guard !isPreview else { return }
-            MenuActions.showDestinationMenu(from: destinationAnchor)
+            actions.showDestinationMenu(from: destinationAnchor)
         case .settings:
-            MenuActions.openSettings(openSettings)
+            actions.openSettings(openSettings)
         case .donate:
             guard !isPreview else { return }
-            MenuActions.openDonation()
+            actions.openDonation()
         case .more:
             guard !isPreview else { return }
-            MenuActions.showOverflowMenu(from: moreAnchor, openWindow: openWindow)
+            actions.showOverflowMenu(from: moreAnchor, openWindow: openWindow)
         case let .favorite(index):
             guard let command = favoriteCommands[safe: index] else { return }
             command.perform()
         case let .capture(index):
-            MenuActions.triggerCapture(index)
+            actions.triggerCapture(index)
         case let .record(index):
-            MenuActions.toggleRecording(gif: recordsGIF, region: index == 1)
+            actions.toggleRecording(gif: recordsGIF, region: index == 1)
         case .stopRecording:
-            MenuActions.stopRecording()
+            actions.stopRecording()
         case let .chip(index):
             MenuAfterCaptureSection.toggle(at: index)
         case let .recent(index):
             guard uploadHistory.indices.contains(index) else { return }
             HistoryActions.copyURL(uploadHistory[index])
         case .history:
-            MenuActions.openHistory(uploadHistory)
+            actions.openHistory(uploadHistory)
         case let .footer(index):
-            MenuFooter.activate(index)
+            MenuFooter.activate(index, using: actions)
         }
     }
 

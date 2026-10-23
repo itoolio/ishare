@@ -30,7 +30,7 @@ enum MenuAppKitMenus {
         }
         if CaptureSession.isRecording {
             let marker = ClosureMenuItem(title: "Add Recording Marker".localized(), symbol: "flag") {
-                AppDelegate.shared.screenRecorder.addMarker()
+                AppModel.shared.recorder.addMarker()
             }
             marker.setAccessibilityIdentifier("menu.addMarker")
             menu.addItem(marker)
@@ -78,7 +78,7 @@ enum MenuAppKitMenus {
     static func notesItem() -> NSMenuItem {
         let title = RecordingNotesController.shared.isVisible ? "Hide Notes" : "Show Notes"
         let item = ClosureMenuItem(title: title.localized(), symbol: "list.bullet.rectangle") {
-            AppDelegate.shared.screenRecorder.toggleNotes()
+            AppModel.shared.recorder.toggleNotes()
         }
         item.setAccessibilityIdentifier("menu.recordingNotes")
         return item

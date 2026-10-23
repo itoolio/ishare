@@ -244,7 +244,7 @@ enum ScreenshotMode {
         window.setAccessibilityIdentifier(windowIdentifier)
         window.isReleasedWhenClosed = false
         window.level = .floating
-        window.contentView = NSHostingView(rootView: ScreenshotCanvas(scene: scene, document: document(for: scene)))
+        window.contentView = NSHostingView(rootView: ScreenshotCanvas(scene: scene, document: document(for: scene)).appModel())
         window.center()
         self.window = window
         NSApp.setActivationPolicy(.regular)
@@ -256,7 +256,7 @@ enum ScreenshotMode {
     }
 
     @MainActor private static func presentForTesting(_ scene: ScreenshotScene) {
-        let hostingView = NSHostingView(rootView: UITestCanvas(scene: scene, document: testDocument(for: scene)))
+        let hostingView = NSHostingView(rootView: UITestCanvas(scene: scene, document: testDocument(for: scene)).appModel())
         hostingView.sizingOptions = [.minSize]
         let window = NSWindow(contentRect: CGRect(origin: .zero, size: testWindowSize(for: scene, fitting: hostingView.fittingSize)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.identifier = NSUserInterfaceItemIdentifier(testWindowIdentifier)

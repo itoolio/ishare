@@ -5,6 +5,7 @@ struct RecentUploadPreview: View {
     let uploaderName: String?
     let onHover: (Bool) -> Void
     let onFinish: () -> Void
+    @EnvironmentObject private var app: AppModel
     @Environment(\.menuContrast) private var contrast
 
     var body: some View {
@@ -59,7 +60,7 @@ struct RecentUploadPreview: View {
             .disabled(item.fileUrl == nil)
             ToastActionButton(symbol: "safari", title: "Open", iconOnly: true, identifier: "menu.preview.open") {
                 onFinish()
-                MenuActions.dismiss()
+                app.menuActions.dismiss()
                 HistoryActions.open(item)
             }
             if HistoryActions.canEdit(item) {

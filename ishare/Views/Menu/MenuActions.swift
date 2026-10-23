@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-enum MenuActions {
+struct MenuActions {
     static let captureTypes: [CaptureType] = [.REGION, .WINDOW, .SCREEN, .SCROLLING]
 
     static var showsDonate: Bool {
@@ -13,70 +13,72 @@ enum MenuActions {
         #endif
     }
 
-    static func dismiss() {
-        MenuController.shared.dismiss()
+    let menu: MenuController
+
+    func dismiss() {
+        menu.dismiss()
     }
 
-    static func run(_ action: @escaping @MainActor () async -> Void) {
-        MenuController.shared.perform(afterDismissing: action)
+    func run(_ action: @escaping @MainActor () async -> Void) {
+        menu.perform(afterDismissing: action)
     }
 
-    static func triggerCapture(_ index: Int) {
-        guard captureTypes.indices.contains(index) else { return }
-        let type = captureTypes[index]
+    func triggerCapture(_ index: Int) {
+        guard Self.captureTypes.indices.contains(index) else { return }
+        let type = Self.captureTypes[index]
         run { await CaptureSession.captureImage(type) }
     }
 
-    static func toggleRecording(gif: Bool, region: Bool = false) {
+    func toggleRecording(gif: Bool, region: Bool = false) {
         run { CaptureSession.toggleRecording(gif: gif, region: region) }
     }
 
-    static func stopRecording() {
+    func stopRecording() {
         CaptureSession.stopRecording()
         dismiss()
     }
 
-    static func editImage() {
+    func editImage() {
         run { await ImageEditor.chooseAndEdit() }
     }
 
-    static func uploadClipboard() {
+    func uploadClipboard() {
         run { await AppState.uploadPasteboard() }
     }
 
-    static func openHistory(_ history: [HistoryItem]) {
+    func openHistory(_ history: [HistoryItem]) {
         dismiss()
         openHistoryWindow(uploadHistory: history)
     }
 
-    static func openDonation() {
+    func openDonation() {
         dismiss()
         NSWorkspace.shared.open(URL(string: "https://github.com/sponsors/castdrian")!)
     }
 
-    static func openSettings(_ openSettings: OpenSettingsAction) {
+    func openSettings(_ openSettings: OpenSettingsAction) {
         dismiss()
         NSApp.activate(ignoringOtherApps: true)
         openSettings()
     }
 
-    static func showDestinationMenu(from anchor: ViewAnchor) {
+    func showDestinationMenu(from anchor: ViewAnchor) {
         AppKitMenuPresenter.popUp(MenuAppKitMenus.destinationMenu(), from: anchor)
     }
 
-    static func showOverflowMenu(from anchor: ViewAnchor, openWindow: OpenWindowAction) {
+    func showOverflowMenu(from anchor: ViewAnchor, openWindow: OpenWindowAction) {
         let overflow = MenuAppKitMenus.overflowMenu(
-            openOnboarding: {
-                MenuController.shared.dismiss()
+            openOnboarding: { [menu] in
+                menu.dismiss()
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: Onboarding.windowID)
             },
-            openCommandPalette: { MenuController.shared.showsCommandPalette = true }
+            openCommandPalette: { [menu] in menu.showsCommandPalette = true }
         )
         AppKitMenuPresenter.popUp(overflow, from: anchor)
     }
 
-    static func showRecentLinksMenu(history: [HistoryItem], from anchor: ViewAnchor) {
+    func showRecentLinksMenu(history: [HistoryItem], from anchor: ViewAnchor) {
         guard let submenu = MenuAppKitMenus.recentLinksItem(history: history).submenu else { return }
         AppKitMenuPresenter.popUp(submenu, from: anchor)
     }

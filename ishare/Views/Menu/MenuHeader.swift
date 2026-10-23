@@ -6,6 +6,7 @@ struct MenuHeader: View {
     let isPreview: Bool
     let destinationAnchor: ViewAnchor
     let moreAnchor: ViewAnchor
+    @EnvironmentObject private var app: AppModel
     @Environment(\.openWindow) private var openWindow
     @Default(.uploadType) private var uploadType
     @Default(.activeCustomUploader) private var activeCustomUploader
@@ -30,7 +31,7 @@ struct MenuHeader: View {
                     .frame(width: 26, height: 26)
                     .contentShape(Rectangle())
             } preAction: {
-                MenuActions.dismiss()
+                app.menuActions.dismiss()
                 NSApp.activate(ignoringOtherApps: true)
             } postAction: {}
                 .buttonStyle(MenuIconButtonStyle())
@@ -50,7 +51,7 @@ struct MenuHeader: View {
     private var destinationPicker: some View {
         Button {
             guard !isPreview else { return }
-            MenuActions.showDestinationMenu(from: destinationAnchor)
+            app.menuActions.showDestinationMenu(from: destinationAnchor)
         } label: {
             DestinationPillLabel(title: destinationTitle)
         }
@@ -68,7 +69,7 @@ struct MenuHeader: View {
     private var donateButton: some View {
         Button {
             guard !isPreview else { return }
-            MenuActions.openDonation()
+            app.menuActions.openDonation()
         } label: {
             Image(systemName: "heart.fill")
                 .font(.system(size: 12, weight: .semibold))
@@ -87,7 +88,7 @@ struct MenuHeader: View {
     private var moreMenu: some View {
         Button {
             guard !isPreview else { return }
-            MenuActions.showOverflowMenu(from: moreAnchor, openWindow: openWindow)
+            app.menuActions.showOverflowMenu(from: moreAnchor, openWindow: openWindow)
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 13, weight: .semibold))

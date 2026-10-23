@@ -23,6 +23,7 @@ struct MenuRecordSection: View {
     let isRecording: Bool
     let startDate: Date?
     let recordsGIF: Bool
+    @EnvironmentObject private var app: AppModel
     @Environment(\.menuMetrics) private var metrics
 
     var body: some View {
@@ -37,7 +38,7 @@ struct MenuRecordSection: View {
                     shortcut: recordsGIF ? .recordGif : .recordScreen,
                     identifier: recordsGIF ? "menu.record.gif" : "menu.record.screen"
                 ) {
-                    MenuActions.toggleRecording(gif: recordsGIF)
+                    app.menuActions.toggleRecording(gif: recordsGIF)
                 }
                 .favoriteContextMenu(MenuFavoriteCommandID.record(0, gif: recordsGIF))
                 .menuFocusRing(.record(0))
@@ -47,7 +48,7 @@ struct MenuRecordSection: View {
                     shortcut: recordsGIF ? .recordRegionGif : .recordRegion,
                     identifier: recordsGIF ? "menu.record.regiongif" : "menu.record.region"
                 ) {
-                    MenuActions.toggleRecording(gif: recordsGIF, region: true)
+                    app.menuActions.toggleRecording(gif: recordsGIF, region: true)
                 }
                 .favoriteContextMenu(MenuFavoriteCommandID.record(1, gif: recordsGIF))
                 .menuFocusRing(.record(1))
@@ -57,7 +58,7 @@ struct MenuRecordSection: View {
 
     private var stopButton: some View {
         Button {
-            MenuActions.stopRecording()
+            app.menuActions.stopRecording()
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "stop.fill")

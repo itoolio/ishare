@@ -3,7 +3,7 @@ import SwiftUI
 
 @MainActor
 final class SettingsNavigator: ObservableObject {
-    static let shared = SettingsNavigator()
+    static var shared: SettingsNavigator { AppModel.shared.settings }
 
     struct AnchorRequest: Equatable {
         let anchor: String

@@ -1,16 +1,18 @@
 import SwiftUI
 
 struct MenuFooter: View {
+    @EnvironmentObject private var app: AppModel
+
     var body: some View {
         HStack(spacing: 8) {
             FooterButton(symbol: "pencil.and.scribble", title: "Edit Image…") {
-                MenuActions.editImage()
+                app.menuActions.editImage()
             }
             .favoriteContextMenu(MenuFavoriteCommandID.footer(0))
             .menuFocusRing(.footer(0))
             .accessibilityIdentifier("menu.editImage")
             FooterButton(symbol: "doc.on.clipboard", title: "Upload Clipboard") {
-                MenuActions.uploadClipboard()
+                app.menuActions.uploadClipboard()
             }
             .favoriteContextMenu(MenuFavoriteCommandID.footer(1))
             .menuFocusRing(.footer(1))
@@ -18,11 +20,11 @@ struct MenuFooter: View {
         }
     }
 
-    static func activate(_ index: Int) {
+    static func activate(_ index: Int, using actions: MenuActions) {
         if index == 0 {
-            MenuActions.editImage()
+            actions.editImage()
         } else {
-            MenuActions.uploadClipboard()
+            actions.uploadClipboard()
         }
     }
 }

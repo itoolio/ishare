@@ -218,6 +218,7 @@ struct OnboardingPermissionStep: View {
 }
 
 struct OnboardingUploaderStep: View {
+    @EnvironmentObject private var app: AppModel
     @Default(.uploadDestination) private var uploadDestination
 
     var body: some View {
@@ -250,7 +251,7 @@ struct OnboardingUploaderStep: View {
                     isSelected: false
                 )
             } preAction: {
-                SettingsNavigator.shared.pane = .uploaders
+                app.settings.pane = .uploaders
                 NSApp.activate(ignoringOtherApps: true)
             } postAction: {}
                 .buttonStyle(.plain)
