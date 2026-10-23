@@ -24,16 +24,15 @@ var entitlementUsage = map[string][]string{
 }
 
 var frameworkUsage = map[string][]string{
-	"ScreenCaptureKit": {"NSScreenCaptureUsageDescription"},
-	"Contacts":         {"NSContactsUsageDescription"},
-	"CoreLocation":     {"NSLocationUsageDescription", "NSLocationWhenInUseUsageDescription"},
-	"EventKit":         {"NSCalendarsUsageDescription", "NSCalendarsFullAccessUsageDescription", "NSRemindersUsageDescription", "NSRemindersFullAccessUsageDescription"},
-	"Photos":           {"NSPhotoLibraryUsageDescription", "NSPhotoLibraryAddUsageDescription"},
-	"Speech":           {"NSSpeechRecognitionUsageDescription"},
-	"CoreBluetooth":    {"NSBluetoothAlwaysUsageDescription"},
-	"HomeKit":          {"NSHomeKitUsageDescription"},
-	"Intents":          {"NSSiriUsageDescription"},
-	"CoreMotion":       {"NSMotionUsageDescription"},
+	"Contacts":      {"NSContactsUsageDescription"},
+	"CoreLocation":  {"NSLocationUsageDescription", "NSLocationWhenInUseUsageDescription"},
+	"EventKit":      {"NSCalendarsUsageDescription", "NSCalendarsFullAccessUsageDescription", "NSRemindersUsageDescription", "NSRemindersFullAccessUsageDescription"},
+	"Photos":        {"NSPhotoLibraryUsageDescription", "NSPhotoLibraryAddUsageDescription"},
+	"Speech":        {"NSSpeechRecognitionUsageDescription"},
+	"CoreBluetooth": {"NSBluetoothAlwaysUsageDescription"},
+	"HomeKit":       {"NSHomeKitUsageDescription"},
+	"Intents":       {"NSSiriUsageDescription"},
+	"CoreMotion":    {"NSMotionUsageDescription"},
 }
 
 var frameworkPath = regexp.MustCompile(`/([^/]+)\.framework/`)
