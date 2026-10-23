@@ -151,11 +151,17 @@ func mergeTranslations(env environment, arguments []string) error {
 }
 
 func captureScreenshots(env environment, arguments []string) error {
-	targets, err := screenshots.ParseTargets(arguments)
+	flags := flag.NewFlagSet("screenshots", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	ci := flags.Bool("ci", false, "")
+	if err := flags.Parse(arguments); err != nil {
+		return errUsage
+	}
+	targets, err := screenshots.ParseTargets(flags.Args())
 	if err != nil {
 		return err
 	}
-	return screenshots.Run(screenshots.Options{Root: repo.Root(), Targets: targets, Output: env.stdout})
+	return screenshots.Run(screenshots.Options{Root: repo.Root(), Targets: targets, Output: env.stdout, CI: *ci})
 }
 
 func releaseCheck(env environment, arguments []string) error {

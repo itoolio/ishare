@@ -70,7 +70,7 @@ open ishare.xcodeproj
   - `app-store-plan --report status.json --releases releases.json` decides whether to wait, submit or report a rejection from `fastlane mac status` and the GitHub releases;
   - `register-bundle-id [identifier...]` registers bundle identifiers with App Store Connect;
   - `merge-translations <base> <incoming> <output>` keeps only new Crowdin translations in a string catalog;
-  - `screenshots [locale[:language]...]` renders the App Store screenshots through the `Screenshots` UI test scheme into `fastlane/screenshots` as 2880×1800 JPEGs. Run it on a Mac with a Retina display (the scenes are 1440×900 points) and commit the result; releases upload the committed screenshots, and the App Store workflow replaces them on a version already in review.
+  - `screenshots [locale[:language]...]` renders the App Store screenshots through the `Screenshots` UI test scheme into `fastlane/screenshots` as 2880×1800 JPEGs. Run it on a Mac with a Retina display (the scenes are 1440×900 points) and commit the result, or pass `--ci` to create a 1680×1050 point HiDPI virtual display first (a CI-only helper in `tools/virtualdisplay`); the App Store workflow's "regenerate screenshots" option does that on a runner and opens a pull request with the result. Releases upload the committed screenshots, and the App Store workflow replaces them on a version already in review.
 - Releases are cut automatically from `main` with semantic-release, so use [Conventional Commits](https://www.conventionalcommits.org). Each release:
   - signs and notarizes the DMG;
   - updates the Sparkle appcast;
