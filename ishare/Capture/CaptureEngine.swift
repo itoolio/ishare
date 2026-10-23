@@ -14,6 +14,26 @@ struct CapturedFrame: Sendable {
     var size: CGSize { contentRect.size }
 }
 
+final class RecordingStartClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var firstFrameTime: Double?
+
+    var time: Double? {
+        lock.withLock { firstFrameTime }
+    }
+
+    func reset() {
+        lock.withLock { firstFrameTime = nil }
+    }
+
+    func mark(_ time: CMTime) {
+        guard time.isNumeric else { return }
+        lock.withLock {
+            if firstFrameTime == nil { firstFrameTime = time.seconds }
+        }
+    }
+}
+
 enum RecordingError: LocalizedError {
     case notRecording
     case finalizeTimedOut
@@ -40,6 +60,7 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
     }
 
     private var streamOutput: CaptureEngineStreamOutput?
+    let startClock = RecordingStartClock()
     private let finishLock = NSLock()
     private var finishContinuation: CheckedContinuation<Void, any Error>?
     private var didFinishRecording = false
@@ -57,9 +78,10 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
             recordingError = nil
             finishContinuation = nil
         }
+        startClock.reset()
 
         return AsyncThrowingStream<CapturedFrame, any Error> { continuation in
-            let output = CaptureEngineStreamOutput(continuation: continuation)
+            let output = CaptureEngineStreamOutput(continuation: continuation, startClock: startClock)
             streamOutput = output
             output.capturedFrameHandler = { continuation.yield($0) }
             output.systemAudioHandler = { [weak self] in self?.systemAudioMeter.process(buffer: $0) }
@@ -178,9 +200,11 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDeleg
     var microphoneHandler: (@Sendable (AVAudioPCMBuffer) -> Void)?
     var capturedFrameHandler: (@Sendable (CapturedFrame) -> Void)?
     private var continuation: AsyncThrowingStream<CapturedFrame, any Error>.Continuation?
+    private nonisolated let startClock: RecordingStartClock
 
-    init(continuation: AsyncThrowingStream<CapturedFrame, any Error>.Continuation?) {
+    init(continuation: AsyncThrowingStream<CapturedFrame, any Error>.Continuation?, startClock: RecordingStartClock) {
         self.continuation = continuation
+        self.startClock = startClock
     }
 
     nonisolated func stream(_: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
@@ -188,6 +212,7 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamOutput, SCStreamDeleg
         switch outputType {
         case .screen:
             guard let frame = createFrame(for: sampleBuffer) else { return }
+            startClock.mark(sampleBuffer.presentationTimeStamp)
             Task { @MainActor [self] in
                 capturedFrameHandler?(frame)
             }

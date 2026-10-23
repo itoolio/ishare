@@ -2,7 +2,7 @@ import Defaults
 import Foundation
 
 enum Migrations {
-    static let currentVersion = 3
+    static let currentVersion = 4
     static let versionKey = "ishareMigrationVersion"
     static let removedKeys = ["captureBinary"]
     static let removedInVersion2 = ["showMainMenu"]
@@ -25,6 +25,9 @@ enum Migrations {
         if version < 3 {
             moveS3SecretsToKeychain(defaults: defaults)
         }
+        if version < 4 {
+            makeS3SecretsSynchronizable(defaults: defaults)
+        }
         defaults.set(currentVersion, forKey: versionKey)
     }
 
@@ -35,6 +38,15 @@ enum Migrations {
         let secrets = Dictionary(uniqueKeysWithValues: uploaders.map { ($0.id, $0.s3?.secretAccessKey) })
         if migrated.contains(where: { secrets[$0.id] != $0.s3?.secretAccessKey }) {
             Defaults[key] = Set(migrated)
+        }
+    }
+
+    static func makeS3SecretsSynchronizable(defaults: UserDefaults) {
+        let key = Defaults.Key<Set<CustomUploader>?>("savedCustomUploaders", suite: defaults)
+        guard let uploaders = Defaults[key] else { return }
+        let migrated = S3SecretStore.makeSynchronizable(uploaders)
+        if !migrated.isEmpty {
+            Log.upload.info("Moved \(migrated.count) S3 secrets to iCloud Keychain")
         }
     }
 

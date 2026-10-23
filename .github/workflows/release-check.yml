@@ -1,0 +1,96 @@
+name: Release Checklist
+
+on:
+    workflow_call:
+        inputs:
+            tag:
+                description: Release tag whose notes are checked; empty checks the latest release
+                type: string
+                default: ""
+            app-artifact:
+                description: Name of an artifact with the archived App Store app as ishare.app.zip; empty archives one
+                type: string
+                default: ""
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: Release tag whose notes are checked; empty checks the latest release
+                type: string
+                default: ""
+
+permissions:
+    contents: read
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    release-check:
+        runs-on: macos-26
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: ${{ inputs.tag || github.ref }}
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
+            - uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: "3.4"
+                  bundler-cache: true
+
+            - name: Check the App Store Connect credentials and app record
+              env:
+                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+                  LC_ALL: en_US.UTF-8
+                  LANG: en_US.UTF-8
+              run: bundle exec fastlane mac verify
+
+            - uses: actions/download-artifact@v8
+              if: inputs.app-artifact != ''
+              with:
+                  name: ${{ inputs.app-artifact }}
+                  path: build/archived
+            - name: Unpack the archived app
+              if: inputs.app-artifact != ''
+              run: ditto -x -k build/archived/ishare.app.zip build/archived
+
+            - name: Install XcodeGen
+              if: inputs.app-artifact == ''
+              run: brew install xcodegen
+            - name: Archive the App Store app
+              if: inputs.app-artifact == ''
+              run: |
+                  xcodegen generate
+                  xcodebuild archive \
+                    -project ishare.xcodeproj \
+                    -scheme ishare \
+                    -configuration Release \
+                    -destination "generic/platform=macOS" \
+                    -archivePath build/ishare-appstore.xcarchive \
+                    CODE_SIGN_STYLE=Manual \
+                    CODE_SIGN_IDENTITY=- \
+                    PROVISIONING_PROFILE_SPECIFIER= \
+                    DEVELOPMENT_TEAM=L988J7YMK5 | xcbeautify
+                  mkdir -p build/archived
+                  ditto build/ishare-appstore.xcarchive/Products/Applications/ishare.app build/archived/ishare.app
+
+            - name: Render the App Store release notes
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ inputs.tag }}
+              run: |
+                  gh release view $TAG --repo "$GITHUB_REPOSITORY" --json body --jq .body \
+                    | go run ./tools/cmd/ishare-tools release-notes build/release_notes.txt
+                  cat build/release_notes.txt
+
+            - name: Run the release checklist
+              run: go run ./tools/cmd/ishare-tools release-check --app build/archived/ishare.app --release-notes build/release_notes.txt

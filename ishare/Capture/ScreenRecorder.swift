@@ -18,11 +18,13 @@ final class RecordingHUDModel: ObservableObject {
     @Published var startDate = Date()
     @Published var showsSystemAudio = Defaults[.recordAudio]
     @Published var showsMicrophone = Defaults[.recordMic]
+    @Published var markerCount = 0
 }
 
 struct RecordingHUD: View {
     @ObservedObject var model: RecordingHUDModel
     @ObservedObject var levels: AudioLevelsProvider
+    var onMarker: () -> Void
     var onStop: () -> Void
 
     var body: some View {
@@ -46,6 +48,14 @@ struct RecordingHUD: View {
                     }
                 }
             }
+            Button(action: onMarker) {
+                Label(model.markerCount > 0 ? "\(model.markerCount)" : "Marker".localized(), systemImage: "bookmark.fill")
+                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
+            }
+            .adaptiveGlassButtonStyle(prominent: false)
+            .help("Add a marker at the current time".localized())
+            .accessibilityLabel(Text("Add Marker".localized()))
+            .accessibilityIdentifier("recording.marker")
             Button(action: onStop) {
                 Label("Stop".localized(), systemImage: "stop.fill")
                     .font(.system(size: 12, weight: .semibold))
@@ -71,13 +81,17 @@ final class ScreenRecorder: ObservableObject {
     private var overlayWindows: [NSWindow] = []
     private let inputOverlay = InputOverlayController()
     private let webcamBubble = WebcamBubbleController()
+    private let overlayRecorder = OverlayEventRecorder()
+    private var hudModel = RecordingHUDModel()
+    private var markerLog = RecordingMarkerLog()
+    private var sidecar = RecordingSidecar.empty
 
     private var captureOverlayWindowIDs: Set<CGWindowID> {
         Set(inputOverlay.windowIDs + [webcamBubble.windowID].compactMap(\.self))
     }
 
     private var showsNativeClicks: Bool {
-        Defaults[.recordClicks] && !inputOverlay.drawsClicks
+        Defaults[.recordClicks] && !inputOverlay.drawsClicks && !overlayRecorder.capturesClicks
     }
 
     var canRecord: Bool {
@@ -95,6 +109,9 @@ final class ScreenRecorder: ObservableObject {
 
     func start(_ fileURL: URL, target: RecordingTarget = .picker) async {
         guard !isRunning else { return }
+        hudModel = RecordingHUDModel()
+        markerLog = RecordingMarkerLog()
+        sidecar = .empty
         switch target {
         case .picker:
             startWithPicker(fileURL)
@@ -182,9 +199,11 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private func makeHUDWindow(near rect: CGRect, on screen: NSScreen) -> NSPanel {
-        RegionOverlay.hudWindow(RecordingHUD(model: RecordingHUDModel(), levels: audioLevelsProvider) {
+        RegionOverlay.hudWindow(RecordingHUD(model: hudModel, levels: audioLevelsProvider, onMarker: { [weak self] in
+            self?.addMarker()
+        }, onStop: {
             CaptureSession.stopRecording()
-        }, near: rect, on: screen)
+        }), near: rect, on: screen)
     }
 
     private func showCaptureOverlays(areas: [RecordingArea], bubbleArea: CGRect?) async {
@@ -216,10 +235,27 @@ final class ScreenRecorder: ObservableObject {
         overlayWindows.removeAll()
     }
 
+    func addMarker() {
+        guard isRunning, let startDate else { return }
+        let start = captureEngine.startClock.time
+        let time = start.map { RecordingClock.now - $0 } ?? Date().timeIntervalSince(startDate)
+        let marker = markerLog.add(at: time)
+        hudModel.markerCount = markerLog.times.count
+        Log.capture.info("Added \(marker.title, privacy: .public) at \(marker.time)s")
+    }
+
+    func takeSidecar() -> RecordingSidecar {
+        defer { sidecar = .empty }
+        return sidecar
+    }
+
     func stop() async -> Result<URL, any Error> {
         removeOverlay()
         let result = await captureEngine.stopCapture()
         hideCaptureOverlays()
+        let overlay = await overlayRecorder.stop()
+        sidecar = RecordingSidecar(markers: markerLog.markers, overlay: overlay, recordingStart: captureEngine.startClock.time)
+        markerLog = RecordingMarkerLog()
         stopAudioMetering()
         isRunning = false
         startDate = nil
@@ -248,6 +284,9 @@ final class ScreenRecorder: ObservableObject {
             configuration.microphoneCaptureDeviceID = Defaults[.recordMic] ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
             configuration.showsCursor = Defaults[.recordPointer]
             configuration.showMouseClicks = showsNativeClicks
+            if overlayRecorder.isActive {
+                overlayRecorder.update(source: OverlaySource.make(for: filter))
+            }
             await captureEngine.update(configuration: configuration, filter: filter)
             return
         }
@@ -255,6 +294,13 @@ final class ScreenRecorder: ObservableObject {
         if filter.style == .display, let screen = recordedScreen(for: filter) {
             await showCaptureOverlays(areas: [.fullScreen(screen)], bubbleArea: screen.visibleFrame)
         } else {
+            await overlayRecorder.start(
+                source: OverlaySource.make(for: filter),
+                showsClicks: Defaults[.recordClicks],
+                showsKeystrokes: Defaults[.showKeystrokes],
+                shortcutsOnly: Defaults[.keystrokesShortcutsOnly],
+                recordsWebcam: Defaults[.showWebcam]
+            )
             showPickerHUD()
         }
         await run(configuration: configuration, filter: filter, fileURL: fileURL)

@@ -4,22 +4,35 @@ import CoreGraphics
 enum AnnotationRenderer {
     static let magnification: CGFloat = 2
 
-    static func applyingEffects(_ annotations: [Annotation], to base: CGImage) -> CGImage {
-        annotations.reduce(base) { image, annotation in
-            switch annotation.shape {
-            case let .blur(rect):
-                ImageProcessing.blur(image, region: rect)
-            case let .pixelate(rect):
-                ImageProcessing.pixelate(image, region: rect)
-            case let .eraser(rect):
-                ImageProcessing.erase(image, region: rect)
-            default:
-                image
-            }
+    static func blurRadius(for rect: CGRect) -> CGFloat {
+        max(10, min(rect.width, rect.height) / 8)
+    }
+
+    static func pixelBlockSize(for rect: CGRect) -> CGFloat {
+        max(8, min(rect.width, rect.height) / 14)
+    }
+
+    static func applyingEffect(_ annotation: Annotation, to image: CGImage, parameterScale: CGFloat = 1, region: CGRect? = nil) -> CGImage {
+        switch annotation.shape {
+        case let .blur(rect):
+            ImageProcessing.blur(image, region: region ?? rect, radius: max(1, blurRadius(for: rect) * parameterScale))
+        case let .pixelate(rect):
+            ImageProcessing.pixelate(image, region: region ?? rect, blockSize: max(1, pixelBlockSize(for: rect) * parameterScale))
+        case let .eraser(rect):
+            ImageProcessing.erase(image, region: region ?? rect)
+        default:
+            image
         }
     }
 
-    static func render(base: CGImage, annotations: [Annotation], crop: CGRect?) -> CGImage? {
+    static func applyingEffects(_ annotations: [Annotation], to base: CGImage) -> CGImage {
+        annotations.filter { $0.isEffect && !$0.hidden }.reduce(base) { image, annotation in
+            applyingEffect(annotation, to: image)
+        }
+    }
+
+    static func render(base: CGImage, annotations allAnnotations: [Annotation], crop: CGRect?) -> CGImage? {
+        let annotations = allAnnotations.filter { !$0.hidden }
         let effected = applyingEffects(annotations, to: base)
         let width = effected.width
         let height = effected.height

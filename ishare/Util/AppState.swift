@@ -13,6 +13,7 @@ final class AppState: ObservableObject {
     init() {
         if !ScreenshotMode.isActive {
             setupKeyboardShortcuts()
+            UploadPresetShortcuts.start()
             UploadBackgroundServices.start()
         }
     }
@@ -39,6 +40,8 @@ final class AppState: ObservableObject {
         onCapture(.captureScreen, .SCREEN)
         onCapture(.captureScrolling, .SCROLLING)
         onCapture(.captureLastRegion, .LAST_REGION)
+        onCapture(.captureText, .TEXT)
+        IntervalCapture.registerShortcut()
         onCapture(.captureRegionForceUpload, .REGION, forceUpload: true)
         onCapture(.captureWindowForceUpload, .WINDOW, forceUpload: true)
         onCapture(.captureScreenForceUpload, .SCREEN, forceUpload: true)
@@ -49,6 +52,8 @@ final class AppState: ObservableObject {
         onRecord(.recordRegionGif, gif: true, region: true)
         onRecord(.recordScreenForceUpload, gif: false, forceUpload: true)
         onRecord(.recordGifForceUpload, gif: true, forceUpload: true)
+
+        KeyboardShortcuts.onKeyUp(for: .addRecordingMarker) { Task { @MainActor in AppDelegate.shared.screenRecorder.addMarker() } }
 
         KeyboardShortcuts.onKeyUp(for: .toggleMainMenu) {
             Task { @MainActor in

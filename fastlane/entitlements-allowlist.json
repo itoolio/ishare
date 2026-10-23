@@ -1,0 +1,59 @@
+{
+  "ignoredEntitlements": [
+    "com.apple.application-identifier",
+    "com.apple.developer.team-identifier",
+    "com.apple.security.get-task-allow"
+  ],
+  "bundles": {
+    "dev.adrian.ishare": {
+      "com.apple.security.app-sandbox": "Required for every Mac App Store app.",
+      "com.apple.developer.ubiquity-kvstore-identifier": "Syncs ishare settings and uploaders between the user's Macs with iCloud key-value storage.",
+      "com.apple.security.application-groups": "Shares the upload history snapshot with the Recent Uploads widget and files with the Share menu extension.",
+      "com.apple.security.assets.pictures.read-write": "Saves screenshots and recordings to the Pictures folder, the default save location.",
+      "com.apple.security.device.audio-input": "Records the microphone into screen recordings when the user turns it on.",
+      "com.apple.security.device.camera": "Shows the optional webcam bubble over screen recordings.",
+      "com.apple.security.files.bookmarks.app-scope": "Remembers save and watch folders the user picked outside Pictures.",
+      "com.apple.security.files.user-selected.read-write": "Opens, uploads and saves files the user picks.",
+      "com.apple.security.network.client": "Uploads captures to Imgur, the user's server or S3-compatible storage."
+    },
+    "dev.adrian.ishare.sharemenuext": {
+      "com.apple.security.app-sandbox": "Required for every Mac App Store extension.",
+      "com.apple.security.application-groups": "Hands the shared file to the ishare app for uploading.",
+      "com.apple.security.files.user-selected.read-only": "Reads the file the user shares from the Share menu."
+    },
+    "dev.adrian.ishare.widgets": {
+      "com.apple.security.app-sandbox": "Required for every Mac App Store extension.",
+      "com.apple.security.application-groups": "Reads the recent uploads snapshot and thumbnails the ishare app writes to the shared container."
+    }
+  },
+  "reviewNotes": [
+    {
+      "topic": "the camera entitlement",
+      "entitlement": "com.apple.security.device.camera",
+      "mentions": ["com.apple.security.device.camera"]
+    },
+    {
+      "topic": "the microphone entitlement",
+      "entitlement": "com.apple.security.device.audio-input",
+      "mentions": ["com.apple.security.device.audio-input"]
+    },
+    {
+      "topic": "Input Monitoring",
+      "mentions": ["Input Monitoring"]
+    },
+    {
+      "topic": "Accessibility",
+      "mentions": ["Accessibility"]
+    },
+    {
+      "topic": "keychain access groups",
+      "entitlement": "keychain-access-groups",
+      "mentions": ["keychain-access-groups", "keychain group"]
+    },
+    {
+      "topic": "the app group shared with the widget and Share extension",
+      "entitlement": "com.apple.security.application-groups",
+      "mentions": ["app group"]
+    }
+  ]
+}

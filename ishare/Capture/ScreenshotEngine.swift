@@ -94,10 +94,10 @@ enum ScreenshotEngine {
         return try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
     }
 
-    static func captureWindow(_ window: SCWindow) async throws -> CGImage {
+    static func captureWindow(_ window: SCWindow, includesShadow: Bool? = nil) async throws -> CGImage {
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let scale = CGFloat(filter.pointPixelScale)
-        let includesShadow = Defaults[.windowShadow]
+        let includesShadow = includesShadow ?? Defaults[.windowShadow]
         let contentSize = filter.contentRect.size
         let configuration = baseConfiguration(
             pixelSize: CGSize(width: contentSize.width * scale, height: contentSize.height * scale),

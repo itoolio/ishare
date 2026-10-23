@@ -1,4 +1,5 @@
 import Defaults
+import KeyboardShortcuts
 import MenuBarExtraAccess
 import SwiftUI
 
@@ -72,6 +73,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
         ScreenshotMode.prepareIfNeeded()
+        if !ScreenshotMode.isActive, !RuntimeEnvironment.isRunningTests {
+            ResultNotifier.shared.activate()
+            KeyboardShortcuts.onKeyUp(for: .openCommandPalette) {
+                Task { @MainActor in
+                    MenuController.shared.openCommandPalette()
+                }
+            }
+        }
+        BackgroundMaintenance.start()
     }
 
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {

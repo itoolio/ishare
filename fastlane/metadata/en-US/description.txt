@@ -6,19 +6,22 @@ CAPTURE ANYTHING
 • Scrolling capture stitches long pages and documents into one image
 • Add a gradient background with padding, rounded corners and a shadow to window captures
 • Blur chosen apps and hide the menu bar automatically for privacy
+• Copy text from anywhere on screen with on-device text recognition, and links from QR codes
+• Self-timer, interval capture and per-app capture profiles
 • Everything runs on ScreenCaptureKit, fast and private
 
 RECORD
 • Record a display, a window or a region you draw
 • Show clicks, keystrokes and a webcam bubble in your recordings
 • Capture system audio and your microphone with live level meters
-• Trim recordings before saving and convert them to GIFs with size and frame rate presets
+• Trim recordings before saving, add chapter markers, and export to MP4, MOV, GIF or audio
+• Generate captions on-device, as an .srt file or burned into the video
 • Choose resolution, frame rate, HEVC, HDR and automatic compression before upload
 
 ANNOTATE
 • Arrows in several styles, lines, shapes, highlights, pen, marker and text
 • Numbered steps, emoji and symbol stamps, spotlight, blur and pixelate
-• Crop with handles and aspect presets, zoom and pan, undo and redo
+• Crop with handles and aspect presets, zoom and pan, a layers sidebar and reusable templates
 • Press Done and your after-capture actions run: copy, save, share and upload
 
 UPLOAD ANYWHERE
@@ -27,10 +30,12 @@ UPLOAD ANYWHERE
 • Any S3-compatible storage, with optional expiring links and secrets kept in the Keychain
 • Upload to several destinations at once or pick one per capture
 • Upload text snippets, watch a folder for new files, and retry failed uploads automatically
+• Upload presets with their own shortcuts, a URL shortener and automatic redaction of sensitive text
 • On Macs with Apple Intelligence, an assistant builds uploaders from a conversation
 
 STAY ORGANIZED
-• A compact, keyboard-friendly menu with recent uploads and previews
+• A compact, customizable menu with a command palette, recent uploads and previews
+• A Recent Uploads widget and a Capture control in Control Center
 • Drop files on the menu bar icon or use "Upload with ishare" in Finder
 • Searchable upload history with filters and server-side deletion
 • Global keyboard shortcuts, Shortcuts actions and a share extension

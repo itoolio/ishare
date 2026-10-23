@@ -92,7 +92,7 @@ jobs:
                   KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
-                  BUNDLE_IDENTIFIERS: dev.adrian.ishare,dev.adrian.ishare.sharemenuext
+                  BUNDLE_IDENTIFIERS: dev.adrian.ishare,dev.adrian.ishare.sharemenuext,dev.adrian.ishare.widgets
                   BUNDLE_NAME: ishare
               run: go run ./tools/cmd/ishare-tools register-bundle-id
 
@@ -211,6 +211,15 @@ jobs:
             - run: go run ./tools/cmd/ishare-tools set-version ${{ needs.version.outputs.version }}
             - run: xcodegen generate
 
+            - name: Register the bundle IDs
+              env:
+                  KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+                  BUNDLE_IDENTIFIERS: dev.adrian.ishare,dev.adrian.ishare.sharemenuext,dev.adrian.ishare.widgets
+                  BUNDLE_NAME: ishare
+              run: go run ./tools/cmd/ishare-tools register-bundle-id
+
             - name: Archive, sign in the cloud and upload
               env:
                   KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -245,6 +254,11 @@ jobs:
                   if [ "$DRY_RUN" = "true" ]; then
                     xcrun altool --validate-app -f build/appstore/ishare.pkg -t macos --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
                   fi
+                  ditto -c -k --keepParent build/ishare-appstore.xcarchive/Products/Applications/ishare.app build/ishare.app.zip
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: app-store-app
+                  path: build/ishare.app.zip
 
     publish:
         needs: [checks, version, developer-id, app-store]
@@ -316,49 +330,23 @@ jobs:
                   name: appcast
                   path: update/appcast.xml
 
-    app-store-submit:
-        needs: [version, publish]
-        runs-on: macos-26
-        timeout-minutes: 120
-        steps:
-            - uses: actions/checkout@v7
-              with:
-                  ref: ${{ needs.publish.outputs.tag }}
-            - uses: maxim-lobanov/setup-xcode@v1
-              with:
-                  xcode-version: latest-stable
-            - uses: actions/setup-go@v7
-              with:
-                  go-version-file: tools/go.mod
-                  cache-dependency-path: tools/go.mod
-            - uses: ruby/setup-ruby@v1
-              with:
-                  ruby-version: "3.4"
-                  bundler-cache: true
-            - name: Install XcodeGen
-              run: brew install xcodegen
-            - name: Write the App Store release notes
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  TAG: ${{ needs.publish.outputs.tag }}
-              run: |
-                  gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body \
-                    | go run ./tools/cmd/ishare-tools release-notes fastlane/metadata/en-US/release_notes.txt
-                  cat fastlane/metadata/en-US/release_notes.txt
-            - name: Check the committed screenshots
-              run: test "$(find fastlane/screenshots -name '*.jpg' | wc -l)" -ge 1
-            - name: Submit to the App Store
-              env:
-                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-                  APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
-                  REVIEW_CONTACT_FIRST_NAME: ${{ secrets.REVIEW_CONTACT_FIRST_NAME }}
-                  REVIEW_CONTACT_LAST_NAME: ${{ secrets.REVIEW_CONTACT_LAST_NAME }}
-                  REVIEW_CONTACT_EMAIL: ${{ secrets.REVIEW_CONTACT_EMAIL }}
-                  REVIEW_CONTACT_PHONE: ${{ secrets.REVIEW_CONTACT_PHONE }}
-                  LC_ALL: en_US.UTF-8
-                  LANG: en_US.UTF-8
-              run: bundle exec fastlane mac release version:${{ needs.version.outputs.version }} build:${{ needs.version.outputs.build-number }}
+    release-check:
+        needs: [version, publish, app-store]
+        uses: ./.github/workflows/release-check.yml
+        with:
+            tag: ${{ needs.publish.outputs.tag }}
+            app-artifact: app-store-app
+        secrets: inherit
+
+    app-store-sync:
+        needs: [version, release-check]
+        uses: ./.github/workflows/app-store-sync.yml
+        with:
+            wait-for-version: ${{ needs.version.outputs.version }}
+        permissions:
+            contents: read
+            issues: write
+        secrets: inherit
 
     pages:
         needs: [appcast]

@@ -26,6 +26,11 @@ enum SettingsSearchIndex {
             "Clipboard", "Copy image to clipboard instead of URL", "Toast", "Toast Timeout", "Notification",
         ]),
         SettingsSearchEntry(pane: .general, keywords: [
+            "Menu", "Density", "Compact", "Comfortable", "Sections", "Restore Default Layout",
+            "Appearance", "Menu theme", "Dark", "Light", "High contrast menu", "Contrast", "Menu preview",
+            "Position", "Corner", "Screen", "Show results as", "Notification Center",
+        ]),
+        SettingsSearchEntry(pane: .general, keywords: [
             "Sounds", "Sound", "Capture sound", "Upload complete sound", "Mute", "Beep",
         ]),
         SettingsSearchEntry(pane: .general, keywords: [
@@ -52,10 +57,18 @@ enum SettingsSearchIndex {
             "Background", "Add a background to screenshots", "Beautify", "Padding", "Corner radius", "Drop shadow",
             "Gradient", "Measure", "Ruler", "Last region",
         ]),
+        SettingsSearchEntry(pane: .capture, keywords: [
+            "Capture delay", "Self-timer", "Timer", "Countdown", "Copy links from QR codes", "QR code", "Barcode",
+            "Redact sensitive text before uploading", "Redaction", "Redact", "Also redact the saved file", "Email addresses",
+            "API keys and tokens", "Credit card numbers", "IP addresses", "Phone numbers", "Interval Capture", "Interval",
+            "Burst", "Time-lapse", "Also make a GIF", "App Profiles", "Profile", "Name files after the window title", "Window title",
+            "Capture Text", "Text recognition", "OCR",
+        ]),
         SettingsSearchEntry(pane: .recording, keywords: [
             "Clicks & Keystrokes", "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera",
             "Input level", "Trim recordings before saving", "Trim", "GIF size", "Meter",
         ]),
+        SettingsSearchEntry(pane: .recording, keywords: ["Captions", "Generate captions", "Subtitles", "SRT", "Transcription", "Speech", "Burn into the video", "Markers", "Chapters", "Export"]),
         SettingsSearchEntry(pane: .uploaders, keywords: [
             "Also upload to", "Copy URL after upload", "Open URL in browser after upload", "Watch Folder", "Folder",
             "Upload Queue", "Retry", "Expiring links", "Presigned", "ShareX", "SXCU", "Test Upload", "Method",
@@ -70,6 +83,7 @@ enum SettingsSearchIndex {
         SettingsSearchEntry(pane: .advanced, keywords: [
             "Advanced", "Imgur Client ID", "Client ID",
         ]),
+        SettingsSearchEntry(pane: .uploaders, keywords: ["Upload Presets", "Preset", "URL Shortener", "Shorten", "Short link", "is.gd", "v.gd"]),
     ]
 
     static func normalized(_ text: String) -> String {

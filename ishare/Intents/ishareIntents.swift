@@ -89,12 +89,14 @@ enum IntentError: LocalizedError {
     case noUploader
     case cancelled
     case unreadableFile
+    case recognitionFailed
 
     var errorDescription: String? {
         switch self {
         case .noUploader: "The selected uploader no longer exists"
         case .cancelled: "The capture was cancelled"
         case .unreadableFile: "The file could not be read"
+        case .recognitionFailed: "Text recognition failed"
         }
     }
 }
@@ -155,6 +157,25 @@ struct CaptureIntent: AppIntent {
             await CaptureSession.finish(fileURL: fileURL, kind: .image, options: CaptureOptions(forceUpload: upload))
         }
         return .result(value: result)
+    }
+}
+
+struct CaptureTextIntent: AppIntent {
+    static var title: LocalizedStringResource { "Capture Text with ishare" }
+    static var description: IntentDescription { IntentDescription("Recognizes the text in an area you select and returns it.") }
+
+    @Parameter(title: "Copy to Clipboard", default: true)
+    var copiesToClipboard: Bool
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let outcome = copiesToClipboard ? await TextCaptureFlow.captureAndCopy() : await TextCaptureFlow.capture()
+        switch outcome {
+        case let .recognized(text): return .result(value: text)
+        case .noText: return .result(value: "")
+        case .failed: throw IntentError.recognitionFailed
+        case .cancelled: throw IntentError.cancelled
+        }
     }
 }
 
@@ -232,6 +253,12 @@ struct ishareShortcuts: AppShortcutsProvider {
             systemImageName: "camera.viewfinder"
         )
         AppShortcut(
+            intent: CaptureTextIntent(),
+            phrases: ["Capture text with \(.applicationName)", "Copy text from the screen with \(.applicationName)"],
+            shortTitle: "Capture Text",
+            systemImageName: "text.viewfinder"
+        )
+        AppShortcut(
             intent: UploadFileIntent(),
             phrases: ["Upload with \(.applicationName)"],
             shortTitle: "Upload File",
@@ -249,5 +276,6 @@ struct ishareShortcuts: AppShortcutsProvider {
             shortTitle: "Set Uploader",
             systemImageName: "server.rack"
         )
+        AppShortcut(intent: CaptureWithPresetIntent(), phrases: ["Capture with an \(.applicationName) preset"], shortTitle: "Capture with Preset", systemImageName: "square.stack.3d.up")
     }
 }

@@ -55,6 +55,39 @@ func TestConvertTruncatesLongNotes(t *testing.T) {
 	}
 }
 
+func TestConvertMergesSeveralReleasesNewestFirst(t *testing.T) {
+	newer := "## [5.2.0](https://example.com) (2026-11-01)\n\n### Bug Fixes\n\n* **menu:** fix the toast ([1234567](https://example.com))\n\n### Features\n\n* **widgets:** add a Recent Uploads widget ([abcdef1](https://example.com))\n"
+	older := "## [5.1.1](https://example.com) (2026-10-25)\n\n### Bug Fixes\n\n* **menu:** fix the toast ([7654321](https://example.com))\n* **editor:** keep the crop ([1111111](https://example.com))\n"
+	got := Convert(newer + "\n" + older)
+	want := "Features:\n• Add a Recent Uploads widget\n\nBug Fixes:\n• Fix the toast\n• Keep the crop"
+	if got != want {
+		t.Fatalf("unexpected notes:\n%s", got)
+	}
+}
+
+func TestRenderedNotesHaveNoProblems(t *testing.T) {
+	if problems := Problems(Render(sample)); len(problems) > 0 {
+		t.Fatalf("unexpected problems %v", problems)
+	}
+}
+
+func TestProblemsFlagMarkupSymbolsLengthAndEmptyNotes(t *testing.T) {
+	cases := map[string]string{
+		"## Features\n• Something":           "Markdown markup",
+		"• Add **bold** text":                "Markdown markup",
+		"• See [docs](https://example.com)":  "Markdown markup",
+		"• Party 🎉":                          "symbols",
+		"   ":                                "empty",
+		strings.Repeat("a", appStoreLimit+1): "characters long",
+	}
+	for notes, expected := range cases {
+		problems := Problems(notes)
+		if len(problems) == 0 || !strings.Contains(strings.Join(problems, "\n"), expected) {
+			t.Errorf("%q: expected a problem mentioning %q, got %v", notes, expected, problems)
+		}
+	}
+}
+
 func TestRenderFallsBackWhenNothingIsUserFacing(t *testing.T) {
 	if got := Render("## 5.0.1\n\n### Miscellaneous Chores\n\n* bump deps\n"); got != fallback {
 		t.Fatalf("unexpected notes %q", got)

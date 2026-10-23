@@ -15,12 +15,15 @@ struct KeybindSettingsView: View {
             ("Capture Screen:", .captureScreen),
             ("Scrolling Capture:", .captureScrolling),
             ("Capture Last Region:", .captureLastRegion),
+            ("Capture Text:", .captureText),
+            ("Interval Capture:", .intervalCapture),
         ]),
         ("Record", [
             ("Record Screen:", .recordScreen),
             ("Record Region:", .recordRegion),
             ("Record GIF:", .recordGif),
             ("Record Region as GIF:", .recordRegionGif),
+            ("Add Recording Marker:", .addRecordingMarker),
         ]),
         ("Capture and Upload", [
             ("Capture Region:", .captureRegionForceUpload),
@@ -31,6 +34,7 @@ struct KeybindSettingsView: View {
         ]),
         ("Other", [
             ("Open Main Menu:", .toggleMainMenu),
+            ("Open Command Palette:", .openCommandPalette),
             ("Open History Window:", .openHistoryWindow),
             ("Open Editor:", .openEditor),
             ("Open most recent item:", .openMostRecentItem),
@@ -47,6 +51,7 @@ struct KeybindSettingsView: View {
                     }
                 }
             }
+            UploadPresetKeybindSection()
             Section {
                 Button(role: .destructive) {
                     KeyboardShortcuts.reset(Self.groups.flatMap { $0.1.map(\.1) })

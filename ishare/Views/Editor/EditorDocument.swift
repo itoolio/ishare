@@ -25,7 +25,7 @@ final class EditorDocument: ObservableObject {
     @Published var fontSize: CGFloat = 36
     @Published var filled = false
     @Published var textBackground = false
-    @Published var selectedID: UUID?
+    @Published var selectedIDs: Set<UUID> = []
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
     @Published var editingText: TextEdit?
@@ -79,6 +79,7 @@ final class EditorDocument: ObservableObject {
         let before = snapshot
         let effectsBefore = annotations.filter(\.isEffect)
         change()
+        selectedIDs.formIntersection(annotations.map(\.id))
         guard !snapshot.matches(before) else { return }
         undoStack.append(before)
         redoStack.removeAll()
@@ -129,12 +130,36 @@ final class EditorDocument: ObservableObject {
     }
 
     func updateSelection(_ change: (inout Annotation) -> Void) {
-        guard let selectedID else { return }
-        updateAnnotations(where: { $0.id == selectedID }, change)
+        guard !selectedIDs.isEmpty else { return }
+        let ids = selectedIDs
+        updateAnnotations(where: { ids.contains($0.id) }, change)
+    }
+
+    var selectedID: UUID? {
+        get { selectedIDs.count == 1 ? selectedIDs.first : nil }
+        set { selectedIDs = newValue.map { [$0] } ?? [] }
     }
 
     var selectedAnnotation: Annotation? {
         selectedID.flatMap { id in annotations.first { $0.id == id } }
+    }
+
+    var selectedAnnotations: [Annotation] {
+        annotations.filter { selectedIDs.contains($0.id) }
+    }
+
+    var selectionBounds: CGRect? {
+        let bounds = selectedAnnotations.filter { !$0.hidden }.map(\.bounds)
+        guard let first = bounds.first else { return nil }
+        return bounds.dropFirst().reduce(first) { $0.union($1) }
+    }
+
+    func toggleSelection(_ id: UUID) {
+        if selectedIDs.contains(id) {
+            selectedIDs.remove(id)
+        } else {
+            selectedIDs.insert(id)
+        }
     }
 
     func setDimAmount(_ amount: Double) {
@@ -195,7 +220,7 @@ final class EditorDocument: ObservableObject {
 
     func apply(_ transform: Transform) {
         commitText()
-        guard let flattened = AnnotationRenderer.render(base: base, annotations: annotations, crop: crop) else { return }
+        guard let flattened = render() else { return }
         let transformed: CGImage = switch transform {
         case .rotateLeft: ImageProcessing.rotated(flattened, clockwise: false)
         case .rotateRight: ImageProcessing.rotated(flattened, clockwise: true)
@@ -211,7 +236,11 @@ final class EditorDocument: ObservableObject {
     }
 
     private func refreshEffects() {
-        effectedBase = AnnotationRenderer.applyingEffects(annotations.filter(\.isEffect), to: base)
+        effectedBase = AnnotationRenderer.applyingEffects(annotations, to: base)
+    }
+
+    func effectedBase(excluding id: UUID) -> CGImage {
+        AnnotationRenderer.applyingEffects(annotations.filter { $0.id != id }, to: base)
     }
 
     func undo() {
@@ -224,6 +253,10 @@ final class EditorDocument: ObservableObject {
         guard let next = redoStack.popLast() else { return }
         undoStack.append(snapshot)
         restore(next)
+    }
+
+    func replaceAnnotations(with list: [Annotation]) {
+        commit { annotations = list }
     }
 
     func add(_ annotation: Annotation) {
@@ -239,9 +272,14 @@ final class EditorDocument: ObservableObject {
     }
 
     func deleteSelection() {
-        guard let selectedID else { return }
-        commit { annotations.removeAll { $0.id == selectedID } }
-        self.selectedID = nil
+        let removable = Set(selectedAnnotations.filter { !$0.locked }.map(\.id))
+        guard !removable.isEmpty else { return }
+        delete(removable)
+    }
+
+    func delete(_ ids: Set<UUID>) {
+        commit { annotations.removeAll { ids.contains($0.id) } }
+        selectedIDs.subtract(ids)
     }
 
     func applyCrop(_ rect: CGRect?) {
@@ -259,14 +297,20 @@ final class EditorDocument: ObservableObject {
 
     func annotation(at point: CGPoint, tolerance: CGFloat? = nil) -> Annotation? {
         let resolved = tolerance ?? max(8, lineWidth)
-        let hits = annotations.reversed().filter { $0.hitTest(point, tolerance: resolved) }
+        let hits = annotations.reversed().filter { $0.isInteractive && $0.hitTest(point, tolerance: resolved) }
         return hits.first { !$0.isSpotlight } ?? hits.first
     }
 
     func move(_ id: UUID, by delta: CGVector) {
-        guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
-        let moved = annotations[index].offset(by: delta)
-        commit { annotations[index] = moved }
+        move([id], by: delta)
+    }
+
+    func move(_ ids: Set<UUID>, by delta: CGVector) {
+        commit {
+            for index in annotations.indices where ids.contains(annotations[index].id) && !annotations[index].locked {
+                annotations[index] = annotations[index].offset(by: delta)
+            }
+        }
     }
 
     func clearAll() {
@@ -354,6 +398,6 @@ final class EditorDocument: ObservableObject {
     }
 
     func render() -> CGImage? {
-        AnnotationRenderer.render(base: base, annotations: annotations, crop: crop)
+        AnnotationRenderer.render(base: base, annotations: annotations.filter { !$0.hidden }, crop: crop)
     }
 }

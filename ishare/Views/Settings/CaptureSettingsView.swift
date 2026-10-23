@@ -12,6 +12,7 @@ struct CaptureSettingsView: View {
     @Default(.showMagnifier) var showMagnifier
     @Default(.openEditorAfterCapture) var openEditorAfterCapture
     @Default(.scrollingAutoScroll) var scrollingAutoScroll
+    @Default(.nameFilesAfterWindowTitle) var nameFilesAfterWindowTitle
     @State private var screenAccess = CGPreflightScreenCaptureAccess()
     @State private var eventAccess = CGPreflightPostEventAccess()
 
@@ -22,6 +23,7 @@ struct CaptureSettingsView: View {
                     ForEach(FileType.allCases) { Text($0.rawValue.uppercased()).tag($0) }
                 }
                 PrefixRow(key: .captureFileName)
+                Toggle("Name files after the window title".localized(), isOn: $nameFilesAfterWindowTitle)
                 FolderRow(title: "Image path:", kind: .captures)
             }
             Section("Capture".localized()) {
@@ -31,6 +33,7 @@ struct CaptureSettingsView: View {
                 Toggle("Open editor after capture".localized(), isOn: $openEditorAfterCapture)
             }
             CaptureExtrasSettings()
+            CaptureToolsSettings()
             Section {
                 Toggle("Scroll automatically".localized(), isOn: Binding(
                     get: { scrollingAutoScroll },

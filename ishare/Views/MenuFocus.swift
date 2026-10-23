@@ -3,6 +3,8 @@ import SwiftUI
 enum MenuFocusTarget: Hashable, Sendable {
     case destination
     case settings
+    case donate
+    case more
     case capture(Int)
     case record(Int)
     case stopRecording
@@ -72,6 +74,33 @@ enum MenuFocusNavigator {
     static func captureIndex(forKey character: Character) -> Int? {
         guard let digit = character.wholeNumberValue, (1 ... 4).contains(digit) else { return nil }
         return digit - 1
+    }
+
+    static func isRecentLinksKey(_ character: Character) -> Bool {
+        character == "l" || character == "L"
+    }
+}
+
+enum MenuFocusLayout {
+    static func headerRow(showsDonate: Bool) -> [MenuFocusTarget] {
+        showsDonate ? [.destination, .donate, .settings, .more] : [.destination, .settings, .more]
+    }
+
+    static func rows(sections: [MenuSection], isRecording: Bool, chipCount: Int, recentCount: Int, showsDonate: Bool = false) -> [[MenuFocusTarget]] {
+        [headerRow(showsDonate: showsDonate)] + sections.compactMap { section in
+            switch section {
+            case .capture:
+                (0 ..< 4).map(MenuFocusTarget.capture)
+            case .record:
+                isRecording ? [.stopRecording] : [.record(0), .record(1)]
+            case .afterCapture:
+                (0 ..< chipCount).map(MenuFocusTarget.chip)
+            case .recentUploads:
+                recentCount > 0 ? (0 ..< recentCount).map(MenuFocusTarget.recent) + [.history] : nil
+            case .footer:
+                [.footer(0), .footer(1)]
+            }
+        }
     }
 }
 

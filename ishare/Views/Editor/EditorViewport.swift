@@ -50,12 +50,18 @@ final class EditorViewport: ObservableObject {
         center = next.center(in: containerSize)
     }
 
-    func zoomIn() {
-        setZoom(CanvasTransform.zoomIn(from: effectiveZoom))
+    var pointerLocation: CGPoint?
+
+    func zoomAnchor(selection: CGRect?) -> CGPoint {
+        transform.zoomAnchor(pointer: pointerLocation, selection: selection, in: containerSize)
     }
 
-    func zoomOut() {
-        setZoom(CanvasTransform.zoomOut(from: effectiveZoom))
+    func zoomIn(selection: CGRect? = nil) {
+        setZoom(CanvasTransform.zoomIn(from: effectiveZoom), anchor: zoomAnchor(selection: selection))
+    }
+
+    func zoomOut(selection: CGRect? = nil) {
+        setZoom(CanvasTransform.zoomOut(from: effectiveZoom), anchor: zoomAnchor(selection: selection))
     }
 
     func fit() {
