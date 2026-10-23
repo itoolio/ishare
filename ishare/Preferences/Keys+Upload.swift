@@ -21,5 +21,11 @@ extension Defaults.Keys {
     static let uploadPresets = Key<[UploadPreset]>("uploadPresets", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let linkOptionPreferences = Key<[String: LinkOptionPreferences]>("linkOptionPreferences", default: [:], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let localFolderBookmarks = Key<[String: Data]>("localFolderBookmarks", default: [:], suite: .ishare)
+    static let optimizeImagesBeforeUpload = Key<Bool>("optimizeImagesBeforeUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let imageOptimizationFormat = Key<ImageOptimizationFormat>("imageOptimizationFormat", default: .lossless, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let imageConversionQuality = Key<Double>("imageConversionQuality", default: 0.85, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let stripImageMetadata = Key<Bool>("stripImageMetadata", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let stripImportedImageMetadata = Key<Bool>("stripImportedImageMetadata", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let uploadWebhooks = Key<[UploadWebhook]>("uploadWebhooks", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let uploadersLastSyncedAt = Key<Date?>("uploadersLastSyncedAt", default: nil, suite: .ishare)
 }

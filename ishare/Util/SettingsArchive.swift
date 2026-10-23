@@ -146,7 +146,8 @@ enum SettingsTransfer {
         .toastCorner, .toastScreen, .resultPresentation,
         .recordingAudioSource, .recordingAudioBundleIDs, .instantReplayDuration, .instantReplayResolution, .instantReplayFrameRate, .recordingNotesFontSize,
         .recordingNotesScrollSpeed, .recordingNotesOpacity, .translationTargetLanguage, .generateAltText, .linkOptionPreferences, .menuFavorites,
-        .showsWhatsNew,
+        .showsWhatsNew, .optimizeImagesBeforeUpload, .imageOptimizationFormat, .imageConversionQuality, .stripImageMetadata,
+        .stripImportedImageMetadata, .uploadWebhooks,
     ]
 
     static var preferenceNames: Set<String> {
@@ -172,7 +173,7 @@ enum SettingsTransfer {
         }
         let uploaders = (Defaults[uploadersKey(in: defaults)] ?? [])
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            .map { S3SecretStore.exporting($0, includeSecret: includeSecrets) }
+            .map { UploaderSecrets.exporting(S3SecretStore.exporting($0, includeSecret: includeSecrets), includeSecrets: includeSecrets) }
         let shortcutEntries = shortcuts.names().reduce(into: [String: ShortcutEntry]()) { result, name in
             result[name] = ShortcutEntry(shortcut: shortcuts.get(name))
         }

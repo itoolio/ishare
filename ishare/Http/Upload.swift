@@ -16,7 +16,12 @@ protocol UploadEnvironment {
     func notify(_ message: String)
     func enqueue(_ fileURL: URL, target: UploadTarget, localPath: String?, error: any Error) throws
     func deliver(_ url: URL)
+    func copyText(_ text: String)
     func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution
+}
+
+extension UploadEnvironment {
+    func copyText(_: String) {}
 }
 
 struct LiveUploadEnvironment: UploadEnvironment {
@@ -47,6 +52,12 @@ struct LiveUploadEnvironment: UploadEnvironment {
         }
     }
 
+    func copyText(_ text: String) {
+        guard Defaults[.copyURLAfterUpload], !Defaults[.copyImageToClipboard] else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
     func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution {
         await LinkOptionsResolver.resolve(for: target)
     }
@@ -60,6 +71,11 @@ enum UploadPlan {
 
     static func urlToDeliver(_ results: [Result<UploadOutcome, any Error>]) -> URL? {
         results.lazy.compactMap { try? $0.get().deliveredURL }.first
+    }
+
+    static func clipboardTextToDeliver(_ results: [Result<UploadOutcome, any Error>]) -> String? {
+        guard let outcome = results.lazy.compactMap({ try? $0.get() }).first(where: { $0.deliveredURL != nil }) else { return nil }
+        return outcome.shortURL == nil ? outcome.clipboardText : nil
     }
 
     static func hasSuccess(_ results: [Result<UploadOutcome, any Error>]) -> Bool {
@@ -132,6 +148,9 @@ enum UploadCoordinator {
         let results = await upload(fileURL: fileURL, to: [primary] + additional, localFileURL: localFileURL, shortener: shortener)
         if let url = UploadPlan.urlToDeliver(results) {
             environment.deliver(url)
+            if let text = UploadPlan.clipboardTextToDeliver(results) {
+                environment.copyText(text)
+            }
         }
         return results[0]
     }
@@ -152,17 +171,28 @@ enum UploadCoordinator {
                 results.append(.failure(UploadFailure.cancelled))
                 continue
             }
+            let prepared = await UploadPreparation.prepare(fileURL, policy: .current(for: target))
+            defer { prepared.discard() }
             do {
-                var outcome = try await UploadService.upload(fileURL: fileURL, to: target, linkChoice: linkChoice) { fraction in
+                var outcome = try await UploadService.upload(fileURL: prepared.fileURL, to: target, linkChoice: linkChoice) { fraction in
                     Task { @MainActor in
                         progressIndicator?.updateProgress(fraction: (Double(index) + fraction) / count)
                     }
                 }
+                outcome.originalBytes = prepared.originalBytes
+                outcome.uploadedBytes = prepared.optimizedBytes
                 Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
+                if let saved = outcome.savedBytes, let original = outcome.originalBytes {
+                    Log.upload.info("\(ByteSavings.description(saved: saved, original: original), privacy: .public)")
+                }
                 if !UploadPlan.hasShareableSuccess(results), outcome.canBeShortened {
                     outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: shortener)
                 }
                 record(outcome, localFileURL: localFileURL)
+                WebhookDispatcher.uploadCompleted(
+                    outcome, fileURL: prepared.fileURL, uploaderName: target.displayName, savedBytes: outcome.savedBytes,
+                    waitsForAltText: AltText.isEnabled && MimeType.isImageOrVideo(prepared.fileURL)
+                )
                 results.append(.success(outcome))
             } catch {
                 handleFailure(error, fileURL: fileURL, target: target, localFileURL: localFileURL)
@@ -209,7 +239,9 @@ enum UploadCoordinator {
                 localPath: localFileURL?.path,
                 date: Date(),
                 shortUrl: outcome.shortURL?.absoluteString,
-                localIdentifier: outcome.localIdentifier
+                localIdentifier: outcome.localIdentifier,
+                originalSize: outcome.savedBytes == nil ? nil : outcome.originalBytes,
+                uploadedSize: outcome.savedBytes == nil ? nil : outcome.uploadedBytes
             )
         )
     }
