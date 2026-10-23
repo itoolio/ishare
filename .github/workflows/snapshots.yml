@@ -1,0 +1,81 @@
+name: Snapshots
+
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: snapshots
+    cancel-in-progress: false
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    record-snapshots:
+        runs-on: macos-26
+        timeout-minutes: 60
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: dev
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - run: xcodegen generate
+            - name: Find the snapshot folder of this macOS version
+              id: os
+              run: echo "folder=macOS$(sw_vers -productVersion | cut -d. -f1)" >> "$GITHUB_OUTPUT"
+            - name: Record the snapshot references
+              env:
+                  TEST_RUNNER_ISHARE_RECORD_SNAPSHOTS: "1"
+              run: |
+                  rm -rf "ishareTests/Snapshots/${{ steps.os.outputs.folder }}"
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -only-testing:ishareTests/SnapshotTests \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - name: Check the recorded references
+              env:
+                  FOLDER: ishareTests/Snapshots/${{ steps.os.outputs.folder }}
+              run: |
+                  COUNT=$(find "$FOLDER" -name '*.png' | wc -l | tr -d ' ')
+                  echo "Recorded $COUNT references in $FOLDER"
+                  test "$COUNT" -gt 0
+            - name: Verify the references against a second rendering
+              run: |
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -only-testing:ishareTests/SnapshotTests \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: snapshot-references
+                  path: ishareTests/Snapshots/${{ steps.os.outputs.folder }}
+            - name: Commit the references to dev
+              env:
+                  FOLDER: ishareTests/Snapshots/${{ steps.os.outputs.folder }}
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add "$FOLDER"
+                  if git diff --cached --quiet; then
+                      echo "The snapshot references did not change."
+                      exit 0
+                  fi
+                  git commit -q -m "test: record the ${{ steps.os.outputs.folder }} snapshot references"
+                  git fetch -q origin dev
+                  git rebase -q origin/dev
+                  git push -q origin HEAD:dev
