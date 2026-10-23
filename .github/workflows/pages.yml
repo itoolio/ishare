@@ -46,13 +46,15 @@ jobs:
             - name: Extract the symbol graph
               shell: bash
               run: |
-                  xcodebuild docbuild \
+                  mkdir -p build/raw-symbol-graphs
+                  xcodebuild build \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
                     -destination "generic/platform=macOS" \
                     -derivedDataPath build/DerivedData \
-                    CODE_SIGNING_ALLOWED=NO | xcbeautify
-                  go run ./tools/cmd/ishare-tools docc-symbols build/DerivedData/Build/Intermediates.noindex build/symbol-graphs
+                    CODE_SIGNING_ALLOWED=NO \
+                    "OTHER_SWIFT_FLAGS=\$(inherited) -emit-symbol-graph -emit-symbol-graph-dir $PWD/build/raw-symbol-graphs -symbol-graph-minimum-access-level internal" | xcbeautify
+                  go run ./tools/cmd/ishare-tools docc-symbols build/raw-symbol-graphs build/symbol-graphs
             - name: Build the documentation
               shell: bash
               run: |

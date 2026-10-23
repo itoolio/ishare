@@ -288,3 +288,14 @@ func TestRunSkipsAppChecksWithoutAnApp(t *testing.T) {
 		t.Fatalf("unexpected output:\n%s", output.String())
 	}
 }
+
+func TestReviewNotesMustFitAppStoreConnect(t *testing.T) {
+	notes := strings.Repeat("a", MaxReviewNotesLength+1)
+	problems := CheckReviewNotes(notes, map[string]bool{}, Allowlist{})
+	if len(problems) != 1 || !strings.Contains(problems[0], "at most 4000") {
+		t.Fatalf("unexpected problems %v", problems)
+	}
+	if problems := CheckReviewNotes(strings.Repeat("ä", MaxReviewNotesLength), map[string]bool{}, Allowlist{}); len(problems) != 0 {
+		t.Fatalf("notes of exactly the limit were rejected: %v", problems)
+	}
+}
