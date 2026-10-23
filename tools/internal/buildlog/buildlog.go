@@ -10,7 +10,7 @@ import (
 
 var DefaultIgnored = []string{"/SourcePackages/checkouts/"}
 
-var warningLine = regexp.MustCompile(`(?i)\bwarning:`)
+var warningLine = regexp.MustCompile(`\b(warning|WARNING):`)
 
 func Warnings(log io.Reader, ignored []string) ([]string, error) {
 	scanner := bufio.NewScanner(log)

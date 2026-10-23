@@ -16,6 +16,7 @@ const sample = `CompileSwift normal arm64 /repo/ishare/App.swift (in target 'ish
 --- xcodebuild: WARNING: Using the first of multiple matching destinations:
 ld: warning: ignoring duplicate libraries: '-lc++'
 note: Building targets in dependency order
+2026-10-23 14:02:08.301192+0200 ishare[1:2] [Sparkle] Warning: Background app automatically schedules for update checks
 ** BUILD SUCCEEDED **
 `
 
