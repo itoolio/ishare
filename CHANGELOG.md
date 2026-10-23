@@ -1,3 +1,26 @@
+## [5.3.0](https://github.com/itoolio/ishare/compare/v5.2.1...v5.3.0) (2026-10-23)
+
+### Features
+
+* **app-store:** localize the App Store listing and screenshots for every supported language ([c1b8006](https://github.com/itoolio/ishare/commit/c1b8006fdc366e5e0b183f630908f796cff0567a))
+* build for Apple silicon only ([3b9f337](https://github.com/itoolio/ishare/commit/3b9f3376a087fdeeae5aa98b6a378e681e0276e1))
+* **capture:** capture and translate, capture and ask, and alt text for uploads ([5f32a30](https://github.com/itoolio/ishare/commit/5f32a30aeb12a2d12da63b97b2e3efafe469e184))
+* **capture:** keep the self-timer key so Esc cancels it from any app ([bd270af](https://github.com/itoolio/ishare/commit/bd270afe6e7dc1300fe8416aa59f0ff67e16b264))
+* **capture:** send interval capture GIFs through the after-capture steps ([011518d](https://github.com/itoolio/ishare/commit/011518d64e803486d6f0c5b49690e40aea639705))
+* **history:** copy alt text and Markdown from the toast and history ([42594cc](https://github.com/itoolio/ishare/commit/42594cca2adece6d443c17529c7b0c6f00c53d12))
+* **i18n:** translate the 5.3 features into all supported languages ([18b2402](https://github.com/itoolio/ishare/commit/18b24027614213e72972cbd841f494d9d43f2923))
+* **recording:** private notes panel, per-app audio, instant replay and on-screen webcam for window recordings ([47f7fdb](https://github.com/itoolio/ishare/commit/47f7fdb00b61bff0d97cfd876f405d96e4bfcef1))
+* **ui:** drag-out captures, settings redesign, interactive onboarding, quick annotate, menu favourites, glass polish and what's new ([5803960](https://github.com/itoolio/ishare/commit/58039604cc1ac0ce146961c854e0d926ddaa8792))
+* **uploads:** password-protected and expiring links, folder, iCloud Drive and Photos destinations ([abedd53](https://github.com/itoolio/ishare/commit/abedd53cb0255198f9667dc9e52139b9335a2ebb))
+
+### Bug Fixes
+
+* **capture:** pass a closure instead of a method reference to the translation picker binding ([433dc6e](https://github.com/itoolio/ishare/commit/433dc6ec48fa37bdc3b22f3c9d448fbd6ce5504c))
+* **capture:** stream on-device answers through an AsyncThrowingStream ([98c7d5e](https://github.com/itoolio/ishare/commit/98c7d5efe4489df0374078eb092f4b04328388ae))
+* **ui:** give the glass modifiers explicit initializers ([bc31282](https://github.com/itoolio/ishare/commit/bc312825c70361062c85d6d900657cef9d07e88b))
+* **upload:** allow plain HTTP to localhost subdomains ([d28c758](https://github.com/itoolio/ishare/commit/d28c7586ebe5ee6c36c18da9cfb64729d22a60c9))
+* **upload:** keep Folder and Photos uploaders out of the synced uploader list ([54c7b26](https://github.com/itoolio/ishare/commit/54c7b26c965ffc88b32fbd46a8fc4b54691c759d))
+
 ## [5.2.1](https://github.com/itoolio/ishare/compare/v5.2.0...v5.2.1) (2026-10-23)
 
 ### Bug Fixes
