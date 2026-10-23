@@ -18,7 +18,7 @@ enum RecentLinks {
         var seen = Set<String>()
         var links: [RecentLink] = []
         for item in history {
-            guard links.count < limit, let url = item.fileUrl?.trimmingCharacters(in: .whitespaces), !url.isEmpty, seen.insert(url).inserted else { continue }
+            guard links.count < limit, let url = (item.preferredURL?.absoluteString ?? item.fileUrl)?.trimmingCharacters(in: .whitespaces), !url.isEmpty, seen.insert(url).inserted else { continue }
             links.append(RecentLink(item: item, url: url))
         }
         return links

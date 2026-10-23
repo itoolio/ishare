@@ -101,7 +101,20 @@ extension AppCommand {
                        perform: afterDismissing { await CaptureSession.captureImage(.SCROLLING) }),
             AppCommand(id: "capture.lastRegion", title: "Capture Last Region", keywords: ["screenshot", "repeat", "again"], symbol: "arrow.counterclockwise",
                        perform: afterDismissing { await CaptureSession.captureImage(.LAST_REGION) }),
-        ]
+            AppCommand(id: "capture.text", title: "Capture Text", keywords: ["ocr", "recognize", "copy text"], symbol: "text.viewfinder",
+                       perform: afterDismissing { await CaptureSession.captureImage(.TEXT) }),
+            AppCommand(id: "capture.timer", title: "Capture Region in 5 Seconds", keywords: ["timer", "delay", "countdown", "self-timer"], symbol: "timer",
+                       perform: afterDismissing { await CaptureSession.captureImage(.REGION, options: CaptureOptions(delay: 5)) }),
+            AppCommand(id: "capture.interval", title: IntervalCapture.isRunning ? "Stop Interval Capture" : "Interval Capture", keywords: ["burst", "time-lapse", "repeat"], symbol: "stopwatch",
+                       perform: afterDismissing { await IntervalCapture.toggle() }),
+        ] + presetCommands()
+    }
+
+    @MainActor private static func presetCommands() -> [AppCommand] {
+        UploadPresets.all.map { preset in
+            AppCommand(id: "preset.\(preset.id.uuidString)", title: String(format: "Capture with %@".localized(), preset.name), keywords: ["preset", "upload", preset.name], symbol: "square.stack.3d.up",
+                       perform: afterDismissing { await UploadPresets.capture(preset, type: .REGION) })
+        }
     }
 
     @MainActor private static func recordingCommands() -> [AppCommand] {
@@ -110,6 +123,10 @@ extension AppCommand {
                 AppCommand(id: "record.stop", title: "Stop Recording", keywords: ["video", "end"], symbol: "stop.fill") {
                     MenuController.shared.dismiss()
                     CaptureSession.stopRecording()
+                },
+                AppCommand(id: "record.marker", title: "Add Recording Marker", keywords: ["chapter", "bookmark", "marker"], symbol: "flag") {
+                    MenuController.shared.dismiss()
+                    AppDelegate.shared.screenRecorder.addMarker()
                 },
             ]
         }

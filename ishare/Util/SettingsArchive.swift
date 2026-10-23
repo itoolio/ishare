@@ -136,6 +136,14 @@ enum SettingsTransfer {
         .recordingResolution, .recordingFrameRate, .gifFrameRate, .compressBeforeUpload, .compressionThresholdMB, .compressionPreset,
         .imgurClientId, .activeCustomUploader, .uploadType, .uploadDestination,
         .copyURLAfterUpload, .openURLAfterUpload, .additionalUploadDestinations, .destinationChooserModifier, .watchFolderFilter,
+        .hideMenuBarInCaptures, .blurredBundleIdentifiers, .beautifyEnabled, .beautifyWindowsOnly, .beautifyPadding, .beautifyCornerRadius,
+        .beautifyShadow, .beautifyBackground, .beautifySolidColor, .showKeystrokes, .keystrokesShortcutsOnly, .showWebcam,
+        .webcamSize, .webcamCorner, .trimBeforeSaving, .gifMaxSize, .historyLimit, .historyRetention,
+        .captureSound, .uploadCompleteSound, .captureDelay, .copyLinksFromCodes, .redactBeforeUpload, .redactSavedFile,
+        .redactionCategories, .intervalCaptureInterval, .intervalCaptureStopMode, .intervalCaptureFrameCount, .intervalCaptureDuration, .intervalCaptureMakesGIF,
+        .captureProfiles, .nameFilesAfterWindowTitle, .generateCaptions, .captionOutput, .urlShortener, .uploadPresets,
+        .editorShowsLayers, .menuSectionOrder, .hiddenMenuSections, .menuDensity, .menuTheme, .highContrastMenu,
+        .toastCorner, .toastScreen, .resultPresentation,
     ]
 
     static var preferenceNames: Set<String> {

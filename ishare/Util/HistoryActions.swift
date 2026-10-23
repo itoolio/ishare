@@ -7,7 +7,7 @@ import SwiftUI
 enum HistoryActions {
     static func copyURL(_ item: HistoryItem, announce: Bool = true) {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(item.fileUrl ?? "", forType: .string)
+        NSPasteboard.general.setString(item.preferredURL?.absoluteString ?? item.fileUrl ?? "", forType: .string)
         if announce {
             BezelNotification.show(messageText: "Copied URL".localized(), icon: ToastIcon)
         }

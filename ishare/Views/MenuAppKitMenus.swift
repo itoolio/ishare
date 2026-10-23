@@ -6,6 +6,27 @@ enum MenuAppKitMenus {
     static func overflowMenu(openOnboarding: @escaping @MainActor () -> Void, openCommandPalette: @escaping @MainActor () -> Void) -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
+        let captureText = ClosureMenuItem(title: "Capture Text".localized(), symbol: "text.viewfinder") {
+            MenuController.shared.perform(afterDismissing: { await CaptureSession.captureImage(.TEXT) })
+        }
+        captureText.setAccessibilityIdentifier("menu.captureText")
+        menu.addItem(captureText)
+        let interval = ClosureMenuItem(title: (IntervalCapture.isRunning ? "Stop Interval Capture" : "Interval Capture").localized(), symbol: "stopwatch") {
+            MenuController.shared.perform(afterDismissing: { await IntervalCapture.toggle() })
+        }
+        interval.setAccessibilityIdentifier("menu.intervalCapture")
+        menu.addItem(interval)
+        if CaptureSession.isRecording {
+            let marker = ClosureMenuItem(title: "Add Recording Marker".localized(), symbol: "flag") {
+                AppDelegate.shared.screenRecorder.addMarker()
+            }
+            marker.setAccessibilityIdentifier("menu.addMarker")
+            menu.addItem(marker)
+        }
+        if !UploadPresets.all.isEmpty {
+            menu.addItem(presetsItem())
+        }
+        menu.addItem(.separator())
         menu.addItem(recentLinksItem())
         menu.addItem(ContinuityCameraImport.menuItem())
         let palette = ClosureMenuItem(title: "Command Palette…".localized(), symbol: "command", keyEquivalent: "k", handler: openCommandPalette)
@@ -29,6 +50,21 @@ enum MenuAppKitMenus {
             NSApplication.shared.terminate(nil)
         })
         return menu
+    }
+
+    static func presetsItem() -> NSMenuItem {
+        let item = NSMenuItem(title: "Capture with Preset".localized(), action: nil, keyEquivalent: "")
+        item.image = NSImage(systemSymbolName: "square.stack.3d.up", accessibilityDescription: nil)
+        item.setAccessibilityIdentifier("menu.presets")
+        let submenu = NSMenu(title: "Capture with Preset".localized())
+        submenu.autoenablesItems = false
+        for preset in UploadPresets.all {
+            submenu.addItem(ClosureMenuItem(title: preset.name) {
+                MenuController.shared.perform(afterDismissing: { await UploadPresets.capture(preset, type: .REGION) })
+            })
+        }
+        item.submenu = submenu
+        return item
     }
 
     static func recentLinksItem(history: [HistoryItem] = Defaults[.uploadHistory]) -> NSMenuItem {

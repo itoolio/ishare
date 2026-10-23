@@ -897,7 +897,7 @@ struct RecentUploadPreview: View {
                     .font(.system(size: 12, weight: Font.Weight.semibold.emphasized(contrast)))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                if let url = item.fileUrl {
+                if let url = item.preferredURL?.absoluteString ?? item.fileUrl {
                     Text(url)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)

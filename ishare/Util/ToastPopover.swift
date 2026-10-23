@@ -249,7 +249,7 @@ private struct ToastCardContent: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.orange)
             case .uploaded, .none:
-                if let url = model.historyItem?.fileUrl {
+                if let url = model.historyItem.flatMap({ $0.preferredURL?.absoluteString ?? $0.fileUrl }) {
                     Text(url)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
