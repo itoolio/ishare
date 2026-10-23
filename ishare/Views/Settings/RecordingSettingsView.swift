@@ -10,6 +10,7 @@ struct RecordingSettingsView: View {
     @Default(.useHEVC) var useHEVC
     @Default(.useHDR) var useHDR
     @Default(.recordAudio) var recordAudio
+    @Default(.recordingAudioSource) var audioSource
     @Default(.recordMic) var recordMic
     @Default(.recordPointer) var recordPointer
     @Default(.recordClicks) var recordClicks
@@ -40,7 +41,10 @@ struct RecordingSettingsView: View {
                 Toggle("Use HDR".localized(), isOn: $useHDR)
             }
             Section("Content".localized()) {
-                Toggle("Record audio".localized(), isOn: $recordAudio)
+                AudioSourceSettingsRows(audioSource: Binding(
+                    get: { RecordingAudioSource.resolved(recordAudio: recordAudio, source: audioSource) },
+                    set: { RecordingAudioSource.store($0) }
+                ))
                 Toggle("Record microphone".localized(), isOn: $recordMic)
                     .onChange(of: recordMic) { _, enabled in
                         guard enabled else { return }
@@ -91,4 +95,26 @@ struct RecordingSettingsView: View {
                 .frame(width: 380, height: 460)
         }
     }
+}
+
+extension RecordingSettingsView: SettingsSearchable {
+    static let searchEntries: [SettingsSearchEntry] = [
+        SettingsSearchEntry("Video", pane: .recording, keywords: [
+            "Resolution", "Frame rate", "FPS", "MP4", "MOV", "HEVC", "HDR", "Record audio", "Audio", "Record microphone",
+            "Microphone", "Record pointer", "Record clicks", "Excluded applications", "GIF", "GIF frame rate", "Compress large recordings before upload",
+            "Compression", "Video path",
+        ]),
+        SettingsSearchEntry("Clicks & Keystrokes", pane: .recording, keywords: [
+            "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera", "Input level", "Trim recordings before saving",
+            "Trim", "GIF size", "Meter",
+        ]),
+        SettingsSearchEntry("Captions", pane: .recording, keywords: [
+            "Generate captions", "Subtitles", "SRT", "Transcription", "Speech", "Burn into the video", "Markers", "Chapters",
+            "Export",
+        ]),
+        SettingsSearchEntry("Audio source", pane: .recording, keywords: [
+            "All system audio", "Only selected apps", "App audio", "Notes", "Teleprompter", "Script", "Instant replay",
+            "Replay", "Buffer", "Keep the last",
+        ]),
+    ]
 }

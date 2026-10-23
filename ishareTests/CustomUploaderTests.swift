@@ -3,7 +3,7 @@ import Testing
 @testable import ishare
 
 struct CustomUploaderTests {
-    static let exampleFiles = ["chibisafe", "copyparty", "discord", "lumen", "zipline", "s3"]
+    static let exampleFiles = ["chibisafe", "copyparty", "discord", "lumen", "zipline", "zipline-protected", "s3", "folder", "photos"]
 
     @Test(arguments: exampleFiles)
     func decodesBundledExamples(name: String) throws {

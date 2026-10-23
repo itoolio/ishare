@@ -1,0 +1,44 @@
+ishare, sadelik ve verimlilik düşünülerek tasarlanmış, macOS için en kapsamlı ekran yakalama aracıdır.
+
+HER ŞEYİ YAKALAYIN
+• Hassas bir seçici, koordinat ve renkleri gösteren piksel büyüteci ve ölçüm aracıyla bir bölgeyi yakalayın
+• Herhangi bir pencereyi gölgeli ya da gölgesiz veya tüm ekranı yakalayın; son bölgenizi tek bir kısayolla yeniden yakalayın
+• Kaydırmalı yakalama, uzun sayfaları ve belgeleri tek bir görüntüde birleştirir
+• Pencere yakalamalarına kenar boşluğu, yuvarlatılmış köşeler ve gölgeyle birlikte gradyan arka plan ekleyin
+• Gizlilik için seçtiğiniz uygulamaları bulanıklaştırın ve menü çubuğunu otomatik olarak gizleyin
+• Aygıt üzerinde metin tanıma ile ekranın herhangi bir yerinden metni, QR kodlarından ise bağlantıları kopyalayın
+• Zamanlayıcı, aralıklı yakalama ve uygulamaya özel yakalama profilleri
+• Her şey ScreenCaptureKit üzerinde çalışır; hızlı ve gizli
+
+KAYDEDİN
+• Bir ekranı, pencereyi veya çizdiğiniz bir bölgeyi kaydedin
+• Kayıtlarınızda tıklamaları, tuş vuruşlarını ve bir web kamerası balonunu gösterin
+• Sistem sesini ve mikrofonunuzu canlı seviye göstergeleriyle kaydedin
+• Kayıtları kaydetmeden önce kırpın, bölüm işaretçileri ekleyin ve MP4, MOV, GIF ya da ses olarak dışa aktarın
+• Altyazıları aygıt üzerinde .srt dosyası olarak veya videoya gömülü şekilde oluşturun
+• Yüklemeden önce çözünürlüğü, kare hızını, HEVC, HDR ve otomatik sıkıştırmayı seçin
+
+AÇIKLAMA EKLEYİN
+• Çeşitli stillerde oklar, çizgiler, şekiller, vurgular, kalem, işaretleyici ve metin
+• Numaralı adımlar, emoji ve sembol damgaları, spot ışığı, bulanıklaştırma ve pikselleştirme
+• Tutamaçlar ve en boy oranı hazır ayarlarıyla kırpma, yakınlaştırma ve kaydırma, katmanlar kenar çubuğu ve yeniden kullanılabilir şablonlar
+• Bitti’ye tıklayın, yakalama sonrası eylemleriniz çalışsın: kopyalama, kaydetme, paylaşma ve yükleme
+
+HER YERE YÜKLEYİN
+• Kurulum gerektirmeden Imgur
+• chibisafe, Zipline, copyparty, Discord webhook’ları ve kendi sunucunuz için özel yükleyiciler, ayrıca ShareX .sxcu içe aktarma
+• S3 uyumlu her depolama; isteğe bağlı süreli bağlantılar ve Anahtar Zinciri’nde saklanan gizli anahtarlar
+• Aynı anda birden fazla hedefe yükleyin ya da her yakalama için birini seçin
+• Metin parçacıkları yükleyin, yeni dosyalar için bir klasörü izleyin ve başarısız yüklemeleri otomatik olarak yeniden deneyin
+• Kendi kısayollarına sahip yükleme hazır ayarları, URL kısaltıcı ve hassas metinlerin otomatik olarak karartılması
+• Apple Intelligence destekli Mac’lerde bir asistan, sohbet ederek sizin için yükleyici oluşturur
+
+DÜZENLİ KALIN
+• Komut paleti, son yüklemeler ve önizlemeler içeren kompakt, özelleştirilebilir bir menü
+• Son Yüklemeler widget’ı ve Denetim Merkezi’nde bir yakalama denetimi
+• Dosyaları menü çubuğu simgesine bırakın veya Finder’da “ishare ile Yükle” seçeneğini kullanın
+• Filtreler ve sunucu tarafında silme özelliğiyle aranabilir yükleme geçmişi
+• Genel klavye kısayolları, Kestirmeler eylemleri ve bir paylaşma uzantısı
+• Tüm ayarları ve yükleyicileri tek bir dosyada yedekleyip geri yükleyin
+
+macOS 26’da Liquid Glass tasarımı, ses seçenekleri, bir karşılama rehberi ve 11 dile çeviri her şeyi tamamlıyor.

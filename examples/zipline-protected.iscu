@@ -1,0 +1,21 @@
+{
+	"name": "zipline-protected",
+	"requestURL": "https://your-zipline-host.com/api/upload",
+	"headers": {
+		"Authorization": "API_KEY",
+	},
+	"responseURL": "{{files[0].url}}",
+	"fileFormName": "file",
+	"linkOptions": {
+		"password": {
+			"field": "x-zipline-password",
+			"location": "header"
+		},
+		"expiry": {
+			"field": "x-zipline-deletes-at",
+			"location": "header",
+			"format": "iso8601",
+			"template": "date={{value}}"
+		}
+	}
+}

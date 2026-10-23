@@ -3,20 +3,21 @@ import Foundation
 
 struct HTTPUploader: Uploader {
     let uploader: CustomUploader
+    var linkChoice: LinkChoice?
 
     func upload(fileURL: URL, progress: @escaping @Sendable (Double) -> Void) async throws -> UploadOutcome {
         let issues = UploaderValidator.issues(for: uploader)
         guard issues.isEmpty else { throw UploadFailure.invalidSpecification(issues) }
-        guard let url = URL(string: uploader.requestURL.trimmingCharacters(in: .whitespaces)) else {
+        let choice = linkChoice ?? LinkOptionsResolver.storedChoice(for: uploader)
+        guard let parts = Self.requestParts(for: uploader, fileURL: fileURL, linkChoice: choice) else {
             throw UploadFailure.invalidSpecification([.invalidRequestURL])
         }
         let method = HTTPMethod(rawValue: (uploader.requestMethod ?? .post).rawValue)
-        var headers = HTTPHeaders(uploader.headers ?? [:])
-        headers.add(name: "x-file-name", value: UploadFileName.lowercasingExtension(of: fileURL))
+        var headers = HTTPHeaders(parts.headers)
         let request: UploadRequest
         switch uploader.requestBodyType ?? .multipartFormData {
         case .multipartFormData:
-            let formData = uploader.formData ?? [:]
+            let formData = parts.formFields
             let formName = uploader.fileFormName ?? "file"
             let fileName = UploadFileName.lowercasingExtension(of: fileURL)
             let mimeType = MimeType.forFile(fileURL)
@@ -27,14 +28,24 @@ struct HTTPUploader: Uploader {
                     }
                     form.append(fileURL, withName: formName, fileName: fileName, mimeType: mimeType)
                 },
-                to: url, method: method, headers: headers
+                to: parts.url, method: method, headers: headers
             )
         case .binary:
             headers.add(name: "Content-Type", value: MimeType.forFile(fileURL))
-            request = UploadService.session.upload(fileURL, to: url, method: method, headers: headers)
+            request = UploadService.session.upload(fileURL, to: parts.url, method: method, headers: headers)
         }
         let data = try await UploadService.perform(request, progress: progress)
         return try Self.outcome(from: data, uploader: uploader)
+    }
+
+    nonisolated static func requestParts(for uploader: CustomUploader, fileURL: URL, linkChoice: LinkChoice, now: Date = .init()) -> HTTPRequestParts? {
+        guard let url = URL(string: uploader.requestURL.trimmingCharacters(in: .whitespaces)) else { return nil }
+        var headers = uploader.headers ?? [:]
+        headers["x-file-name"] = UploadFileName.lowercasingExtension(of: fileURL)
+        let isMultipart = (uploader.requestBodyType ?? .multipartFormData) == .multipartFormData
+        var parts = HTTPRequestParts(url: url, headers: headers, formFields: isMultipart ? uploader.formData ?? [:] : [:])
+        LinkOptionsEncoder.apply(linkChoice, spec: uploader.linkOptions, to: &parts, now: now)
+        return parts
     }
 
     func delete(_ item: HistoryItem) async throws {

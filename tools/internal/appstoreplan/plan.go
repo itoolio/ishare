@@ -42,12 +42,14 @@ const (
 )
 
 type Plan struct {
-	Action   Action
-	Version  string
-	Build    string
-	Live     string
-	Releases []string
-	Reason   string
+	Action     Action
+	Version    string
+	Build      string
+	Live       string
+	Releases   []string
+	Reason     string
+	Supersedes string
+	Pending    string
 }
 
 var activeVersionStates = map[string]bool{
@@ -61,6 +63,8 @@ var activeVersionStates = map[string]bool{
 	"ACCEPTED":                      true,
 	"PENDING_CONTRACT":              true,
 }
+
+const queuedState = "WAITING_FOR_REVIEW"
 
 var activeSubmissionStates = map[string]bool{
 	"WAITING_FOR_REVIEW": true,
@@ -102,10 +106,13 @@ func Decide(report Report, releases []Release) Plan {
 		plan.Version = versions[0]
 	}
 	if inFlight := report.InFlight; inFlight != nil && activeVersionStates[inFlight.State] {
-		return withReason(plan, Wait, fmt.Sprintf("%s is %s; an active review is never interrupted", inFlight.Version, inFlight.State))
+		if supersedable(report, plan.Version) {
+			return supersedeQueued(plan, report)
+		}
+		return waitForActive(plan, inFlight.Version, fmt.Sprintf("%s is %s; an active review is never interrupted", inFlight.Version, inFlight.State))
 	}
 	if submission := report.Submission; submission != nil && activeSubmissionStates[submission.State] {
-		return withReason(plan, Wait, fmt.Sprintf("review submission %s is %s", submission.ID, submission.State))
+		return waitForActive(plan, "", fmt.Sprintf("review submission %s is %s", submission.ID, submission.State))
 	}
 	if len(versions) == 0 {
 		return withReason(plan, UpToDate, "there are no published GitHub releases")
@@ -133,6 +140,48 @@ func Decide(report Report, releases []Release) Plan {
 	return withReason(plan, Submit, reason)
 }
 
+func supersedable(report Report, latest string) bool {
+	inFlight := report.InFlight
+	if inFlight == nil || inFlight.State != queuedState || latest == "" || Compare(latest, inFlight.Version) <= 0 {
+		return false
+	}
+	return report.Submission == nil || report.Submission.State == queuedState
+}
+
+func supersedeQueued(plan Plan, report Report) Plan {
+	inFlight := report.InFlight
+	queued := fmt.Sprintf("%s (%s)", inFlight.Version, inFlight.State)
+	build, processed := report.Builds[plan.Version]
+	if !processed || build == "" {
+		plan.Pending = plan.Version
+		return withReason(plan, WaitingForBuild, fmt.Sprintf("the build for %s has not finished processing, so %s stays queued for now", plan.Version, queued))
+	}
+	plan.Build = build
+	plan.Supersedes = inFlight.Version
+	return withReason(plan, Submit, fmt.Sprintf("%s (%s) supersedes %s; the queued submission is withdrawn first", plan.Version, build, queued))
+}
+
+func waitForActive(plan Plan, inFlightVersion, reason string) Plan {
+	if pending := pendingRelease(plan, inFlightVersion); pending != "" {
+		plan.Pending = pending
+		reason += fmt.Sprintf("; the newer release %s is pending and is submitted once the review is over", pending)
+	}
+	return withReason(plan, Wait, reason)
+}
+
+func pendingRelease(plan Plan, inFlightVersion string) string {
+	if plan.Version == "" {
+		return ""
+	}
+	if inFlightVersion != "" && Compare(plan.Version, inFlightVersion) > 0 {
+		return plan.Version
+	}
+	if inFlightVersion == "" && (plan.Live == "" || Compare(plan.Version, plan.Live) > 0) {
+		return plan.Version
+	}
+	return ""
+}
+
 func withReason(plan Plan, action Action, reason string) Plan {
 	plan.Action = action
 	plan.Reason = reason
@@ -149,6 +198,8 @@ func (plan Plan) Outputs() string {
 		"build=" + plan.Build,
 		"live=" + plan.Live,
 		"releases=" + strings.Join(tags(plan.Releases), " "),
+		"supersedes=" + plan.Supersedes,
+		"pending=" + plan.Pending,
 		"reason=" + strings.ReplaceAll(plan.Reason, "\n", " "),
 	}
 	return strings.Join(lines, "\n") + "\n"
@@ -157,6 +208,9 @@ func (plan Plan) Outputs() string {
 func (plan Plan) Summary() string {
 	switch plan.Action {
 	case Submit:
+		if plan.Supersedes != "" {
+			return fmt.Sprintf("submit %s %s superseding %s", plan.Version, plan.Build, plan.Supersedes)
+		}
 		return fmt.Sprintf("submit %s %s", plan.Version, plan.Build)
 	case WaitingForBuild, Rejected:
 		return fmt.Sprintf("%s %s", plan.Action, plan.Version)

@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import Synchronization
 
 protocol SecretBackend: Sendable {
     func read(account: String) -> String?
@@ -89,7 +90,7 @@ enum KeychainQueries {
         return request
     }
 
-    static func synchronizedItem(service: String, account: String, accessGroup: String?, data: Data) -> [String: Any] {
+    static func synchronizedItem(service: String, account: String, accessGroup: String?, data: Data, label: String = KeychainQueries.label) -> [String: Any] {
         var item = legacy(service: service, account: account)
         item[kSecUseDataProtectionKeychain as String] = true
         item[kSecAttrSynchronizable as String] = true
@@ -102,7 +103,7 @@ enum KeychainQueries {
         return item
     }
 
-    static func legacyItem(service: String, account: String, data: Data) -> [String: Any] {
+    static func legacyItem(service: String, account: String, data: Data, label: String = KeychainQueries.label) -> [String: Any] {
         var item = legacy(service: service, account: account)
         item[kSecAttrLabel as String] = label
         item[kSecValueData as String] = data
@@ -114,6 +115,7 @@ struct KeychainSecretBackend: SecretBackend {
     let service: String
     var accessGroup: String? = SharedKeychainGroup.current
     var client: any KeychainClient = SecurityKeychainClient()
+    var label = KeychainQueries.label
 
     private func synchronizedQuery(_ account: String) -> [String: Any] {
         KeychainQueries.synchronized(service: service, account: account, accessGroup: accessGroup)
@@ -153,7 +155,7 @@ struct KeychainSecretBackend: SecretBackend {
     }
 
     private func addSynchronized(_ data: Data, account: String) throws {
-        let status = client.add(KeychainQueries.synchronizedItem(service: service, account: account, accessGroup: accessGroup, data: data))
+        let status = client.add(KeychainQueries.synchronizedItem(service: service, account: account, accessGroup: accessGroup, data: data, label: label))
         switch status {
         case errSecSuccess:
             _ = client.delete(legacyQuery(account))
@@ -167,7 +169,7 @@ struct KeychainSecretBackend: SecretBackend {
     private func writeLegacy(_ data: Data, account: String) throws {
         let status = client.update(legacyQuery(account), with: [kSecValueData as String: data])
         if status == errSecItemNotFound {
-            let addStatus = client.add(KeychainQueries.legacyItem(service: service, account: account, data: data))
+            let addStatus = client.add(KeychainQueries.legacyItem(service: service, account: account, data: data, label: label))
             guard addStatus == errSecSuccess else { throw KeychainError(status: addStatus) }
         } else if status != errSecSuccess {
             throw KeychainError(status: status)
@@ -186,7 +188,7 @@ struct KeychainSecretBackend: SecretBackend {
 
     @discardableResult
     private func promoteToSynchronizable(_ data: Data, account: String) -> Bool {
-        let item = KeychainQueries.synchronizedItem(service: service, account: account, accessGroup: accessGroup, data: data)
+        let item = KeychainQueries.synchronizedItem(service: service, account: account, accessGroup: accessGroup, data: data, label: label)
         let status = client.add(item)
         guard status == errSecSuccess || status == errSecDuplicateItem else {
             guard status != errSecMissingEntitlement else { return false }
@@ -198,45 +200,61 @@ struct KeychainSecretBackend: SecretBackend {
     }
 }
 
-final class InMemorySecretBackend: SecretBackend, @unchecked Sendable {
-    private var secrets: [String: String] = [:]
-    private var localOnly: Set<String> = []
-    private let lock = NSLock()
+final class InMemorySecretBackend: SecretBackend {
+    private struct State {
+        var secrets: [String: String] = [:]
+        var localOnly: Set<String> = []
+    }
+
+    private let state = Mutex(State())
 
     func read(account: String) -> String? {
-        lock.withLock {
-            localOnly.remove(account)
-            return secrets[account]
+        state.withLock { state in
+            state.localOnly.remove(account)
+            return state.secrets[account]
         }
     }
 
     func write(_ secret: String, account: String) throws {
-        lock.withLock {
-            secrets[account] = secret
-            localOnly.remove(account)
+        state.withLock { state in
+            state.secrets[account] = secret
+            state.localOnly.remove(account)
         }
     }
 
     func delete(account: String) {
-        lock.withLock {
-            _ = secrets.removeValue(forKey: account)
-            localOnly.remove(account)
+        state.withLock { state in
+            _ = state.secrets.removeValue(forKey: account)
+            state.localOnly.remove(account)
         }
     }
 
     func storeLocalOnly(_ secret: String, account: String) {
-        lock.withLock {
-            secrets[account] = secret
-            localOnly.insert(account)
+        state.withLock { state in
+            state.secrets[account] = secret
+            state.localOnly.insert(account)
         }
     }
 
     func isSynchronizable(account: String) -> Bool {
-        lock.withLock { secrets[account] != nil && !localOnly.contains(account) }
+        state.withLock { $0.secrets[account] != nil && !$0.localOnly.contains(account) }
     }
 
     func makeSynchronizable(account: String) -> Bool {
-        lock.withLock { secrets[account] != nil && localOnly.remove(account) != nil }
+        state.withLock { $0.secrets[account] != nil && $0.localOnly.remove(account) != nil }
+    }
+}
+
+final class SecretBackendSlot: Sendable {
+    private let backend: Mutex<any SecretBackend>
+
+    init(_ backend: any SecretBackend) {
+        self.backend = Mutex(backend)
+    }
+
+    var current: any SecretBackend {
+        get { backend.withLock { $0 } }
+        set { backend.withLock { $0 = newValue } }
     }
 }
 
@@ -257,9 +275,14 @@ enum S3SecretError: LocalizedError, Equatable {
 enum S3SecretStore {
     static let service = "dev.adrian.ishare.s3"
     static let placeholder = "@keychain"
-    nonisolated(unsafe) static var backend: any SecretBackend = RuntimeEnvironment.isRunningTests
-        ? InMemorySecretBackend()
-        : KeychainSecretBackend(service: service)
+    private static let backendSlot = SecretBackendSlot(
+        RuntimeEnvironment.isRunningTests ? InMemorySecretBackend() : KeychainSecretBackend(service: service)
+    )
+
+    static var backend: any SecretBackend {
+        get { backendSlot.current }
+        set { backendSlot.current = newValue }
+    }
 
     static func isPlaceholder(_ secret: String) -> Bool {
         secret == placeholder

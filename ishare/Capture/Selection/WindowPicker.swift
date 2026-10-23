@@ -1,5 +1,5 @@
 import AppKit
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 @MainActor
 final class WindowPicker {

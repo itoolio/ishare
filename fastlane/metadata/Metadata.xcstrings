@@ -1,0 +1,787 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare هو أداة التقاط الشاشة المثالية لنظام macOS، صممت مع مراعاة البساطة والكفاءة.\n\nالتقط أي شيء\n• التقط منطقة باستخدام محدد دقيق، ومكبر بكسلات يعرض الإحداثيات والألوان، وأداة قياس\n• التقط أي نافذة مع ظلها أو بدونه، أو شاشة كاملة، وأعد التقاط آخر منطقة باختصار واحد\n• يجمع الالتقاط مع التمرير الصفحات والمستندات الطويلة في صورة واحدة\n• أضف إلى لقطات النوافذ خلفية متدرجة مع هوامش وزوايا مستديرة وظل\n• موه التطبيقات التي تختارها وأخف شريط القوائم تلقائيا حفاظا على الخصوصية\n• انسخ النص من أي مكان على الشاشة عبر التعرف على النص على الجهاز، والروابط من رموز QR\n• مؤقت ذاتي، والتقاط على فترات، وملفات تعريف التقاط لكل تطبيق\n• كل شيء يعمل عبر ScreenCaptureKit، بسرعة ومع الحفاظ على الخصوصية\n\nالتسجيل\n• سجل شاشة أو نافذة أو منطقة ترسمها\n• اعرض النقرات وضغطات المفاتيح وفقاعة كاميرا الويب في تسجيلاتك\n• سجل صوت النظام والميكروفون مع مؤشرات مستوى مباشرة\n• قص التسجيلات قبل حفظها، وأضف علامات الفصول، وصدر إلى MP4 أو MOV أو GIF أو صوت\n• أنشئ ترجمات نصية على الجهاز كملف .srt أو مدمجة في الفيديو\n• اختر الدقة ومعدل الإطارات وHEVC وHDR والضغط التلقائي قبل الرفع\n\nالتعليقات التوضيحية\n• أسهم بأنماط متعددة، وخطوط، وأشكال، وتظليل، وقلم، وقلم تحديد، ونص\n• خطوات مرقمة، وأختام الرموز التعبيرية والرموز، وتسليط الضوء، وتمويه، وبكسلة\n• اقتصاص بمقابض ونسب أبعاد جاهزة، وتكبير وتحريك، وشريط جانبي للطبقات، وقوالب قابلة لإعادة الاستخدام\n• اضغط على «تم» لتعمل إجراءاتك بعد الالتقاط: النسخ والحفظ والمشاركة والرفع\n\nالرفع إلى أي مكان\n• Imgur جاهز للاستخدام فورا\n• أدوات رفع مخصصة لـ chibisafe وZipline وcopyparty وخطافات الويب في Discord وخادمك الخاص، مع استيراد ملفات .sxcu من ShareX\n• أي تخزين متوافق مع S3، مع روابط تنتهي صلاحيتها اختياريا وأسرار محفوظة في سلسلة المفاتيح\n• ارفع إلى عدة وجهات في آن واحد أو اختر وجهة لكل لقطة\n• ارفع مقتطفات نصية، وراقب مجلدا للملفات الجديدة، وأعد محاولة عمليات الرفع الفاشلة تلقائيا\n• إعدادات رفع مسبقة باختصاراتها الخاصة، وأداة لتقصير الروابط، وحجب تلقائي للنصوص الحساسة\n• على أجهزة Mac المزودة بـ Apple Intelligence، ينشئ مساعد أدوات الرفع من خلال محادثة\n\nكل شيء منظم\n• قائمة مدمجة وقابلة للتخصيص مع لوحة أوامر وعمليات الرفع الأخيرة ومعاينات\n• أداة «عمليات الرفع الأخيرة» وعنصر تحكم للالتقاط في مركز التحكم\n• أفلت الملفات على أيقونة شريط القوائم أو استخدم «الرفع باستخدام ishare» في Finder\n• سجل رفع قابل للبحث مع عوامل تصفية وحذف من الخادم\n• اختصارات لوحة مفاتيح عامة، وإجراءات الاختصارات، وامتداد للمشاركة\n• انسخ جميع الإعدادات وأدوات الرفع احتياطيا واستعدها من ملف واحد\n\nتصميم Liquid Glass على macOS 26، وخيارات الصوت، ودليل ترحيبي، وترجمات إلى 11 لغة، كلها تكمل التجربة."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare ist das ultimative Bildschirmfoto-Tool für macOS, entwickelt für Einfachheit und Effizienz.\n\nALLES AUFNEHMEN\n• Nimm eine Region mit präziser Auswahl auf, mit Pixel-Lupe samt Koordinaten und Farben sowie einem Messwerkzeug\n• Nimm jedes Fenster mit oder ohne Schatten oder einen ganzen Bildschirm auf und wiederhole deine letzte Region per Tastenkürzel\n• Die scrollende Aufnahme fügt lange Seiten und Dokumente zu einem einzigen Bild zusammen\n• Versieh Fensteraufnahmen mit einem Verlaufshintergrund samt Innenabstand, abgerundeten Ecken und Schatten\n• Mache ausgewählte Apps unkenntlich und blende die Menüleiste automatisch aus, für mehr Privatsphäre\n• Kopiere Text von überall auf dem Bildschirm per Texterkennung direkt auf dem Gerät, dazu Links aus QR-Codes\n• Selbstauslöser, Intervallaufnahmen und Aufnahmeprofile pro App\n• Alles basiert auf ScreenCaptureKit, schnell und privat\n\nAUFZEICHNEN\n• Zeichne einen Bildschirm, ein Fenster oder eine selbst gezogene Region auf\n• Zeige Klicks, Tastenanschläge und eine Webcam-Blase in deinen Aufzeichnungen\n• Nimm Systemaudio und dein Mikrofon mit Live-Pegelanzeigen auf\n• Kürze Aufzeichnungen vor dem Sichern, setze Kapitelmarken und exportiere als MP4, MOV, GIF oder Audio\n• Erzeuge Untertitel direkt auf dem Gerät, als .srt-Datei oder fest ins Video eingebrannt\n• Wähle Auflösung, Bildrate, HEVC, HDR und automatische Komprimierung vor dem Upload\n\nANNOTIEREN\n• Pfeile in verschiedenen Stilen, Linien, Formen, Hervorhebungen, Stift, Marker und Text\n• Nummerierte Schritte, Emoji- und Symbolstempel, Spotlight, Weichzeichner und Verpixeln\n• Zuschneiden mit Griffen und Seitenverhältnis-Vorgaben, Zoomen und Schwenken, eine Ebenen-Seitenleiste und wiederverwendbare Vorlagen\n• Klicke auf „Fertig“ und deine Aktionen nach der Aufnahme laufen ab: kopieren, sichern, teilen und hochladen\n\nÜBERALL HOCHLADEN\n• Imgur ohne jede Einrichtung\n• Eigene Uploader für chibisafe, Zipline, copyparty, Discord-Webhooks und deinen eigenen Server, dazu der Import von ShareX-.sxcu-Dateien\n• Jeder S3-kompatible Speicher, optional mit ablaufenden Links, und Geheimnisse sicher im Schlüsselbund\n• Lade an mehrere Ziele gleichzeitig hoch oder wähle pro Aufnahme eines aus\n• Lade Textausschnitte hoch, überwache einen Ordner auf neue Dateien und wiederhole fehlgeschlagene Uploads automatisch\n• Upload-Voreinstellungen mit eigenen Tastenkürzeln, ein URL-Kürzer und automatisches Schwärzen sensibler Texte\n• Auf Macs mit Apple Intelligence erstellt ein Assistent Uploader im Gespräch mit dir\n\nIMMER DEN ÜBERBLICK BEHALTEN\n• Ein kompaktes, anpassbares Menü mit Befehlspalette, letzten Uploads und Vorschauen\n• Ein Widget „Letzte Uploads“ und eine Aufnahme-Steuerung im Kontrollzentrum\n• Zieh Dateien auf das Symbol in der Menüleiste oder nutze „Mit ishare hochladen“ im Finder\n• Durchsuchbarer Upload-Verlauf mit Filtern und serverseitigem Löschen\n• Globale Tastenkürzel, Aktionen für Kurzbefehle und eine Teilen-Erweiterung\n• Alle Einstellungen und Uploader in einer einzigen Datei sichern und wiederherstellen\n\nEin Design mit Liquid Glass unter macOS 26, Sound-Optionen, eine Einführung und Übersetzungen in 11 Sprachen runden alles ab."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare is the definitive screen capture utility for macOS, designed with simplicity and efficiency in mind.\n\nCAPTURE ANYTHING\n• Capture a region with a precise selector, a pixel magnifier with coordinates and colors, and a measuring tool\n• Capture any window with or without its shadow, or a whole display, and recapture your last region with one shortcut\n• Scrolling capture stitches long pages and documents into one image\n• Add a gradient background with padding, rounded corners and a shadow to window captures\n• Blur chosen apps and hide the menu bar automatically for privacy\n• Copy text from anywhere on screen with on-device text recognition, and links from QR codes\n• Self-timer, interval capture and per-app capture profiles\n• Everything runs on ScreenCaptureKit, fast and private\n\nRECORD\n• Record a display, a window or a region you draw\n• Show clicks, keystrokes and a webcam bubble in your recordings\n• Capture system audio and your microphone with live level meters\n• Trim recordings before saving, add chapter markers, and export to MP4, MOV, GIF or audio\n• Generate captions on-device, as an .srt file or burned into the video\n• Choose resolution, frame rate, HEVC, HDR and automatic compression before upload\n\nANNOTATE\n• Arrows in several styles, lines, shapes, highlights, pen, marker and text\n• Numbered steps, emoji and symbol stamps, spotlight, blur and pixelate\n• Crop with handles and aspect presets, zoom and pan, a layers sidebar and reusable templates\n• Press Done and your after-capture actions run: copy, save, share and upload\n\nUPLOAD ANYWHERE\n• Imgur out of the box\n• Custom uploaders for chibisafe, Zipline, copyparty, Discord webhooks and your own server, plus ShareX .sxcu import\n• Any S3-compatible storage, with optional expiring links and secrets kept in the Keychain\n• Upload to several destinations at once or pick one per capture\n• Upload text snippets, watch a folder for new files, and retry failed uploads automatically\n• Upload presets with their own shortcuts, a URL shortener and automatic redaction of sensitive text\n• On Macs with Apple Intelligence, an assistant builds uploaders from a conversation\n\nSTAY ORGANIZED\n• A compact, customizable menu with a command palette, recent uploads and previews\n• A Recent Uploads widget and a Capture control in Control Center\n• Drop files on the menu bar icon or use \"Upload with ishare\" in Finder\n• Searchable upload history with filters and server-side deletion\n• Global keyboard shortcuts, Shortcuts actions and a share extension\n• Back up and restore all settings and uploaders in one file\n\nA Liquid Glass design on macOS 26, sound options, a welcome guide and translations into 11 languages round it all off."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare es la utilidad definitiva de captura de pantalla para macOS, diseñada pensando en la sencillez y la eficiencia.\n\nCAPTURA LO QUE QUIERAS\n• Captura una región con un selector preciso, una lupa de píxeles con coordenadas y colores, y una herramienta de medición\n• Captura cualquier ventana con o sin sombra, o una pantalla completa, y repite tu última región con un solo atajo\n• La captura con desplazamiento une páginas y documentos largos en una sola imagen\n• Añade a las capturas de ventanas un fondo degradado con margen, esquinas redondeadas y sombra\n• Difumina las apps que elijas y oculta la barra de menús automáticamente para proteger tu privacidad\n• Copia texto de cualquier parte de la pantalla con el reconocimiento de texto en el dispositivo, y enlaces de códigos QR\n• Temporizador, capturas por intervalos y perfiles de captura por app\n• Todo funciona con ScreenCaptureKit, rápido y privado\n\nGRABA\n• Graba una pantalla, una ventana o una región que dibujes\n• Muestra clics, pulsaciones de teclas y una burbuja de cámara web en tus grabaciones\n• Graba el audio del sistema y tu micrófono con medidores de nivel en directo\n• Recorta las grabaciones antes de guardarlas, añade marcadores de capítulo y exporta a MP4, MOV, GIF o audio\n• Genera subtítulos en el dispositivo, como archivo .srt o incrustados en el vídeo\n• Elige resolución, frecuencia de fotogramas, HEVC, HDR y compresión automática antes de subir\n\nANOTA\n• Flechas de varios estilos, líneas, formas, resaltados, lápiz, rotulador y texto\n• Pasos numerados, sellos de emoji y símbolos, foco, desenfoque y pixelado\n• Recorte con tiradores y proporciones predefinidas, zoom y desplazamiento, una barra lateral de capas y plantillas reutilizables\n• Pulsa Listo y se ejecutan tus acciones tras la captura: copiar, guardar, compartir y subir\n\nSUBE A CUALQUIER SITIO\n• Imgur listo para usar\n• Servicios de subida personalizados para chibisafe, Zipline, copyparty, webhooks de Discord y tu propio servidor, además de importación de archivos .sxcu de ShareX\n• Cualquier almacenamiento compatible con S3, con enlaces que caducan opcionales y secretos guardados en el llavero\n• Sube a varios destinos a la vez o elige uno por captura\n• Sube fragmentos de texto, vigila una carpeta en busca de archivos nuevos y reintenta automáticamente las subidas fallidas\n• Ajustes de subida predefinidos con sus propios atajos, un acortador de URL y ocultación automática de texto confidencial\n• En los Mac con Apple Intelligence, un asistente crea servicios de subida a partir de una conversación\n\nTODO BAJO CONTROL\n• Un menú compacto y personalizable con paleta de comandos, subidas recientes y previsualizaciones\n• Un widget de Subidas recientes y un control de captura en el Centro de control\n• Suelta archivos en el icono de la barra de menús o usa “Subir con ishare” en el Finder\n• Historial de subidas con búsqueda, filtros y eliminación en el servidor\n• Atajos de teclado globales, acciones de Atajos y una extensión para compartir\n• Copia de seguridad y restauración de todos los ajustes y servicios de subida en un solo archivo\n\nUn diseño Liquid Glass en macOS 26, opciones de sonido, una guía de bienvenida y traducciones a 11 idiomas completan el conjunto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare est l’utilitaire de capture d’écran de référence pour macOS, conçu pour allier simplicité et efficacité.\n\nCAPTUREZ TOUT\n• Capturez une région avec un sélecteur précis, une loupe au pixel près avec coordonnées et couleurs, et un outil de mesure\n• Capturez n’importe quelle fenêtre avec ou sans son ombre, ou un écran entier, et recapturez votre dernière région d’un seul raccourci\n• La capture défilante assemble les longues pages et les documents en une seule image\n• Ajoutez aux captures de fenêtres un arrière-plan dégradé avec marges, coins arrondis et ombre\n• Floutez les apps de votre choix et masquez automatiquement la barre des menus pour préserver votre confidentialité\n• Copiez du texte n’importe où à l’écran grâce à la reconnaissance de texte sur l’appareil, ainsi que les liens des codes QR\n• Retardateur, capture à intervalles et profils de capture par app\n• Tout repose sur ScreenCaptureKit, rapide et confidentiel\n\nENREGISTREZ\n• Enregistrez un écran, une fenêtre ou une région que vous tracez\n• Affichez les clics, les frappes au clavier et une bulle webcam dans vos enregistrements\n• Enregistrez l’audio du système et votre micro avec des indicateurs de niveau en temps réel\n• Coupez vos enregistrements avant de les sauvegarder, ajoutez des marqueurs de chapitre et exportez en MP4, MOV, GIF ou audio\n• Générez des sous-titres sur l’appareil, en fichier .srt ou incrustés dans la vidéo\n• Choisissez la résolution, la fréquence d’images, HEVC, HDR et la compression automatique avant l’envoi\n\nANNOTEZ\n• Flèches de plusieurs styles, lignes, formes, surlignages, stylo, marqueur et texte\n• Étapes numérotées, tampons d’emoji et de symboles, projecteur, flou et pixellisation\n• Recadrage avec poignées et formats prédéfinis, zoom et défilement, barre latérale des calques et modèles réutilisables\n• Cliquez sur Terminé et vos actions après capture s’exécutent : copier, enregistrer, partager et envoyer\n\nENVOYEZ OÙ VOUS VOULEZ\n• Imgur prêt à l’emploi\n• Services d’envoi personnalisés pour chibisafe, Zipline, copyparty, les webhooks Discord et votre propre serveur, avec import des fichiers .sxcu de ShareX\n• Tout stockage compatible S3, avec liens à expiration en option et secrets conservés dans le trousseau\n• Envoyez vers plusieurs destinations à la fois ou choisissez-en une par capture\n• Envoyez des extraits de texte, surveillez un dossier pour les nouveaux fichiers et relancez automatiquement les envois échoués\n• Préréglages d’envoi avec leurs propres raccourcis, un raccourcisseur d’URL et le masquage automatique des textes sensibles\n• Sur les Mac dotés d’Apple Intelligence, un assistant crée des services d’envoi à partir d’une simple conversation\n\nRESTEZ ORGANISÉ\n• Un menu compact et personnalisable avec palette de commandes, envois récents et aperçus\n• Un widget Envois récents et une commande de capture dans le Centre de contrôle\n• Déposez des fichiers sur l’icône de la barre des menus ou utilisez « Envoyer avec ishare » dans le Finder\n• Historique des envois consultable, avec filtres et suppression côté serveur\n• Raccourcis clavier globaux, actions Raccourcis et extension de partage\n• Sauvegardez et restaurez tous les réglages et services d’envoi dans un seul fichier\n\nUn design Liquid Glass sous macOS 26, des options sonores, un guide de bienvenue et des traductions en 11 langues complètent le tout."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare macOS के लिए बेहतरीन स्क्रीन कैप्चर यूटिलिटी है, जिसे सरलता और दक्षता को ध्यान में रखकर बनाया गया है।\n\nकुछ भी कैप्चर करें\n• सटीक सिलेक्टर, निर्देशांक और रंग दिखाने वाले पिक्सेल मैग्निफ़ायर और मापने के टूल के साथ कोई भी क्षेत्र कैप्चर करें\n• किसी भी विंडो को उसकी छाया के साथ या बिना, या पूरे डिस्प्ले को कैप्चर करें, और एक ही शॉर्टकट से अपना पिछला क्षेत्र दोबारा कैप्चर करें\n• स्क्रॉलिंग कैप्चर लंबे पेज और दस्तावेज़ों को जोड़कर एक इमेज बना देता है\n• विंडो कैप्चर में पैडिंग, गोल कोनों और छाया के साथ ग्रेडिएंट बैकग्राउंड जोड़ें\n• प्राइवेसी के लिए चुनी हुई ऐप्स को धुंधला करें और मेनू बार को अपने आप छिपाएँ\n• ऑन-डिवाइस टेक्स्ट पहचान से स्क्रीन पर कहीं से भी टेक्स्ट कॉपी करें, और QR कोड से लिंक\n• सेल्फ़-टाइमर, इंटरवल कैप्चर और हर ऐप के लिए अलग कैप्चर प्रोफ़ाइल\n• सब कुछ ScreenCaptureKit पर चलता है, तेज़ और निजी\n\nरिकॉर्ड करें\n• कोई डिस्प्ले, विंडो या अपना बनाया हुआ क्षेत्र रिकॉर्ड करें\n• अपनी रिकॉर्डिंग में क्लिक, कीस्ट्रोक और वेबकैम बबल दिखाएँ\n• लाइव लेवल मीटर के साथ सिस्टम ऑडियो और अपना माइक्रोफ़ोन रिकॉर्ड करें\n• सहेजने से पहले रिकॉर्डिंग ट्रिम करें, चैप्टर मार्कर जोड़ें, और MP4, MOV, GIF या ऑडियो में एक्सपोर्ट करें\n• डिवाइस पर ही कैप्शन बनाएँ, .srt फ़ाइल के रूप में या वीडियो में बर्न करके\n• अपलोड से पहले रिज़ॉल्यूशन, फ़्रेम रेट, HEVC, HDR और ऑटोमैटिक कम्प्रेशन चुनें\n\nएनोटेट करें\n• कई स्टाइल के तीर, लाइनें, आकृतियाँ, हाइलाइट, पेन, मार्कर और टेक्स्ट\n• क्रमांकित स्टेप, इमोजी और सिंबल स्टैम्प, स्पॉटलाइट, ब्लर और पिक्सेलेट\n• हैंडल और आस्पेक्ट प्रीसेट के साथ क्रॉप, ज़ूम और पैन, लेयर साइडबार और दोबारा इस्तेमाल होने वाले टेम्पलेट\n• “पूर्ण” दबाएँ और कैप्चर के बाद की आपकी कार्रवाइयाँ अपने आप चलेंगी: कॉपी, सेव, शेयर और अपलोड\n\nकहीं भी अपलोड करें\n• Imgur पहले से तैयार\n• chibisafe, Zipline, copyparty, Discord वेबहुक और आपके अपने सर्वर के लिए कस्टम अपलोडर, साथ ही ShareX .sxcu इम्पोर्ट\n• कोई भी S3-संगत स्टोरेज, वैकल्पिक रूप से एक्सपायर होने वाले लिंक के साथ, और सीक्रेट कीचेन में सुरक्षित\n• एक साथ कई जगह अपलोड करें या हर कैप्चर के लिए एक चुनें\n• टेक्स्ट स्निपेट अपलोड करें, नई फ़ाइलों के लिए किसी फ़ोल्डर पर नज़र रखें, और विफल अपलोड अपने आप दोबारा आज़माएँ\n• अपने शॉर्टकट वाले अपलोड प्रीसेट, URL शॉर्टनर और संवेदनशील टेक्स्ट को अपने आप छिपाने की सुविधा\n• Apple Intelligence वाले Mac पर, एक असिस्टेंट बातचीत से ही अपलोडर बना देता है\n\nसब कुछ व्यवस्थित रखें\n• कमांड पैलेट, हाल के अपलोड और प्रीव्यू के साथ एक कॉम्पैक्ट, कस्टमाइज़ करने योग्य मेनू\n• “हाल के अपलोड” विजेट और कंट्रोल सेंटर में कैप्चर कंट्रोल\n• मेनू बार आइकन पर फ़ाइलें छोड़ें या Finder में “ishare से अपलोड करें” इस्तेमाल करें\n• फ़िल्टर और सर्वर-साइड डिलीट के साथ सर्च करने योग्य अपलोड इतिहास\n• ग्लोबल कीबोर्ड शॉर्टकट, शॉर्टकट ऐप की कार्रवाइयाँ और एक शेयर एक्सटेंशन\n• सभी सेटिंग्स और अपलोडर का एक ही फ़ाइल में बैकअप लें और रीस्टोर करें\n\nmacOS 26 पर Liquid Glass डिज़ाइन, साउंड विकल्प, वेलकम गाइड और 11 भाषाओं में अनुवाद इसे हर तरह से पूरा बनाते हैं।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishareは、シンプルさと効率を追求したmacOS向けの決定版スクリーンキャプチャユーティリティです。\n\nあらゆるものをキャプチャ\n• 正確な範囲選択、座標と色を表示するピクセルルーペ、計測ツールで範囲をキャプチャ\n• 任意のウインドウを影付きまたは影なしで、あるいはディスプレイ全体をキャプチャ。前回の範囲もショートカットひとつで再キャプチャ\n• スクロールキャプチャで、長いページや書類を1枚の画像につなぎ合わせ\n• ウインドウのキャプチャに、余白、角丸、影付きのグラデーション背景を追加\n• プライバシー保護のため、選んだアプリをぼかし、メニューバーを自動的に非表示に\n• デバイス上のテキスト認識で画面上のどこからでもテキストをコピー。QRコードのリンクも取得\n• セルフタイマー、インターバルキャプチャ、アプリごとのキャプチャプロファイル\n• すべてScreenCaptureKitで動作し、高速でプライベート\n\n画面収録\n• ディスプレイ、ウインドウ、または描いた範囲を収録\n• クリック、キー入力、Webカメラのバブルを収録に表示\n• システムオーディオとマイクを、ライブのレベルメーターを見ながら録音\n• 保存前に収録をトリミングし、チャプターマーカーを追加して、MP4、MOV、GIF、オーディオに書き出し\n• デバイス上で字幕を生成し、.srtファイルとして保存、またはビデオに焼き込み\n• アップロード前に解像度、フレームレート、HEVC、HDR、自動圧縮を選択\n\n注釈\n• さまざまなスタイルの矢印、線、図形、ハイライト、ペン、マーカー、テキスト\n• 番号付きステップ、絵文字や記号のスタンプ、スポットライト、ぼかし、ピクセル化\n• ハンドルと縦横比プリセットによる切り取り、拡大縮小とパン、レイヤーサイドバー、再利用できるテンプレート\n• 「完了」を押すと、キャプチャ後のアクションを実行：コピー、保存、共有、アップロード\n\nどこへでもアップロード\n• 設定不要でImgurに対応\n• chibisafe、Zipline、copyparty、DiscordのWebhook、自分のサーバ向けのカスタムアップローダー。ShareXの.sxcuの読み込みにも対応\n• あらゆるS3互換ストレージに対応。有効期限付きリンクも選べ、シークレットはキーチェーンに安全に保管\n• 複数の送信先に同時にアップロード、またはキャプチャごとに1つを選択\n• テキストの断片をアップロード、フォルダを監視して新しいファイルを検出、失敗したアップロードは自動で再試行\n• 専用ショートカット付きのアップロードプリセット、URL短縮、機密テキストの自動墨消し\n• Apple Intelligenceに対応したMacでは、アシスタントとの会話からアップローダーを作成\n\nすっきり整理\n• コマンドパレット、最近のアップロード、プレビューを備えた、コンパクトでカスタマイズ可能なメニュー\n• 「最近のアップロード」ウィジェットと、コントロールセンターのキャプチャコントロール\n• メニューバーのアイコンにファイルをドロップ、またはFinderで「ishareでアップロード」を使用\n• フィルタとサーバ側での削除に対応した、検索可能なアップロード履歴\n• グローバルキーボードショートカット、ショートカットのアクション、共有機能拡張\n• すべての設定とアップローダーを1つのファイルにバックアップして復元\n\nmacOS 26のLiquid Glassデザイン、サウンドオプション、ウェルカムガイド、11言語への翻訳もそろっています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare는 단순함과 효율성을 염두에 두고 설계된 macOS용 최고의 화면 캡처 유틸리티입니다.\n\n무엇이든 캡처\n• 정밀한 선택 도구, 좌표와 색상을 표시하는 픽셀 돋보기, 측정 도구로 영역 캡처\n• 모든 윈도우를 그림자와 함께 또는 그림자 없이, 혹은 디스플레이 전체를 캡처하고, 단축키 하나로 마지막 영역 다시 캡처\n• 스크롤 캡처로 긴 페이지와 문서를 하나의 이미지로 연결\n• 윈도우 캡처에 여백, 둥근 모서리, 그림자가 있는 그라디언트 배경 추가\n• 개인정보 보호를 위해 선택한 앱을 흐리게 처리하고 메뉴 막대를 자동으로 가리기\n• 기기 내 텍스트 인식으로 화면 어디서나 텍스트를 복사하고, QR 코드에서 링크 추출\n• 셀프 타이머, 간격 캡처, 앱별 캡처 프로필\n• 모든 기능이 ScreenCaptureKit 기반으로 빠르고 안전하게 동작\n\n화면 기록\n• 디스플레이, 윈도우 또는 직접 그린 영역 기록\n• 기록에 클릭, 키 입력, 웹캠 버블 표시\n• 실시간 레벨 미터를 보며 시스템 오디오와 마이크 녹음\n• 저장 전에 기록을 다듬고, 챕터 마커를 추가하고, MP4, MOV, GIF 또는 오디오로 내보내기\n• 기기에서 자막을 생성하여 .srt 파일로 저장하거나 비디오에 삽입\n• 업로드 전에 해상도, 프레임률, HEVC, HDR, 자동 압축 선택\n\n주석\n• 다양한 스타일의 화살표, 선, 도형, 하이라이트, 펜, 마커, 텍스트\n• 번호 단계, 이모지 및 기호 스탬프, 스포트라이트, 흐림 효과, 픽셀화\n• 핸들과 비율 프리셋으로 자르기, 확대 및 이동, 레이어 사이드바, 재사용 가능한 템플릿\n• 완료를 누르면 캡처 후 동작 실행: 복사, 저장, 공유, 업로드\n\n어디로든 업로드\n• 별도 설정 없이 Imgur 지원\n• chibisafe, Zipline, copyparty, Discord 웹훅, 자체 서버용 사용자 설정 업로더와 ShareX .sxcu 가져오기\n• 모든 S3 호환 스토리지 지원, 만료 링크 옵션 제공, 비밀 정보는 키체인에 보관\n• 여러 대상에 동시에 업로드하거나 캡처마다 하나를 선택\n• 텍스트 조각 업로드, 폴더를 감시해 새 파일 업로드, 실패한 업로드 자동 재시도\n• 전용 단축키가 있는 업로드 프리셋, URL 단축기, 민감한 텍스트 자동 가리기\n• Apple Intelligence를 지원하는 Mac에서는 어시스턴트가 대화를 통해 업로더 생성\n\n깔끔한 정리\n• 명령 팔레트, 최근 업로드, 미리보기를 갖춘 간결하고 사용자화 가능한 메뉴\n• 최근 업로드 위젯과 제어 센터의 캡처 제어\n• 메뉴 막대 아이콘에 파일을 놓거나 Finder에서 ‘ishare로 업로드’ 사용\n• 필터와 서버 측 삭제를 지원하는 검색 가능한 업로드 기록\n• 전역 키보드 단축키, 단축어 동작, 공유 확장 프로그램\n• 모든 설정과 업로더를 하나의 파일로 백업 및 복원\n\nmacOS 26의 Liquid Glass 디자인, 사운드 옵션, 시작 가이드, 11개 언어 번역까지 모두 갖추었습니다."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare, sadelik ve verimlilik düşünülerek tasarlanmış, macOS için en kapsamlı ekran yakalama aracıdır.\n\nHER ŞEYİ YAKALAYIN\n• Hassas bir seçici, koordinat ve renkleri gösteren piksel büyüteci ve ölçüm aracıyla bir bölgeyi yakalayın\n• Herhangi bir pencereyi gölgeli ya da gölgesiz veya tüm ekranı yakalayın; son bölgenizi tek bir kısayolla yeniden yakalayın\n• Kaydırmalı yakalama, uzun sayfaları ve belgeleri tek bir görüntüde birleştirir\n• Pencere yakalamalarına kenar boşluğu, yuvarlatılmış köşeler ve gölgeyle birlikte gradyan arka plan ekleyin\n• Gizlilik için seçtiğiniz uygulamaları bulanıklaştırın ve menü çubuğunu otomatik olarak gizleyin\n• Aygıt üzerinde metin tanıma ile ekranın herhangi bir yerinden metni, QR kodlarından ise bağlantıları kopyalayın\n• Zamanlayıcı, aralıklı yakalama ve uygulamaya özel yakalama profilleri\n• Her şey ScreenCaptureKit üzerinde çalışır; hızlı ve gizli\n\nKAYDEDİN\n• Bir ekranı, pencereyi veya çizdiğiniz bir bölgeyi kaydedin\n• Kayıtlarınızda tıklamaları, tuş vuruşlarını ve bir web kamerası balonunu gösterin\n• Sistem sesini ve mikrofonunuzu canlı seviye göstergeleriyle kaydedin\n• Kayıtları kaydetmeden önce kırpın, bölüm işaretçileri ekleyin ve MP4, MOV, GIF ya da ses olarak dışa aktarın\n• Altyazıları aygıt üzerinde .srt dosyası olarak veya videoya gömülü şekilde oluşturun\n• Yüklemeden önce çözünürlüğü, kare hızını, HEVC, HDR ve otomatik sıkıştırmayı seçin\n\nAÇIKLAMA EKLEYİN\n• Çeşitli stillerde oklar, çizgiler, şekiller, vurgular, kalem, işaretleyici ve metin\n• Numaralı adımlar, emoji ve sembol damgaları, spot ışığı, bulanıklaştırma ve pikselleştirme\n• Tutamaçlar ve en boy oranı hazır ayarlarıyla kırpma, yakınlaştırma ve kaydırma, katmanlar kenar çubuğu ve yeniden kullanılabilir şablonlar\n• Bitti’ye tıklayın, yakalama sonrası eylemleriniz çalışsın: kopyalama, kaydetme, paylaşma ve yükleme\n\nHER YERE YÜKLEYİN\n• Kurulum gerektirmeden Imgur\n• chibisafe, Zipline, copyparty, Discord webhook’ları ve kendi sunucunuz için özel yükleyiciler, ayrıca ShareX .sxcu içe aktarma\n• S3 uyumlu her depolama; isteğe bağlı süreli bağlantılar ve Anahtar Zinciri’nde saklanan gizli anahtarlar\n• Aynı anda birden fazla hedefe yükleyin ya da her yakalama için birini seçin\n• Metin parçacıkları yükleyin, yeni dosyalar için bir klasörü izleyin ve başarısız yüklemeleri otomatik olarak yeniden deneyin\n• Kendi kısayollarına sahip yükleme hazır ayarları, URL kısaltıcı ve hassas metinlerin otomatik olarak karartılması\n• Apple Intelligence destekli Mac’lerde bir asistan, sohbet ederek sizin için yükleyici oluşturur\n\nDÜZENLİ KALIN\n• Komut paleti, son yüklemeler ve önizlemeler içeren kompakt, özelleştirilebilir bir menü\n• Son Yüklemeler widget’ı ve Denetim Merkezi’nde bir yakalama denetimi\n• Dosyaları menü çubuğu simgesine bırakın veya Finder’da “ishare ile Yükle” seçeneğini kullanın\n• Filtreler ve sunucu tarafında silme özelliğiyle aranabilir yükleme geçmişi\n• Genel klavye kısayolları, Kestirmeler eylemleri ve bir paylaşma uzantısı\n• Tüm ayarları ve yükleyicileri tek bir dosyada yedekleyip geri yükleyin\n\nmacOS 26’da Liquid Glass tasarımı, ses seçenekleri, bir karşılama rehberi ve 11 dile çeviri her şeyi tamamlıyor."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare — найкраща утиліта для знімків екрана на macOS, створена з думкою про простоту й ефективність.\n\nЗНІМАЙТЕ БУДЬ-ЩО\n• Знімайте область за допомогою точного виділення, піксельної лупи з координатами й кольорами та інструмента вимірювання\n• Знімайте будь-яке вікно з тінню або без неї чи весь дисплей, а останню область повторюйте одним сполученням клавіш\n• Захоплення з прокручуванням зшиває довгі сторінки й документи в одне зображення\n• Додавайте до знімків вікон градієнтне тло з полями, заокругленими кутами й тінню\n• Розмивайте вибрані програми й автоматично ховайте рядок меню заради приватності\n• Копіюйте текст із будь-якого місця на екрані завдяки розпізнаванню тексту на пристрої, а також посилання з QR-кодів\n• Таймер, знімки з інтервалом і профілі знімання для окремих програм\n• Усе працює на ScreenCaptureKit — швидко й приватно\n\nЗАПИСУЙТЕ\n• Записуйте дисплей, вікно або намальовану вами область\n• Показуйте клацання, натискання клавіш і бульбашку вебкамери у своїх записах\n• Записуйте системний звук і мікрофон з індикаторами рівня в реальному часі\n• Обрізайте записи перед збереженням, додавайте позначки розділів і експортуйте в MP4, MOV, GIF або аудіо\n• Створюйте субтитри на пристрої — файлом .srt або вбудованими у відео\n• Вибирайте роздільність, частоту кадрів, HEVC, HDR і автоматичне стиснення перед вивантаженням\n\nАНОТУЙТЕ\n• Стрілки різних стилів, лінії, фігури, виділення, перо, маркер і текст\n• Нумеровані кроки, штампи з емодзі й символами, прожектор, розмиття й пікселізація\n• Обтинання з маркерами й готовими пропорціями, масштабування й панорамування, бічна панель шарів і шаблони для повторного використання\n• Натисніть «Готово» — і дії після знімка виконаються самі: копіювання, збереження, поширення й вивантаження\n\nВИВАНТАЖУЙТЕ КУДИ ЗАВГОДНО\n• Imgur одразу після встановлення\n• Власні вивантажувачі для chibisafe, Zipline, copyparty, вебхуків Discord і вашого сервера, а також імпорт .sxcu із ShareX\n• Будь-яке S3-сумісне сховище з необов’язковими посиланнями, що спливають, і секретами у Зв’язці ключів\n• Вивантажуйте в кілька місць одночасно або вибирайте одне для кожного знімка\n• Вивантажуйте фрагменти тексту, відстежуйте папку на нові файли й автоматично повторюйте невдалі вивантаження\n• Пресети вивантаження з власними сполученнями клавіш, скорочувач URL-адрес і автоматичне приховування конфіденційного тексту\n• На Mac з Apple Intelligence асистент створює вивантажувачі просто з розмови\n\nТРИМАЙТЕ ВСЕ В ПОРЯДКУ\n• Компактне меню, яке можна налаштувати, з палітрою команд, останніми вивантаженнями й попереднім переглядом\n• Віджет «Останні вивантаження» та елемент знімання в Центрі керування\n• Перетягуйте файли на піктограму в рядку меню або використовуйте «Вивантажити за допомогою ishare» у Finder\n• Історія вивантажень із пошуком, фільтрами й видаленням на сервері\n• Глобальні сполучення клавіш, дії для Швидких команд і розширення для поширення\n• Резервне копіювання й відновлення всіх налаштувань і вивантажувачів в одному файлі\n\nДизайн Liquid Glass у macOS 26, налаштування звуку, вітальний посібник і переклади 11 мовами доповнюють усе це."
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare 是 macOS 上的终极截图工具，以简洁和高效为设计理念。\n\n截取一切\n• 使用精确的选择器截取区域，配有显示坐标和颜色的像素放大镜以及测量工具\n• 截取任意窗口（可带或不带阴影）或整个显示器，一个快捷键即可重新截取上次的区域\n• 滚动截图可将长网页和文档拼接为一张图片\n• 为窗口截图添加带内边距、圆角和阴影的渐变背景\n• 自动模糊所选 App 并隐藏菜单栏，保护隐私\n• 通过设备端文字识别复制屏幕上任意位置的文字，还能提取二维码中的链接\n• 自拍定时、定时连续截图，以及按 App 设置的截图配置\n• 一切基于 ScreenCaptureKit，快速且私密\n\n录制\n• 录制显示器、窗口或自行绘制的区域\n• 在录制中显示点按、按键和摄像头气泡\n• 录制系统音频和麦克风，并显示实时电平表\n• 存储前修剪录制，添加章节标记，并导出为 MP4、MOV、GIF 或音频\n• 在设备端生成字幕，可存为 .srt 文件或直接烧录进视频\n• 上传前选择分辨率、帧率、HEVC、HDR 和自动压缩\n\n标注\n• 多种样式的箭头、线条、形状、高亮、钢笔、记号笔和文字\n• 编号步骤、表情符号和符号印章、聚光灯、模糊和像素化\n• 带控制柄和比例预设的裁剪、缩放和平移、图层边栏以及可重复使用的模板\n• 按下“完成”即运行截图后操作：复制、存储、共享和上传\n\n上传到任何地方\n• 开箱即用支持 Imgur\n• 为 chibisafe、Zipline、copyparty、Discord Webhook 和你自己的服务器自定义上传器，并支持导入 ShareX .sxcu\n• 支持任何兼容 S3 的存储，可选过期链接，密钥保存在钥匙串中\n• 同时上传到多个目标，或为每次截图单独选择一个\n• 上传文本片段、监视文件夹中的新文件，并自动重试失败的上传\n• 带独立快捷键的上传预设、网址缩短以及敏感文字自动遮盖\n• 在支持 Apple Intelligence 的 Mac 上，助手可通过对话创建上传器\n\n井井有条\n• 紧凑、可自定义的菜单，配有命令面板、最近上传和预览\n• “最近上传”小组件和控制中心中的截图控制\n• 将文件拖放到菜单栏图标上，或在访达中使用“使用 ishare 上传”\n• 可搜索的上传历史记录，支持筛选和服务器端删除\n• 全局键盘快捷键、快捷指令操作和共享扩展\n• 将所有设置和上传器备份到一个文件中，随时恢复\n\nmacOS 26 上的 Liquid Glass 设计、声音选项、欢迎指南以及 11 种语言的翻译，让一切更加完善。"
+          }
+        }
+      }
+    },
+    "keywords" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لقطة شاشة,تصوير,تسجيل,فيديو,GIF,رفع,ShareX,S3,Imgur,كاميرا"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot,Bildschirmfoto,Bildschirmvideo,GIF,hochladen,annotieren,ShareX,S3,Imgur,Webcam,Upload"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "screenshot, screen recording, gif, upload, annotate, sharex, s3, capture, imgur, webcam"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "screenshot,grabar,grabación,GIF,subir,anotar,ShareX,S3,Imgur,cámara web,recortes,vídeo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "screenshot,enregistrement,vidéo,GIF,envoi,upload,annoter,ShareX,S3,Imgur,webcam,partage"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "screenshot,स्क्रीनशॉट,अपलोड,GIF,ShareX,S3,Imgur,वेबकैम"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクショ,スクリーンショット,画面収録,録画,GIF,アップロード,ShareX,S3,Imgur"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스크린샷,스샷,녹화,GIF,업로드,주석,ShareX,S3,Imgur,웹캠,이미지공유"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "screenshot,kayıt,video,GIF,yükleme,açıklama,ShareX,S3,Imgur,web kamerası,yakalama,paylaş"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "скриншот,скрін,запис,відео,GIF,вивантаження,ShareX,S3,Imgur"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "截屏,录屏,屏幕录制,GIF,动图,上传,标注,图床,ShareX,S3,Imgur,摄像头"
+          }
+        }
+      }
+    },
+    "name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - التقاط الشاشة"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - Bildschirmaufnahme"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - screen capture"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - Captura de pantalla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - Capture d’écran"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - स्क्रीन कैप्चर"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - スクリーンキャプチャ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - 화면 캡처"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - Ekran Görüntüsü"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - Знімок екрана"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ishare - 屏幕截图"
+          }
+        }
+      }
+    },
+    "promotional_text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الآن مع تراكبات كاميرا الويب وضغطات المفاتيح، وقص التسجيلات، والأختام وتسليط الضوء، والرفع إلى وجهات متعددة، ومجلد المراقبة، وسجل قابل للبحث."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neu: Webcam- und Tastatur-Overlays, Aufnahmen kürzen, Stempel und Spotlight, Uploads an mehrere Ziele, ein überwachter Ordner und ein durchsuchbarer Verlauf."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now with webcam and keystroke overlays, recording trim, stamps and spotlight, multi-destination uploads, a watch folder and searchable history."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora con superposición de cámara web y teclas, recorte de grabaciones, sellos y foco, subidas a varios destinos, carpeta vigilada e historial con búsqueda."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouveau : incrustation webcam et touches, découpe des enregistrements, tampons et projecteur, envoi multi-destination, dossier surveillé et historique consultable."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अब वेबकैम और कीस्ट्रोक ओवरले, रिकॉर्डिंग ट्रिम, स्टैम्प और स्पॉटलाइट, एक साथ कई जगह अपलोड, वॉच फ़ोल्डर और सर्च करने योग्य इतिहास के साथ।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Webカメラとキー入力のオーバーレイ、収録のトリミング、スタンプとスポットライト、複数の送信先への同時アップロード、監視フォルダ、検索できる履歴に対応しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제 웹캠 및 키 입력 오버레이, 기록 다듬기, 스탬프와 스포트라이트, 여러 대상 동시 업로드, 감시 폴더, 검색 가능한 업로드 기록을 지원합니다."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Artık web kamerası ve tuş vuruşu katmanları, kayıt kırpma, damgalar ve spot ışığı, çoklu hedefe yükleme, izlenen klasör ve aranabilir geçmiş ile."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тепер із накладками вебкамери й натискань клавіш, обрізанням записів, штампами й прожектором, вивантаженням у кілька місць, відстежуваною папкою та пошуком в історії."
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增摄像头与按键叠加层、录制修剪、印章与聚光灯、多目标同时上传、监视文件夹，以及可搜索的历史记录。"
+          }
+        }
+      }
+    },
+    "release_notes.fallback" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إصلاحات للأخطاء وتحسينات."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fehlerbehebungen und Verbesserungen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bug fixes and improvements."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corrección de errores y mejoras."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corrections de bugs et améliorations."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बग फ़िक्स और सुधार।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バグ修正と改善。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "버그 수정 및 개선 사항."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hata düzeltmeleri ve iyileştirmeler."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Виправлення помилок і покращення."
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "问题修复和改进。"
+          }
+        }
+      }
+    },
+    "release_notes.heading.breaking_changes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تغييرات جذرية"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inkompatible Änderungen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Breaking Changes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambios incompatibles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changements incompatibles"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "असंगत बदलाव"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "互換性に影響する変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "호환성이 깨지는 변경 사항"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uyumluluğu Bozan Değişiklikler"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Несумісні зміни"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "破坏性变更"
+          }
+        }
+      }
+    },
+    "release_notes.heading.bug_fixes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إصلاحات الأخطاء"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fehlerbehebungen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bug Fixes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corrección de errores"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corrections de bugs"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बग फ़िक्स"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バグ修正"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "버그 수정"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hata Düzeltmeleri"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Виправлення помилок"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "问题修复"
+          }
+        }
+      }
+    },
+    "release_notes.heading.features" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الميزات"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Funktionen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Features"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novedades"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouveautés"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नई सुविधाएँ"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新機能"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로운 기능"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni Özellikler"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нові функції"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新功能"
+          }
+        }
+      }
+    },
+    "release_notes.heading.performance_improvements" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحسينات الأداء"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leistungsverbesserungen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Performance Improvements"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mejoras de rendimiento"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Améliorations des performances"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "परफ़ॉर्मेंस सुधार"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パフォーマンスの向上"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "성능 개선"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Performans İyileştirmeleri"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Покращення продуктивності"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "性能改进"
+          }
+        }
+      }
+    },
+    "release_notes.heading.reverts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تغييرات تم التراجع عنها"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rückgängig gemachte Änderungen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reverts"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambios revertidos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifications annulées"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वापस लिए गए बदलाव"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取り消された変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "되돌린 변경 사항"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri Alınan Değişiklikler"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скасовані зміни"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已撤销的更改"
+          }
+        }
+      }
+    },
+    "subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التقاط وتسجيل ورفع بسهولة"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnehmen, filmen, hochladen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture, record and upload"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Captura, graba y sube"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturez, enregistrez, envoyez"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कैप्चर, रिकॉर्ड और अपलोड करें"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャプチャ、画面収録、アップロード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "캡처, 화면 기록, 업로드까지"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yakala, kaydet ve yükle"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Знімки, записи й вивантаження"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "截图、录屏、上传，一气呵成"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -194,7 +194,7 @@ struct SynchronizableMigrationTests {
         TestSecrets.backend.storeLocalOnly("secret", account: uploader.id.uuidString)
         Migrations.run(defaults: defaults)
         #expect(TestSecrets.backend.isSynchronizable(account: uploader.id.uuidString))
-        #expect(defaults.integer(forKey: Migrations.versionKey) == 4)
+        #expect(defaults.integer(forKey: Migrations.versionKey) == Migrations.currentVersion)
         #expect(S3SecretStore.makeSynchronizable([uploader]).isEmpty)
         #expect(S3SecretStore.secret(for: uploader) == "secret")
     }
@@ -342,7 +342,7 @@ extension NetworkSuite {
 
         init() {
             UploadService.session = StubURLProtocol.makeSession()
-            UploadCoordinator.environment = spy.environment
+            UploadCoordinator.environment = spy
             StubURLProtocol.reset { request in
                 switch request.url.host() {
                 case "primary.example.com":
@@ -360,7 +360,7 @@ extension NetworkSuite {
         }
 
         func finish() {
-            UploadCoordinator.environment = .live
+            UploadCoordinator.environment = LiveUploadEnvironment()
         }
 
         @Test func shortensTheDeliveredURLAndStoresBoth() async throws {

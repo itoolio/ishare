@@ -1,6 +1,6 @@
 import CoreGraphics
 import Foundation
-@preconcurrency import Vision
+import Vision
 
 struct RecognizedWord: Hashable, Sendable {
     var range: NSRange
@@ -60,10 +60,21 @@ enum TextRecognition {
     }
 
     private static func performRecognition(on image: CGImage) throws -> [RecognizedLine] {
+        do {
+            return try performRecognition(on: image, onCPU: false)
+        } catch {
+            return try performRecognition(on: image, onCPU: true)
+        }
+    }
+
+    private static func performRecognition(on image: CGImage, onCPU: Bool) throws -> [RecognizedLine] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
         request.automaticallyDetectsLanguage = true
+        if onCPU, let cpu = try request.supportedComputeStageDevices[.main]?.first(where: { if case .cpu = $0 { true } else { false } }) {
+            request.setComputeDevice(cpu, for: .main)
+        }
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         try handler.perform([request])
         return (request.results ?? []).compactMap(line(from:))

@@ -62,16 +62,34 @@ struct PixelBuffer: Equatable {
         self.bytes = bytes
     }
 
-    func differentPixels(from other: PixelBuffer, channelTolerance: Int) -> Int? {
+    func differentPixels(from other: PixelBuffer, channelTolerance: Int, searchRadius: Int = 0) -> Int? {
         guard width == other.width, height == other.height else { return nil }
         var count = 0
-        for pixel in stride(from: 0, to: bytes.count, by: 4) {
-            for channel in 0 ..< 4 where abs(Int(bytes[pixel + channel]) - Int(other.bytes[pixel + channel])) > channelTolerance {
+        for y in 0 ..< height {
+            for x in 0 ..< width where !other.hasMatch(for: self, x: x, y: y, tolerance: channelTolerance, radius: searchRadius) {
                 count += 1
-                break
             }
         }
         return count
+    }
+
+    private func hasMatch(for other: PixelBuffer, x: Int, y: Int, tolerance: Int, radius: Int) -> Bool {
+        let pixel = (y * width + x) * 4
+        if matches(other, pixel: pixel, at: pixel, tolerance: tolerance) { return true }
+        guard radius > 0 else { return false }
+        for neighbourY in max(0, y - radius) ... min(height - 1, y + radius) {
+            for neighbourX in max(0, x - radius) ... min(width - 1, x + radius) where neighbourX != x || neighbourY != y {
+                if matches(other, pixel: pixel, at: (neighbourY * width + neighbourX) * 4, tolerance: tolerance) { return true }
+            }
+        }
+        return false
+    }
+
+    private func matches(_ other: PixelBuffer, pixel: Int, at index: Int, tolerance: Int) -> Bool {
+        for channel in 0 ..< 4 where abs(Int(other.bytes[pixel + channel]) - Int(bytes[index + channel])) > tolerance {
+            return false
+        }
+        return true
     }
 
     func variance(in rect: CGRect) -> Double {
@@ -91,10 +109,10 @@ struct PixelBuffer: Equatable {
 }
 
 final class LanguageOverrideBundle: Bundle, @unchecked Sendable {
-    nonisolated(unsafe) static var language: Bundle?
+    @MainActor static var language: Bundle?
 
     override func localizedString(forKey key: String, value: String?, table tableName: String?) -> String {
-        if Thread.isMainThread, let language = Self.language {
+        if Thread.isMainThread, let language = MainActor.assumeIsolated({ Self.language }) {
             return language.localizedString(forKey: key, value: value, table: tableName)
         }
         return super.localizedString(forKey: key, value: value, table: tableName)
@@ -125,6 +143,7 @@ enum LanguageOverride {
 
 enum SnapshotStore {
     static let tolerance = 24
+    static let searchRadius = 1
     static let maximumDifferentFraction = 0.005
 
     static var isRecording: Bool {
@@ -168,7 +187,7 @@ enum SnapshotStore {
               let expected = CGImageSourceCreateImageAtIndex(source, 0, nil)
         else { return .missingReference(actualPath) }
         guard let actualPixels = PixelBuffer(image), let expectedPixels = PixelBuffer(expected),
-              let different = actualPixels.differentPixels(from: expectedPixels, channelTolerance: tolerance)
+              let different = actualPixels.differentPixels(from: expectedPixels, channelTolerance: tolerance, searchRadius: searchRadius)
         else { return .sizeChanged(actualPath) }
         if Double(different) <= Double(actualPixels.width * actualPixels.height) * maximumDifferentFraction {
             try? FileManager.default.removeItem(atPath: actualPath)

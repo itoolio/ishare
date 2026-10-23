@@ -40,6 +40,7 @@ struct LocalizationTests {
     @MainActor static var indirectKeys: Set<String> {
         var keys = Set<String>()
         keys.formUnion(SettingsPane.allCases.map(\.title))
+        keys.formUnion(SettingsSearchIndex.entries.filter { $0.anchor != nil }.map(\.title))
         keys.formUnion(EditorTool.allCases.map(\.title))
         keys.formUnion(ScreenshotScene.allCases.flatMap { [$0.title, $0.subtitle] })
         keys.insert(RecordingResolution.native.title)

@@ -41,12 +41,13 @@ struct HistoryThumbnail: View {
 struct HistoryGridView: View {
     @Default(.uploadHistory) var uploadHistory
     @Default(.savedCustomUploaders) var savedCustomUploaders
+    @Default(.savedLocalUploaders) var savedLocalUploaders
     @State private var filter = HistoryFilter()
     @State private var selection = HistorySelection()
     @State private var shareAnchor = ViewAnchor()
 
     private var uploaders: [CustomUploader] {
-        Array(savedCustomUploaders ?? [])
+        Array((savedCustomUploaders ?? []).union(savedLocalUploaders))
     }
 
     private var filteredHistory: [HistoryItem] {
@@ -179,6 +180,7 @@ struct HistoryGridView: View {
         .controlSize(.small)
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
+        .adaptiveGlassBar()
     }
 
     private var filterBar: some View {
@@ -202,7 +204,7 @@ struct HistoryGridView: View {
             }
             .padding(.horizontal, 8)
             .frame(height: 28)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.primary.opacity(0.07)))
+            .adaptiveGlass(cornerRadius: 8, interactive: true, fallback: .fill(0.07))
             .frame(minWidth: 200)
 
             Picker("Uploader".localized(), selection: $filter.uploader) {
@@ -239,7 +241,9 @@ struct HistoryGridView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
+        .adaptiveGlassBar()
     }
+
 
     private func title(for uploader: HistoryUploader) -> String {
         switch uploader {
@@ -299,7 +303,9 @@ struct HistoryCard: View {
         .anchored(to: shareAnchor)
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
+        .onDrag { DragExport.provider(for: item) }
         .onTapGesture(count: 2) { HistoryActions.open(item) }
+
         .simultaneousGesture(TapGesture().onEnded { onSelect(.current) })
         .contextMenu { contextMenu }
         .help(item.fileUrl ?? "")

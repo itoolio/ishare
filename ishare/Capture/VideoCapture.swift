@@ -1,4 +1,4 @@
-@preconcurrency import AppKit
+import AppKit
 import Defaults
 import Foundation
 

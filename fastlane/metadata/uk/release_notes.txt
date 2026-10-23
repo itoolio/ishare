@@ -1,0 +1,23 @@
+Несумісні зміни:
+• Screenshots use ScreenCaptureKit and the custom screencapture binary setting was removed; the menu, settings and Sparkle feed URL changed
+• The custom screencapture binary setting was removed
+
+Нові функції:
+• Add option to copy image data to clipboard instead of URL
+• Capture with ScreenCaptureKit and on-screen selectors
+• Chat uploader assistant, permission helper and live-test fixes
+• Chat-based uploader assistant and drag-in permission helper
+• New viewfinder app icon and violet accent
+• Add ShareX style annotation tools
+• Translate every new string into all supported languages
+• Ishare 5.0
+• Redesign the menu and settings with Liquid Glass
+• Async upload service with S3 support
+
+Виправлення помилок:
+• Add extension file to github target
+• Fix a few more things
+• Correct German typos and capitalization
+• Skip untranslated strings in Crowdin exports and widen the editor
+• Import uploaders without a key window and log capture and upload outcomes
+• MacOS 26 Tahoe stuff

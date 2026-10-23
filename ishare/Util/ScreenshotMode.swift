@@ -64,6 +64,24 @@ enum ScreenshotMode {
         argument(after: "-ishareScene").flatMap(ScreenshotScene.init(rawValue:))
     }
 
+    nonisolated static var usesFixtureCapture: Bool {
+        isUITesting && argument(after: "-ishareUITestCaptureSource") == "fixture"
+    }
+
+    nonisolated static var uploadStubURL: String? {
+        guard isUITesting else { return nil }
+        return argument(after: "-ishareUITestUploadURL")
+    }
+
+    nonisolated static let fixtureCaptureSize = CGSize(width: 1200, height: 750)
+
+    @MainActor static func fixtureCapture() -> CapturedImage? {
+        guard usesFixtureCapture,
+              let image = sampleImage(size: fixtureCaptureSize, hue: 0.45, title: "UI test capture")
+        else { return nil }
+        return CapturedImage(image: image, suffix: "fixture", pointScale: 1, source: CaptureSource(appName: "ishare UI tests"))
+    }
+
     @MainActor static var initialSettingsPane: SettingsPane? {
         guard isActive else { return nil }
         switch scene {
@@ -131,6 +149,31 @@ enum ScreenshotMode {
         Defaults[.compressBeforeUpload] = true
         Defaults[.menuRecordsGIF] = false
         Defaults[.uploadHistory] = sampleHistory()
+        if let uploadStubURL {
+            seedUploadStub(requestURL: uploadStubURL)
+        }
+    }
+
+    @MainActor private static func seedUploadStub(requestURL: String) {
+        let stub = CustomUploader(
+            name: "uitest stub", requestURL: requestURL, headers: nil, formData: nil, fileFormName: "file", responseURL: "{{url}}"
+        )
+        Defaults[.savedCustomUploaders] = [stub]
+        Defaults[.activeCustomUploader] = stub.id
+        Defaults[.uploadType] = .CUSTOM
+        Defaults[.uploadDestination] = .custom(stub.id)
+        Defaults[.additionalUploadDestinations] = []
+        Defaults[.uploadMedia] = true
+        Defaults[.copyToClipboard] = false
+        Defaults[.copyURLAfterUpload] = true
+        Defaults[.copyImageToClipboard] = false
+        Defaults[.openURLAfterUpload] = false
+        Defaults[.saveToDisk] = false
+        Defaults[.openEditorAfterCapture] = false
+        Defaults[.builtInShare] = SharingPreferences(airdrop: false, photos: false, messages: false, mail: false)
+        Defaults[.resultPresentation] = .toast
+        Defaults[.toastTimeout] = 60
+        Defaults[.uploadHistory] = []
     }
 
     @MainActor private static func sampleHistory() -> [HistoryItem] {
@@ -201,7 +244,7 @@ enum ScreenshotMode {
         window.setAccessibilityIdentifier(windowIdentifier)
         window.isReleasedWhenClosed = false
         window.level = .floating
-        window.contentView = NSHostingView(rootView: ScreenshotCanvas(scene: scene, document: document(for: scene)))
+        window.contentView = NSHostingView(rootView: ScreenshotCanvas(scene: scene, document: document(for: scene)).appModel())
         window.center()
         self.window = window
         NSApp.setActivationPolicy(.regular)
@@ -213,7 +256,7 @@ enum ScreenshotMode {
     }
 
     @MainActor private static func presentForTesting(_ scene: ScreenshotScene) {
-        let hostingView = NSHostingView(rootView: UITestCanvas(scene: scene, document: testDocument(for: scene)))
+        let hostingView = NSHostingView(rootView: UITestCanvas(scene: scene, document: testDocument(for: scene)).appModel())
         hostingView.sizingOptions = [.minSize]
         let window = NSWindow(contentRect: CGRect(origin: .zero, size: testWindowSize(for: scene, fitting: hostingView.fittingSize)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.identifier = NSUserInterfaceItemIdentifier(testWindowIdentifier)
@@ -367,7 +410,14 @@ struct UITestCanvas: View {
     var body: some View {
         switch scene {
         case .menu:
-            MainMenuView()
+            if ScreenshotMode.uploadStubURL != nil {
+                VStack(spacing: 0) {
+                    MainMenuView()
+                    HistoryStateProbe()
+                }
+            } else {
+                MainMenuView()
+            }
         case .editor:
             if let document {
                 VStack(spacing: 0) {
@@ -407,5 +457,26 @@ struct EditorStateProbe: View {
             .accessibilityLabel(summary)
             .accessibilityValue(summary)
             .accessibilityIdentifier("uitest.editor.state")
+    }
+}
+
+struct HistoryStateProbe: View {
+    @Default(.uploadHistory) private var uploadHistory
+
+    private var summary: String {
+        "history=\(uploadHistory.count) latest=\(uploadHistory.first?.fileUrl ?? "none")"
+    }
+
+    var body: some View {
+        Text(summary)
+            .font(.system(size: 10).monospaced())
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(summary)
+            .accessibilityValue(summary)
+            .accessibilityIdentifier("uitest.history.state")
     }
 }

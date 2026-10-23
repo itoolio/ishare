@@ -5,9 +5,15 @@ on:
     push:
         branches: [dev]
     workflow_call:
+    workflow_dispatch:
+        inputs:
+            record_snapshots:
+                description: Record the snapshot test references on the macOS runner and commit them to dev
+                type: boolean
+                default: false
 
 concurrency:
-    group: ci-${{ github.ref }}
+    group: ci-${{ github.ref }}-${{ github.event_name }}
     cancel-in-progress: true
 
 defaults:
@@ -16,7 +22,7 @@ defaults:
 
 jobs:
     tools:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v7
             - uses: actions/setup-go@v7
@@ -25,10 +31,14 @@ jobs:
                   cache-dependency-path: tools/go.mod
             - run: go vet ./tools/...
             - run: go test ./tools/...
-            - name: Check that the string catalog round-trips through merge-translations
+            - name: Check that the string catalogs round-trip through merge-translations
               run: |
-                  go run ./tools/cmd/ishare-tools merge-translations ishare/Localizable.xcstrings ishare/Localizable.xcstrings "$RUNNER_TEMP/Localizable.xcstrings"
-                  cmp ishare/Localizable.xcstrings "$RUNNER_TEMP/Localizable.xcstrings"
+                  for catalog in ishare/Localizable.xcstrings fastlane/metadata/Metadata.xcstrings; do
+                      go run ./tools/cmd/ishare-tools merge-translations "$catalog" "$catalog" "$RUNNER_TEMP/roundtrip.xcstrings"
+                      cmp "$catalog" "$RUNNER_TEMP/roundtrip.xcstrings"
+                  done
+            - name: Check that the localized App Store metadata matches its catalog
+              run: go run ./tools/cmd/ishare-tools metadata --check
 
     app:
         runs-on: macos-26
@@ -38,6 +48,10 @@ jobs:
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
             - run: xcodegen generate
@@ -48,14 +62,111 @@ jobs:
                     -scheme ishare \
                     -configuration Release \
                     -destination "generic/platform=macOS" \
-                    CODE_SIGNING_ALLOWED=NO | xcbeautify
+                    CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/app-store-build.log" | xcbeautify
             - name: Run unit tests
               run: |
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | tee "$RUNNER_TEMP/unit-tests.log" | xcbeautify
+            - name: Fail on build warnings
+              run: |
+                  go run ./tools/cmd/ishare-tools build-warnings \
+                    "$RUNNER_TEMP/app-store-build.log" "$RUNNER_TEMP/unit-tests.log"
+            - name: Show compiler errors
+              if: failure()
+              run: grep -h -B2 -A6 -E "error:|Command .* failed|Stack dump" "$RUNNER_TEMP"/*.log | head -200 || true
+            - name: Find the source file that crashes the compiler
+              if: failure()
+              run: |
+                  xcodebuild build \
+                    -project ishare.xcodeproj \
+                    -scheme ishare \
+                    -configuration Release \
+                    -destination "generic/platform=macOS" \
+                    SWIFT_COMPILATION_MODE=singlefile \
+                    SWIFT_ENABLE_BATCH_MODE=NO \
+                    CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/singlefile.log" 2>&1 || true
+                  grep -B12 -E "Stack dump:" "$RUNNER_TEMP/singlefile.log" | grep -E "SwiftCompile|Compiling|emitting|-primary-file" | sed -E 's/.*-primary-file ([^ ]+).*/primary file: \1/' | sort -u | head -40 || true
+            - name: Collect the snapshot renderings that differ from their references
+              if: failure()
+              run: |
+                  FAILURES="$(getconf DARWIN_USER_TEMP_DIR)ishare-snapshot-failures"
+                  mkdir -p build/snapshot-failures
+                  if [ -d "$FAILURES" ]; then cp -R "$FAILURES/." build/snapshot-failures/; fi
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: snapshot-failures
+                  path: build/snapshot-failures
+                  if-no-files-found: ignore
+
+    record-snapshots:
+        if: github.event_name == 'workflow_dispatch' && inputs.record_snapshots
+        runs-on: macos-26
+        timeout-minutes: 60
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: dev
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - run: xcodegen generate
+            - name: Find the snapshot folder of this macOS version
+              id: os
+              run: echo "folder=macOS$(sw_vers -productVersion | cut -d. -f1)" >> "$GITHUB_OUTPUT"
+            - name: Record the snapshot references
+              env:
+                  TEST_RUNNER_ISHARE_RECORD_SNAPSHOTS: "1"
+              run: |
+                  rm -rf "ishareTests/Snapshots/${{ steps.os.outputs.folder }}"
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -only-testing:ishareTests/SnapshotTests \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - name: Check the recorded references
+              env:
+                  FOLDER: ishareTests/Snapshots/${{ steps.os.outputs.folder }}
+              run: |
+                  COUNT=$(find "$FOLDER" -name '*.png' | wc -l | tr -d ' ')
+                  echo "Recorded $COUNT references in $FOLDER"
+                  test "$COUNT" -gt 0
+            - name: Verify the references against a second rendering
+              run: |
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -only-testing:ishareTests/SnapshotTests \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: snapshot-references
+                  path: ishareTests/Snapshots/${{ steps.os.outputs.folder }}
+            - name: Commit the references to dev
+              env:
+                  FOLDER: ishareTests/Snapshots/${{ steps.os.outputs.folder }}
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add "$FOLDER"
+                  if git diff --cached --quiet; then
+                      echo "The snapshot references did not change."
+                      exit 0
+                  fi
+                  git commit -q -m "test: record the ${{ steps.os.outputs.folder }} snapshot references"
+                  git fetch -q origin dev
+                  git rebase -q origin/dev
+                  git push -q origin HEAD:dev
 
     app-store-tests:
         runs-on: macos-26
@@ -65,6 +176,10 @@ jobs:
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
             - run: xcodegen generate
@@ -73,11 +188,13 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme AppStoreTests \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -derivedDataPath build/DerivedData \
                     -resultBundlePath build/AppStoreTests.xcresult \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
-                    ISHARE_APP_STORE_ENTITLEMENTS=ishareTests/SandboxedTestHost.entitlements | xcbeautify
+                    ISHARE_APP_STORE_ENTITLEMENTS=ishareTests/SandboxedTestHost.entitlements | tee "$RUNNER_TEMP/app-store-tests.log" | xcbeautify
+            - name: Fail on build warnings
+              run: go run ./tools/cmd/ishare-tools build-warnings "$RUNNER_TEMP/app-store-tests.log"
             - name: Check that the test host really was sandboxed
               run: codesign -d --entitlements - --xml build/DerivedData/Build/Products/Debug/ishare.app | grep -q com.apple.security.app-sandbox
             - uses: actions/upload-artifact@v7
@@ -94,6 +211,10 @@ jobs:
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
             - run: xcodegen generate
@@ -102,12 +223,87 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme UITests \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -derivedDataPath build/DerivedData \
                     -resultBundlePath build/UITests.xcresult \
-                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | tee "$RUNNER_TEMP/ui-tests.log" | xcbeautify
+            - name: Fail on build warnings
+              run: go run ./tools/cmd/ishare-tools build-warnings "$RUNNER_TEMP/ui-tests.log"
             - uses: actions/upload-artifact@v7
               if: failure()
               with:
                   name: ui-tests-xcresult
                   path: build/UITests.xcresult
+
+    s3-integration:
+        runs-on: macos-26
+        timeout-minutes: 60
+        env:
+            MINIO_ROOT_USER: ishare-ci
+            MINIO_ROOT_PASSWORD: ishare-ci-secret
+            MINIO_DOMAIN: localhost
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen and MinIO
+              run: brew install xcodegen minio
+            - name: Check that bucket subdomains of localhost resolve to loopback
+              run: |
+                  for host in ishare-integration.localhost ishare-integration-private.localhost; do
+                      dscacheutil -q host -a name "$host"
+                  done
+            - name: Start MinIO
+              run: |
+                  mkdir -p "$RUNNER_TEMP/minio"
+                  nohup minio server "$RUNNER_TEMP/minio" --address "[::]:9000" > "$RUNNER_TEMP/minio.log" 2>&1 &
+                  for _ in $(seq 1 60); do
+                      if curl -sf http://127.0.0.1:9000/minio/health/live; then
+                          exit 0
+                      fi
+                      sleep 1
+                  done
+                  cat "$RUNNER_TEMP/minio.log"
+                  exit 1
+            - run: xcodegen generate
+            - name: Run the S3 integration tests against MinIO
+              env:
+                  TEST_RUNNER_ISHARE_S3_ENDPOINT: http://127.0.0.1:9000
+                  TEST_RUNNER_ISHARE_S3_VIRTUAL_HOST_ENDPOINT: http://localhost:9000
+                  TEST_RUNNER_ISHARE_S3_ACCESS_KEY: ishare-ci
+                  TEST_RUNNER_ISHARE_S3_SECRET_KEY: ishare-ci-secret
+              run: |
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -derivedDataPath build/DerivedData \
+                    -resultBundlePath build/S3Integration.xcresult \
+                    -only-testing:ishareTests/NetworkSuite \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - name: Check that the integration tests ran
+              run: |
+                  xcrun xcresulttool get test-results tests --path build/S3Integration.xcresult > "$RUNNER_TEMP/tests.json"
+                  python3 - "$RUNNER_TEMP/tests.json" <<'PY'
+                  import json, sys
+
+                  def walk(node):
+                      yield node
+                      for child in node.get("children", []):
+                          yield from walk(child)
+
+                  nodes = [node for root in json.load(open(sys.argv[1]))["testNodes"] for node in walk(root)]
+                  integration = [node for node in nodes if node.get("nodeType") == "Test Case" and "S3IntegrationTests" in node.get("nodeIdentifier", "")]
+                  passed = [node for node in integration if node.get("result") == "Passed"]
+                  print(f"{len(passed)} of {len(integration)} S3 integration tests passed")
+                  sys.exit(0 if integration and len(passed) == len(integration) else 1)
+                  PY
+            - name: Show the MinIO log
+              if: failure()
+              run: cat "$RUNNER_TEMP/minio.log"
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: s3-integration-xcresult
+                  path: build/S3Integration.xcresult

@@ -5,6 +5,29 @@ import Foundation
 enum UploaderStore {
     typealias StorageKey = Defaults.Key<Set<CustomUploader>?>
 
+    static func isDefaultStorage(_ key: StorageKey) -> Bool {
+        key.name == Defaults.Keys.savedCustomUploaders.name && key.suite === Defaults.Keys.savedCustomUploaders.suite
+    }
+
+    static func saveLocal(_ uploader: CustomUploader) {
+        var local = Defaults[.savedLocalUploaders]
+        local.remove(uploader)
+        local.insert(uploader)
+        Defaults[.savedLocalUploaders] = local
+        var synced = Defaults[.savedCustomUploaders] ?? []
+        if synced.remove(uploader) != nil {
+            Defaults[.savedCustomUploaders] = synced
+        }
+    }
+
+    static func separateLocalUploaders() {
+        let synced = Defaults[.savedCustomUploaders] ?? []
+        let local = synced.filter(\.isLocalOnly)
+        guard !local.isEmpty else { return }
+        Defaults[.savedLocalUploaders] = Defaults[.savedLocalUploaders].union(local)
+        Defaults[.savedCustomUploaders] = synced.subtracting(local)
+    }
+
     static func prepared(_ uploader: CustomUploader, at date: Date = .init()) -> CustomUploader {
         S3SecretStore.movingSecretToKeychain(uploader).touched(at: date)
     }
@@ -12,6 +35,10 @@ enum UploaderStore {
     @discardableResult
     static func save(_ uploader: CustomUploader, key: StorageKey = .savedCustomUploaders) -> CustomUploader {
         let stored = prepared(uploader)
+        if stored.isLocalOnly, isDefaultStorage(key) {
+            saveLocal(stored)
+            return stored
+        }
         var uploaders = Defaults[key] ?? []
         uploaders.remove(stored)
         uploaders.insert(stored)
@@ -24,6 +51,10 @@ enum UploaderStore {
         var uploaders = Defaults[key] ?? []
         for uploader in incoming {
             let stored = prepared(uploader)
+            if stored.isLocalOnly, isDefaultStorage(key) {
+                saveLocal(stored)
+                continue
+            }
             uploaders.remove(stored)
             uploaders.insert(stored)
         }
@@ -44,6 +75,9 @@ enum UploaderStore {
 
     static func delete(_ uploader: CustomUploader, key: StorageKey = .savedCustomUploaders) {
         Defaults[key] = (Defaults[key] ?? []).filter { $0.id != uploader.id }
+        if isDefaultStorage(key) {
+            Defaults[.savedLocalUploaders] = Defaults[.savedLocalUploaders].filter { $0.id != uploader.id }
+        }
         S3SecretStore.removeSecret(for: uploader.id)
     }
 
@@ -52,5 +86,8 @@ enum UploaderStore {
             S3SecretStore.removeSecret(for: uploader.id)
         }
         Defaults[key] = nil
+        if isDefaultStorage(key) {
+            Defaults[.savedLocalUploaders] = []
+        }
     }
 }

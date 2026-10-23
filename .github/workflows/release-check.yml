@@ -88,7 +88,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAG: ${{ inputs.tag }}
               run: |
-                  gh release view $TAG --repo "$GITHUB_REPOSITORY" --json body --jq .body \
+                  gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body \
                     | go run ./tools/cmd/ishare-tools release-notes build/release_notes.txt
                   cat build/release_notes.txt
 

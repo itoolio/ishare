@@ -2,7 +2,8 @@
 import Combine
 import Defaults
 import Foundation
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
+import Synchronization
 
 struct CapturedFrame: Sendable {
     static let invalid = CapturedFrame(surface: nil, contentRect: .zero, contentScale: 0, scaleFactor: 0)
@@ -14,22 +15,21 @@ struct CapturedFrame: Sendable {
     var size: CGSize { contentRect.size }
 }
 
-final class RecordingStartClock: @unchecked Sendable {
-    private let lock = NSLock()
-    private var firstFrameTime: Double?
+final class RecordingStartClock: Sendable {
+    private let firstFrameTime = Mutex<Double?>(nil)
 
     var time: Double? {
-        lock.withLock { firstFrameTime }
+        firstFrameTime.withLock { $0 }
     }
 
     func reset() {
-        lock.withLock { firstFrameTime = nil }
+        firstFrameTime.withLock { $0 = nil }
     }
 
     func mark(_ time: CMTime) {
         guard time.isNumeric else { return }
-        lock.withLock {
-            if firstFrameTime == nil { firstFrameTime = time.seconds }
+        firstFrameTime.withLock { first in
+            if first == nil { first = time.seconds }
         }
     }
 }
@@ -66,10 +66,9 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
     private var didFinishRecording = false
     private var recordingError: (any Error)?
 
-    @MainActor func startCapture(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL, showsNativeClicks: Bool) -> AsyncThrowingStream<CapturedFrame, any Error> {
+    @MainActor func startCapture(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL, showsNativeClicks: Bool, audioPlan: RecordingAudioPlan) -> AsyncThrowingStream<CapturedFrame, any Error> {
         let recordMP4 = Defaults[.recordMP4]
         let useHEVC = Defaults[.useHEVC]
-        let recordAudio = Defaults[.recordAudio]
         let recordMic = Defaults[.recordMic]
         let recordPointer = Defaults[.recordPointer]
         let microphoneID = recordMic ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
@@ -88,7 +87,7 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
             output.microphoneHandler = { [weak self] in self?.microphoneMeter.process(buffer: $0) }
 
             do {
-                configuration.capturesAudio = recordAudio
+                RecordingAudioFilter.apply(audioPlan, to: configuration)
                 configuration.captureMicrophone = recordMic
                 configuration.microphoneCaptureDeviceID = microphoneID
                 configuration.showsCursor = recordPointer
@@ -186,6 +185,10 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
 
     func recordingOutput(_: SCRecordingOutput, didFailWithError error: any Error) {
         completeFinish(error: error)
+    }
+
+    func meterSystemAudio(_ buffer: AVAudioPCMBuffer) {
+        systemAudioMeter.process(buffer: buffer)
     }
 
     func update(configuration: SCStreamConfiguration, filter: SCContentFilter) async {

@@ -1,4 +1,4 @@
-@preconcurrency import AppKit
+import AppKit
 @preconcurrency import AVFoundation
 import Defaults
 
@@ -108,16 +108,37 @@ final class CaptureSessionRunner: @unchecked Sendable {
 }
 
 private final class WebcamBubbleView: NSView {
-    override var mouseDownCanMoveWindow: Bool { true }
+    var isMovable = true
+
+    override var mouseDownCanMoveWindow: Bool { isMovable }
+}
+
+enum WebcamBubblePreviewArea {
+    static func cocoaRect(fromCGGlobal rect: CGRect, primaryScreenHeight: CGFloat) -> CGRect {
+        CGRect(x: rect.minX, y: primaryScreenHeight - rect.maxY, width: rect.width, height: rect.height)
+    }
 }
 
 @MainActor
 final class WebcamBubbleController {
     private var panel: NSPanel?
     private var runner: CaptureSessionRunner?
+    private(set) var isCompositedLater = false
 
     var windowID: CGWindowID? {
-        panel.map { CGWindowID($0.windowNumber) }
+        guard !isCompositedLater else { return nil }
+        return panel.map { CGWindowID($0.windowNumber) }
+    }
+
+    func showPreview(of session: AVCaptureSession, in area: CGRect) {
+        hide()
+        let frame = WebcamBubbleLayout.frame(diameter: Defaults[.webcamSize].diameter, corner: Defaults[.webcamCorner], in: area)
+        let panel = makePanel(frame: frame, session: session, movable: false)
+        panel.sharingType = .none
+        panel.ignoresMouseEvents = true
+        panel.orderFrontRegardless()
+        isCompositedLater = true
+        self.panel = panel
     }
 
     func show(in area: CGRect) async {
@@ -144,7 +165,7 @@ final class WebcamBubbleController {
         runner.session.commitConfiguration()
 
         let frame = WebcamBubbleLayout.frame(diameter: Defaults[.webcamSize].diameter, corner: Defaults[.webcamCorner], in: area)
-        let panel = makePanel(frame: frame, session: runner.session)
+        let panel = makePanel(frame: frame, session: runner.session, movable: true)
         panel.orderFrontRegardless()
         runner.start()
         self.runner = runner
@@ -156,19 +177,21 @@ final class WebcamBubbleController {
         runner = nil
         panel?.orderOut(nil)
         panel = nil
+        isCompositedLater = false
     }
 
-    private func makePanel(frame: CGRect, session: AVCaptureSession) -> NSPanel {
+    private func makePanel(frame: CGRect, session: AVCaptureSession, movable: Bool) -> NSPanel {
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.level = .recordingBubble
-        panel.isMovableByWindowBackground = true
+        panel.isMovableByWindowBackground = movable
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.isReleasedWhenClosed = false
 
         let view = WebcamBubbleView(frame: CGRect(origin: .zero, size: frame.size))
+        view.isMovable = movable
         let container = CALayer()
         container.frame = view.bounds
         container.cornerRadius = frame.width / 2

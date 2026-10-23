@@ -1,6 +1,7 @@
 import AppKit
 import QuickLookThumbnailing
 import SwiftUI
+import Synchronization
 
 struct ThumbnailKey: Hashable, Sendable {
     enum Source: Hashable, Sendable {
@@ -81,6 +82,13 @@ final class ThumbnailCache {
 
     func removeAll() {
         images.removeAllObjects()
+    }
+
+    func removeImages(forFile url: URL) {
+        let path = url.standardizedFileURL.path
+        for bucket in ThumbnailKey.pixelBuckets {
+            images.removeObject(forKey: ThumbnailKey(source: .file(path), requestedPixelSize: bucket).cacheKey as NSString)
+        }
     }
 
     func image(for key: ThumbnailKey) async -> NSImage? {
@@ -187,19 +195,18 @@ struct ThumbnailImage<Placeholder: View>: View {
     }
 }
 
-private final class SingleDelivery: @unchecked Sendable {
-    private let lock = NSLock()
-    private var continuation: CheckedContinuation<NSImage?, Never>?
+private final class SingleDelivery: Sendable {
+    private let continuation: Mutex<CheckedContinuation<NSImage?, Never>?>
 
     init(_ continuation: CheckedContinuation<NSImage?, Never>) {
-        self.continuation = continuation
+        self.continuation = Mutex(continuation)
     }
 
-    func deliver(_ image: NSImage?) {
-        lock.lock()
-        let pending = continuation
-        continuation = nil
-        lock.unlock()
+    func deliver(_ image: sending NSImage?) {
+        let pending = continuation.withLock { stored in
+            defer { stored = nil }
+            return stored
+        }
         pending?.resume(returning: image)
     }
 }

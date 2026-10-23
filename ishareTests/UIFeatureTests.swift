@@ -164,14 +164,27 @@ struct SettingsSearchTests {
     }
 
     @Test func searchesLocalizedKeywords() {
-        let entries = [SettingsSearchEntry(pane: .general, keywords: ["Sounds"])]
+        let entries = [SettingsSearchEntry("Sounds", pane: .general)]
         let matches = SettingsSearchIndex.matches(for: "klänge", entries: entries, localize: { $0 == "Sounds" ? "Klänge" : $0 })
         #expect(matches == [SettingsSearchMatch(pane: .general, keyword: "Sounds")])
     }
 
     @Test func extendsWithExtraEntries() {
-        let entries = SettingsSearchIndex.entries + [SettingsSearchEntry(pane: .advanced, keywords: ["Telemetry"])]
+        let entries = SettingsSearchIndex.entries + [SettingsSearchEntry("Telemetry", pane: .advanced)]
         #expect(SettingsSearchIndex.matches(for: "telemetry", entries: entries, localize: { $0 }).map(\.pane) == [.advanced])
+    }
+
+    @Test func derivesTheIndexFromWhatEachPaneDeclares() {
+        #expect(SettingsSearchIndex.entries == SettingsPane.allCases.flatMap { $0.searchable.searchEntries })
+        for pane in SettingsPane.allCases {
+            #expect(pane.searchable.searchEntries.allSatisfy { $0.pane == pane })
+        }
+    }
+
+    @Test func searchesTheTitleBeforeTheKeywords() {
+        let entries = [SettingsSearchEntry("Clipboard", pane: .general, keywords: ["Copy image to clipboard"], anchor: "general.clipboard")]
+        let matches = SettingsSearchIndex.matches(for: "clip", entries: entries, localize: { $0 })
+        #expect(matches == [SettingsSearchMatch(pane: .general, keyword: "Clipboard", anchor: "general.clipboard")])
     }
 }
 
@@ -185,7 +198,7 @@ struct OnboardingTests {
     }
 
     @Test func walksThroughAllSteps() {
-        #expect(OnboardingStep.allCases == [.permission, .uploader, .shortcuts, .afterCapture])
+        #expect(OnboardingStep.allCases == [.permission, .uploader, .shortcuts, .tryCapture, .tryEditor, .tryPalette, .afterCapture])
     }
 }
 

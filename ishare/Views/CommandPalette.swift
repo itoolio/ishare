@@ -59,8 +59,8 @@ struct CommandPaletteView: View {
         }
         .padding(.horizontal, 9)
         .frame(height: 30)
-        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.primary.opacity(contrast.fillOpacity)))
-        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Color.menuAccent.opacity(0.7), lineWidth: 1))
+        .adaptiveGlass(cornerRadius: 9, interactive: true, fallback: .fill(contrast.fillOpacity))
+        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Color.menuAccent.opacity(contrast.isHigh ? 1 : 0.7), lineWidth: contrast.isHigh ? 1.5 : 1))
     }
 
     private var results: some View {
@@ -140,7 +140,9 @@ private struct CommandPaletteRow: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
+        .contextMenu { FavoriteMenuItems(id: command.id) }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+
         .accessibilityIdentifier("menu.palette.\(command.id)")
     }
 }

@@ -1,7 +1,7 @@
-@preconcurrency import AppKit
-@preconcurrency import AVFoundation
+import AppKit
+import AVFoundation
 import Defaults
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 struct OverlaySource: Sendable {
     var windowID: CGWindowID?
@@ -50,6 +50,10 @@ final class OverlayEventRecorder {
     private var shortcutsOnly = true
     private(set) var capturesClicks = false
     private(set) var isActive = false
+
+    var webcamSession: AVCaptureSession? {
+        webcamRecorder?.session
+    }
 
     func start(source: OverlaySource, showsClicks: Bool, showsKeystrokes: Bool, shortcutsOnly: Bool, recordsWebcam: Bool) async {
         _ = await stop()
@@ -133,6 +137,8 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
     private let runner = CaptureSessionRunner()
     private let queue = DispatchQueue(label: "dev.adrian.ishare.WebcamFrameRecorder")
+
+    var session: AVCaptureSession { runner.session }
     private let url = FileManager.default.temporaryDirectory.appending(path: "ishare-webcam-\(UUID().uuidString).mov")
     private var writer: AVAssetWriter?
     private var input: AVAssetWriterInput?

@@ -7,8 +7,9 @@ struct SoundSettingsSection: View {
     private let choices = SoundPlayer.choices
 
     var body: some View {
-        Section("Sounds".localized()) {
+        Section(Self.sounds.title.localized()) {
             soundPicker("Capture sound".localized(), selection: $captureSound, identifier: "settings.sounds.capture")
+                .settingsEntry(Self.sounds)
             soundPicker("Upload complete sound".localized(), selection: $uploadCompleteSound, identifier: "settings.sounds.upload")
         }
     }
@@ -56,11 +57,12 @@ struct HistorySettingsSection: View {
     @Default(.uploadHistory) private var uploadHistory
 
     var body: some View {
-        Section("History".localized()) {
+        Section(Self.history.title.localized()) {
             Picker("Keep up to".localized(), selection: $historyLimit) {
                 ForEach(HistoryLimit.allCases) { Text($0.title).tag($0) }
             }
             .accessibilityIdentifier("settings.history.limit")
+            .settingsEntry(Self.history)
             Picker("Remove uploads older than".localized(), selection: $historyRetention) {
                 ForEach(HistoryRetention.allCases) { Text($0.title).tag($0) }
             }
@@ -72,8 +74,24 @@ struct HistorySettingsSection: View {
                 .disabled(uploadHistory.isEmpty)
                 .accessibilityIdentifier("settings.history.clear")
             }
+            .settingsEntry(Self.clearHistory)
         }
         .onChange(of: historyLimit) { applyHistoryLimits() }
         .onChange(of: historyRetention) { applyHistoryLimits() }
     }
+}
+
+extension SoundSettingsSection: SettingsSearchable {
+    static let sounds = SettingsSearchEntry(
+        "Sounds", pane: .general, keywords: ["Sound", "Capture sound", "Upload complete sound", "Mute", "Beep"], anchor: SettingsAnchor.sounds
+    )
+    static let searchEntries = [sounds]
+}
+
+extension HistorySettingsSection: SettingsSearchable {
+    static let history = SettingsSearchEntry(
+        "History", pane: .general, keywords: ["Keep up to", "Remove uploads older than", "Limit", "Retention"], anchor: SettingsAnchor.history
+    )
+    static let clearHistory = SettingsSearchEntry("Clear History", pane: .general, anchor: SettingsAnchor.clearHistory)
+    static let searchEntries = [history, clearHistory]
 }

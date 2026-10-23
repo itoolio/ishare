@@ -17,13 +17,16 @@ struct KeybindSettingsView: View {
             ("Capture Last Region:", .captureLastRegion),
             ("Capture Text:", .captureText),
             ("Interval Capture:", .intervalCapture),
-        ]),
+            ("Capture and Translate:", .captureTranslate),
+        ] + (OnDeviceModel.isAvailable ? [("Capture and Ask:", .captureAsk)] : [])),
         ("Record", [
             ("Record Screen:", .recordScreen),
             ("Record Region:", .recordRegion),
             ("Record GIF:", .recordGif),
             ("Record Region as GIF:", .recordRegionGif),
             ("Add Recording Marker:", .addRecordingMarker),
+            ("Show or Hide Notes:", .toggleRecordingNotes),
+            ("Save Instant Replay:", .saveInstantReplay),
         ]),
         ("Capture and Upload", [
             ("Capture Region:", .captureRegionForceUpload),
@@ -62,5 +65,19 @@ struct KeybindSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+extension KeybindSettingsView: SettingsSearchable {
+    static let searchEntries: [SettingsSearchEntry] = [
+        SettingsSearchEntry("Keybinds", pane: .keybinds, keywords: [
+            "Keyboard", "Shortcut", "Hotkey", "Reset All Keybinds", "Force upload", "Modifier",
+        ]),
+        shortcutsEntry,
+    ]
+
+    private static var shortcutsEntry: SettingsSearchEntry {
+        let titles = groups.flatMap { [$0.0] + $0.1.map(\.0) }
+        return SettingsSearchEntry(titles[0], pane: .keybinds, keywords: Array(titles.dropFirst()))
     }
 }

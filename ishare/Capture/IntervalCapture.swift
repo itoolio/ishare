@@ -3,7 +3,7 @@ import BezelNotification
 import Defaults
 import ImageIO
 import KeyboardShortcuts
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -114,6 +114,10 @@ enum IntervalGIF {
     }
 }
 
+enum IntervalDelivery {
+    static let kind = PostCapture.Kind.video
+}
+
 @MainActor
 final class IntervalCaptureModel: ObservableObject {
     @Published var captured = 0
@@ -196,6 +200,12 @@ enum IntervalCapture {
         }
         guard let displayID = target.screen.displayID else { return nil }
 
+        let result = await capture(plan: plan, displayID: displayID, target: target, makesGIF: makesGIF)
+        await deliver(result)
+        return result
+    }
+
+    private static func capture(plan: IntervalPlan, displayID: CGDirectDisplayID, target: (screen: NSScreen, region: CGRect?), makesGIF: Bool) async -> IntervalCaptureResult? {
         let model = IntervalCaptureModel(planned: plan.plannedFrames)
         self.model = model
         let overlays = showOverlays(model: model, screen: target.screen, region: target.region)
@@ -203,11 +213,8 @@ enum IntervalCapture {
             overlays.forEach { $0.orderOut(nil) }
             self.model = nil
         }
-
         do {
-            let result = try await run(plan: plan, displayID: displayID, region: target.region, model: model, makesGIF: makesGIF)
-            announce(result)
-            return result
+            return try await run(plan: plan, displayID: displayID, region: target.region, model: model, makesGIF: makesGIF)
         } catch {
             Log.capture.error("Interval capture failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
@@ -280,12 +287,16 @@ enum IntervalCapture {
         return windows
     }
 
-    private static func announce(_ result: IntervalCaptureResult?) {
+    private static func deliver(_ result: IntervalCaptureResult?) async {
         guard let result else { return }
+        if let gif = result.gif {
+            await CaptureSession.finish(fileURL: gif, kind: IntervalDelivery.kind)
+            return
+        }
         SoundPlayer.play(.capture)
         BezelNotification.show(messageText: String(format: "Saved %d frames".localized(), result.frames.count), icon: ToastIcon)
         if Defaults[.openInFinder] {
-            NSWorkspace.shared.activateFileViewerSelecting([result.gif ?? result.folder])
+            NSWorkspace.shared.activateFileViewerSelecting([result.folder])
         }
     }
 }

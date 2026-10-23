@@ -66,22 +66,90 @@ struct CountdownHUD: View {
     }
 }
 
+struct CountdownFocus: Equatable, Sendable {
+    let ownProcessID: pid_t
+    private(set) var appToRestore: pid_t?
+
+    init(ownProcessID: pid_t, frontmost: pid_t?) {
+        self.ownProcessID = ownProcessID
+        appToRestore = frontmost == ownProcessID ? nil : frontmost
+    }
+
+    mutating func activated(_ processID: pid_t) -> Bool {
+        guard processID != ownProcessID else { return false }
+        appToRestore = processID
+        return true
+    }
+}
+
+@MainActor
+final class CountdownKeyKeeper {
+    private let panel: NSPanel
+    private var focus: CountdownFocus
+    private var observer: NSObjectProtocol?
+    private var restored = false
+
+    init(panel: NSPanel) {
+        self.panel = panel
+        focus = CountdownFocus(ownProcessID: ProcessInfo.processInfo.processIdentifier, frontmost: NSWorkspace.shared.frontmostApplication?.processIdentifier)
+    }
+
+    func start() {
+        panel.orderFrontRegardless()
+        panel.makeKey()
+        observer = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] notification in
+            let processID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
+            MainActor.assumeIsolated {
+                guard let processID else { return }
+                self?.applicationActivated(processID)
+            }
+        }
+    }
+
+    func finish() {
+        if let observer {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            self.observer = nil
+        }
+        panel.orderOut(nil)
+        guard !restored else { return }
+        restored = true
+        restoreFocus()
+    }
+
+    private func applicationActivated(_ processID: pid_t) {
+        guard focus.activated(processID), panel.isVisible, !panel.isKeyWindow else { return }
+        panel.makeKey()
+    }
+
+    private func restoreFocus() {
+        guard let processID = focus.appToRestore,
+              let app = NSRunningApplication(processIdentifier: processID), !app.isTerminated
+        else { return }
+        if NSApp.isActive {
+            NSApp.yieldActivation(to: app)
+        }
+        app.activate()
+    }
+}
+
 @MainActor
 enum CaptureCountdown {
     static func run(seconds: Int) async -> Bool {
         guard seconds > 0 else { return true }
         let model = CountdownModel(seconds: seconds)
-        let panel = panel(for: model)
+        let keeper = CountdownKeyKeeper(panel: panel(for: model))
         let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard event.keyCode == KeyCode.escape else { return event }
             model.cancelled = true
             return nil
         }
-        panel.orderFrontRegardless()
-        panel.makeKey()
+        keeper.start()
         defer {
             if let monitor { NSEvent.removeMonitor(monitor) }
-            panel.orderOut(nil)
+            keeper.finish()
         }
         while model.remaining > 0, !model.cancelled {
             for _ in 0 ..< 10 where !model.cancelled {
@@ -91,7 +159,7 @@ enum CaptureCountdown {
                 withAnimation { model.remaining -= 1 }
             }
         }
-        panel.orderOut(nil)
+        keeper.finish()
         guard !model.cancelled else { return false }
         try? await Task.sleep(for: .milliseconds(120))
         return true
@@ -118,6 +186,8 @@ enum CaptureCountdown {
         let visibleFrame = (NSScreen.underMouse ?? NSScreen.main)?.visibleFrame ?? CGRect(origin: .zero, size: size)
         let frame = CGRect(origin: origin(for: size, pointer: pointer, visibleFrame: visibleFrame), size: size)
         let panel = HUDPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.becomesKeyOnlyIfNeeded = false
+        panel.hidesOnDeactivate = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.level = .screenSaver

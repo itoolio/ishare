@@ -16,12 +16,28 @@ enum MenuAppKitMenus {
         }
         interval.setAccessibilityIdentifier("menu.intervalCapture")
         menu.addItem(interval)
+        let translate = ClosureMenuItem(title: "Capture and Translate".localized(), symbol: "translate") {
+            MenuController.shared.perform(afterDismissing: { await CaptureTranslateFlow.run() })
+        }
+        translate.setAccessibilityIdentifier("menu.captureTranslate")
+        menu.addItem(translate)
+        if CaptureAskFlow.isAvailable {
+            let ask = ClosureMenuItem(title: "Capture and Ask".localized(), symbol: "sparkles") {
+                MenuController.shared.perform(afterDismissing: { await CaptureAskFlow.run() })
+            }
+            ask.setAccessibilityIdentifier("menu.captureAsk")
+            menu.addItem(ask)
+        }
         if CaptureSession.isRecording {
             let marker = ClosureMenuItem(title: "Add Recording Marker".localized(), symbol: "flag") {
-                AppDelegate.shared.screenRecorder.addMarker()
+                AppModel.shared.recorder.addMarker()
             }
             marker.setAccessibilityIdentifier("menu.addMarker")
             menu.addItem(marker)
+        }
+        menu.addItem(notesItem())
+        if InstantReplay.isRunning {
+            menu.addItem(instantReplayItem())
         }
         if !UploadPresets.all.isEmpty {
             menu.addItem(presetsItem())
@@ -45,11 +61,36 @@ enum MenuAppKitMenus {
         let onboarding = ClosureMenuItem(title: "Welcome Guide…".localized(), handler: openOnboarding)
         onboarding.setAccessibilityIdentifier("menu.onboarding")
         menu.addItem(onboarding)
+        let whatsNew = ClosureMenuItem(title: "What’s New…".localized()) {
+            MenuController.shared.dismiss()
+            WhatsNewWindow.show()
+        }
+        whatsNew.setAccessibilityIdentifier("menu.whatsNew")
+        menu.addItem(whatsNew)
+
         menu.addItem(.separator())
         menu.addItem(ClosureMenuItem(title: "Quit".localized(), keyEquivalent: "q") {
             NSApplication.shared.terminate(nil)
         })
         return menu
+    }
+
+    static func notesItem() -> NSMenuItem {
+        let title = RecordingNotesController.shared.isVisible ? "Hide Notes" : "Show Notes"
+        let item = ClosureMenuItem(title: title.localized(), symbol: "list.bullet.rectangle") {
+            AppModel.shared.recorder.toggleNotes()
+        }
+        item.setAccessibilityIdentifier("menu.recordingNotes")
+        return item
+    }
+
+    static func instantReplayItem() -> NSMenuItem {
+        let item = ClosureMenuItem(title: "Save Instant Replay".localized(), symbol: "gobackward") {
+            MenuController.shared.perform(afterDismissing: { await InstantReplay.shared.save() })
+        }
+        item.toolTip = "Instant replay is buffering the last moments of your main display".localized()
+        item.setAccessibilityIdentifier("menu.instantReplay")
+        return item
     }
 
     static func presetsItem() -> NSMenuItem {

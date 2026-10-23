@@ -57,6 +57,8 @@ enum UploadRequestMethod: String, Codable, CaseIterable, Sendable {
 enum UploaderKind: String, Codable, CaseIterable, Sendable {
     case custom
     case s3
+    case folder
+    case photos
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -65,6 +67,28 @@ enum UploaderKind: String, Codable, CaseIterable, Sendable {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid uploader type: \(rawValue)")
         }
         self = kind
+    }
+
+    var isLocal: Bool {
+        self == .folder || self == .photos
+    }
+
+    var symbolName: String {
+        switch self {
+        case .custom: "server.rack"
+        case .s3: "externaldrive.connected.to.line.below"
+        case .folder: "folder"
+        case .photos: "photo.on.rectangle"
+        }
+    }
+
+    var titleKey: String {
+        switch self {
+        case .custom: "Custom HTTP uploader"
+        case .s3: "S3-compatible storage"
+        case .folder: "Folder"
+        case .photos: "Photos"
+        }
     }
 }
 
@@ -83,13 +107,17 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
     var s3: S3Configuration?
     var requestMethod: UploadRequestMethod?
     var modifiedAt: Date?
+    var linkOptions: LinkOptionsSpec?
+    var folder: FolderDestination?
+    var photos: PhotosDestination?
 
     init(
         id: UUID = UUID(), name: String, requestURL: String, headers: [String: String]?,
         formData: [String: String]?, fileFormName: String?, requestBodyType: RequestBodyType? = nil,
         responseURL: String, deletionURL: String? = nil, deleteRequestType: DeleteRequestType? = nil,
         uploaderType: UploaderKind? = nil, s3: S3Configuration? = nil, requestMethod: UploadRequestMethod? = nil,
-        modifiedAt: Date? = nil
+        modifiedAt: Date? = nil, linkOptions: LinkOptionsSpec? = nil, folder: FolderDestination? = nil,
+        photos: PhotosDestination? = nil
     ) {
         self.id = id
         self.name = name
@@ -105,6 +133,23 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         self.s3 = s3
         self.requestMethod = requestMethod
         self.modifiedAt = modifiedAt
+        self.linkOptions = linkOptions
+        self.folder = folder
+        self.photos = photos
+    }
+
+    static func folder(id: UUID = UUID(), name: String, destination: FolderDestination) -> CustomUploader {
+        CustomUploader(
+            id: id, name: name, requestURL: "", headers: nil, formData: nil, fileFormName: nil,
+            responseURL: "", uploaderType: .folder, folder: destination
+        )
+    }
+
+    static func photos(id: UUID = UUID(), name: String, destination: PhotosDestination) -> CustomUploader {
+        CustomUploader(
+            id: id, name: name, requestURL: "", headers: nil, formData: nil, fileFormName: nil,
+            responseURL: "", uploaderType: .photos, photos: destination
+        )
     }
 
     static func s3(id: UUID = UUID(), name: String, configuration: S3Configuration) -> CustomUploader {
@@ -129,6 +174,9 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         case s3
         case requestMethod = "requestmethod"
         case modifiedAt = "modifiedat"
+        case linkOptions = "linkoptions"
+        case folder
+        case photos
     }
 
     init(from decoder: any Decoder) throws {
@@ -136,10 +184,13 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
         id = try container.decodeDynamicIfPresent(UUID.self, forKey: .key(named: "id")) ?? UUID()
         name = try container.decodeDynamic(String.self, forKey: .key(named: "name"))
         s3 = try container.decodeDynamicIfPresent(S3Configuration.self, forKey: .key(named: "s3"))
+        folder = try container.decodeDynamicIfPresent(FolderDestination.self, forKey: .key(named: "folder"))
+        photos = try container.decodeDynamicIfPresent(PhotosDestination.self, forKey: .key(named: "photos"))
+        linkOptions = try container.decodeDynamicIfPresent(LinkOptionsSpec.self, forKey: .key(named: "linkoptions"))
         let declaredKind = try container.decodeDynamicIfPresent(UploaderKind.self, forKey: .key(named: "uploadertype"))
-        uploaderType = declaredKind ?? (s3 == nil ? nil : .s3)
-        let isS3 = uploaderType == .s3
-        if isS3 {
+        uploaderType = declaredKind ?? Self.inferredKind(s3: s3, folder: folder, photos: photos)
+        let needsRequest = uploaderType == nil || uploaderType == .custom
+        if !needsRequest {
             requestURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "requesturl")) ?? ""
             responseURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "responseurl")) ?? ""
         } else {
@@ -158,8 +209,20 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
 
     var kind: UploaderKind { uploaderType ?? .custom }
 
+    private static func inferredKind(s3: S3Configuration?, folder: FolderDestination?, photos: PhotosDestination?) -> UploaderKind? {
+        if s3 != nil { return .s3 }
+        if folder != nil { return .folder }
+        if photos != nil { return .photos }
+        return nil
+    }
+
     static var allCases: [CustomUploader] {
-        Defaults[.savedCustomUploaders]?.sorted(by: { $0.name.localizedStandardCompare($1.name) == .orderedAscending }) ?? []
+        (Defaults[.savedCustomUploaders] ?? []).union(Defaults[.savedLocalUploaders])
+            .sorted(by: { $0.name.localizedStandardCompare($1.name) == .orderedAscending })
+    }
+
+    var isLocalOnly: Bool {
+        kind == .folder || kind == .photos
     }
 
     static func == (lhs: CustomUploader, rhs: CustomUploader) -> Bool {
@@ -197,7 +260,7 @@ struct CustomUploader: Codable, Hashable, Equatable, CaseIterable, Identifiable,
             id: id, name: newName, requestURL: requestURL, headers: headers, formData: formData, fileFormName: fileFormName,
             requestBodyType: requestBodyType, responseURL: responseURL, deletionURL: deletionURL,
             deleteRequestType: deleteRequestType, uploaderType: uploaderType, s3: s3, requestMethod: requestMethod,
-            modifiedAt: modifiedAt
+            modifiedAt: modifiedAt, linkOptions: linkOptions, folder: folder, photos: photos
         )
     }
 

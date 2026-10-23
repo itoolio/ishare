@@ -145,6 +145,7 @@ struct CustomShortenerEditor: View {
 struct UploadPresetsSettings: View {
     @Default(.uploadPresets) var presets
     @Default(.savedCustomUploaders) var savedCustomUploaders
+    @Default(.savedLocalUploaders) var savedLocalUploaders
     @State private var editing: UploadPreset?
     @State private var pendingDeletion: UploadPreset?
 

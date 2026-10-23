@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Synchronization
 
 struct RecordedResponse: Sendable, Equatable {
     let statusCode: Int?
@@ -7,20 +8,19 @@ struct RecordedResponse: Sendable, Equatable {
     let body: Data
 }
 
-final class ResponseRecorder: @unchecked Sendable {
-    private var recorded: [RecordedResponse] = []
-    private let lock = NSLock()
+final class ResponseRecorder: Sendable {
+    private let recorded = Mutex<[RecordedResponse]>([])
 
     func record(_ response: HTTPURLResponse?, body: Data) {
         let headers = (response?.allHeaderFields ?? [:]).reduce(into: [String: String]()) { result, entry in
             result[String(describing: entry.key)] = String(describing: entry.value)
         }
         let entry = RecordedResponse(statusCode: response?.statusCode, headers: headers, body: body)
-        lock.withLock { recorded.append(entry) }
+        recorded.withLock { $0.append(entry) }
     }
 
     var responses: [RecordedResponse] {
-        lock.withLock { recorded }
+        recorded.withLock { $0 }
     }
 }
 

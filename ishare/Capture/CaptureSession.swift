@@ -1,4 +1,4 @@
-@preconcurrency import AppKit
+import AppKit
 import BezelNotification
 import Defaults
 import Foundation
@@ -9,6 +9,7 @@ struct CaptureOptions: Sendable {
     var destinations: [UploadTarget]?
     var preset: UploadPreset?
     var delay: Int?
+    var resultHandler: (@MainActor @Sendable (URL) -> Void)?
 
     static let standard = CaptureOptions()
 }
@@ -19,7 +20,7 @@ enum CaptureSession {
     private static var pendingRecording: (gif: Bool, options: CaptureOptions)?
 
     static var isRecording: Bool {
-        AppDelegate.shared.screenRecorder.isRunning
+        AppModel.shared.recorder.isRunning
     }
 
     static func captureImage(_ type: CaptureType, display: Int = 1, options: CaptureOptions = .standard) async {
@@ -44,7 +45,13 @@ enum CaptureSession {
         do {
             let fileURL = try ImageCaptureFlow.save(captured)
             Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
+            if let resultHandler = options.resultHandler {
+                ToastPlacement.capturedDisplayID = nil
+                resultHandler(fileURL)
+                return
+            }
             await finish(fileURL: fileURL, kind: .image, options: options)
+
         } catch {
             Log.capture.error("Saving capture failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
@@ -63,7 +70,7 @@ enum CaptureSession {
     }
 
     private static func startRecording(region: Bool) async {
-        let recorder = AppDelegate.shared.screenRecorder
+        let recorder = AppModel.shared.recorder
         guard await recorder.canRecord else {
             BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
             return
@@ -90,21 +97,25 @@ enum CaptureSession {
         let wantsDestinationChoice = DestinationChooser.isRequested()
         Task { @MainActor in
             ContentSharingPickerManager.shared.deactivatePicker()
-            switch await AppDelegate.shared.screenRecorder.stop() {
+            switch await AppModel.shared.recorder.stop() {
             case let .success(url):
                 var options = pending.options
                 if wantsDestinationChoice, let target = DestinationChooser.choose() {
                     options.destinations = [target]
                 }
-                await finishRecording(url, gif: pending.gif, options: options)
+                await finishRecording(url, gif: pending.gif, options: options, sidecar: AppModel.shared.recorder.takeSidecar())
             case let .failure(error):
                 Log.capture.error("Stopping the recording failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
 
-    private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions) async {
-        let sidecar = AppDelegate.shared.screenRecorder.takeSidecar()
+    static func finishInstantReplay(_ url: URL) async {
+        await finishRecording(url, gif: false, options: .standard, sidecar: .empty)
+    }
+
+    private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions, sidecar: RecordingSidecar) async {
+        await RecordingPostProcessor.mergeAppAudio(url, sidecar: sidecar)
         await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
         var fileURL = url
         var markers = sidecar.markers
@@ -207,14 +218,19 @@ enum CaptureSession {
         }
         let uploadURL = kind == .video ? await PostCapture.compressedIfNeeded(fileURL) : redactedURL ?? fileURL
         let localFileURL = keepsLocalFile ? fileURL : nil
+        let altText = kind == .image && AltText.isEnabled ? Task { await AltText.generate(for: uploadURL) } : nil
+        var results: [Result<UploadOutcome, any Error>] = []
         if let destinations = options.destinations {
             for target in destinations {
-                await UploadCoordinator.upload(fileURL: uploadURL, target: target, localFileURL: localFileURL)
+                results.append(await UploadCoordinator.upload(fileURL: uploadURL, target: target, localFileURL: localFileURL))
             }
         } else if let preset = options.preset {
-            await UploadCoordinator.upload(fileURL: uploadURL, preset: preset, localFileURL: localFileURL)
+            results.append(await UploadCoordinator.upload(fileURL: uploadURL, preset: preset, localFileURL: localFileURL))
         } else {
-            await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: localFileURL)
+            results.append(await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: localFileURL))
+        }
+        if let altText, let text = await altText.value {
+            AltText.store(text, forUploadsAt: results.compactMap { try? $0.get().url })
         }
         if let redactedURL {
             Redactor.discard(redactedURL)

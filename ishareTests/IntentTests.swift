@@ -43,7 +43,7 @@ struct IntentTests {
 
     @Test func switchesTheActiveUploader() async throws {
         try await withUploaders {
-            var intent = SetUploaderIntent()
+            let intent = SetUploaderIntent()
             intent.uploader = UploaderEntity(uploader)
             _ = try await intent.perform()
             #expect(Defaults[.uploadType] == .CUSTOM)
@@ -56,8 +56,8 @@ struct IntentTests {
     }
 
     @Test func rejectsUnknownUploaders() async throws {
-        try await withUploaders {
-            var intent = SetUploaderIntent()
+        await withUploaders {
+            let intent = SetUploaderIntent()
             intent.uploader = UploaderEntity(id: UUID().uuidString, name: "gone", kind: "Custom")
             await #expect(throws: IntentError.self) {
                 _ = try await intent.perform()
@@ -69,7 +69,7 @@ struct IntentTests {
         UploadService.session = StubURLProtocol.makeSession()
         StubURLProtocol.reset { _ in StubResponse(body: Data(#"{"url": "https://cdn.example.com/intent.png"}"#.utf8)) }
         try await withUploaders {
-            var intent = UploadFileIntent()
+            let intent = UploadFileIntent()
             intent.file = IntentFile(data: Data([0x89, 0x50, 0x4E, 0x47]), filename: "shot.png", type: .png)
             intent.uploader = UploaderEntity(uploader)
             _ = try await intent.perform()

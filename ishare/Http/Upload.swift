@@ -9,32 +9,47 @@ enum UploadType: String, CaseIterable, Identifiable, Codable, Defaults.Serializa
     var id: Self { self }
 }
 
-struct UploadEnvironment {
-    var recordHistory: @MainActor (HistoryItem) -> Void
-    var notify: @MainActor (String) -> Void
-    var enqueue: @MainActor (URL, UploadTarget, String?, any Error) throws -> Void
-    var deliver: @MainActor (URL) -> Void
-    var showsProgress = true
+@MainActor
+protocol UploadEnvironment {
+    var showsProgress: Bool { get }
+    func recordHistory(_ item: HistoryItem)
+    func notify(_ message: String)
+    func enqueue(_ fileURL: URL, target: UploadTarget, localPath: String?, error: any Error) throws
+    func deliver(_ url: URL)
+    func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution
+}
 
-    @MainActor static let live = UploadEnvironment(
-        recordHistory: { addToUploadHistory($0) },
-        notify: { BezelNotification.show(messageText: $0, icon: ToastIcon) },
-        enqueue: { fileURL, target, localPath, error in
-            try UploadQueue.shared.enqueue(fileURL: fileURL, target: target, localPath: localPath, error: error)
-        },
-        deliver: { url in
-            let actions = UploadPlan.deliveryActions(
-                copyURL: Defaults[.copyURLAfterUpload], copyImage: Defaults[.copyImageToClipboard], openURL: Defaults[.openURLAfterUpload]
-            )
-            if actions.copy {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(url.absoluteString, forType: .string)
-            }
-            if actions.open {
-                NSWorkspace.shared.open(url)
-            }
+struct LiveUploadEnvironment: UploadEnvironment {
+    var showsProgress: Bool { true }
+
+    func recordHistory(_ item: HistoryItem) {
+        addToUploadHistory(item)
+    }
+
+    func notify(_ message: String) {
+        BezelNotification.show(messageText: message, icon: ToastIcon)
+    }
+
+    func enqueue(_ fileURL: URL, target: UploadTarget, localPath: String?, error: any Error) throws {
+        try UploadQueue.shared.enqueue(fileURL: fileURL, target: target, localPath: localPath, error: error)
+    }
+
+    func deliver(_ url: URL) {
+        let actions = UploadPlan.deliveryActions(
+            copyURL: Defaults[.copyURLAfterUpload], copyImage: Defaults[.copyImageToClipboard], openURL: Defaults[.openURLAfterUpload]
+        )
+        if actions.copy {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(url.absoluteString, forType: .string)
         }
-    )
+        if actions.open {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution {
+        await LinkOptionsResolver.resolve(for: target)
+    }
 }
 
 enum UploadPlan {
@@ -51,6 +66,10 @@ enum UploadPlan {
         results.contains { if case .success = $0 { true } else { false } }
     }
 
+    static func hasShareableSuccess(_ results: [Result<UploadOutcome, any Error>]) -> Bool {
+        results.contains { (try? $0.get().deliveredURL) != nil }
+    }
+
     static func deliveryActions(copyURL: Bool, copyImage: Bool, openURL: Bool) -> (copy: Bool, open: Bool) {
         (copyURL && !copyImage, openURL)
     }
@@ -58,7 +77,7 @@ enum UploadPlan {
 
 @MainActor
 enum UploadCoordinator {
-    static var environment = UploadEnvironment.live
+    static var environment: any UploadEnvironment = LiveUploadEnvironment()
 
     static func currentTarget() -> UploadTarget? {
         switch Defaults[.uploadType] {
@@ -128,14 +147,19 @@ enum UploadCoordinator {
         }
         let count = Double(targets.count)
         for (index, target) in targets.enumerated() {
+            guard case let .use(linkChoice) = await environment.resolveLinkChoice(for: target) else {
+                environment.notify("Upload cancelled".localized())
+                results.append(.failure(UploadFailure.cancelled))
+                continue
+            }
             do {
-                var outcome = try await UploadService.upload(fileURL: fileURL, to: target) { fraction in
+                var outcome = try await UploadService.upload(fileURL: fileURL, to: target, linkChoice: linkChoice) { fraction in
                     Task { @MainActor in
                         progressIndicator?.updateProgress(fraction: (Double(index) + fraction) / count)
                     }
                 }
                 Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
-                if !UploadPlan.hasSuccess(results) {
+                if !UploadPlan.hasShareableSuccess(results), outcome.canBeShortened {
                     outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: shortener)
                 }
                 record(outcome, localFileURL: localFileURL)
@@ -150,9 +174,13 @@ enum UploadCoordinator {
 
     static func completeQueued(_ outcome: UploadOutcome, localFileURL: URL?) async {
         var outcome = outcome
-        outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: Defaults[.urlShortener])
+        if outcome.canBeShortened {
+            outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: Defaults[.urlShortener])
+        }
         record(outcome, localFileURL: localFileURL)
-        deliver(outcome.deliveredURL)
+        if let url = outcome.deliveredURL {
+            deliver(url)
+        }
     }
 
     static func handleFailure(_ error: any Error, fileURL: URL, target: UploadTarget, localFileURL: URL?) {
@@ -160,7 +188,7 @@ enum UploadCoordinator {
         let failure = error as? UploadFailure
         if case let .unsupportedFile(destination, fileExtension) = failure {
             environment.notify(String(format: "%@ can't host .%@ files. Choose a custom uploader instead.".localized(), destination, fileExtension))
-        } else if failure?.isRetryable == true, (try? environment.enqueue(fileURL, target, localFileURL?.path, error)) != nil {
+        } else if failure?.isRetryable == true, (try? environment.enqueue(fileURL, target: target, localPath: localFileURL?.path, error: error)) != nil {
             environment.notify("Upload failed, ishare will retry it later".localized())
         } else {
             environment.notify("Upload failed".localized())
@@ -174,13 +202,14 @@ enum UploadCoordinator {
     static func record(_ outcome: UploadOutcome, localFileURL: URL?) {
         environment.recordHistory(
             HistoryItem(
-                fileUrl: outcome.url.absoluteString,
+                fileUrl: outcome.historyURL,
                 deletionUrl: outcome.deletionURL,
                 uploaderId: outcome.uploaderID,
                 s3Key: outcome.s3Key,
                 localPath: localFileURL?.path,
                 date: Date(),
-                shortUrl: outcome.shortURL?.absoluteString
+                shortUrl: outcome.shortURL?.absoluteString,
+                localIdentifier: outcome.localIdentifier
             )
         )
     }

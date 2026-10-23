@@ -1,0 +1,45 @@
+version: 2
+updates:
+    - package-ecosystem: github-actions
+      directory: /
+      target-branch: dev
+      schedule:
+          interval: weekly
+      commit-message:
+          prefix: ci
+      groups:
+          github-actions:
+              update-types: [minor, patch]
+
+    - package-ecosystem: gomod
+      directory: /tools
+      target-branch: dev
+      schedule:
+          interval: weekly
+      commit-message:
+          prefix: build
+      groups:
+          go:
+              update-types: [minor, patch]
+
+    - package-ecosystem: npm
+      directory: /website
+      target-branch: dev
+      schedule:
+          interval: weekly
+      commit-message:
+          prefix: build
+      groups:
+          website:
+              update-types: [minor, patch]
+
+    - package-ecosystem: bundler
+      directory: /
+      target-branch: dev
+      schedule:
+          interval: weekly
+      commit-message:
+          prefix: build
+      groups:
+          fastlane:
+              update-types: [minor, patch]

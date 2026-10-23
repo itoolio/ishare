@@ -26,6 +26,9 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
     case permission
     case uploader
     case shortcuts
+    case tryCapture
+    case tryEditor
+    case tryPalette
     case afterCapture
 
     var id: Self { self }
@@ -35,6 +38,9 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
         case .permission: "Allow Screen Recording"
         case .uploader: "Choose Where to Upload"
         case .shortcuts: "Capture from Anywhere"
+        case .tryCapture: "Take Your First Capture"
+        case .tryEditor: "Mark It Up"
+        case .tryPalette: "Find Any Action"
         case .afterCapture: "After Every Capture"
         }
     }
@@ -44,6 +50,9 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
         case .permission: "ishare needs screen recording access to take screenshots and recordings."
         case .uploader: "Use Imgur right away, import an .iscu file or set up your own server."
         case .shortcuts: "These shortcuts work in every app. Change them any time in Settings."
+        case .tryCapture: "Select a region of your screen to see how capturing works."
+        case .tryEditor: "Open the capture in the editor to add arrows, text, blur and more."
+        case .tryPalette: "The command palette runs any action from the keyboard."
         case .afterCapture: "Pick what happens automatically once you take a screenshot or recording."
         }
     }
@@ -53,13 +62,17 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
         case .permission: "lock.shield"
         case .uploader: "icloud.and.arrow.up"
         case .shortcuts: "command"
+        case .tryCapture: "rectangle.dashed"
+        case .tryEditor: "pencil.and.scribble"
+        case .tryPalette: "magnifyingglass"
         case .afterCapture: "wand.and.stars"
         }
     }
 }
 
 struct OnboardingView: View {
-    @State private var step: OnboardingStep = .permission
+    @State private var step: OnboardingStep = .resumed(from: Defaults[.onboardingStep])
+    @StateObject private var trials = OnboardingTrialModel()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -72,6 +85,9 @@ struct OnboardingView: View {
                 case .permission: OnboardingPermissionStep()
                 case .uploader: OnboardingUploaderStep()
                 case .shortcuts: OnboardingShortcutsStep()
+                case .tryCapture: OnboardingTryCaptureStep(model: trials)
+                case .tryEditor: OnboardingTryEditorStep(model: trials)
+                case .tryPalette: OnboardingTryPaletteStep(model: trials)
                 case .afterCapture: OnboardingAfterCaptureStep()
                 }
             }
@@ -82,10 +98,13 @@ struct OnboardingView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)
         }
-        .frame(width: 560, height: 480)
+        .frame(width: 580, height: 560)
         .background(.background)
         .onAppear {
             NSApp.activate(ignoringOtherApps: true)
+        }
+        .onChange(of: step) { _, newStep in
+            Defaults[.onboardingStep] = newStep.rawValue
         }
         .onDisappear {
             Defaults[.hasCompletedOnboarding] = true
@@ -127,6 +146,11 @@ struct OnboardingView: View {
             }
             .accessibilityHidden(true)
             Spacer()
+            if step.trial.map({ !trials.isCompleted($0) }) == true, let next = OnboardingStep(rawValue: step.rawValue + 1) {
+                Button("Skip This Step".localized()) { withAnimation(.snappy) { step = next } }
+                    .buttonStyle(.link)
+                    .accessibilityIdentifier("onboarding.skipStep")
+            }
             if let previous = OnboardingStep(rawValue: step.rawValue - 1) {
                 Button("Back".localized()) { withAnimation(.snappy) { step = previous } }
                     .accessibilityIdentifier("onboarding.back")
@@ -146,8 +170,10 @@ struct OnboardingView: View {
 
     private func finish() {
         Defaults[.hasCompletedOnboarding] = true
+        Defaults[.onboardingStep] = 0
         dismiss()
     }
+
 }
 
 struct OnboardingPermissionStep: View {
@@ -192,6 +218,7 @@ struct OnboardingPermissionStep: View {
 }
 
 struct OnboardingUploaderStep: View {
+    @EnvironmentObject private var app: AppModel
     @Default(.uploadDestination) private var uploadDestination
 
     var body: some View {
@@ -224,7 +251,7 @@ struct OnboardingUploaderStep: View {
                     isSelected: false
                 )
             } preAction: {
-                SettingsNavigator.shared.pane = .uploaders
+                app.settings.pane = .uploaders
                 NSApp.activate(ignoringOtherApps: true)
             } postAction: {}
                 .buttonStyle(.plain)

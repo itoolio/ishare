@@ -40,7 +40,8 @@ struct CaptureSource: Hashable, Sendable {
 @MainActor
 enum ImageCaptureFlow {
     static func capture(type: CaptureType, display: Int = 1, delay: Int = 0) async -> CapturedImage? {
-        await withCaptureContent { content in
+        if let fixture = ScreenshotMode.fixtureCapture() { return fixture }
+        return await withCaptureContent { content in
             switch type {
             case .REGION, .TEXT:
                 try await captureRegion(content: content, delay: delay)

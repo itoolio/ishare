@@ -1,0 +1,44 @@
+ishare es la utilidad definitiva de captura de pantalla para macOS, diseñada pensando en la sencillez y la eficiencia.
+
+CAPTURA LO QUE QUIERAS
+• Captura una región con un selector preciso, una lupa de píxeles con coordenadas y colores, y una herramienta de medición
+• Captura cualquier ventana con o sin sombra, o una pantalla completa, y repite tu última región con un solo atajo
+• La captura con desplazamiento une páginas y documentos largos en una sola imagen
+• Añade a las capturas de ventanas un fondo degradado con margen, esquinas redondeadas y sombra
+• Difumina las apps que elijas y oculta la barra de menús automáticamente para proteger tu privacidad
+• Copia texto de cualquier parte de la pantalla con el reconocimiento de texto en el dispositivo, y enlaces de códigos QR
+• Temporizador, capturas por intervalos y perfiles de captura por app
+• Todo funciona con ScreenCaptureKit, rápido y privado
+
+GRABA
+• Graba una pantalla, una ventana o una región que dibujes
+• Muestra clics, pulsaciones de teclas y una burbuja de cámara web en tus grabaciones
+• Graba el audio del sistema y tu micrófono con medidores de nivel en directo
+• Recorta las grabaciones antes de guardarlas, añade marcadores de capítulo y exporta a MP4, MOV, GIF o audio
+• Genera subtítulos en el dispositivo, como archivo .srt o incrustados en el vídeo
+• Elige resolución, frecuencia de fotogramas, HEVC, HDR y compresión automática antes de subir
+
+ANOTA
+• Flechas de varios estilos, líneas, formas, resaltados, lápiz, rotulador y texto
+• Pasos numerados, sellos de emoji y símbolos, foco, desenfoque y pixelado
+• Recorte con tiradores y proporciones predefinidas, zoom y desplazamiento, una barra lateral de capas y plantillas reutilizables
+• Pulsa Listo y se ejecutan tus acciones tras la captura: copiar, guardar, compartir y subir
+
+SUBE A CUALQUIER SITIO
+• Imgur listo para usar
+• Servicios de subida personalizados para chibisafe, Zipline, copyparty, webhooks de Discord y tu propio servidor, además de importación de archivos .sxcu de ShareX
+• Cualquier almacenamiento compatible con S3, con enlaces que caducan opcionales y secretos guardados en el llavero
+• Sube a varios destinos a la vez o elige uno por captura
+• Sube fragmentos de texto, vigila una carpeta en busca de archivos nuevos y reintenta automáticamente las subidas fallidas
+• Ajustes de subida predefinidos con sus propios atajos, un acortador de URL y ocultación automática de texto confidencial
+• En los Mac con Apple Intelligence, un asistente crea servicios de subida a partir de una conversación
+
+TODO BAJO CONTROL
+• Un menú compacto y personalizable con paleta de comandos, subidas recientes y previsualizaciones
+• Un widget de Subidas recientes y un control de captura en el Centro de control
+• Suelta archivos en el icono de la barra de menús o usa “Subir con ishare” en el Finder
+• Historial de subidas con búsqueda, filtros y eliminación en el servidor
+• Atajos de teclado globales, acciones de Atajos y una extensión para compartir
+• Copia de seguridad y restauración de todos los ajustes y servicios de subida en un solo archivo
+
+Un diseño Liquid Glass en macOS 26, opciones de sonido, una guía de bienvenida y traducciones a 11 idiomas completan el conjunto.

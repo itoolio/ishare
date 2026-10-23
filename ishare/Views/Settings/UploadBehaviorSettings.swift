@@ -8,6 +8,7 @@ struct UploadBehaviorSettings: View {
     @Default(.additionalUploadDestinations) var additionalUploadDestinations
     @Default(.destinationChooserModifier) var destinationChooserModifier
     @Default(.savedCustomUploaders) var savedCustomUploaders
+    @Default(.savedLocalUploaders) var savedLocalUploaders
 
     private var destinations: [(title: String, destination: UploadDestination)] {
         [("Imgur", UploadDestination.builtIn(.IMGUR))] + CustomUploader.allCases.map { ($0.name, UploadDestination.custom($0.id)) }

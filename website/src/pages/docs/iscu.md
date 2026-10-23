@@ -44,6 +44,32 @@ Wrap JSON paths from the response in double braces. Nested objects use dots and 
 
 Every upload also sends an `x-file-name` header with the original file name.
 
+### Password-protected and expiring links
+
+Services that can protect a link with a password or delete it after a while describe that with an optional `linkOptions` block. ishare then lets you pick a password and an expiry for each upload: set the defaults in the uploader editor, or turn on **Ask every time** to choose them in a prompt before every upload to that uploader. The default password is stored in your Keychain, never in the `.iscu` file.
+
+```json
+{
+  "name": "Zipline",
+  "requestURL": "https://zipline.example.com/api/upload",
+  "headers": { "Authorization": "API_KEY" },
+  "responseURL": "{{files[0].url}}",
+  "linkOptions": {
+    "password": { "field": "x-zipline-password", "location": "header" },
+    "expiry": { "field": "x-zipline-deletes-at", "location": "header", "format": "iso8601", "template": "date={{value}}" }
+  }
+}
+```
+
+| Property | Required | Description |
+| --- | --- | --- |
+| `password.field`, `expiry.field` | yes | Name of the form field, header or query parameter. |
+| `location` | no | `form` (default, multipart field), `header` or `query`. `form` needs a multipart body. |
+| `expiry.format` | no | `seconds` (default, seconds from now), `minutes` (minutes from now, rounded up), `iso8601` (UTC date such as `2026-10-23T12:00:00Z`) or `timestamp` (Unix seconds). |
+| `template` | no | Wraps the value, for example `date={{value}}` or `{{value}}m`. Must contain `{{value}}`. |
+
+Either `password` or `expiry` can be left out. Nothing is sent when you upload without a password or with links that never expire.
+
 ## S3-compatible storage
 
 Set `uploaderType` to `s3` to upload with AWS Signature Version 4. This works with AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2, MinIO and other S3-compatible services.
@@ -79,6 +105,46 @@ Set `uploaderType` to `s3` to upload with AWS Signature Version 4. This works wi
 Key templates support `{{filename}}`, `{{name}}`, `{{ext}}`, `{{uuid}}`, `{{random}}`, `{{timestamp}}`, `{{date}}` (`yyyy/MM/dd`), `{{year}}`, `{{month}}` and `{{day}}`. Public URL templates support `{{key}}`, `{{rawkey}}`, `{{bucket}}`, `{{region}}`, `{{host}}` and `{{endpoint}}`.
 
 Deleting an S3 upload from the history window sends a signed `DELETE` for its key.
+
+## Local destinations
+
+Folder and Photos uploaders keep captures on your Mac instead of uploading them. They can be the default uploader, an extra destination or part of an upload preset. Create them in **Settings → Uploaders → Create**.
+
+### Folder
+
+```json
+{
+  "name": "Website folder",
+  "uploaderType": "folder",
+  "folder": {
+    "path": "~/Sites/screenshots",
+    "subfolderTemplate": "{{date}}",
+    "publicURL": "https://example.com/screenshots/{{path}}"
+  }
+}
+```
+
+| Property | Required | Description |
+| --- | --- | --- |
+| `path` | yes | The folder captures are copied into. Choose it again with **Choose…** after importing so ishare is allowed to write to it. |
+| `subfolderTemplate` | no | Subfolder for each capture. Supports the same placeholders as S3 key templates, for example `{{date}}` or `{{year}}/{{month}}`. |
+| `publicURL` | no | Link to copy for folders that a web server or sync service publishes. Supports `{{filename}}`, `{{path}}` (subfolder and file name) and `{{subfolder}}`. Without it, ishare copies the `file://` URL. |
+
+Files with the same name get a number appended instead of being replaced. Deleting the upload from the history moves the copy to the Trash.
+
+**iCloud Drive** is a folder uploader that starts the folder picker in iCloud Drive. Choose iCloud Drive or a folder inside it and iCloud syncs the captures to your other devices.
+
+### Photos
+
+```json
+{
+  "name": "Photos",
+  "uploaderType": "photos",
+  "photos": { "album": "ishare" }
+}
+```
+
+Captures are added to the album named by `album`, which is created when it doesn't exist. Use `"album": ""` to add them to the library only. ishare asks for Photos access when you create the uploader. Apps can't create shared albums or add to them, so pick a regular album and share it from Photos. Photos uploads have no link; the history keeps a reference to the photo, and deleting the upload there removes it from Photos.
 
 ## Shortcuts
 

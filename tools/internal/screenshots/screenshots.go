@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/itoolio/ishare/tools/internal/locales"
 )
 
 const (
@@ -47,10 +49,15 @@ func ParseTargets(arguments []string) ([]Target, error) {
 	if len(arguments) == 0 {
 		return []Target{{Locale: "en-US", Language: "en"}}, nil
 	}
+	if len(arguments) == 1 && arguments[0] == "all" {
+		return AllTargets(), nil
+	}
 	targets := make([]Target, 0, len(arguments))
 	for _, argument := range arguments {
 		locale, language, explicit := strings.Cut(argument, ":")
-		if !explicit {
+		if known, ok := locales.ByAppStore(locale); ok && !explicit {
+			language = known.Catalog
+		} else if !explicit {
 			language, _, _ = strings.Cut(locale, "-")
 		}
 		if locale == "" || language == "" || strings.ContainsAny(locale, `/\`) {
@@ -59,6 +66,14 @@ func ParseTargets(arguments []string) ([]Target, error) {
 		targets = append(targets, Target{Locale: locale, Language: language})
 	}
 	return targets, nil
+}
+
+func AllTargets() []Target {
+	targets := make([]Target, len(locales.All))
+	for index, locale := range locales.All {
+		targets[index] = Target{Locale: locale.AppStore, Language: locale.Catalog}
+	}
+	return targets
 }
 
 func ScreenshotName(suggested string) string {
@@ -108,7 +123,7 @@ func TestArguments(derivedData, result string) []string {
 		"test-without-building",
 		"-project", "ishare.xcodeproj",
 		"-scheme", scheme,
-		"-destination", "platform=macOS",
+		"-destination", "platform=macOS,arch=arm64",
 		"-derivedDataPath", derivedData,
 		"-resultBundlePath", result,
 		"-only-testing:" + testID,
@@ -122,7 +137,7 @@ func BuildArguments(derivedData string) []string {
 		"build-for-testing",
 		"-project", "ishare.xcodeproj",
 		"-scheme", scheme,
-		"-destination", "platform=macOS",
+		"-destination", "platform=macOS,arch=arm64",
 		"-derivedDataPath", derivedData,
 	}, unsignedBuild...)
 }

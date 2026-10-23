@@ -64,10 +64,25 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>ishare shows your camera in a bubble during recordings if you turn on the webcam overlay</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>ishare transcribes the audio of your recordings on this Mac to create captions if you turn on Generate captions</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ishare adds your captures to Photos when you set up a Photos uploader</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ishare adds captures to the album you choose for a Photos uploader, creating it if needed, and removes them again when you delete them from the upload history</string>
 	<key>NSServices</key>
 	<array>
 		<dict>
@@ -97,6 +112,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>ishare transcribes the audio of your recordings on this Mac to create captions if you turn on Generate captions</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

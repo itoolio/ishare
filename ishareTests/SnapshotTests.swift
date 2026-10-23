@@ -13,7 +13,7 @@ struct SnapshotTests {
         case editorToolbar
         case generalSettings
 
-        var size: CGSize {
+        @MainActor var size: CGSize {
             switch self {
             case .menu: CGSize(width: 360, height: 420)
             case .toast: CGSize(width: ToastCardView.width + 24, height: 120)
@@ -45,7 +45,7 @@ struct SnapshotTests {
     func view(for subject: Subject) -> AnyView {
         switch subject {
         case .menu:
-            return AnyView(MainMenuView())
+            return AnyView(MainMenuView().appModel())
         case .toast:
             let image = ScreenshotMode.sampleImage(size: CGSize(width: 320, height: 200), hue: 0.58, title: "Toast").map { NSImage(cgImage: $0, size: CGSize(width: 160, height: 100)) }
             let model = ToastModel(fileURL: URL(fileURLWithPath: "/tmp/ishare-1800000000.png"), isImage: true, thumbnail: image)
@@ -55,7 +55,7 @@ struct SnapshotTests {
             let document = EditorDocument(image: image, fileURL: nil)
             return AnyView(EditorView(document: document, onDone: {}, onDiscard: {}, onCopy: {}))
         case .generalSettings:
-            return AnyView(GeneralSettingsView())
+            return AnyView(GeneralSettingsView().appModel())
         }
     }
 
@@ -111,5 +111,26 @@ struct OffscreenRenderingTests {
         #expect((first.differentPixels(from: try #require(PixelBuffer(other)), channelTolerance: 24) ?? 0) > 100)
         let smaller = try #require(ScreenshotMode.sampleImage(size: CGSize(width: 32, height: 20), hue: 0.3, title: ""))
         #expect(first.differentPixels(from: try #require(PixelBuffer(smaller)), channelTolerance: 24) == nil)
+    }
+
+    @Test func pixelComparisonForgivesOnePixelShifts() throws {
+        let reference = try #require(Self.stripe(at: 20))
+        let shifted = try #require(Self.stripe(at: 21))
+        #expect((shifted.differentPixels(from: reference, channelTolerance: 24) ?? 0) > 0)
+        #expect(shifted.differentPixels(from: reference, channelTolerance: 24, searchRadius: SnapshotStore.searchRadius) == 0)
+        let moved = try #require(Self.stripe(at: 30))
+        #expect((moved.differentPixels(from: reference, channelTolerance: 24, searchRadius: SnapshotStore.searchRadius) ?? 0) > 0)
+    }
+
+    private static func stripe(at x: Int) -> PixelBuffer? {
+        guard let context = CGContext(
+            data: nil, width: 64, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 64, height: 40))
+        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: x, y: 0, width: 2, height: 40))
+        return context.makeImage().flatMap(PixelBuffer.init)
     }
 }

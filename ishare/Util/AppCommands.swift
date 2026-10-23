@@ -107,7 +107,17 @@ extension AppCommand {
                        perform: afterDismissing { await CaptureSession.captureImage(.REGION, options: CaptureOptions(delay: 5)) }),
             AppCommand(id: "capture.interval", title: IntervalCapture.isRunning ? "Stop Interval Capture" : "Interval Capture", keywords: ["burst", "time-lapse", "repeat"], symbol: "stopwatch",
                        perform: afterDismissing { await IntervalCapture.toggle() }),
-        ] + presetCommands()
+            AppCommand(id: "capture.translate", title: "Capture and Translate", keywords: ["translation", "ocr", "language", "text"], symbol: "translate",
+                       perform: afterDismissing { await CaptureTranslateFlow.run() }),
+        ] + askCommands() + presetCommands()
+    }
+
+    @MainActor private static func askCommands() -> [AppCommand] {
+        guard CaptureAskFlow.isAvailable else { return [] }
+        return [
+            AppCommand(id: "capture.ask", title: "Capture and Ask", keywords: ["apple intelligence", "question", "describe", "summarize", "explain"], symbol: "sparkles",
+                       perform: afterDismissing { await CaptureAskFlow.run() }),
+        ]
     }
 
     @MainActor private static func presetCommands() -> [AppCommand] {
@@ -126,11 +136,11 @@ extension AppCommand {
                 },
                 AppCommand(id: "record.marker", title: "Add Recording Marker", keywords: ["chapter", "bookmark", "marker"], symbol: "flag") {
                     MenuController.shared.dismiss()
-                    AppDelegate.shared.screenRecorder.addMarker()
+                    AppModel.shared.recorder.addMarker()
                 },
-            ]
+            ] + recordingExtraCommands()
         }
-        return [
+        return recordingExtraCommands() + [
             AppCommand(id: "record.screen", title: "Record Screen", keywords: ["video", "movie", "screencast"], symbol: "record.circle",
                        perform: afterDismissing { CaptureSession.toggleRecording() }),
             AppCommand(id: "record.region", title: "Record Region", keywords: ["video", "area"], symbol: "rectangle.dashed.badge.record",
@@ -140,6 +150,20 @@ extension AppCommand {
             AppCommand(id: "record.regionGif", title: "Record Region as GIF", keywords: ["animation", "area"], symbol: "photo.stack",
                        perform: afterDismissing { CaptureSession.toggleRecording(gif: true, region: true) }),
         ]
+    }
+
+    @MainActor private static func recordingExtraCommands() -> [AppCommand] {
+        var commands = [
+            AppCommand(id: "record.notes", title: RecordingNotesController.shared.isVisible ? "Hide Notes" : "Show Notes", keywords: ["teleprompter", "script", "notes"], symbol: "list.bullet.rectangle") {
+                MenuController.shared.dismiss()
+                AppModel.shared.recorder.toggleNotes()
+            },
+        ]
+        if InstantReplay.isRunning {
+            commands.append(AppCommand(id: "record.instantReplay", title: "Save Instant Replay", keywords: ["replay", "buffer", "clip", "last"], symbol: "gobackward",
+                                       perform: afterDismissing { await InstantReplay.shared.save() }))
+        }
+        return commands
     }
 
     @MainActor private static func toolCommands() -> [AppCommand] {
