@@ -2,6 +2,7 @@ package releasenotes
 
 import (
 	"bufio"
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -103,6 +104,28 @@ func upperFirst(text string) string {
 	runes := []rune(text)
 	runes[0] = []rune(strings.ToUpper(string(runes[0])))[0]
 	return string(runes)
+}
+
+var markup = regexp.MustCompile("[*_`#<>\\[\\]]")
+
+func Problems(notes string) []string {
+	var problems []string
+	trimmed := strings.TrimSpace(notes)
+	if trimmed == "" {
+		problems = append(problems, "the release notes are empty")
+	}
+	if length := len([]rune(trimmed)); length > appStoreLimit {
+		problems = append(problems, fmt.Sprintf("the release notes are %d characters long, the App Store allows %d", length, appStoreLimit))
+	}
+	for number, line := range strings.Split(trimmed, "\n") {
+		if markup.MatchString(line) {
+			problems = append(problems, fmt.Sprintf("line %d contains Markdown markup: %q", number+1, line))
+		}
+		if symbols := disallowed.FindAllString(line, -1); len(symbols) > 0 {
+			problems = append(problems, fmt.Sprintf("line %d contains symbols the App Store may reject: %q", number+1, strings.Join(symbols, "")))
+		}
+	}
+	return problems
 }
 
 func truncate(text string, limit int) string {

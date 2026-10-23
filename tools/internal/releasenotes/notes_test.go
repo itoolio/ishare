@@ -55,6 +55,29 @@ func TestConvertTruncatesLongNotes(t *testing.T) {
 	}
 }
 
+func TestRenderedNotesHaveNoProblems(t *testing.T) {
+	if problems := Problems(Render(sample)); len(problems) > 0 {
+		t.Fatalf("unexpected problems %v", problems)
+	}
+}
+
+func TestProblemsFlagMarkupSymbolsLengthAndEmptyNotes(t *testing.T) {
+	cases := map[string]string{
+		"## Features\n• Something":           "Markdown markup",
+		"• Add **bold** text":                "Markdown markup",
+		"• See [docs](https://example.com)":  "Markdown markup",
+		"• Party 🎉":                          "symbols",
+		"   ":                                "empty",
+		strings.Repeat("a", appStoreLimit+1): "characters long",
+	}
+	for notes, expected := range cases {
+		problems := Problems(notes)
+		if len(problems) == 0 || !strings.Contains(strings.Join(problems, "\n"), expected) {
+			t.Errorf("%q: expected a problem mentioning %q, got %v", notes, expected, problems)
+		}
+	}
+}
+
 func TestRenderFallsBackWhenNothingIsUserFacing(t *testing.T) {
 	if got := Render("## 5.0.1\n\n### Miscellaneous Chores\n\n* bump deps\n"); got != fallback {
 		t.Fatalf("unexpected notes %q", got)

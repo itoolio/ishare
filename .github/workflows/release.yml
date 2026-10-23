@@ -245,6 +245,11 @@ jobs:
                   if [ "$DRY_RUN" = "true" ]; then
                     xcrun altool --validate-app -f build/appstore/ishare.pkg -t macos --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
                   fi
+                  ditto -c -k --keepParent build/ishare-appstore.xcarchive/Products/Applications/ishare.app build/ishare.app.zip
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: app-store-app
+                  path: build/ishare.app.zip
 
     publish:
         needs: [checks, version, developer-id, app-store]
@@ -316,8 +321,16 @@ jobs:
                   name: appcast
                   path: update/appcast.xml
 
+    release-check:
+        needs: [version, publish, app-store]
+        uses: ./.github/workflows/release-check.yml
+        with:
+            tag: ${{ needs.publish.outputs.tag }}
+            app-artifact: app-store-app
+        secrets: inherit
+
     app-store-submit:
-        needs: [version, publish]
+        needs: [version, publish, release-check]
         runs-on: macos-26
         timeout-minutes: 120
         steps:

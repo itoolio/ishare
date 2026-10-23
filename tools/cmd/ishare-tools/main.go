@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/itoolio/ishare/tools/internal/appstore"
+	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
 	"github.com/itoolio/ishare/tools/internal/repo"
 	"github.com/itoolio/ishare/tools/internal/screenshots"
@@ -33,7 +35,8 @@ var commands = map[string]command{
 	"release-notes":      {"release-notes [output-file] < release.md", releaseNotes},
 	"register-bundle-id": {"register-bundle-id [identifier...]", registerBundleID},
 	"merge-translations": {"merge-translations <base.xcstrings> <incoming.xcstrings> <output.xcstrings>", mergeTranslations},
-	"screenshots":        {"screenshots [locale[:language]...]", captureScreenshots},
+	"screenshots":        {"screenshots [--ci] [locale[:language]...]", captureScreenshots},
+	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir]", releaseCheck},
 }
 
 func main() {
@@ -151,4 +154,20 @@ func captureScreenshots(env environment, arguments []string) error {
 		return err
 	}
 	return screenshots.Run(screenshots.Options{Root: repo.Root(), Targets: targets, Output: env.stdout})
+}
+
+func releaseCheck(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("release-check", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	options := releasecheck.Options{Inspector: releasecheck.SystemInspector{}, Output: env.stdout}
+	flags.StringVar(&options.App, "app", "", "")
+	flags.StringVar(&options.ReleaseNotes, "release-notes", "", "")
+	flags.StringVar(&options.Allowlist, "allowlist", repo.Path("fastlane", "entitlements-allowlist.json"), "")
+	flags.StringVar(&options.ReviewNotes, "review-notes", repo.Path("fastlane", "review_notes.txt"), "")
+	flags.StringVar(&options.Screenshots, "screenshots", repo.Path("fastlane", "screenshots"), "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 {
+		return errUsage
+	}
+	_, err := releasecheck.Run(options)
+	return err
 }
