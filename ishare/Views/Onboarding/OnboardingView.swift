@@ -297,15 +297,15 @@ struct OnboardingAfterCaptureStep: View {
     var body: some View {
         OnboardingCard {
             VStack(alignment: .leading, spacing: 10) {
-                Toggle("Copy to Clipboard".localized(), isOn: $copyToClipboard)
+                Toggle("Open Editor".localized(), isOn: $openEditorAfterCapture)
                 Toggle("Save to Disk".localized(), isOn: $saveToDisk)
                     .onChange(of: saveToDisk) { _, saved in
                         if !saved { openInFinder = false }
                     }
+                Toggle("Copy to Clipboard".localized(), isOn: $copyToClipboard)
                 Toggle("Open in Finder".localized(), isOn: $openInFinder)
                     .disabled(!saveToDisk)
                 Toggle("Upload Media".localized(), isOn: $uploadMedia)
-                Toggle("Open Editor".localized(), isOn: $openEditorAfterCapture)
             }
             .toggleStyle(.switch)
             .frame(maxWidth: .infinity, alignment: .leading)

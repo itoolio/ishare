@@ -45,7 +45,7 @@ struct MainMenuView: View {
             footer
         }
         .padding(12)
-        .frame(width: 320)
+        .frame(width: 360)
         .environment(\.menuFocusedTarget, focusedTarget)
         .focusable()
         .focusEffectDisabled()
@@ -263,26 +263,28 @@ struct MainMenuView: View {
     private var afterCaptureSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
-                ToggleChip(symbol: "doc.on.clipboard", title: "Copy to Clipboard", isOn: chipBindings[0])
+                ToggleChip(symbol: "pencil.tip.crop.circle", title: "Open Editor", isOn: chipBindings[0])
                     .menuFocusRing(.chip(0), shape: .circle)
                 ToggleChip(symbol: "internaldrive", title: "Save to Disk", isOn: chipBindings[1])
                     .menuFocusRing(.chip(1), shape: .circle)
-                ToggleChip(symbol: "folder", title: "Open in Finder", isOn: chipBindings[2])
-                    .disabled(!saveToDisk)
+                ToggleChip(symbol: "doc.on.clipboard", title: "Copy to Clipboard", isOn: chipBindings[2])
                     .menuFocusRing(.chip(2), shape: .circle)
-                ToggleChip(symbol: "icloud.and.arrow.up", title: "Upload Media", isOn: chipBindings[3])
+                ToggleChip(symbol: "folder", title: "Open in Finder", isOn: chipBindings[3])
+                    .disabled(!saveToDisk)
                     .menuFocusRing(.chip(3), shape: .circle)
-                ToggleChip(symbol: "pencil.tip.crop.circle", title: "Open Editor", isOn: chipBindings[4])
-                    .menuFocusRing(.chip(4), shape: .circle)
                 Divider()
                     .frame(height: 22)
-                ShareChip(image: airdropIcon, title: "AirDrop", isOn: chipBindings[5])
+                ShareChip(image: airdropIcon, title: "AirDrop", isOn: chipBindings[4])
+                    .menuFocusRing(.chip(4), shape: .circle)
+                ShareChip(image: icon(forAppWithName: "com.apple.Photos"), title: "Photos", isOn: chipBindings[5])
                     .menuFocusRing(.chip(5), shape: .circle)
-                ShareChip(image: icon(forAppWithName: "com.apple.Photos"), title: "Photos", isOn: chipBindings[6])
+                ShareChip(image: icon(forAppWithName: "com.apple.MobileSMS"), title: "Messages", isOn: chipBindings[6])
                     .menuFocusRing(.chip(6), shape: .circle)
-                ShareChip(image: icon(forAppWithName: "com.apple.MobileSMS"), title: "Messages", isOn: chipBindings[7])
+                ShareChip(image: icon(forAppWithName: "com.apple.Mail"), title: "Mail", isOn: chipBindings[7])
                     .menuFocusRing(.chip(7), shape: .circle)
-                ShareChip(image: icon(forAppWithName: "com.apple.Mail"), title: "Mail", isOn: chipBindings[8])
+                Divider()
+                    .frame(height: 22)
+                ToggleChip(symbol: "icloud.and.arrow.up", title: "Upload Media", isOn: chipBindings[8])
                     .menuFocusRing(.chip(8), shape: .circle)
             }
             Text(afterCaptureSummary)
@@ -296,14 +298,14 @@ struct MainMenuView: View {
     private var afterCaptureSummary: String {
         let enabled: [(Bool, String)] = [
             (openEditorAfterCapture, "Open Editor"),
-            (copyToClipboard, "Copy to Clipboard"),
             (saveToDisk, "Save to Disk"),
+            (copyToClipboard, "Copy to Clipboard"),
             (saveToDisk && openInFinder, "Open in Finder"),
-            (uploadMedia, "Upload Media"),
             (builtInShare.airdrop, "AirDrop"),
             (builtInShare.photos, "Photos"),
             (builtInShare.messages, "Messages"),
             (builtInShare.mail, "Mail"),
+            (uploadMedia, "Upload Media"),
         ]
         let titles = enabled.filter(\.0).map { $0.1.localized() }
         return titles.isEmpty ? "Nothing happens after a capture".localized() : titles.formatted(.list(type: .and))
@@ -347,15 +349,15 @@ struct MainMenuView: View {
             }
             .padding(.horizontal, 9)
             .frame(height: 26)
-            .frame(maxWidth: 150)
             .background(Capsule().fill(Color.primary.opacity(0.09)))
             .contentShape(Capsule())
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .fixedSize()
-        .help("Upload Destination".localized())
+        .fixedSize(horizontal: false, vertical: true)
+        .layoutPriority(1)
+        .help(String(format: "%@: %@", "Upload Destination".localized(), destinationTitle))
         .menuFocusRing(.destination, shape: .roundedRectangle(13))
         .accessibilityValue(destinationTitle)
         .accessibilityIdentifier("menu.destination")
@@ -429,15 +431,15 @@ struct MainMenuView: View {
 
     private var chipBindings: [Binding<Bool>] {
         [
-            $copyToClipboard,
-            Binding(get: { saveToDisk }, set: { saveToDisk = $0; if !$0 { openInFinder = false } }),
-            $openInFinder,
-            $uploadMedia,
             $openEditorAfterCapture,
+            Binding(get: { saveToDisk }, set: { saveToDisk = $0; if !$0 { openInFinder = false } }),
+            $copyToClipboard,
+            $openInFinder,
             $builtInShare.airdrop,
             $builtInShare.photos,
             $builtInShare.messages,
             $builtInShare.mail,
+            $uploadMedia,
         ]
     }
 
