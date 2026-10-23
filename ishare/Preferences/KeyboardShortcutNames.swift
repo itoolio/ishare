@@ -24,4 +24,6 @@ extension KeyboardShortcuts.Name {
     static let recordRegionGif = Self("recordRegionGif", default: .init(.f, modifiers: [.control, .option]))
     static let addRecordingMarker = Self("addRecordingMarker")
     static let openEditor = Self("openEditor", default: .init(.e, modifiers: [.control, .option]))
+    static let toggleRecordingNotes = Self("toggleRecordingNotes")
+    static let saveInstantReplay = Self("saveInstantReplay")
 }

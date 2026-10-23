@@ -128,9 +128,9 @@ extension AppCommand {
                     MenuController.shared.dismiss()
                     AppDelegate.shared.screenRecorder.addMarker()
                 },
-            ]
+            ] + recordingExtraCommands()
         }
-        return [
+        return recordingExtraCommands() + [
             AppCommand(id: "record.screen", title: "Record Screen", keywords: ["video", "movie", "screencast"], symbol: "record.circle",
                        perform: afterDismissing { CaptureSession.toggleRecording() }),
             AppCommand(id: "record.region", title: "Record Region", keywords: ["video", "area"], symbol: "rectangle.dashed.badge.record",
@@ -140,6 +140,20 @@ extension AppCommand {
             AppCommand(id: "record.regionGif", title: "Record Region as GIF", keywords: ["animation", "area"], symbol: "photo.stack",
                        perform: afterDismissing { CaptureSession.toggleRecording(gif: true, region: true) }),
         ]
+    }
+
+    @MainActor private static func recordingExtraCommands() -> [AppCommand] {
+        var commands = [
+            AppCommand(id: "record.notes", title: RecordingNotesController.shared.isVisible ? "Hide Notes" : "Show Notes", keywords: ["teleprompter", "script", "notes"], symbol: "list.bullet.rectangle") {
+                MenuController.shared.dismiss()
+                AppDelegate.shared.screenRecorder.toggleNotes()
+            },
+        ]
+        if InstantReplay.isRunning {
+            commands.append(AppCommand(id: "record.instantReplay", title: "Save Instant Replay", keywords: ["replay", "buffer", "clip", "last"], symbol: "gobackward",
+                                       perform: afterDismissing { await InstantReplay.shared.save() }))
+        }
+        return commands
     }
 
     @MainActor private static func toolCommands() -> [AppCommand] {

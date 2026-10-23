@@ -24,6 +24,8 @@ struct KeybindSettingsView: View {
             ("Record GIF:", .recordGif),
             ("Record Region as GIF:", .recordRegionGif),
             ("Add Recording Marker:", .addRecordingMarker),
+            ("Show or Hide Notes:", .toggleRecordingNotes),
+            ("Save Instant Replay:", .saveInstantReplay),
         ]),
         ("Capture and Upload", [
             ("Capture Region:", .captureRegionForceUpload),

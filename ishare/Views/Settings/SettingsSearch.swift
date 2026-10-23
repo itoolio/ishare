@@ -69,6 +69,10 @@ enum SettingsSearchIndex {
             "Input level", "Trim recordings before saving", "Trim", "GIF size", "Meter",
         ]),
         SettingsSearchEntry(pane: .recording, keywords: ["Captions", "Generate captions", "Subtitles", "SRT", "Transcription", "Speech", "Burn into the video", "Markers", "Chapters", "Export"]),
+        SettingsSearchEntry(pane: .recording, keywords: [
+            "Audio source", "All system audio", "Only selected apps", "App audio", "Notes", "Teleprompter", "Script",
+            "Instant replay", "Replay", "Buffer", "Keep the last",
+        ]),
         SettingsSearchEntry(pane: .uploaders, keywords: [
             "Also upload to", "Copy URL after upload", "Open URL in browser after upload", "Watch Folder", "Folder",
             "Upload Queue", "Retry", "Expiring links", "Presigned", "ShareX", "SXCU", "Test Upload", "Method",
