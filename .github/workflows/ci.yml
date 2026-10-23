@@ -43,6 +43,12 @@ jobs:
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: latest-stable
+            - name: Check the Swift formatting
+              run: |
+                  xcrun swift-format --version
+                  xcrun swift-format lint --strict --recursive --parallel \
+                    ishare sharemenuext ishareWidgets ishare-cli ishareTests ishareUITests \
+                    Packages/ishareCore/Package.swift Packages/ishareCore/Sources Packages/ishareCore/Tests
             - name: Run the ishareCore package tests
               run: swift test --package-path Packages/ishareCore
 

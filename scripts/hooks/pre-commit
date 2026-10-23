@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.swift' ':!website' ':!integrations')
+[ -z "$staged" ] && exit 0
+
+printf '%s\n' "$staged" | tr '\n' '\0' | xargs -0 xcrun swift-format lint --strict --configuration .swift-format || {
+    echo "Swift formatting issues found. Run: xcrun swift-format format --in-place <files>" >&2
+    exit 1
+}
