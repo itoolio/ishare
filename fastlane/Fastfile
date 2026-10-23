@@ -19,7 +19,7 @@ platform :mac do
       phone_number: ENV.fetch("REVIEW_CONTACT_PHONE"),
       demo_user: "",
       demo_password: "",
-      notes: "ishare is a menu bar app. Click the ishare icon in the menu bar to open the capture menu. Uploading requires a custom uploader, which can be added in Settings > Uploaders, or the built-in Imgur option. Camera (com.apple.security.device.camera): used only for the optional webcam bubble that is overlaid on screen recordings. To try it, open Settings > Recordings, turn on Webcam > Show webcam, then choose Record > Screen or Region in the menu; a round camera preview appears over the recording. Microphone (com.apple.security.device.audio-input): records your voice into screen recordings when Settings > Recordings > Record microphone is on, and powers the input level meter there. Input Monitoring is requested only when Settings > Recordings > Show keystrokes is turned on, to display pressed keyboard shortcuts in recordings. Accessibility (event posting) is used only for the optional automatic scrolling in scrolling capture, which is off by default: when the user turns on Settings > Screenshots > Scrolling Capture > Scroll automatically, ishare asks for the permission with an explanation and then scrolls the area the user selected so a long page can be stitched into one image. It is never requested otherwise; without it the user scrolls manually. The Movies folder entitlement was removed because it was not needed."
+      notes: File.read(File.expand_path("review_notes.txt", __dir__)).strip
     }
   end
 
@@ -124,6 +124,47 @@ platform :mac do
         content_rights_contains_third_party_content: false
       }
     )
+  end
+
+  def version_report(version)
+    return nil unless version
+    { version: version.version_string, state: version.app_store_state }
+  end
+
+  desc "Write the App Store state of the app as JSON for ishare-tools app-store-plan"
+  lane :status do |options|
+    output = File.expand_path(options.fetch(:output, "app-store-status.json"), ENV.fetch("GITHUB_WORKSPACE", Dir.pwd))
+    api_key
+    app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
+    UI.user_error!("App not found in App Store Connect") unless app
+    platform = Spaceship::ConnectAPI::Platform::MAC_OS
+    wait_for = options[:wait_for].to_s
+    unless wait_for.empty?
+      latest = Spaceship::ConnectAPI::Build.all(app_id: app.id, version: wait_for, platform: platform, sort: "-uploadedDate", limit: 1).first
+      begin
+        wait_for_processed_build(version: wait_for, build: latest.version, timeout: 5400) if latest
+      rescue FastlaneCore::Interface::FastlaneError => error
+        UI.important("Not waiting for #{wait_for} any longer: #{error.message}")
+      end
+    end
+    live = app.get_live_app_store_version(platform: platform)
+    in_flight = app.get_in_review_app_store_version(platform: platform) ||
+                app.get_pending_release_app_store_version(platform: platform) ||
+                app.get_edit_app_store_version(platform: platform)
+    submission = app.get_in_progress_review_submission(platform: platform)
+    builds = {}
+    Spaceship::ConnectAPI::Build.all(app_id: app.id, platform: platform, sort: "-uploadedDate", limit: 100).each do |build|
+      next unless build.processing_state == Spaceship::ConnectAPI::Build::ProcessingState::VALID
+      builds[build.app_version] ||= build.version
+    end
+    report = {
+      live: version_report(live),
+      inFlight: version_report(in_flight),
+      submission: submission ? { id: submission.id, state: submission.state } : nil,
+      builds: builds
+    }
+    File.write(output, JSON.pretty_generate(report))
+    UI.success("Wrote #{output}")
   end
 
   desc "Check that the App Store Connect credentials and app record work"

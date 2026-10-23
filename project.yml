@@ -82,6 +82,9 @@ targetTemplates:
       - target: sharemenuext
         embed: true
         codeSign: true
+      - target: ishareWidgets
+        embed: true
+        codeSign: true
     settings:
       base:
         PRODUCT_NAME: ishare
@@ -109,7 +112,7 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: ishare/Info.plist
-        CODE_SIGN_ENTITLEMENTS: ishare/ishare.entitlements
+        CODE_SIGN_ENTITLEMENTS: $(ISHARE_APP_STORE_ENTITLEMENTS:default=ishare/ishare.entitlements)
         ENABLE_APP_SANDBOX: YES
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) APP_STORE
       configs:
@@ -150,16 +153,78 @@ targets:
         SKIP_INSTALL: YES
         COMBINE_HIDPI_IMAGES: YES
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks
+  ishareWidgets:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: ishareWidgets
+        excludes:
+          - "**/*.entitlements"
+          - Info.plist
+      - path: ishare/Shared
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_NAME: ishareWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.widgets
+        INFOPLIST_FILE: ishareWidgets/Info.plist
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ishare
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© Adrian Castro"
+        CODE_SIGN_ENTITLEMENTS: ishareWidgets/ishareWidgets.entitlements
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        REGISTER_APP_GROUPS: YES
+        SKIP_INSTALL: YES
+        COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: ""
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks
   ishareTests:
     type: bundle.unit-test
     platform: macOS
     sources:
       - path: ishareTests
+        excludes:
+          - Snapshots
+          - "**/*.entitlements"
     dependencies:
       - target: ishare - GitHub
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/ishare.app/Contents/MacOS/ishare
+        BUNDLE_LOADER: $(TEST_HOST)
+  ishareAppStoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: ishareTests
+        excludes:
+          - Snapshots
+          - "**/*.entitlements"
+      - path: examples
+        type: folder
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: Fixtures
+      - path: ishare
+        type: folder
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: Fixtures
+    dependencies:
+      - target: ishare
+    settings:
+      base:
+        PRODUCT_NAME: ishareAppStoreTests
+        PRODUCT_MODULE_NAME: ishareAppStoreTests
+        PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.appstoretests
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/ishare.app/Contents/MacOS/ishare
         BUNDLE_LOADER: $(TEST_HOST)
@@ -198,6 +263,15 @@ schemes:
         - ishareTests
     archive:
       config: Release
+  AppStoreTests:
+    build:
+      targets:
+        ishare: all
+        ishareAppStoreTests: [test]
+    test:
+      config: Debug
+      targets:
+        - ishareAppStoreTests
   Screenshots:
     build:
       targets:

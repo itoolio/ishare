@@ -1,14 +1,20 @@
 package screenshots
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -34,6 +40,7 @@ type Options struct {
 	Root    string
 	Targets []Target
 	Output  io.Writer
+	CI      bool
 }
 
 func ParseTargets(arguments []string) ([]Target, error) {
@@ -134,6 +141,13 @@ func Run(options Options) error {
 	if err := xcodebuild(options, nil, BuildArguments(derivedData)); err != nil {
 		return err
 	}
+	if options.CI {
+		stop, err := startVirtualDisplay(options, work)
+		if err != nil {
+			return err
+		}
+		defer stop()
+	}
 	for _, target := range options.Targets {
 		if err := capture(options, work, derivedData, target); err != nil {
 			return fmt.Errorf("%s: %w", target.Locale, err)
@@ -170,6 +184,11 @@ func capture(options Options, work, derivedData string, target Target) error {
 		return err
 	}
 	for _, copy := range copies {
+		if options.CI {
+			if err := CheckPixelSize(copy.Source); err != nil {
+				return err
+			}
+		}
 		if err := copyFile(copy.Source, copy.Destination); err != nil {
 			return err
 		}
@@ -244,4 +263,84 @@ func xcodebuild(options Options, environment []string, arguments []string) error
 		return fmt.Errorf("xcodebuild %s failed: %w", arguments[0], buildErr)
 	}
 	return prettyErr
+}
+
+func CheckPixelSize(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	config, _, err := image.DecodeConfig(file)
+	if err != nil {
+		return fmt.Errorf("%s: %w", filepath.Base(path), err)
+	}
+	width, _ := strconv.Atoi(pixelWidth)
+	height, _ := strconv.Atoi(pixelHeight)
+	if config.Width != width || config.Height != height {
+		return fmt.Errorf("%s is %dx%d instead of %dx%d; the window was not captured on a HiDPI display large enough for the 1440x900 point scene", filepath.Base(path), config.Width, config.Height, width, height)
+	}
+	return nil
+}
+
+func VirtualDisplayArguments(source, binary string) []string {
+	return []string{"clang", "-fobjc-arc", "-framework", "Foundation", "-framework", "CoreGraphics", source, "-o", binary}
+}
+
+func ParseReady(line string) (bool, error) {
+	if strings.HasPrefix(line, "ready ") {
+		if !strings.Contains(line, "points=1680x1050") || !strings.Contains(line, "pixels=3360x2100") {
+			return false, fmt.Errorf("the virtual display is not 1680x1050 points at 2x: %s", line)
+		}
+		if !strings.Contains(line, "main=1") {
+			return false, fmt.Errorf("the virtual display did not become the main display: %s", line)
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+func startVirtualDisplay(options Options, work string) (func(), error) {
+	binary := filepath.Join(work, "virtual-display")
+	source := filepath.Join(options.Root, "tools", "virtualdisplay", "main.m")
+	if err := run(options, nil, "xcrun", VirtualDisplayArguments(source, binary)...); err != nil {
+		return nil, err
+	}
+	helper := exec.Command(binary, "--width", "1680", "--height", "1050", "--scale", "2")
+	helper.Stderr = os.Stderr
+	stdout, err := helper.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	if err := helper.Start(); err != nil {
+		return nil, err
+	}
+	stop := func() {
+		_ = helper.Process.Signal(os.Interrupt)
+		_ = helper.Wait()
+	}
+	ready := make(chan error, 1)
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			fmt.Fprintln(options.Output, scanner.Text())
+			if ok, err := ParseReady(scanner.Text()); ok || err != nil {
+				ready <- err
+				return
+			}
+		}
+		ready <- fmt.Errorf("the virtual display helper exited before it was ready")
+	}()
+	select {
+	case err := <-ready:
+		if err != nil {
+			stop()
+			return nil, err
+		}
+	case <-time.After(60 * time.Second):
+		stop()
+		return nil, fmt.Errorf("timed out waiting for the virtual display")
+	}
+	time.Sleep(2 * time.Second)
+	return stop, nil
 }

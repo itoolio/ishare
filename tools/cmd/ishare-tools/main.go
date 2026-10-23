@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/itoolio/ishare/tools/internal/appstore"
+	"github.com/itoolio/ishare/tools/internal/appstoreplan"
+	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
 	"github.com/itoolio/ishare/tools/internal/repo"
 	"github.com/itoolio/ishare/tools/internal/screenshots"
@@ -33,7 +36,9 @@ var commands = map[string]command{
 	"release-notes":      {"release-notes [output-file] < release.md", releaseNotes},
 	"register-bundle-id": {"register-bundle-id [identifier...]", registerBundleID},
 	"merge-translations": {"merge-translations <base.xcstrings> <incoming.xcstrings> <output.xcstrings>", mergeTranslations},
-	"screenshots":        {"screenshots [locale[:language]...]", captureScreenshots},
+	"screenshots":        {"screenshots [--ci] [locale[:language]...]", captureScreenshots},
+	"app-store-plan":     {"app-store-plan --report status.json --releases releases.json", appStorePlan},
+	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir]", releaseCheck},
 }
 
 func main() {
@@ -146,9 +151,59 @@ func mergeTranslations(env environment, arguments []string) error {
 }
 
 func captureScreenshots(env environment, arguments []string) error {
-	targets, err := screenshots.ParseTargets(arguments)
+	flags := flag.NewFlagSet("screenshots", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	ci := flags.Bool("ci", false, "")
+	if err := flags.Parse(arguments); err != nil {
+		return errUsage
+	}
+	targets, err := screenshots.ParseTargets(flags.Args())
 	if err != nil {
 		return err
 	}
-	return screenshots.Run(screenshots.Options{Root: repo.Root(), Targets: targets, Output: env.stdout})
+	return screenshots.Run(screenshots.Options{Root: repo.Root(), Targets: targets, Output: env.stdout, CI: *ci})
+}
+
+func releaseCheck(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("release-check", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	options := releasecheck.Options{Inspector: releasecheck.SystemInspector{}, Output: env.stdout}
+	flags.StringVar(&options.App, "app", "", "")
+	flags.StringVar(&options.ReleaseNotes, "release-notes", "", "")
+	flags.StringVar(&options.Allowlist, "allowlist", repo.Path("fastlane", "entitlements-allowlist.json"), "")
+	flags.StringVar(&options.ReviewNotes, "review-notes", repo.Path("fastlane", "review_notes.txt"), "")
+	flags.StringVar(&options.Screenshots, "screenshots", repo.Path("fastlane", "screenshots"), "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 {
+		return errUsage
+	}
+	_, err := releasecheck.Run(options)
+	return err
+}
+
+func appStorePlan(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("app-store-plan", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	reportPath := flags.String("report", "", "")
+	releasesPath := flags.String("releases", "", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 || *reportPath == "" || *releasesPath == "" {
+		return errUsage
+	}
+	reportData, err := os.ReadFile(*reportPath)
+	if err != nil {
+		return err
+	}
+	report, err := appstoreplan.ParseReport(reportData)
+	if err != nil {
+		return err
+	}
+	releaseData, err := os.ReadFile(*releasesPath)
+	if err != nil {
+		return err
+	}
+	releases, err := appstoreplan.ParseReleases(releaseData)
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(env.stdout, appstoreplan.Decide(report, releases).Outputs())
+	return err
 }

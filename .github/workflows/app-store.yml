@@ -14,12 +14,58 @@ on:
                 description: Upload the committed screenshots and submit the version for review
                 type: boolean
                 default: true
+            regenerate_screenshots:
+                description: Render new screenshots on a virtual HiDPI display and open a pull request with them instead of submitting
+                type: boolean
+                default: false
+            locales:
+                description: Locales to render when regenerating, for example en-US de-DE:de
+                type: string
+                default: en-US
 
 permissions:
     contents: read
 
 jobs:
+    regenerate-screenshots:
+        if: inputs.regenerate_screenshots
+        runs-on: macos-26
+        timeout-minutes: 60
+        permissions:
+            contents: write
+            pull-requests: write
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - name: Render the screenshots on a 1680x1050 point HiDPI virtual display
+              env:
+                  LOCALES: ${{ inputs.locales }}
+              run: go run ./tools/cmd/ishare-tools screenshots --ci $LOCALES
+            - name: Check the rendered screenshots
+              run: go run ./tools/cmd/ishare-tools release-check
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: screenshots
+                  path: fastlane/screenshots
+            - uses: peter-evans/create-pull-request@v7
+              with:
+                  branch: screenshots/${{ inputs.version }}
+                  title: "chore(app-store): regenerate the App Store screenshots for ${{ inputs.version }}"
+                  commit-message: "chore(app-store): regenerate the App Store screenshots"
+                  body: Screenshots rendered by the App Store workflow on a HiDPI virtual display. Review them before merging; the next submission uploads whatever is committed.
+                  add-paths: fastlane/screenshots
+
     screenshots:
+        if: ${{ !inputs.regenerate_screenshots }}
         runs-on: macos-26
         timeout-minutes: 45
         steps:
