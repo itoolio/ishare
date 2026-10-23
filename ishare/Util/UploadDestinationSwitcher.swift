@@ -1,6 +1,7 @@
 import AppKit
 import BezelNotification
 import Defaults
+import ishareCore
 
 @MainActor
 enum UploadDestinationSwitcher {

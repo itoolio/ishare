@@ -1,6 +1,7 @@
 import CoreGraphics
 import Defaults
 import Foundation
+import ishareCore
 
 struct PointerEffectSettings: Hashable, Sendable {
     static let scaleRange: ClosedRange<Double> = 1 ... 3
@@ -49,100 +50,12 @@ extension CaptureColor {
     static let defaultRipple = CaptureColor(red: 1, green: 0.8, blue: 0)
 }
 
-enum PointerSmoother {
-    static let defaultTimeConstant: Double = 0.08
-
-    static func smooth(_ samples: [PointerSample], timeConstant: Double = defaultTimeConstant) -> [PointerSample] {
-        guard let first = samples.first, timeConstant > 0 else { return samples }
-        var current = first.point
-        var previousTime = first.time
-        return samples.map { sample in
-            let elapsed = max(0, sample.time - previousTime)
-            let alpha = 1 - exp(-elapsed / timeConstant)
-            current = current.interpolated(to: sample.point, fraction: alpha)
-            previousTime = sample.time
-            return PointerSample(time: sample.time, point: current)
-        }
-    }
-
-    static func resample(_ samples: [PointerSample], interval: Double) -> [PointerSample] {
-        guard let first = samples.first, let last = samples.last, interval > 0, last.time > first.time else { return samples }
-        let count = Int(((last.time - first.time) / interval).rounded(.down))
-        return (0 ... count).compactMap { index in
-            let time = first.time + Double(index) * interval
-            return PointerTrack.interpolatedPoint(in: samples, at: time, maximumGap: .infinity).map { PointerSample(time: time, point: $0) }
-        }
-    }
-}
-
-enum PointerIdleDetector {
-    static let movementThreshold: CGFloat = 1
-
-    static func hiddenIntervals(samples: [PointerSample], clicks: [Double], idleDelay: Double, duration: Double) -> [ClosedRange<Double>] {
-        guard idleDelay > 0, let first = samples.first else { return [] }
-        var activity: [Double] = [first.time]
-        var anchor = first.point
-        for sample in samples.dropFirst() where sample.point.distance(to: anchor) > movementThreshold {
-            activity.append(sample.time)
-            anchor = sample.point
-        }
-        let times = (activity + clicks).sorted()
-        var intervals: [ClosedRange<Double>] = []
-        for (index, time) in times.enumerated() {
-            let hideStart = time + idleDelay
-            let nextActivity = index + 1 < times.count ? times[index + 1] : duration
-            if nextActivity > hideStart {
-                intervals.append(hideStart ... nextActivity)
-            }
-        }
-        return intervals
-    }
-}
-
-struct PointerTrack: Hashable, Sendable {
-    static let maximumSampleGap: Double = 0.25
-    static let fadeDuration: Double = 0.25
-
-    var samples: [PointerSample]
-    var hiddenIntervals: [ClosedRange<Double>] = []
-    var scale: Double = 1
-
+extension PointerTrack {
     static func make(samples: [PointerSample], clicks: [Double], settings: PointerEffectSettings, duration: Double) -> PointerTrack {
         let sorted = samples.sorted { $0.time < $1.time }
         let positions = settings.smoothing ? PointerSmoother.smooth(sorted) : sorted
         let hidden = settings.hidesWhenIdle ? PointerIdleDetector.hiddenIntervals(samples: sorted, clicks: clicks, idleDelay: settings.idleDelay, duration: duration) : []
         return PointerTrack(samples: positions, hiddenIntervals: hidden, scale: settings.scale)
-    }
-
-    func position(at time: Double) -> CGPoint? {
-        Self.interpolatedPoint(in: samples, at: time, maximumGap: Self.maximumSampleGap)
-    }
-
-    func opacity(at time: Double) -> Double {
-        guard let interval = hiddenIntervals.first(where: { $0.contains(time) }) else { return 1 }
-        guard time < interval.upperBound else { return 1 }
-        return 1 - min(1, (time - interval.lowerBound) / Self.fadeDuration)
-    }
-
-    static func interpolatedPoint(in samples: [PointerSample], at time: Double, maximumGap: Double) -> CGPoint? {
-        guard let first = samples.first, let last = samples.last else { return nil }
-        if time <= first.time { return first.time - time <= maximumGap / 2 ? first.point : nil }
-        if time >= last.time { return time - last.time <= maximumGap / 2 ? last.point : nil }
-        var low = 0
-        var high = samples.count - 1
-        while high - low > 1 {
-            let middle = (low + high) / 2
-            if samples[middle].time <= time { low = middle } else { high = middle }
-        }
-        let previous = samples[low]
-        let next = samples[high]
-        guard next.time - previous.time <= maximumGap else { return nil }
-        let fraction = (time - previous.time) / max(0.0001, next.time - previous.time)
-        return previous.point.interpolated(to: next.point, fraction: fraction)
-    }
-
-    static func nearestPoint(in samples: [PointerSample], at time: Double) -> CGPoint? {
-        samples.min { abs($0.time - time) < abs($1.time - time) }?.point
     }
 }
 

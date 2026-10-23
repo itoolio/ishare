@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ishareCore
 import Synchronization
 
 struct RecordedResponse: Sendable, Equatable {

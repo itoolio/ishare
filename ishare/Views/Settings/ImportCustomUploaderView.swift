@@ -1,4 +1,5 @@
 import Defaults
+import ishareCore
 import SwiftUI
 import UniformTypeIdentifiers
 

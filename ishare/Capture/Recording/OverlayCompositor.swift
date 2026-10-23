@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import CoreImage
+import ishareCore
 
 final class OverlayCompositionInstruction: NSObject, AVVideoCompositionInstructionProtocol, @unchecked Sendable {
     let timeRange: CMTimeRange

@@ -1,6 +1,7 @@
 import AVFoundation
 import CoreGraphics
 import Defaults
+import ishareCore
 
 enum RecordingResolution: String, CaseIterable, Identifiable, Defaults.Serializable, Sendable {
     case native

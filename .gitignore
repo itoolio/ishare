@@ -101,3 +101,6 @@ website/.astro
 fastlane/README.md
 
 .claude/worktrees/
+
+# ishareCore package
+Packages/ishareCore/.swiftpm/

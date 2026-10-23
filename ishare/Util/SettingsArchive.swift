@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 import KeyboardShortcuts
 
 indirect enum ArchiveValue: Codable, Equatable, Sendable {

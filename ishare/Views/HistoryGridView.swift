@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 import SwiftUI
 
 struct HistoryThumbnail: View {

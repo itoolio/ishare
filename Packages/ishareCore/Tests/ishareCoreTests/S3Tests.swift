@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ishare
+@testable import ishareCore
 
 struct SigV4SignerTests {
     let signer = SigV4Signer(

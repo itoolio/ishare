@@ -1,97 +1,10 @@
 import Citadel
 import Crypto
 import Foundation
+import ishareCore
 import NIOCore
 import NIOSSH
 import Synchronization
-
-struct SFTPConfiguration: Codable, Hashable, Sendable {
-    var host: String
-    var port: Int?
-    var username: String
-    var password: String?
-    var privateKey: String?
-    var passphrase: String?
-    var directory: String?
-    var pathTemplate: String?
-    var createDirectories: Bool?
-    var publicURL: String?
-    var hostKeyFingerprint: String?
-
-    static let defaultPort = 22
-
-    init(
-        host: String, port: Int? = nil, username: String, password: String? = nil, privateKey: String? = nil,
-        passphrase: String? = nil, directory: String? = nil, pathTemplate: String? = nil, createDirectories: Bool? = nil,
-        publicURL: String? = nil, hostKeyFingerprint: String? = nil
-    ) {
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
-        self.privateKey = privateKey
-        self.passphrase = passphrase
-        self.directory = directory
-        self.pathTemplate = pathTemplate
-        self.createDirectories = createDirectories
-        self.publicURL = publicURL
-        self.hostKeyFingerprint = hostKeyFingerprint
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case host
-        case port
-        case username
-        case password
-        case privateKey = "privatekey"
-        case passphrase
-        case directory
-        case pathTemplate = "pathtemplate"
-        case createDirectories = "createdirectories"
-        case publicURL = "publicurl"
-        case hostKeyFingerprint = "hostkeyfingerprint"
-    }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
-        let rawHost = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "host"))
-            ?? container.decodeDynamic(String.self, forKey: .key(named: "url"))
-        let parsed = Self.parse(rawHost)
-        host = parsed.host
-        port = try container.decodeDynamicIfPresent(Int.self, forKey: .key(named: "port")) ?? parsed.port
-        username = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "username")) ?? parsed.username ?? ""
-        password = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "password"))
-        privateKey = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "privatekey"))
-        passphrase = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "passphrase"))
-        directory = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "directory")) ?? parsed.directory
-        pathTemplate = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "pathtemplate"))
-        createDirectories = try container.decodeDynamicIfPresent(Bool.self, forKey: .key(named: "createdirectories"))
-        publicURL = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "publicurl"))
-        hostKeyFingerprint = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "hostkeyfingerprint"))
-    }
-
-    static func parse(_ value: String) -> (host: String, port: Int?, username: String?, directory: String?) {
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
-        guard trimmed.lowercased().hasPrefix("sftp://"), let components = URLComponents(string: trimmed) else {
-            return (trimmed, nil, nil, nil)
-        }
-        let path = components.path.isEmpty || components.path == "/" ? nil : components.path
-        return (components.host ?? "", components.port, components.user, path)
-    }
-
-    var resolvedPort: Int { port ?? Self.defaultPort }
-    var createsDirectories: Bool { createDirectories ?? true }
-    var trimmedHost: String { host.trimmingCharacters(in: .whitespaces) }
-
-    var usesPrivateKey: Bool {
-        !(privateKey ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    func remotePath(for relativePath: String) -> String {
-        guard let directory = directory?.trimmingCharacters(in: .whitespaces), !directory.isEmpty else { return relativePath }
-        return RemotePath.joined(directory, relativePath)
-    }
-}
 
 enum SFTPError: LocalizedError, Equatable {
     case missingCredentials
@@ -209,33 +122,6 @@ enum SFTPAuthentication {
         }
         guard let password = configuration.password, !password.isEmpty else { throw SFTPError.missingCredentials }
         return .passwordBased(username: username, password: password)
-    }
-}
-
-struct SFTPPlan: Equatable, Sendable {
-    let relativePath: String
-    let remotePath: String
-    let directories: [String]
-    let resultURL: URL?
-}
-
-enum SFTPPlanner {
-    static func plan(configuration: SFTPConfiguration, fileName: String, date: Date = .init(), uuid: UUID = .init()) throws -> SFTPPlan {
-        let relativePath = try RemotePath.render(configuration.pathTemplate, fileName: fileName, date: date, uuid: uuid)
-        let remotePath = configuration.remotePath(for: relativePath)
-        let directories = configuration.createsDirectories ? RemotePath.directories(of: relativePath).map(configuration.remotePath(for:)) : []
-        let resultURL = try RemotePath.publicURL(configuration.publicURL, path: relativePath, fallback: nil)
-        return SFTPPlan(relativePath: relativePath, remotePath: remotePath, directories: directories, resultURL: resultURL)
-    }
-
-    static func fileURL(configuration: SFTPConfiguration, remotePath: String) -> URL? {
-        var components = URLComponents()
-        components.scheme = "sftp"
-        components.host = configuration.trimmedHost
-        components.user = configuration.username.isEmpty ? nil : configuration.username
-        components.port = configuration.port
-        components.path = remotePath.hasPrefix("/") ? remotePath : "/" + remotePath
-        return components.url
     }
 }
 

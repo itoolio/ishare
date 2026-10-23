@@ -2,6 +2,7 @@ import AppKit
 import Defaults
 import Foundation
 import ImageIO
+import ishareCore
 import UniformTypeIdentifiers
 
 @MainActor

@@ -1,4 +1,5 @@
 import CoreGraphics
+import ishareCore
 
 enum ResizeHandle: CaseIterable, Hashable, Sendable {
     case topLeft

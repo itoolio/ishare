@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 import KeyboardShortcuts
 import Testing
 @testable import ishare
@@ -44,117 +45,6 @@ struct S3PresignTests {
         #expect(try CustomUploader.fromJSON(original.toJSON()).s3?.presignedExpiry == 600)
         let decoded = try CustomUploader.fromJSON(Data(#"{"name": "x", "s3": {"endpoint": "e", "bucket": "b", "accessKeyId": "a", "secretAccessKey": "s", "PresignedExpiry": 60}}"#.utf8))
         #expect(decoded.s3?.presignedExpiry == 60)
-    }
-}
-
-struct ShareXImportTests {
-    static let imgurStyle = """
-    {
-      "Version": "15.0.0",
-      "Name": "Zipline",
-      "DestinationType": "ImageUploader, TextUploader, FileUploader",
-      "RequestMethod": "POST",
-      "RequestURL": "https://zipline.example.com/api/upload",
-      "Headers": {
-        "Authorization": "secret-token",
-        "Format": "random"
-      },
-      "Body": "MultipartFormData",
-      "Arguments": {
-        "album": "shots"
-      },
-      "FileFormName": "file",
-      "URL": "{json:files[0]}",
-      "DeletionURL": "https://zipline.example.com/api/delete/{json:id}",
-      "ErrorMessage": "{json:error}"
-    }
-    """
-
-    static let legacyBinary = """
-    {
-      "Name": "Legacy",
-      "DestinationType": "ImageUploader",
-      "RequestType": "PUT",
-      "RequestMethod": "put",
-      "RequestURL": "https://legacy.example.com/upload",
-      "Parameters": { "key": "abc" },
-      "Body": "Binary",
-      "URL": "$json:data.link$",
-      "DeletionURL": "$json:data.delete$",
-    }
-    """
-
-    @Test func importsMultipartUploadersWithModernSyntax() throws {
-        let uploader = try ShareXImport.uploader(from: Data(Self.imgurStyle.utf8))
-        #expect(uploader.name == "Zipline")
-        #expect(uploader.requestURL == "https://zipline.example.com/api/upload")
-        #expect(uploader.headers == ["Authorization": "secret-token", "Format": "random"])
-        #expect(uploader.formData == ["album": "shots"])
-        #expect(uploader.fileFormName == "file")
-        #expect(uploader.requestBodyType == .multipartFormData)
-        #expect(uploader.responseURL == "{{files[0]}}")
-        #expect(uploader.deletionURL == "https://zipline.example.com/api/delete/{{id}}")
-        #expect(uploader.requestMethod == nil)
-        #expect(uploader.isValid())
-    }
-
-    @Test func importsBinaryUploadersWithLegacySyntaxAndQueryParameters() throws {
-        let uploader = try ShareXImport.uploader(from: Data(Self.legacyBinary.utf8))
-        #expect(uploader.requestURL == "https://legacy.example.com/upload?key=abc")
-        #expect(uploader.requestBodyType == .binary)
-        #expect(uploader.requestMethod == .put)
-        #expect(uploader.formData == nil)
-        #expect(uploader.fileFormName == nil)
-        #expect(uploader.responseURL == "{{data.link}}")
-        #expect(uploader.deletionURL == "{{data.delete}}")
-    }
-
-    @Test func usesTheResponseBodyWhenNoURLIsGivenAndFallsBackToTheFileName() throws {
-        let json = #"{"RequestURL": "https://paste.example.com/", "FileFormName": "f"}"#
-        let uploader = try UploaderFile.decode(Data(json.utf8), fileExtension: "SXCU", fallbackName: "my paste")
-        #expect(uploader.name == "my paste")
-        #expect(uploader.responseURL == "{{response}}")
-        #expect(uploader.fileFormName == "f")
-    }
-
-    @Test func convertsJSONPathPrefixes() throws {
-        #expect(try ShareXImport.convertTemplate("{json:$.data.url}", field: "URL") == "{{data.url}}")
-        #expect(try ShareXImport.convertTemplate("https://x/{json:files[0].name}?r={response}", field: "URL") == "https://x/{{files[0].name}}?r={{response}}")
-    }
-
-    @Test func rejectsUnsupportedFeatures() {
-        #expect(throws: ShareXImportError.unsupportedBody("JSON")) {
-            try ShareXImport.uploader(from: Data(#"{"RequestURL": "https://a.b", "Body": "JSON"}"#.utf8))
-        }
-        #expect(throws: ShareXImportError.unsupportedSyntax(field: "URL", token: "{regex:1}")) {
-            try ShareXImport.uploader(from: Data(#"{"RequestURL": "https://a.b", "URL": "{regex:1}"}"#.utf8))
-        }
-        #expect(throws: ShareXImportError.unsupportedDestination("URLShortener")) {
-            try ShareXImport.uploader(from: Data(#"{"RequestURL": "https://a.b", "DestinationType": "URLShortener"}"#.utf8))
-        }
-        #expect(throws: ShareXImportError.unsupportedMethod("GET")) {
-            try ShareXImport.uploader(from: Data(#"{"RequestURL": "https://a.b", "RequestMethod": "GET"}"#.utf8))
-        }
-        #expect(throws: ShareXImportError.missingRequestURL) {
-            try ShareXImport.uploader(from: Data(#"{"Name": "x"}"#.utf8))
-        }
-    }
-
-    @Test func keepsIscuFilesOnTheIshareDecoder() throws {
-        let uploader = try UploaderFile.decode(Fixtures.data("examples/zipline.iscu"), fileExtension: "iscu")
-        #expect(uploader.name == "zipline")
-    }
-
-    @Test func roundTripsRequestMethodAndModificationDate() throws {
-        let date = Date(timeIntervalSince1970: 1_700_000_000)
-        let original = TestUploaders.http(name: "m", host: "a.example.com")
-        var modified = original
-        modified.requestMethod = .patch
-        modified.modifiedAt = date
-        let decoded = try CustomUploader.fromJSON(modified.toJSON())
-        #expect(decoded.requestMethod == .patch)
-        #expect(decoded.modifiedAt == date)
-        #expect(try CustomUploader.fromJSON(Data(#"{"name":"x","requestURL":"https://a.b","responseURL":"{{u}}","requestMethod":"put"}"#.utf8)).requestMethod == .put)
     }
 }
 

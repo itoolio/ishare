@@ -2,6 +2,7 @@ import CoreGraphics
 import Defaults
 import Foundation
 import ImageIO
+import ishareCore
 import Testing
 import UniformTypeIdentifiers
 @testable import ishare

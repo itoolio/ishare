@@ -1,6 +1,7 @@
 import AppKit
 import BezelNotification
 import Defaults
+import ishareCore
 
 @MainActor
 func importIscu(_ url: URL) {

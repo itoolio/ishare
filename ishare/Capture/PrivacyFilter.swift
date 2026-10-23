@@ -1,5 +1,6 @@
 import AppKit
 import Defaults
+import ishareCore
 import ScreenCaptureKit
 
 struct PrivacyWindow: Hashable, Sendable {

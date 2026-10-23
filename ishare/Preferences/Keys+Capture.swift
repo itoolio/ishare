@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 
 extension Defaults.Keys {
     static let capturePath = Key<String>("capturePath", default: "~/Pictures/", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftyJSON
 import Testing
-@testable import ishare
+@testable import ishareCore
 
 struct ResponseTemplateTests {
     let json = JSON(parseJSON: """

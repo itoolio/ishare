@@ -1,5 +1,6 @@
 import Foundation
 import ImageIO
+import ishareCore
 import UniformTypeIdentifiers
 
 enum MetadataScrubber {

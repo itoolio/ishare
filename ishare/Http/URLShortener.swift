@@ -1,6 +1,7 @@
 import Alamofire
 import Defaults
 import Foundation
+import ishareCore
 
 enum URLShortenerKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case none

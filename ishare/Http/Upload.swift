@@ -2,6 +2,7 @@ import AppKit
 import BezelNotification
 import Defaults
 import Foundation
+import ishareCore
 
 enum UploadType: String, CaseIterable, Identifiable, Codable, Defaults.Serializable {
     case IMGUR, CUSTOM

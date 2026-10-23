@@ -1,5 +1,6 @@
 import AppKit
 import Defaults
+import ishareCore
 import SwiftUI
 
 struct EditorBeautifySheet: View {

@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import Defaults
+import ishareCore
 import ScreenCaptureKit
 
 struct OverlaySource: Sendable {

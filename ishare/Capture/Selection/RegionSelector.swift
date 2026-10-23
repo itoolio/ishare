@@ -1,4 +1,5 @@
 import AppKit
+import ishareCore
 
 @MainActor
 final class RegionSelector {

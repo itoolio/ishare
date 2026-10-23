@@ -1,5 +1,6 @@
 import Alamofire
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
 

@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
 

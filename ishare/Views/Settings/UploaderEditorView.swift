@@ -1,3 +1,4 @@
+import ishareCore
 import SwiftUI
 
 enum UploaderEditorTarget: Identifiable {

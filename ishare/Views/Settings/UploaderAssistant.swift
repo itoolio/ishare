@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 import SwiftUI
 
 #if canImport(FoundationModels)

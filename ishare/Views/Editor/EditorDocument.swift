@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Defaults
+import ishareCore
 
 @MainActor
 final class EditorDocument: ObservableObject {

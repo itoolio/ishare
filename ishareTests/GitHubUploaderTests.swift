@@ -1,4 +1,5 @@
 import Foundation
+import ishareCore
 import Synchronization
 import Testing
 @testable import ishare

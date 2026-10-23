@@ -3,6 +3,7 @@ import AVFoundation
 import AVKit
 import BezelNotification
 import Defaults
+import ishareCore
 import SwiftUI
 
 enum TrimOutcome: Equatable {

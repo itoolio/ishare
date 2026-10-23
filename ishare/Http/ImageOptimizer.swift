@@ -1,69 +1,8 @@
 import Defaults
 import Foundation
 import ImageIO
+import ishareCore
 import UniformTypeIdentifiers
-
-enum ImageOptimizationFormat: String, Codable, CaseIterable, Identifiable, Sendable, Defaults.Serializable {
-    case lossless
-    case avif
-    case webp
-
-    var id: Self { self }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let rawValue = try container.decode(String.self).lowercased()
-        switch rawValue {
-        case "lossless", "png", "original": self = .lossless
-        case "avif": self = .avif
-        case "webp": self = .webp
-        default: throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid image format: \(rawValue)")
-        }
-    }
-
-    var titleKey: String {
-        switch self {
-        case .lossless: "Keep the format (lossless PNG recompression)"
-        case .avif: "Convert to AVIF"
-        case .webp: "Convert to WebP"
-        }
-    }
-}
-
-struct ImageOptimizationOverride: Codable, Hashable, Sendable {
-    var enabled: Bool?
-    var format: ImageOptimizationFormat?
-
-    init(enabled: Bool? = nil, format: ImageOptimizationFormat? = nil) {
-        self.enabled = enabled
-        self.format = format
-    }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
-        enabled = try container.decodeDynamicIfPresent(Bool.self, forKey: .key(named: "enabled"))
-        format = try container.decodeDynamicIfPresent(ImageOptimizationFormat.self, forKey: .key(named: "format"))
-    }
-
-    var isEmpty: Bool { enabled == nil && format == nil }
-}
-
-struct ImageOptimizationSettings: Equatable, Sendable {
-    var enabled: Bool
-    var format: ImageOptimizationFormat
-    var quality: Double
-
-    static func resolved(global: ImageOptimizationSettings, override: ImageOptimizationOverride?) -> ImageOptimizationSettings {
-        var settings = global
-        if let enabled = override?.enabled {
-            settings.enabled = enabled
-        }
-        if let format = override?.format {
-            settings.format = format
-        }
-        return settings
-    }
-}
 
 struct ImageOptimizationResult: Equatable, Sendable {
     let url: URL
@@ -227,3 +166,5 @@ enum ByteSavings {
         return String(format: "Saved %@ (%d%%)".localized(), formatter.string(fromByteCount: Int64(saved)), percent)
     }
 }
+
+extension ImageOptimizationFormat: @retroactive Defaults.Serializable {}

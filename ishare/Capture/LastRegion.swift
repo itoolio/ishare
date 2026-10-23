@@ -1,6 +1,7 @@
 import AppKit
 import Defaults
 import Foundation
+import ishareCore
 
 struct StoredRegion: Codable, Hashable, Sendable {
     var x: Double

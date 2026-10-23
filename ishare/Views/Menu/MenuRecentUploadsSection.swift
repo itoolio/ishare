@@ -1,3 +1,4 @@
+import ishareCore
 import SwiftUI
 
 struct MenuRecentUploadsSection: View {

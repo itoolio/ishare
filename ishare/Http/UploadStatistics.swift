@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import ishareCore
 
 struct UploadStatisticsSample: Codable, Equatable, Sendable {
     var date: Date

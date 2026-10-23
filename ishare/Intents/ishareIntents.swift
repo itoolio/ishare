@@ -1,6 +1,7 @@
 import AppIntents
 import Defaults
 import Foundation
+import ishareCore
 import UniformTypeIdentifiers
 
 struct UploaderEntity: AppEntity, Identifiable, Hashable {

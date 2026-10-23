@@ -2,6 +2,7 @@ import AVFoundation
 import CoreGraphics
 import Defaults
 import Foundation
+import ishareCore
 
 enum RecordingExportFormat: String, CaseIterable, Identifiable, Sendable {
     case mp4H264

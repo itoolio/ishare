@@ -1,6 +1,7 @@
 import BezelNotification
 import Defaults
 import Foundation
+import ishareCore
 
 struct UploaderConflict: Equatable {
     let local: CustomUploader

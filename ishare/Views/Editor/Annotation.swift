@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import ishareCore
 
 struct RGBAColor: Codable, Hashable, Sendable {
     var red: Double

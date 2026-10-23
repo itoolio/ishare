@@ -1,20 +1,7 @@
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
-
-struct PKCETests {
-    @Test func derivesTheRFC7636Challenge() {
-        let pkce = PKCE(verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
-        #expect(pkce.challenge == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
-    }
-
-    @Test func generatesURLSafeVerifiersOfAValidLength() {
-        let pkce = PKCE.generate()
-        #expect((43 ... 128).contains(pkce.verifier.count))
-        #expect(pkce.verifier.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" })
-        #expect(PKCE.generate().verifier != pkce.verifier)
-    }
-}
 
 struct OAuthRequestTests {
     func query(_ url: URL) -> [String: String] {

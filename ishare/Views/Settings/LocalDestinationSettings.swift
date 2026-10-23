@@ -1,4 +1,5 @@
 import AppKit
+import ishareCore
 import SwiftUI
 
 struct FolderDraft: Equatable {

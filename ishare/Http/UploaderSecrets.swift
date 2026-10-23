@@ -1,4 +1,5 @@
 import Foundation
+import ishareCore
 
 enum UploaderSecretField: String, CaseIterable, Sendable {
     case password

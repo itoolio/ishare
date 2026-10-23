@@ -1,6 +1,7 @@
 import AppKit
 import Defaults
 import Foundation
+import ishareCore
 
 enum AutomationError: Error, Equatable, Sendable {
     case cancelled

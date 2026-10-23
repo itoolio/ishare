@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 
 enum UploadOrigin: Sendable {
     case capture

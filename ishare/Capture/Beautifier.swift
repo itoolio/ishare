@@ -1,6 +1,7 @@
 import CoreGraphics
 import Defaults
 import Foundation
+import ishareCore
 
 enum BeautifyBackground: String, CaseIterable, Identifiable, Sendable, Defaults.Serializable {
     case ocean
