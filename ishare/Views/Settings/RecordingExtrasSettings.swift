@@ -13,6 +13,7 @@ struct RecordingExtrasSettings: View {
             CaptionsSettingsSection()
             NotesSettingsSection()
             InstantReplaySettingsSection()
+            RecordingEffectsSettings()
         }
     }
 }
