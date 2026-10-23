@@ -73,6 +73,13 @@ private struct AdaptiveGlassModifier<S: InsettableShape>: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     private var contrast = ResolvedGlassContrast()
 
+    init(shape: S, interactive: Bool, tint: Color?, fallback: GlassFallback) {
+        self.shape = shape
+        self.interactive = interactive
+        self.tint = tint
+        self.fallback = fallback
+    }
+
     private var rendering: GlassRendering {
         GlassRendering.resolve(glassAvailable: GlassRendering.isGlassAvailable, reduceTransparency: reduceTransparency, fallback: fallback)
     }
@@ -149,6 +156,10 @@ private struct AdaptiveGlassBarModifier: ViewModifier {
     let edge: VerticalEdge
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     private var contrast = ResolvedGlassContrast()
+
+    init(edge: VerticalEdge) {
+        self.edge = edge
+    }
 
     func body(content: Content) -> some View {
         content
