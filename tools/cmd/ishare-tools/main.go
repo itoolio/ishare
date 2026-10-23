@@ -11,6 +11,7 @@ import (
 
 	"github.com/itoolio/ishare/tools/internal/appstore"
 	"github.com/itoolio/ishare/tools/internal/appstoreplan"
+	"github.com/itoolio/ishare/tools/internal/buildlog"
 	"github.com/itoolio/ishare/tools/internal/metadata"
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
@@ -40,6 +41,7 @@ var commands = map[string]command{
 	"screenshots":        {"screenshots [--ci] [all | locale[:language]...]", captureScreenshots},
 	"metadata":           {"metadata [--check] [--metadata dir] [--catalog Metadata.xcstrings] [--release-notes en-US/release_notes.txt]", renderMetadata},
 	"app-store-plan":     {"app-store-plan --report status.json --releases releases.json", appStorePlan},
+	"build-warnings":     {"build-warnings [--ignore fragment]... <xcodebuild.log>...", buildWarnings},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
 
@@ -223,4 +225,41 @@ func renderMetadata(env environment, arguments []string) error {
 		return errUsage
 	}
 	return metadata.Run(options)
+}
+
+type fragments []string
+
+func (f *fragments) String() string { return strings.Join(*f, ",") }
+
+func (f *fragments) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
+func buildWarnings(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("build-warnings", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	ignored := fragments(append([]string{}, buildlog.DefaultIgnored...))
+	flags.Var(&ignored, "ignore", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() == 0 {
+		return errUsage
+	}
+	logs := make([]buildlog.Log, 0, flags.NArg())
+	for _, path := range flags.Args() {
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		logs = append(logs, buildlog.Log{Name: path, Reader: file})
+	}
+	count, err := buildlog.Check(logs, ignored, env.stdout)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("%d build warnings", count)
+	}
+	fmt.Fprintf(env.stdout, "no build warnings in %d logs\n", len(logs))
+	return nil
 }
