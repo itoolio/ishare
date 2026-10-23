@@ -205,7 +205,7 @@ struct S3SecretStoreTests {
         let migrated = try #require(Defaults[key]?.first { $0.id == plain.id })
         #expect(migrated.s3?.secretAccessKey == S3SecretStore.placeholder)
         #expect(S3SecretStore.secret(for: migrated) == "migrate-me")
-        #expect(defaults.integer(forKey: Migrations.versionKey) == 3)
+        #expect(defaults.integer(forKey: Migrations.versionKey) == Migrations.currentVersion)
         Migrations.moveS3SecretsToKeychain(defaults: defaults)
         #expect(Defaults[key]?.count == 2)
     }

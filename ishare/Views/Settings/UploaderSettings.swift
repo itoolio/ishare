@@ -64,6 +64,8 @@ struct UploaderSettingsView: View {
             }
 
             UploadBehaviorSettings()
+            URLShortenerSettings()
+            UploadPresetsSettings()
             WatchFolderSettings()
             UploadQueueSettings()
 

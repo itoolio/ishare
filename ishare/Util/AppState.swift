@@ -13,6 +13,7 @@ final class AppState: ObservableObject {
     init() {
         if !ScreenshotMode.isActive {
             setupKeyboardShortcuts()
+            UploadPresetShortcuts.start()
             UploadBackgroundServices.start()
         }
     }

@@ -36,11 +36,16 @@ enum TestUploaders {
 
 @MainActor
 enum TestSecrets {
-    static let backend = InMemorySecretBackend()
+    private static let fallback = InMemorySecretBackend()
+
+    static var backend: InMemorySecretBackend {
+        install()
+        return S3SecretStore.backend as? InMemorySecretBackend ?? fallback
+    }
 
     static func install() {
         if !(S3SecretStore.backend is InMemorySecretBackend) {
-            S3SecretStore.backend = backend
+            S3SecretStore.backend = fallback
         }
     }
 }
