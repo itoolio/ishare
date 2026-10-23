@@ -221,7 +221,7 @@ struct CaptureTranslateView: View {
             CaptureResultTextBox(title: "Translation".localized(), text: model.translation, placeholder: placeholder)
             status
             HStack(spacing: 8) {
-                Picker("Translate to".localized(), selection: Binding(get: { model.targetID }, set: model.selectTarget)) {
+                Picker("Translate to".localized(), selection: Binding(get: { model.targetID }, set: { model.selectTarget($0) })) {
                     ForEach(model.options) { Text($0.name).tag($0.id) }
                 }
                 .fixedSize()
