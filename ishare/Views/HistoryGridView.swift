@@ -163,6 +163,10 @@ struct HistoryGridView: View {
             }
             .anchored(to: shareAnchor)
             .accessibilityIdentifier("history.bulk.share")
+            Button("Combine…".localized(), systemImage: "square.grid.2x2") { HistoryActions.combine(items) }
+                .disabled(!HistoryActions.canCombine(items))
+                .help("Combine the selected images into one".localized())
+                .accessibilityIdentifier("history.bulk.combine")
             Button("Delete from Server…".localized(), systemImage: "trash", role: .destructive) {
                 HistoryActions.confirmDeleteFromServer(items)
             }
@@ -319,13 +323,16 @@ struct HistoryCard: View {
         if let bulkItems {
             Button(String(format: "Copy %d Links".localized(), HistorySelection.links(for: bulkItems).count)) { HistoryActions.copyLinks(bulkItems) }
             Button("Share…".localized()) { SharePicker.show(SharePicker.items(for: bulkItems), from: shareAnchor) }
+            if HistoryActions.canCombine(bulkItems) {
+                Button("Combine…".localized()) { HistoryActions.combine(bulkItems) }
+            }
             Divider()
             if bulkItems.contains(where: \.canDeleteFromServer) {
                 Button("Delete from Server…".localized(), role: .destructive) { HistoryActions.confirmDeleteFromServer(bulkItems) }
             }
             Button("Remove from History".localized()) { HistoryActions.removeFromHistory(bulkItems) }
         } else {
-            HistoryItemMenuItems(item: item, shareAnchor: shareAnchor)
+            HistoryItemMenuItems(item: item, shareAnchor: shareAnchor, showsImageActions: true)
         }
     }
 }
