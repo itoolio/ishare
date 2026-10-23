@@ -84,6 +84,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         BackgroundMaintenance.start()
         WhatsNew.presentIfNeeded()
+        LocalShareManager.shared.stopAll()
+        if !ScreenshotMode.isActive, !RuntimeEnvironment.isRunningTests {
+            HistorySync.shared.start()
+        }
+    }
+
+    func applicationWillTerminate(_: Notification) {
+        LocalShareManager.shared.stopAll()
     }
 
 
@@ -112,29 +120,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handle(_ url: URL) {
-        Log.app.info("Handling \(url.absoluteString, privacy: .public)")
-        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        switch url.host() {
-        case "upload":
-            guard let value = items.first(where: { $0.name == "file" })?.value,
-                  let decoded = value.removingPercentEncoding,
-                  let fileURL = URL(string: decoded)
-            else { return }
-            Task { @MainActor in
-                await UploadCoordinator.upload(fileURL: fileURL)
-                await showToast(fileURL: fileURL)
-            }
-        case "capture":
-            let type = items.first(where: { $0.name == "type" })?.value.flatMap { CaptureType(rawValue: $0.uppercased()) } ?? .REGION
-            Task { @MainActor in
-                await CaptureSession.captureImage(type)
-            }
-        case "record":
-            let gif = items.contains { $0.name == "gif" && $0.value != "0" }
-            let region = items.contains { $0.name == "region" && $0.value != "0" }
-            CaptureSession.toggleRecording(gif: gif, region: region)
-        default:
-            break
+        Task { @MainActor in
+            await URLSchemeRouter.shared.handle(url)
         }
     }
 
