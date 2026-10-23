@@ -11,6 +11,7 @@ struct CaptureSettingsView: View {
     @Default(.windowShadow) var windowShadow
     @Default(.showMagnifier) var showMagnifier
     @Default(.openEditorAfterCapture) var openEditorAfterCapture
+    @Default(.editorSmartShapes) var editorSmartShapes
     @Default(.scrollingAutoScroll) var scrollingAutoScroll
     @Default(.nameFilesAfterWindowTitle) var nameFilesAfterWindowTitle
     @State private var screenAccess = CGPreflightScreenCaptureAccess()
@@ -31,6 +32,7 @@ struct CaptureSettingsView: View {
                 Toggle("Include window shadow".localized(), isOn: $windowShadow)
                 Toggle("Show magnifier while selecting".localized(), isOn: $showMagnifier)
                 Toggle("Open editor after capture".localized(), isOn: $openEditorAfterCapture)
+                Toggle("Snap editor shapes to detected elements".localized(), isOn: $editorSmartShapes)
             }
             CaptureExtrasSettings()
             CaptureToolsSettings()
@@ -75,11 +77,13 @@ extension CaptureSettingsView: SettingsSearchable {
         SettingsSearchEntry("Screenshot", pane: .capture, keywords: [
             "Format", "PNG", "JPG", "HEIC", "WebP", "TIFF", "File prefix", "Image path", "Folder", "Show pointer in screenshots",
             "Pointer", "Cursor", "Include window shadow", "Shadow", "Show magnifier while selecting", "Magnifier",
-            "Open editor after capture", "Editor", "Scrolling Capture", "Scroll automatically", "Permissions", "Screen recording",
+            "Open editor after capture", "Editor", "Snap editor shapes to detected elements", "Smart shapes", "Snapping", "Scrolling Capture", "Scroll automatically", "Permissions", "Screen recording",
         ]),
         SettingsSearchEntry("Privacy", pane: .capture, keywords: [
             "Hide the menu bar in screenshots", "Menu bar", "Blurred applications", "Blur", "Background", "Add a background to screenshots",
             "Beautify", "Padding", "Corner radius", "Drop shadow", "Gradient", "Measure", "Ruler", "Last region",
+            "Frame", "Device frame", "Mockup", "Laptop", "Desktop Display", "Phone", "Browser Window", "Frame appearance",
+            "Screen fit", "Letterbox", "Crop to Fill", "Address bar text",
         ]),
         SettingsSearchEntry("Capture delay", pane: .capture, keywords: [
             "Self-timer", "Timer", "Countdown", "Copy links from QR codes", "QR code", "Barcode", "Redact sensitive text before uploading",
