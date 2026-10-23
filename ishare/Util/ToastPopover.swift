@@ -439,6 +439,13 @@ private struct ToastCardContent: View {
                         if let markdown = item.markdownImage {
                             Button("Copy Markdown".localized()) { HistoryActions.copy(markdown, announcing: "Copied Markdown") }
                         }
+                        Button("Show QR Code".localized()) { QRCodePanel.show(for: item) }
+                            .disabled(item.preferredURL == nil)
+                    }
+                    if let url = model.fileURL, fileExists {
+                        Button("Share on Local Network".localized()) {
+                            Task { @MainActor in await LocalShareManager.shared.shareAndPresent(fileURL: url) }
+                        }
                     }
                 }
             ToastActionButton(symbol: "arrow.up.forward.app", title: "Open", iconOnly: model.canUndo, identifier: "toast.open") { open() }

@@ -105,8 +105,7 @@ enum HistoryActions {
 
     static func removeFromHistory(_ items: [HistoryItem]) {
         guard !items.isEmpty else { return }
-        let removed = Set(items)
-        Defaults[.uploadHistory].removeAll { removed.contains($0) }
+        removeFromUploadHistory(items)
         BezelNotification.show(messageText: "Removed from History".localized(), icon: ToastIcon)
     }
 
@@ -208,6 +207,11 @@ struct HistoryItemMenuItems: View {
         }
         Button("Open in Browser".localized()) { HistoryActions.open(item) }
             .disabled(item.remoteURL == nil)
+        Button("Show QR Code".localized()) { HistoryActions.showQRCode(item) }
+            .disabled(item.preferredURL == nil)
+        if HistoryActions.canShareOnLocalNetwork(item) {
+            Button("Share on Local Network".localized()) { HistoryActions.shareOnLocalNetwork(item) }
+        }
         if HistoryActions.canEdit(item) {
             Button("Open in Editor".localized()) { HistoryActions.edit(item) }
             if showsImageActions {

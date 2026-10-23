@@ -67,6 +67,7 @@ struct HistorySettingsSection: View {
                 ForEach(HistoryRetention.allCases) { Text($0.title).tag($0) }
             }
             .accessibilityIdentifier("settings.history.retention")
+            HistorySyncToggle()
             LabeledContent(String(format: "%d uploads in history".localized(), uploadHistory.count)) {
                 Button("Clear History…".localized(), role: .destructive) {
                     _ = HistoryActions.confirmClearHistory()
@@ -93,5 +94,7 @@ extension HistorySettingsSection: SettingsSearchable {
         "History", pane: .general, keywords: ["Keep up to", "Remove uploads older than", "Limit", "Retention"], anchor: SettingsAnchor.history
     )
     static let clearHistory = SettingsSearchEntry("Clear History", pane: .general, anchor: SettingsAnchor.clearHistory)
-    static let searchEntries = [history, clearHistory]
+    static var searchEntries: [SettingsSearchEntry] {
+        [history, clearHistory] + HistorySyncToggle.searchEntries
+    }
 }

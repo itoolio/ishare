@@ -89,6 +89,12 @@ targetTemplates:
       - target: ishareWidgets
         embed: true
         codeSign: true
+      - target: ishare-cli
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
     settings:
       base:
         PRODUCT_NAME: ishare
@@ -187,6 +193,29 @@ targets:
         COMBINE_HIDPI_IMAGES: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: ""
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks
+  ishare-cli:
+    type: tool
+    platform: macOS
+    sources:
+      - path: ishare-cli
+        excludes:
+          - "**/*.entitlements"
+      - path: ishare/CLI
+    settings:
+      base:
+        PRODUCT_NAME: ishare
+        PRODUCT_MODULE_NAME: ishare_cli
+        PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.cli
+        CODE_SIGN_ENTITLEMENTS: ishare-cli/ishare-cli.entitlements
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        REGISTER_APP_GROUPS: YES
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ishare
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© Adrian Castro"
+        SKIP_INSTALL: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
   ishareTests:
     type: bundle.unit-test
     platform: macOS

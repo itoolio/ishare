@@ -180,7 +180,21 @@ extension AppCommand {
                 MenuController.shared.dismiss()
                 openHistoryWindow(uploadHistory: Defaults[.uploadHistory])
             },
-        ]
+        ] + latestUploadCommands()
+    }
+
+    @MainActor private static func latestUploadCommands() -> [AppCommand] {
+        guard let latest = Defaults[.uploadHistory].first else { return [] }
+        var commands: [AppCommand] = []
+        if latest.preferredURL.map({ !$0.isFileURL }) == true {
+            commands.append(AppCommand(id: "history.qr", title: "Show QR Code for Last Upload", keywords: ["qr", "scan", "phone", "link"], symbol: "qrcode",
+                                       perform: afterDismissing { QRCodePanel.show(for: latest) }))
+        }
+        if HistoryActions.canShareOnLocalNetwork(latest) {
+            commands.append(AppCommand(id: "history.localNetwork", title: "Share Last Capture on Local Network", keywords: ["lan", "wi-fi", "local", "qr", "phone"], symbol: "wifi",
+                                       perform: afterDismissing { HistoryActions.shareOnLocalNetwork(latest) }))
+        }
+        return commands
     }
 
     @MainActor private static func destinationCommands() -> [AppCommand] {

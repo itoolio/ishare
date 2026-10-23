@@ -46,12 +46,27 @@ ishare 5.3 and later require a Mac with Apple silicon running macOS 15 or later.
 - **Record**: displays, windows or a region you draw, as video or GIF, with a webcam bubble, click and keystroke overlays, system audio and microphone meters, trimming, chapter markers, on-device captions and exports to MP4, MOV, GIF or audio.
 - **Annotate**: arrows in several styles, lines, shapes, highlights, pen, marker, text, speech balloons, numbered steps, emoji and symbol stamps, magnifier, spotlight, blur, pixelate, smart eraser, crop with handles and aspect presets, rotate, flip, zoom and pan, a layers sidebar and templates. Done runs your after-capture actions.
 - **Upload**: Imgur, custom HTTP uploaders with optional password-protected and expiring links, ShareX `.sxcu` import, S3-compatible storage (AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2, MinIO) with expiring links and Keychain-stored secrets, and local destinations: a folder, iCloud Drive or a Photos album. Upload to several destinations, pick one per capture, upload text snippets, watch a folder, retry failed uploads, shorten links and redact sensitive text. Upload presets get their own shortcuts. An Apple Intelligence assistant builds uploaders from a conversation.
-- **Automate**: global keyboard shortcuts, Shortcuts actions, a share menu extension, "Upload with ishare" in Finder and drag and drop onto the menu bar icon.
+- **Automate**: global keyboard shortcuts, Shortcuts actions, an `ishare` command-line tool with JSON output, `ishare://` URL actions with x-callback-url support, a [Raycast extension](integrations/raycast), a share menu extension, "Upload with ishare" in Finder and drag and drop onto the menu bar icon.
+- **Share nearby**: QR codes for every link, and temporary links on your local network that devices on the same Wi-Fi can open without any uploader.
 - **Everything else**: a customizable, keyboard-friendly menu with a ⌘K command palette and previews, a Recent Uploads widget, searchable upload history with server-side deletion, settings search and backup, sound options, a welcome guide, AirDrop, Photos, Messages and Mail sharing, 11 languages, and Liquid Glass on macOS 26.
 
 ## Custom uploaders
 
 ishare imports `.iscu` files: JSON documents that describe an HTTP or S3 uploader, or a local destination such as a folder, iCloud Drive or a Photos album. HTTP uploaders can declare `linkOptions` so you can protect each link with a password or let it expire. The full specification is on the [website](https://ishare.itoolio.dev/docs/iscu/), and ready-made uploaders for chibisafe, copyparty, Discord webhooks, lumen, Zipline (also with password and expiry headers), S3, a folder and Photos are in [examples](examples).
+
+## Command line and URL actions
+
+Install the bundled command-line tool from **Settings → Advanced → Command-Line Tool**, then:
+
+```bash
+ishare upload ~/Desktop/diagram.png
+ishare capture region --upload --json
+ishare record start
+ishare uploaders list
+ishare history --limit 10 --json
+```
+
+Apps and scripts can also open `ishare://capture/region`, `ishare://record/toggle`, `ishare://upload?path=…`, `ishare://uploader/select?name=…` and `ishare://open/history`, with optional `x-success` and `x-error` callbacks. The full reference is on the [website](https://ishare.itoolio.dev/docs/automation/).
 
 ## Development
 

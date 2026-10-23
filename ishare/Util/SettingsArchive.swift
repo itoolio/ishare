@@ -150,6 +150,7 @@ enum SettingsTransfer {
         .pointerSmoothing, .pointerScale, .clickRipples, .clickRippleColor, .hidesIdlePointer, .pointerIdleSeconds,
         .liveDrawingTool, .liveDrawingColor, .liveDrawingFadeDelay, .recordingMaxMinutes, .recordingMaxMegabytes, .recordingLowDiskWarningMB,
         .beautifyFrame, .beautifyFrameAppearance, .beautifyFrameFit, .beautifyFrameTitle, .editorSmartShapes,
+        .showQRCodeAfterUpload, .localShareExpiry, .localShareMaxDownloads, .historySyncEnabled,
     ]
 
     static var preferenceNames: Set<String> {

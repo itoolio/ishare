@@ -10,13 +10,14 @@ struct UploadOutcome: Sendable, Equatable {
     var shortURL: URL? = nil
     var localIdentifier: String? = nil
     var isShareable = true
+    var isLocalNetwork = false
 
     var deliveredURL: URL? {
         isShareable ? shortURL ?? url : nil
     }
 
     var canBeShortened: Bool {
-        isShareable && !url.isFileURL
+        isShareable && !url.isFileURL && !isLocalNetwork
     }
 
     var historyURL: String? {
@@ -27,6 +28,7 @@ struct UploadOutcome: Sendable, Equatable {
 enum UploadTarget: Sendable {
     case imgur(clientID: String)
     case custom(CustomUploader)
+    case localNetwork
 
     @MainActor var uploader: any Uploader {
         uploader(linkChoice: nil)
@@ -43,6 +45,8 @@ enum UploadTarget: Sendable {
             case .photos: PhotosUploader(uploader: uploader)
             case .custom: HTTPUploader(uploader: uploader, linkChoice: linkChoice)
             }
+        case .localNetwork:
+            LocalNetworkUploader()
         }
     }
 
@@ -50,6 +54,7 @@ enum UploadTarget: Sendable {
         switch self {
         case .imgur: .builtIn(.IMGUR)
         case let .custom(uploader): .custom(uploader.id)
+        case .localNetwork: .localNetwork
         }
     }
 
@@ -57,6 +62,7 @@ enum UploadTarget: Sendable {
         switch self {
         case .imgur: "Imgur"
         case let .custom(uploader): uploader.name
+        case .localNetwork: LocalNetworkUploader.displayName
         }
     }
 }

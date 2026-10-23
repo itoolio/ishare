@@ -22,4 +22,9 @@ extension Defaults.Keys {
     static let linkOptionPreferences = Key<[String: LinkOptionPreferences]>("linkOptionPreferences", default: [:], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let localFolderBookmarks = Key<[String: Data]>("localFolderBookmarks", default: [:], suite: .ishare)
     static let uploadersLastSyncedAt = Key<Date?>("uploadersLastSyncedAt", default: nil, suite: .ishare)
+    static let showQRCodeAfterUpload = Key<Bool>("showQRCodeAfterUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let localShareExpiry = Key<LocalShareExpiry>("localShareExpiry", default: .oneHour, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let localShareMaxDownloads = Key<Int?>("localShareMaxDownloads", default: nil, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
+
+extension LocalShareExpiry: Defaults.Serializable {}

@@ -29,6 +29,8 @@ struct AdvancedSettingsView: View {
                     }
                 }
             }
+            SharingSettingsSection()
+            CommandLineToolSection()
             LocalCaptureCleanupSection()
             DiagnosticsSection()
             SettingsTransferSection()
@@ -38,7 +40,11 @@ struct AdvancedSettingsView: View {
 }
 
 extension AdvancedSettingsView: SettingsSearchable {
-    static let searchEntries: [SettingsSearchEntry] = [
+    static var searchEntries: [SettingsSearchEntry] {
+        baseSearchEntries + SharingSettingsSection.searchEntries + CommandLineToolSection.searchEntries
+    }
+
+    static let baseSearchEntries: [SettingsSearchEntry] = [
         SettingsSearchEntry("Backup", pane: .advanced, keywords: [
             "Export Settings", "Import Settings", "Include upload history", "Include S3 secret access keys",
         ]),

@@ -45,6 +45,9 @@ struct LiveUploadEnvironment: UploadEnvironment {
         if actions.open {
             NSWorkspace.shared.open(url)
         }
+        if Defaults[.showQRCodeAfterUpload], !url.isFileURL, !LocalNetworkAddress.isPrivateHost(url.host() ?? "") {
+            QRCodePanel.show(url)
+        }
     }
 
     func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution {
@@ -98,6 +101,7 @@ enum UploadCoordinator {
         case .builtIn(.IMGUR): .imgur(clientID: Defaults[.imgurClientId])
         case .builtIn(.CUSTOM): currentTarget()
         case let .custom(id): target(forUploaderID: id)
+        case .localNetwork: .localNetwork
         }
     }
 

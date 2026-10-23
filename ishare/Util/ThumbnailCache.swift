@@ -44,7 +44,9 @@ struct ThumbnailKey: Hashable, Sendable {
         }
         guard item.kind != .video, let string = item.fileUrl, let url = URL(string: string), let scheme = url.scheme?.lowercased(),
               ["http", "https"].contains(scheme)
-        else { return nil }
+        else {
+            return HistorySyncPreviews.existingURL(for: item).map { ThumbnailKey(source: .file($0.path), requestedPixelSize: pixels) }
+        }
         return ThumbnailKey(source: .remote(url), requestedPixelSize: pixels)
     }
 }

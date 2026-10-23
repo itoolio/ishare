@@ -35,6 +35,22 @@ jobs:
             - name: Check that the localized App Store metadata matches its catalog
               run: go run ./tools/cmd/ishare-tools metadata --check
 
+    integrations:
+        runs-on: ubuntu-24.04
+        defaults:
+            run:
+                working-directory: integrations/raycast
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: lts/*
+                  cache: npm
+                  cache-dependency-path: integrations/raycast/package-lock.json
+            - run: npm ci
+            - run: npm run build
+            - run: npm run lint
+
     app:
         runs-on: macos-26
         timeout-minutes: 60
