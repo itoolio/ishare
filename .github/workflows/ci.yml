@@ -35,6 +35,17 @@ jobs:
             - name: Check that the localized App Store metadata matches its catalog
               run: go run ./tools/cmd/ishare-tools metadata --check
 
+    core:
+        runs-on: macos-26
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Run the ishareCore package tests
+              run: swift test --package-path Packages/ishareCore
+
     integrations:
         runs-on: ubuntu-24.04
         defaults:
