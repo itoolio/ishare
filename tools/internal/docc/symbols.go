@@ -11,31 +11,19 @@ import (
 )
 
 var DocumentedTypes = []string{
-	"CustomUploader",
-	"DeleteRequestType",
-	"FolderDestination",
 	"FolderUploader",
 	"HTTPUploader",
 	"HistoryItem",
 	"ImgurUploader",
-	"LinkOptionsSpec",
-	"PhotosDestination",
 	"PhotosUploader",
-	"RequestBodyType",
-	"ResponseTemplate",
-	"S3Configuration",
 	"S3Uploader",
 	"UploadCoordinator",
 	"UploadEnvironment",
 	"UploadFailure",
 	"UploadOutcome",
-	"UploadRequestMethod",
 	"UploadService",
 	"UploadTarget",
 	"Uploader",
-	"UploaderIssue",
-	"UploaderKind",
-	"UploaderValidator",
 }
 
 type graph struct {
