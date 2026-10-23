@@ -43,6 +43,8 @@ final class AppState: ObservableObject {
         onCapture(.captureLastRegion, .LAST_REGION)
         onCapture(.captureText, .TEXT)
         IntervalCapture.registerShortcut()
+        CaptureTranslateFlow.registerShortcut()
+        CaptureAskFlow.registerShortcut()
         onCapture(.captureRegionForceUpload, .REGION, forceUpload: true)
         onCapture(.captureWindowForceUpload, .WINDOW, forceUpload: true)
         onCapture(.captureScreenForceUpload, .SCREEN, forceUpload: true)

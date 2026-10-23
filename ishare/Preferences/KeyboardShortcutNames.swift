@@ -26,4 +26,6 @@ extension KeyboardShortcuts.Name {
     static let openEditor = Self("openEditor", default: .init(.e, modifiers: [.control, .option]))
     static let toggleRecordingNotes = Self("toggleRecordingNotes")
     static let saveInstantReplay = Self("saveInstantReplay")
+    static let captureTranslate = Self("captureTranslate")
+    static let captureAsk = Self("captureAsk")
 }

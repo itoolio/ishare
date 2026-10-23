@@ -9,6 +9,7 @@ struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var localPath: String?
     var date: Date?
     var shortUrl: String?
+    var altText: String?
     var id: Self { self }
 }
 

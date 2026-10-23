@@ -179,6 +179,21 @@ struct CaptureTextIntent: AppIntent {
     }
 }
 
+struct CaptureTranslateIntent: AppIntent {
+    static var title: LocalizedStringResource { "Capture and Translate with ishare" }
+    static var description: IntentDescription { IntentDescription("Recognizes the text in an area you select, translates it on this Mac and returns the translation.") }
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        switch await CaptureTranslateFlow.run() {
+        case let .translated(text): return .result(value: text)
+        case .noText: return .result(value: "")
+        case .failed: throw IntentError.recognitionFailed
+        case .cancelled: throw IntentError.cancelled
+        }
+    }
+}
+
 struct RecordIntent: AppIntent {
     static var title: LocalizedStringResource { "Start or Stop Recording with ishare" }
     static var description: IntentDescription { IntentDescription("Starts a screen recording, or stops the one in progress.") }
@@ -275,6 +290,12 @@ struct ishareShortcuts: AppShortcutsProvider {
             phrases: ["Change the \(.applicationName) uploader"],
             shortTitle: "Set Uploader",
             systemImageName: "server.rack"
+        )
+        AppShortcut(
+            intent: CaptureTranslateIntent(),
+            phrases: ["Translate text on the screen with \(.applicationName)", "Capture and translate with \(.applicationName)"],
+            shortTitle: "Capture and Translate",
+            systemImageName: "translate"
         )
         AppShortcut(intent: CaptureWithPresetIntent(), phrases: ["Capture with an \(.applicationName) preset"], shortTitle: "Capture with Preset", systemImageName: "square.stack.3d.up")
     }

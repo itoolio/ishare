@@ -63,6 +63,8 @@ enum SettingsSearchIndex {
             "API keys and tokens", "Credit card numbers", "IP addresses", "Phone numbers", "Interval Capture", "Interval",
             "Burst", "Time-lapse", "Also make a GIF", "App Profiles", "Profile", "Name files after the window title", "Window title",
             "Capture Text", "Text recognition", "OCR",
+            "Capture and Translate", "Translate", "Translation", "Translate to", "System Language", "Translate & Describe",
+            "Capture and Ask", "Apple Intelligence", "Generate alt text for uploads", "Alt text",
         ]),
         SettingsSearchEntry(pane: .recording, keywords: [
             "Clicks & Keystrokes", "Show keystrokes", "Keystrokes", "Clicks", "Webcam", "Show webcam", "Camera",

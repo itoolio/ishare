@@ -211,14 +211,19 @@ enum CaptureSession {
         }
         let uploadURL = kind == .video ? await PostCapture.compressedIfNeeded(fileURL) : redactedURL ?? fileURL
         let localFileURL = keepsLocalFile ? fileURL : nil
+        let altText = kind == .image && AltText.isEnabled ? Task { await AltText.generate(for: uploadURL) } : nil
+        var results: [Result<UploadOutcome, any Error>] = []
         if let destinations = options.destinations {
             for target in destinations {
-                await UploadCoordinator.upload(fileURL: uploadURL, target: target, localFileURL: localFileURL)
+                results.append(await UploadCoordinator.upload(fileURL: uploadURL, target: target, localFileURL: localFileURL))
             }
         } else if let preset = options.preset {
-            await UploadCoordinator.upload(fileURL: uploadURL, preset: preset, localFileURL: localFileURL)
+            results.append(await UploadCoordinator.upload(fileURL: uploadURL, preset: preset, localFileURL: localFileURL))
         } else {
-            await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: localFileURL)
+            results.append(await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: localFileURL))
+        }
+        if let altText, let text = await altText.value {
+            AltText.store(text, forUploadsAt: results.compactMap { try? $0.get().url })
         }
         if let redactedURL {
             Redactor.discard(redactedURL)

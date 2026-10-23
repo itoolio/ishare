@@ -32,5 +32,7 @@ extension Defaults.Keys {
     static let intervalCaptureDuration = Key<Int>("intervalCaptureDuration", default: 60, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let intervalCaptureMakesGIF = Key<Bool>("intervalCaptureMakesGIF", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let captureProfiles = Key<[CaptureProfile]>("captureProfiles", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let translationTargetLanguage = Key<String>("translationTargetLanguage", default: "", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let generateAltText = Key<Bool>("generateAltText", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let nameFilesAfterWindowTitle = Key<Bool>("nameFilesAfterWindowTitle", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
