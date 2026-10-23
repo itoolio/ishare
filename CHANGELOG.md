@@ -1,3 +1,25 @@
+## [5.2.0](https://github.com/itoolio/ishare/compare/v5.1.1...v5.2.0) (2026-10-23)
+
+### Features
+
+* **capture:** text capture, self-timer, QR links, redaction, interval capture, app profiles and window-title names ([942e62a](https://github.com/itoolio/ishare/commit/942e62aae4ef117bb0563f194fc9a68e9226e8fa))
+* **diagnostics:** collect MetricKit crash and hang reports ([9e82135](https://github.com/itoolio/ishare/commit/9e82135c0bdfe294cd1078131005e9f4757f8691))
+* **editor:** annotation templates, layers sidebar, anchored zoom and live effect previews ([58eafb5](https://github.com/itoolio/ishare/commit/58eafb5d82edf03b9d2ed531daeedfc245f15504))
+* **history:** day timeline with multi-select and bulk actions ([3deedf9](https://github.com/itoolio/ishare/commit/3deedf9df1f32273f7eb481e5d7c82df36ee2d4c))
+* **i18n:** translate the 5.2 features into all supported languages ([c24ff04](https://github.com/itoolio/ishare/commit/c24ff0418e46a2d6d0ee72d4f4750c4bc34c4380))
+* **menu:** add text capture, interval capture, markers and presets to the menu and command palette ([ac645cf](https://github.com/itoolio/ishare/commit/ac645cfb20c99c13270c1b002db964b24c7f8bd4))
+* **menu:** command palette, menu layout and appearance, toast placement, notifications, sharing, undo and Continuity Camera import ([21c3b6a](https://github.com/itoolio/ishare/commit/21c3b6a8a51476ef12bb5a1f0c32cd032404e630))
+* **recording:** markers and chapters, on-device captions, export formats and composited overlays for window recordings ([ce86b7c](https://github.com/itoolio/ishare/commit/ce86b7c3cb03e7acb3203be80a2518d9fd1b31ff))
+* **settings:** move old local captures to the Trash ([9855998](https://github.com/itoolio/ishare/commit/98559980ce2c7206952a071ca5eb580e09edd49d))
+* **upload:** sync S3 secrets through iCloud Keychain in a shared access group ([103ebfd](https://github.com/itoolio/ishare/commit/103ebfd943b8246893d37bc2b69e8cb1fe0239f3))
+* **upload:** URL shortener step and upload presets with shortcuts and an App Intent ([2e1c962](https://github.com/itoolio/ishare/commit/2e1c96216bbbeeda50cb975dfefd537158de2650))
+* **widgets:** add a Recent Uploads widget and a Capture Region control ([61bd48e](https://github.com/itoolio/ishare/commit/61bd48e87641e38ab1e303cae503f3d3d8d8ac4e))
+
+### Bug Fixes
+
+* **menu:** show after-capture steps in the order they run and fit longer uploader names ([a3e9885](https://github.com/itoolio/ishare/commit/a3e98857590e864624794fea34390af5b754aa2d))
+* **upload:** keep Keychain sharing to the App Store build ([875daf1](https://github.com/itoolio/ishare/commit/875daf1cca6dbca12de819662284298a0e75fb3b))
+
 ## [5.1.1](https://github.com/itoolio/ishare/compare/v5.1.0...v5.1.1) (2026-10-23)
 
 ### Bug Fixes
