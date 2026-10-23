@@ -32,7 +32,7 @@ env:
 
 jobs:
     sync:
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-24.04
         timeout-minutes: 150
         concurrency:
             group: app-store-sync

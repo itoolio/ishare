@@ -32,12 +32,16 @@ env:
         -p conventional-changelog-conventionalcommits@9
         semantic-release
 
+defaults:
+    run:
+        shell: bash
+
 jobs:
     checks:
         uses: ./.github/workflows/ci.yml
 
     version:
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-24.04
         permissions:
             contents: write
         outputs:
@@ -138,12 +142,15 @@ jobs:
                     CODE_SIGN_IDENTITY="$IDENTITY" \
                     PROVISIONING_PROFILE_SPECIFIER= \
                     DEVELOPMENT_TEAM=L988J7YMK5 \
-                    OTHER_CODE_SIGN_FLAGS=--timestamp | xcbeautify
+                    OTHER_CODE_SIGN_FLAGS=--timestamp | tee "$RUNNER_TEMP/developer-id-archive.log" | xcbeautify
                   xcodebuild -exportArchive \
                     -archivePath build/ishare.xcarchive \
                     -exportOptionsPlist ExportOptions-DeveloperID.plist \
                     -exportPath build/export | xcbeautify
                   codesign --verify --deep --strict --verbose=2 build/export/ishare.app
+                  go run ./tools/cmd/ishare-tools build-warnings \
+                    --ignore "the target atom is ambiguous" \
+                    "$RUNNER_TEMP/developer-id-archive.log"
 
             - name: Notarize and staple app
               env:
@@ -240,7 +247,10 @@ jobs:
                     CODE_SIGN_STYLE=Manual \
                     CODE_SIGN_IDENTITY=- \
                     PROVISIONING_PROFILE_SPECIFIER= \
-                    DEVELOPMENT_TEAM=L988J7YMK5 | xcbeautify
+                    DEVELOPMENT_TEAM=L988J7YMK5 | tee "$RUNNER_TEMP/app-store-archive.log" | xcbeautify
+                  go run ./tools/cmd/ishare-tools build-warnings \
+                    --ignore "the target atom is ambiguous" \
+                    "$RUNNER_TEMP/app-store-archive.log"
                   OPTIONS=ExportOptions-AppStore.plist
                   if [ "$DRY_RUN" = "true" ]; then
                     sed 's#<string>upload</string>#<string>export</string>#' ExportOptions-AppStore.plist > build/ExportOptions-validate.plist
@@ -263,7 +273,7 @@ jobs:
     publish:
         needs: [checks, version, developer-id, app-store]
         if: github.event_name == 'push'
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-24.04
         outputs:
             tag: ${{ steps.release.outputs.tag }}
         permissions:

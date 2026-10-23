@@ -47,7 +47,9 @@ jobs:
             - name: Render the screenshots of every locale on a 1680x1050 point HiDPI virtual display
               env:
                   LOCALES: ${{ inputs.locales }}
-              run: go run ./tools/cmd/ishare-tools screenshots --ci $LOCALES
+              run: |
+                  read -ra locales <<< "$LOCALES"
+                  go run ./tools/cmd/ishare-tools screenshots --ci "${locales[@]}"
             - name: Check the rendered screenshots
               run: go run ./tools/cmd/ishare-tools release-check
             - uses: actions/upload-artifact@v7

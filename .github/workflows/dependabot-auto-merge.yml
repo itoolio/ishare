@@ -12,7 +12,7 @@ permissions:
 jobs:
     auto-merge:
         if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'itoolio/ishare'
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-24.04
         steps:
             - name: Read the update metadata
               id: metadata
