@@ -92,7 +92,7 @@ jobs:
                   KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
-                  BUNDLE_IDENTIFIERS: dev.adrian.ishare,dev.adrian.ishare.sharemenuext
+                  BUNDLE_IDENTIFIERS: dev.adrian.ishare,dev.adrian.ishare.sharemenuext,dev.adrian.ishare.widgets
                   BUNDLE_NAME: ishare
               run: go run ./tools/cmd/ishare-tools register-bundle-id
 
@@ -210,6 +210,15 @@ jobs:
               run: brew install xcodegen
             - run: go run ./tools/cmd/ishare-tools set-version ${{ needs.version.outputs.version }}
             - run: xcodegen generate
+
+            - name: Register the bundle IDs
+              env:
+                  KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+                  BUNDLE_IDENTIFIERS: dev.adrian.ishare,dev.adrian.ishare.sharemenuext,dev.adrian.ishare.widgets
+                  BUNDLE_NAME: ishare
+              run: go run ./tools/cmd/ishare-tools register-bundle-id
 
             - name: Archive, sign in the cloud and upload
               env:

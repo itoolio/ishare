@@ -6,5 +6,6 @@ enum BackgroundMaintenance {
         guard !ScreenshotMode.isActive, !RuntimeEnvironment.isRunningTests else { return }
         DiagnosticsCollector.shared.start()
         LocalCaptureCleanup.start()
+        WidgetSnapshotWriter.start()
     }
 }
