@@ -13,11 +13,14 @@ import (
 	"github.com/itoolio/ishare/tools/internal/appstore"
 	"github.com/itoolio/ishare/tools/internal/appstoreplan"
 	"github.com/itoolio/ishare/tools/internal/buildlog"
+	"github.com/itoolio/ishare/tools/internal/coverage"
+	"github.com/itoolio/ishare/tools/internal/docc"
 	"github.com/itoolio/ishare/tools/internal/metadata"
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
 	"github.com/itoolio/ishare/tools/internal/repo"
 	"github.com/itoolio/ishare/tools/internal/screenshots"
+	symbolication "github.com/itoolio/ishare/tools/internal/symbolicate"
 	"github.com/itoolio/ishare/tools/internal/version"
 	"github.com/itoolio/ishare/tools/internal/xcstrings"
 )
@@ -44,6 +47,10 @@ var commands = map[string]command{
 	"app-store-plan":     {"app-store-plan --report status.json --releases releases.json", appStorePlan},
 	"appcast-hardware":   {"appcast-hardware <requirement> <appcast.xml>", appcastHardware},
 	"build-warnings":     {"build-warnings [--ignore fragment]... <xcodebuild.log>...", buildWarnings},
+	"coverage":           {"coverage [--root dir] [--min Area=percent]... [--output summary.md] [--summary-file path] <xccov.json>", coverageReport},
+	"docc-symbols":       {"docc-symbols [--module ishare] [--keep Type]... <derived-data-or-symbol-graph-dir> <output-dir>", doccSymbols},
+	"package-dsyms":      {"package-dsyms <archive.xcarchive> <output.zip>", packageDSYMs},
+	"symbolicate":        {"symbolicate <crash.ips|crash> --dsyms <dSYMs.zip|dir> [--output file]", symbolicate},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
 
@@ -282,5 +289,170 @@ func appcastHardware(env environment, arguments []string) error {
 		return err
 	}
 	fmt.Fprintf(env.stdout, "required %s on %d appcast items\n", arguments[0], changed)
+	return nil
+}
+
+func coverageReport(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("coverage", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	root := flags.String("root", repo.Root(), "")
+	output := flags.String("output", "", "")
+	summaryFile := flags.String("summary-file", os.Getenv("GITHUB_STEP_SUMMARY"), "")
+	var minimumValues fragments
+	flags.Var(&minimumValues, "min", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() != 1 {
+		return errUsage
+	}
+	minimums := make([]coverage.Minimum, 0, len(minimumValues))
+	for _, value := range minimumValues {
+		minimum, err := coverage.ParseMinimum(value)
+		if err != nil {
+			return err
+		}
+		minimums = append(minimums, minimum)
+	}
+	file, err := os.Open(flags.Arg(0))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	report, err := coverage.Parse(file)
+	if err != nil {
+		return err
+	}
+	areas := coverage.Summarize(report, *root, coverage.DefaultTargets)
+	violations := coverage.Check(areas, minimums)
+	markdown := coverage.Markdown(areas, minimums, violations)
+	if _, err := io.WriteString(env.stdout, markdown); err != nil {
+		return err
+	}
+	if *output != "" {
+		if err := os.WriteFile(*output, []byte(markdown), 0o644); err != nil {
+			return err
+		}
+	}
+	if *summaryFile != "" {
+		if err := appendToFile(*summaryFile, markdown); err != nil {
+			return err
+		}
+	}
+	if len(violations) > 0 {
+		return fmt.Errorf("%d coverage minimums not met", len(violations))
+	}
+	return nil
+}
+
+func appendToFile(path, contents string) error {
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	if _, err := io.WriteString(file, contents); err != nil {
+		file.Close()
+		return err
+	}
+	return file.Close()
+}
+
+func symbolicate(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("symbolicate", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	dsyms := flags.String("dsyms", "", "")
+	output := flags.String("output", "", "")
+	crashPath, rest := splitPositional(arguments)
+	if err := flags.Parse(rest); err != nil || *dsyms == "" {
+		return errUsage
+	}
+	if crashPath == "" && flags.NArg() == 1 {
+		crashPath = flags.Arg(0)
+	} else if crashPath == "" || flags.NArg() > 0 {
+		return errUsage
+	}
+	data, err := os.ReadFile(crashPath)
+	if err != nil {
+		return err
+	}
+	report, err := symbolication.Parse(data)
+	if err != nil {
+		return err
+	}
+	directory := *dsyms
+	if strings.HasSuffix(strings.ToLower(directory), ".zip") {
+		extracted, err := os.MkdirTemp("", "ishare-dsyms-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(extracted)
+		if err := symbolication.Unzip(*dsyms, extracted); err != nil {
+			return err
+		}
+		directory = extracted
+	}
+	bundles, err := symbolication.FindDSYMs(directory)
+	if err != nil {
+		return err
+	}
+	if len(bundles) == 0 {
+		return fmt.Errorf("no .dSYM bundles found in %s", *dsyms)
+	}
+	runner := symbolication.ExecRunner{}
+	binaries, err := symbolication.IndexBinaries(runner, bundles)
+	if err != nil {
+		return err
+	}
+	symbolicated, resolved, err := symbolication.Symbolicate(report, runner, binaries)
+	if err != nil {
+		return err
+	}
+	rendered := symbolication.Render(symbolicated)
+	if *output != "" {
+		if err := os.WriteFile(*output, []byte(rendered), 0o644); err != nil {
+			return err
+		}
+	} else if _, err := io.WriteString(env.stdout, rendered); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "symbolicated %d frames with %d dSYMs\n", resolved, len(bundles))
+	return nil
+}
+
+func splitPositional(arguments []string) (string, []string) {
+	if len(arguments) > 0 && !strings.HasPrefix(arguments[0], "-") {
+		return arguments[0], arguments[1:]
+	}
+	return "", arguments
+}
+
+func packageDSYMs(env environment, arguments []string) error {
+	if len(arguments) != 2 {
+		return errUsage
+	}
+	result, err := symbolication.PackageArchive(symbolication.ExecRunner{}, arguments[0], arguments[1], symbolication.RequiredDSYMs)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(env.stdout, "packaged %s into %s, UUIDs verified for %s\n",
+		strings.Join(result.Bundles, ", "), arguments[1], strings.Join(result.Verified, ", "))
+	return nil
+}
+
+func doccSymbols(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("docc-symbols", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	module := flags.String("module", "ishare", "")
+	var kept fragments
+	flags.Var(&kept, "keep", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() != 2 {
+		return errUsage
+	}
+	types := []string(kept)
+	if len(types) == 0 {
+		types = docc.DocumentedTypes
+	}
+	result, err := docc.FilterFile(flags.Arg(0), *module, flags.Arg(1), types)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(env.stdout, "kept %d symbols and %d relationships of %d types\n", result.Symbols, result.Relationships, len(result.Types))
 	return nil
 }

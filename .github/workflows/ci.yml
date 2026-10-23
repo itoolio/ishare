@@ -80,11 +80,35 @@ jobs:
                     -project ishare.xcodeproj \
                     -scheme GitHub \
                     -destination "platform=macOS,arch=arm64" \
+                    -enableCodeCoverage YES \
+                    -resultBundlePath build/UnitTests.xcresult \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | tee "$RUNNER_TEMP/unit-tests.log" | xcbeautify
             - name: Fail on build warnings
               run: |
                   go run ./tools/cmd/ishare-tools build-warnings \
                     "$RUNNER_TEMP/app-store-build.log" "$RUNNER_TEMP/unit-tests.log"
+            - name: Check code coverage
+              run: |
+                  mkdir -p build/coverage
+                  xcrun xccov view --report --json build/UnitTests.xcresult > "$RUNNER_TEMP/coverage.json"
+                  go run ./tools/cmd/ishare-tools coverage \
+                    --root "$GITHUB_WORKSPACE" \
+                    --min Capture=23 \
+                    --min Http=70 \
+                    --min ISCU=80 \
+                    --output build/coverage/summary.md \
+                    "$RUNNER_TEMP/coverage.json"
+            - name: Record the pull request for the coverage comment
+              if: always() && github.event_name == 'pull_request' && hashFiles('build/coverage/summary.md') != ''
+              env:
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+              run: echo "$PR_NUMBER" > build/coverage/pr-number
+            - uses: actions/upload-artifact@v7
+              if: always() && github.event_name == 'pull_request' && hashFiles('build/coverage/summary.md') != ''
+              with:
+                  name: coverage-summary
+                  path: build/coverage
+                  retention-days: 7
             - name: Show compiler errors
               if: failure()
               run: grep -h -B2 -A6 -E "error:|Command .* failed|Stack dump" "$RUNNER_TEMP"/*.log | head -200 || true

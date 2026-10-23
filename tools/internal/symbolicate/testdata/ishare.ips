@@ -1,0 +1,26 @@
+{"app_name":"ishare","timestamp":"2026-10-20 10:11:12.00 +0200","app_version":"5.3.0","slice_uuid":"1c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f","build_version":"412","platform":1,"bundleID":"dev.adrian.ishare","share_with_app_devs":0,"is_first_party":0,"bug_type":"309","os_version":"macOS 26.0 (25A100)","incident_id":"4F0C4D7B-0000-0000-0000-000000000000","name":"ishare"}
+{
+  "uptime" : 1000,
+  "procName" : "ishare",
+  "cpuType" : "ARM-64",
+  "exception" : {"codes":"0x0000000000000001, 0x00000001024a1234","type":"EXC_BREAKPOINT","signal":"SIGTRAP"},
+  "faultingThread" : 0,
+  "threads" : [
+    {"triggered":true,"id":1,"queue":"com.apple.main-thread","frames":[
+      {"imageOffset":4660,"imageIndex":0},
+      {"imageOffset":8192,"imageIndex":0},
+      {"imageOffset":2048,"symbol":"specialized UploadWidget.render()","symbolLocation":16,"imageIndex":1},
+      {"imageOffset":99999,"symbol":"__pthread_kill","symbolLocation":8,"imageIndex":2}
+    ]},
+    {"id":2,"name":"com.apple.uikit.eventfetch-thread","frames":[
+      {"imageOffset":4660,"imageIndex":0},
+      {"imageOffset":512,"imageIndex":3}
+    ]}
+  ],
+  "usedImages" : [
+    {"source":"P","arch":"arm64","base":4333371392,"size":1048576,"uuid":"1c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f","path":"/Applications/ishare.app/Contents/MacOS/ishare","name":"ishare","CFBundleIdentifier":"dev.adrian.ishare"},
+    {"source":"P","arch":"arm64","base":4341760000,"size":65536,"uuid":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee","path":"/Applications/ishare.app/Contents/PlugIns/ishareWidgets.appex/Contents/MacOS/ishareWidgets","name":"ishareWidgets"},
+    {"source":"P","arch":"arm64e","base":6576668672,"size":245760,"uuid":"11111111-2222-3333-4444-555555555555","path":"/usr/lib/system/libsystem_kernel.dylib","name":"libsystem_kernel.dylib"},
+    {"size":0,"source":"A","base":0,"uuid":"00000000-0000-0000-0000-000000000000"}
+  ]
+}
