@@ -249,5 +249,6 @@ struct ishareShortcuts: AppShortcutsProvider {
             shortTitle: "Set Uploader",
             systemImageName: "server.rack"
         )
+        AppShortcut(intent: CaptureWithPresetIntent(), phrases: ["Capture with an \(.applicationName) preset"], shortTitle: "Capture with Preset", systemImageName: "square.stack.3d.up")
     }
 }

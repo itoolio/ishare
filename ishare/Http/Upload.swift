@@ -44,7 +44,11 @@ enum UploadPlan {
     }
 
     static func urlToDeliver(_ results: [Result<UploadOutcome, any Error>]) -> URL? {
-        results.lazy.compactMap { try? $0.get().url }.first
+        results.lazy.compactMap { try? $0.get().deliveredURL }.first
+    }
+
+    static func hasSuccess(_ results: [Result<UploadOutcome, any Error>]) -> Bool {
+        results.contains { if case .success = $0 { true } else { false } }
     }
 
     static func deliveryActions(copyURL: Bool, copyImage: Bool, openURL: Bool) -> (copy: Bool, open: Bool) {
@@ -88,31 +92,52 @@ enum UploadCoordinator {
             environment.notify("No uploader is selected".localized())
             return .failure(UploadFailure.missingUploader)
         }
-        let targets = [primary] + (explicitTarget == nil ? additionalTargets(for: primary) : [])
-        let results = await upload(fileURL: fileURL, to: targets, localFileURL: localFileURL)
+        let additional = explicitTarget == nil ? additionalTargets(for: primary) : []
+        return await upload(fileURL: fileURL, primary: primary, additional: additional, shortener: Defaults[.urlShortener], localFileURL: localFileURL)
+    }
+
+    @discardableResult
+    static func upload(fileURL: URL, preset: UploadPreset, localFileURL: URL? = nil) async -> Result<UploadOutcome, any Error> {
+        guard let primary = target(for: preset.destination) else {
+            environment.notify("No uploader is selected".localized())
+            return .failure(UploadFailure.missingUploader)
+        }
+        let additional = additionalTargets(for: primary, destinations: preset.additionalDestinations)
+        let shortener = preset.shortener ?? Defaults[.urlShortener]
+        return await upload(fileURL: fileURL, primary: primary, additional: additional, shortener: shortener, localFileURL: localFileURL)
+    }
+
+    static func upload(
+        fileURL: URL, primary: UploadTarget, additional: [UploadTarget], shortener: URLShortenerConfiguration, localFileURL: URL?
+    ) async -> Result<UploadOutcome, any Error> {
+        let results = await upload(fileURL: fileURL, to: [primary] + additional, localFileURL: localFileURL, shortener: shortener)
         if let url = UploadPlan.urlToDeliver(results) {
             environment.deliver(url)
         }
         return results[0]
     }
 
-    static func upload(fileURL: URL, to targets: [UploadTarget], localFileURL: URL?) async -> [Result<UploadOutcome, any Error>] {
+    static func upload(
+        fileURL: URL, to targets: [UploadTarget], localFileURL: URL?, shortener: URLShortenerConfiguration = .none
+    ) async -> [Result<UploadOutcome, any Error>] {
         let progressIndicator: UploadManager? = environment.showsProgress ? UploadManager.shared : nil
         progressIndicator?.begin()
         var results: [Result<UploadOutcome, any Error>] = []
         defer {
-            let succeeded = results.contains { if case .success = $0 { true } else { false } }
-            progressIndicator?.uploadCompleted(succeeded: succeeded)
+            progressIndicator?.uploadCompleted(succeeded: UploadPlan.hasSuccess(results))
         }
         let count = Double(targets.count)
         for (index, target) in targets.enumerated() {
             do {
-                let outcome = try await UploadService.upload(fileURL: fileURL, to: target) { fraction in
+                var outcome = try await UploadService.upload(fileURL: fileURL, to: target) { fraction in
                     Task { @MainActor in
                         progressIndicator?.updateProgress(fraction: (Double(index) + fraction) / count)
                     }
                 }
                 Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
+                if !UploadPlan.hasSuccess(results) {
+                    outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: shortener)
+                }
                 record(outcome, localFileURL: localFileURL)
                 results.append(.success(outcome))
             } catch {
@@ -121,6 +146,13 @@ enum UploadCoordinator {
             }
         }
         return results
+    }
+
+    static func completeQueued(_ outcome: UploadOutcome, localFileURL: URL?) async {
+        var outcome = outcome
+        outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: Defaults[.urlShortener])
+        record(outcome, localFileURL: localFileURL)
+        deliver(outcome.deliveredURL)
     }
 
     static func handleFailure(_ error: any Error, fileURL: URL, target: UploadTarget, localFileURL: URL?) {
@@ -147,7 +179,8 @@ enum UploadCoordinator {
                 uploaderId: outcome.uploaderID,
                 s3Key: outcome.s3Key,
                 localPath: localFileURL?.path,
-                date: Date()
+                date: Date(),
+                shortUrl: outcome.shortURL?.absoluteString
             )
         )
     }

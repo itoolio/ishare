@@ -70,6 +70,7 @@ enum SettingsSearchIndex {
         SettingsSearchEntry(pane: .advanced, keywords: [
             "Advanced", "Imgur Client ID", "Client ID",
         ]),
+        SettingsSearchEntry(pane: .uploaders, keywords: ["Upload Presets", "Preset", "URL Shortener", "Shorten", "Short link", "is.gd", "v.gd"]),
     ]
 
     static func normalized(_ text: String) -> String {

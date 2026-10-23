@@ -47,6 +47,7 @@ struct KeybindSettingsView: View {
                     }
                 }
             }
+            UploadPresetKeybindSection()
             Section {
                 Button(role: .destructive) {
                     KeyboardShortcuts.reset(Self.groups.flatMap { $0.1.map(\.1) })

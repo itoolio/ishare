@@ -31,8 +31,9 @@ final class UploadQueue: ObservableObject {
             return try await UploadService.upload(fileURL: fileURL, to: target)
         },
         onSuccess: { item, outcome in
-            UploadCoordinator.record(outcome, localFileURL: item.localPath.map { URL(fileURLWithPath: $0) })
-            UploadCoordinator.deliver(outcome.url)
+            Task { @MainActor in
+                await UploadCoordinator.completeQueued(outcome, localFileURL: item.localPath.map { URL(fileURLWithPath: $0) })
+            }
             BezelNotification.show(messageText: "Queued upload finished".localized(), icon: ToastIcon)
         }
     )

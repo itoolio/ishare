@@ -7,6 +7,7 @@ struct CaptureOptions: Sendable {
     var forceUpload = false
     var openEditor = false
     var destinations: [UploadTarget]?
+    var preset: UploadPreset?
 
     static let standard = CaptureOptions()
 }
@@ -122,7 +123,7 @@ enum CaptureSession {
 
     static func finish(fileURL originalURL: URL, kind: PostCapture.Kind, options: CaptureOptions = .standard) async {
         var fileURL = originalURL
-        let saveToDisk = AfterCaptureStep.saveToDisk.isEnabled
+        let saveToDisk = options.isEnabled(.saveToDisk)
         for step in AfterCaptureStep.allCases where step.runs(for: kind, options: options) {
             switch step {
             case .openEditor:
@@ -162,6 +163,8 @@ enum CaptureSession {
             for target in destinations {
                 await UploadCoordinator.upload(fileURL: uploadURL, target: target, localFileURL: localFileURL)
             }
+        } else if let preset = options.preset {
+            await UploadCoordinator.upload(fileURL: uploadURL, preset: preset, localFileURL: localFileURL)
         } else {
             await UploadCoordinator.upload(fileURL: uploadURL, localFileURL: localFileURL)
         }
@@ -174,9 +177,9 @@ enum CaptureSession {
 extension AfterCaptureStep {
     @MainActor func runs(for kind: PostCapture.Kind, options: CaptureOptions) -> Bool {
         switch self {
-        case .openEditor: kind == .image && (options.openEditor || isEnabled)
-        case .upload: isEnabled || options.forceUpload || options.destinations != nil
-        default: isEnabled
+        case .openEditor: kind == .image && (options.openEditor || options.isEnabled(self))
+        case .upload: options.isEnabled(self) || options.forceUpload || options.destinations != nil
+        default: options.isEnabled(self)
         }
     }
 }

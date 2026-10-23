@@ -8,6 +8,7 @@ struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var s3Key: String?
     var localPath: String?
     var date: Date?
+    var shortUrl: String?
     var id: Self { self }
 }
 
@@ -42,6 +43,14 @@ enum HistoryUploader: Hashable, Sendable {
 extension HistoryItem {
     var remoteURL: URL? {
         fileUrl.flatMap(URL.init(string:))
+    }
+
+    var shortURL: URL? {
+        shortUrl.flatMap(URL.init(string:))
+    }
+
+    var preferredURL: URL? {
+        shortURL ?? remoteURL
     }
 
     var localFileURL: URL? {

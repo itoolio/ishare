@@ -7,6 +7,9 @@ struct UploadOutcome: Sendable, Equatable {
     let deletionURL: String?
     let uploaderID: UUID?
     let s3Key: String?
+    var shortURL: URL? = nil
+
+    var deliveredURL: URL { shortURL ?? url }
 }
 
 enum UploadTarget: Sendable {
