@@ -15,7 +15,7 @@ struct StubResponse: Sendable {
     var body: Data = Data()
 }
 
-final class StubURLProtocol: URLProtocol, @unchecked Sendable {
+final class StubURLProtocol: URLProtocol {
     private struct State {
         var responder: @Sendable (CapturedRequest) -> StubResponse = { _ in StubResponse() }
         var captured: [CapturedRequest] = []
