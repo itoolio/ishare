@@ -1,0 +1,1 @@
+Artık web kamerası ve tuş vuruşu katmanları, kayıt kırpma, damgalar ve spot ışığı, çoklu hedefe yükleme, izlenen klasör ve aranabilir geçmiş ile.

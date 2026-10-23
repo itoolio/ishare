@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/itoolio/ishare/tools/internal/metadata"
 	"github.com/itoolio/ishare/tools/internal/plist"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
 )
@@ -24,6 +25,7 @@ type Options struct {
 	Allowlist    string
 	ReviewNotes  string
 	Screenshots  string
+	Metadata     string
 	ReleaseNotes string
 	Inspector    Inspector
 	Output       io.Writer
@@ -53,6 +55,8 @@ func Run(options Options) ([]Result, error) {
 	results = append(results, appResults...)
 	results = append(results, reviewNotesResult(options, allowlist, bundles))
 	results = append(results, Result{Name: "screenshots", Problems: CheckScreenshots(options.Screenshots)})
+	results = append(results, LocalizedScreenshotsResult(options.Screenshots))
+	results = append(results, metadataResult(options))
 	results = append(results, releaseNotesResult(options))
 	report(options.Output, results)
 	for _, result := range results {
@@ -107,6 +111,13 @@ func reviewNotesResult(options Options, allowlist Allowlist, bundles []Bundle) R
 		}
 	}
 	return Result{Name: "review notes", Problems: CheckReviewNotes(string(notes), present, allowlist)}
+}
+
+func metadataResult(options Options) Result {
+	if options.Metadata == "" {
+		return Result{Name: "localized metadata", Skipped: "no metadata directory was given, pass --metadata"}
+	}
+	return Result{Name: "localized metadata", Problems: metadata.CheckDirectory(options.Metadata)}
 }
 
 func releaseNotesResult(options Options) Result {

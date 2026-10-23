@@ -89,7 +89,7 @@ func TestProblemsFlagMarkupSymbolsLengthAndEmptyNotes(t *testing.T) {
 }
 
 func TestRenderFallsBackWhenNothingIsUserFacing(t *testing.T) {
-	if got := Render("## 5.0.1\n\n### Miscellaneous Chores\n\n* bump deps\n"); got != fallback {
+	if got := Render("## 5.0.1\n\n### Miscellaneous Chores\n\n* bump deps\n"); got != Fallback {
 		t.Fatalf("unexpected notes %q", got)
 	}
 	if got := Render(sample); got != Convert(sample) {

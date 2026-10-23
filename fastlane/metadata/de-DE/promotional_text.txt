@@ -1,0 +1,1 @@
+Neu: Webcam- und Tastatur-Overlays, Aufnahmen kürzen, Stempel und Spotlight, Uploads an mehrere Ziele, ein überwachter Ordner und ein durchsuchbarer Verlauf.

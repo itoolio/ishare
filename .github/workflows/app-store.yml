@@ -19,9 +19,9 @@ on:
                 type: boolean
                 default: false
             locales:
-                description: Locales to render when regenerating, for example en-US de-DE:de
+                description: Locales to render when regenerating, all for every App Store locale or a list such as en-US de-DE
                 type: string
-                default: en-US
+                default: all
 
 permissions:
     contents: read
@@ -30,7 +30,7 @@ jobs:
     regenerate-screenshots:
         if: inputs.regenerate_screenshots
         runs-on: macos-26
-        timeout-minutes: 60
+        timeout-minutes: 180
         permissions:
             contents: write
         steps:
@@ -44,7 +44,7 @@ jobs:
                   cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
-            - name: Render the screenshots on a 1680x1050 point HiDPI virtual display
+            - name: Render the screenshots of every locale on a 1680x1050 point HiDPI virtual display
               env:
                   LOCALES: ${{ inputs.locales }}
               run: go run ./tools/cmd/ishare-tools screenshots --ci $LOCALES
@@ -88,8 +88,8 @@ jobs:
               with:
                   ruby-version: "3.4"
                   bundler-cache: true
-            - name: Check the committed screenshots
-              run: test "$(find fastlane/screenshots -name '*.jpg' | wc -l)" -ge 1
+            - name: Check the committed screenshots and metadata of every locale
+              run: go run ./tools/cmd/ishare-tools release-check
             - name: Write the App Store release notes
               if: inputs.submit && inputs.build != ''
               env:
@@ -98,6 +98,9 @@ jobs:
               run: |
                   gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body \
                     | go run ./tools/cmd/ishare-tools release-notes fastlane/metadata/en-US/release_notes.txt
+            - name: Localize the App Store metadata and release notes
+              if: inputs.submit && inputs.build != ''
+              run: go run ./tools/cmd/ishare-tools metadata
             - name: Submit the version with metadata and release notes
               if: inputs.submit && inputs.build != ''
               env:

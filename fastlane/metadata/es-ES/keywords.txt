@@ -1,0 +1,1 @@
+screenshot,grabar,grabación,GIF,subir,anotar,ShareX,S3,Imgur,cámara web,recortes,vídeo

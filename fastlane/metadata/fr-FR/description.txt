@@ -1,0 +1,44 @@
+ishare est l’utilitaire de capture d’écran de référence pour macOS, conçu pour allier simplicité et efficacité.
+
+CAPTUREZ TOUT
+• Capturez une région avec un sélecteur précis, une loupe au pixel près avec coordonnées et couleurs, et un outil de mesure
+• Capturez n’importe quelle fenêtre avec ou sans son ombre, ou un écran entier, et recapturez votre dernière région d’un seul raccourci
+• La capture défilante assemble les longues pages et les documents en une seule image
+• Ajoutez aux captures de fenêtres un arrière-plan dégradé avec marges, coins arrondis et ombre
+• Floutez les apps de votre choix et masquez automatiquement la barre des menus pour préserver votre confidentialité
+• Copiez du texte n’importe où à l’écran grâce à la reconnaissance de texte sur l’appareil, ainsi que les liens des codes QR
+• Retardateur, capture à intervalles et profils de capture par app
+• Tout repose sur ScreenCaptureKit, rapide et confidentiel
+
+ENREGISTREZ
+• Enregistrez un écran, une fenêtre ou une région que vous tracez
+• Affichez les clics, les frappes au clavier et une bulle webcam dans vos enregistrements
+• Enregistrez l’audio du système et votre micro avec des indicateurs de niveau en temps réel
+• Coupez vos enregistrements avant de les sauvegarder, ajoutez des marqueurs de chapitre et exportez en MP4, MOV, GIF ou audio
+• Générez des sous-titres sur l’appareil, en fichier .srt ou incrustés dans la vidéo
+• Choisissez la résolution, la fréquence d’images, HEVC, HDR et la compression automatique avant l’envoi
+
+ANNOTEZ
+• Flèches de plusieurs styles, lignes, formes, surlignages, stylo, marqueur et texte
+• Étapes numérotées, tampons d’emoji et de symboles, projecteur, flou et pixellisation
+• Recadrage avec poignées et formats prédéfinis, zoom et défilement, barre latérale des calques et modèles réutilisables
+• Cliquez sur Terminé et vos actions après capture s’exécutent : copier, enregistrer, partager et envoyer
+
+ENVOYEZ OÙ VOUS VOULEZ
+• Imgur prêt à l’emploi
+• Services d’envoi personnalisés pour chibisafe, Zipline, copyparty, les webhooks Discord et votre propre serveur, avec import des fichiers .sxcu de ShareX
+• Tout stockage compatible S3, avec liens à expiration en option et secrets conservés dans le trousseau
+• Envoyez vers plusieurs destinations à la fois ou choisissez-en une par capture
+• Envoyez des extraits de texte, surveillez un dossier pour les nouveaux fichiers et relancez automatiquement les envois échoués
+• Préréglages d’envoi avec leurs propres raccourcis, un raccourcisseur d’URL et le masquage automatique des textes sensibles
+• Sur les Mac dotés d’Apple Intelligence, un assistant crée des services d’envoi à partir d’une simple conversation
+
+RESTEZ ORGANISÉ
+• Un menu compact et personnalisable avec palette de commandes, envois récents et aperçus
+• Un widget Envois récents et une commande de capture dans le Centre de contrôle
+• Déposez des fichiers sur l’icône de la barre des menus ou utilisez « Envoyer avec ishare » dans le Finder
+• Historique des envois consultable, avec filtres et suppression côté serveur
+• Raccourcis clavier globaux, actions Raccourcis et extension de partage
+• Sauvegardez et restaurez tous les réglages et services d’envoi dans un seul fichier
+
+Un design Liquid Glass sous macOS 26, des options sonores, un guide de bienvenue et des traductions en 11 langues complètent le tout.

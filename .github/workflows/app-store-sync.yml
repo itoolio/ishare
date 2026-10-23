@@ -149,6 +149,9 @@ jobs:
                     gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body
                     echo
                   done | (cd main && go run ./tools/cmd/ishare-tools release-notes "$GITHUB_WORKSPACE/release/fastlane/metadata/en-US/release_notes.txt")
+                  (cd main && go run ./tools/cmd/ishare-tools metadata \
+                    --metadata "$GITHUB_WORKSPACE/release/fastlane/metadata" \
+                    --catalog "$GITHUB_WORKSPACE/main/fastlane/metadata/Metadata.xcstrings")
                   cat release/fastlane/metadata/en-US/release_notes.txt
                   echo "### Release notes" >> "$GITHUB_STEP_SUMMARY"
                   sed 's/^/    /' release/fastlane/metadata/en-US/release_notes.txt >> "$GITHUB_STEP_SUMMARY"
@@ -162,6 +165,7 @@ jobs:
                   go run ./tools/cmd/ishare-tools release-check \
                     --screenshots "$GITHUB_WORKSPACE/release/fastlane/screenshots" \
                     --review-notes "$REVIEW_NOTES" \
+                    --metadata "$GITHUB_WORKSPACE/release/fastlane/metadata" \
                     --release-notes "$GITHUB_WORKSPACE/release/fastlane/metadata/en-US/release_notes.txt"
 
             - name: Submit for review

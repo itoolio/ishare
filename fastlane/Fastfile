@@ -23,6 +23,11 @@ platform :mac do
     }
   end
 
+  def metadata_languages
+    metadata = File.expand_path("metadata", __dir__)
+    Dir.children(metadata).select { |entry| File.directory?(File.join(metadata, entry)) }.sort
+  end
+
   def wait_for_processed_build(version:, build:, timeout: 3600)
     app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
     UI.user_error!("App not found in App Store Connect") unless app
@@ -59,6 +64,8 @@ platform :mac do
       overwrite_screenshots: true,
       metadata_path: "./fastlane/metadata",
       screenshots_path: "./fastlane/screenshots",
+      languages: metadata_languages,
+      ignore_language_directory_validation: false,
       app_review_information: review_contact,
       app_rating_config_path: "./fastlane/metadata/age_rating.json",
       force: true,
@@ -110,6 +117,8 @@ platform :mac do
       skip_screenshots: false,
       overwrite_screenshots: true,
       screenshots_path: "./fastlane/screenshots",
+      languages: metadata_languages,
+      ignore_language_directory_validation: false,
       force: true,
       submit_for_review: submit,
       reject_if_possible: submit,

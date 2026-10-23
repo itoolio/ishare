@@ -1,0 +1,1 @@
+Screenshot,Bildschirmfoto,Bildschirmvideo,GIF,hochladen,annotieren,ShareX,S3,Imgur,Webcam,Upload

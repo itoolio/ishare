@@ -9,7 +9,7 @@ import (
 
 const (
 	appStoreLimit = 4000
-	fallback      = "Bug fixes and improvements."
+	Fallback      = "Bug fixes and improvements."
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 	prNumber       = regexp.MustCompile(`\s*\(#\d+\)$`)
 	trailer        = regexp.MustCompile(`^(Co-Authored-By|Signed-off-by|Reviewed-by|Refs?|Closes|Fixes):`)
 	angleBracketed = regexp.MustCompile(`<[^>]*>`)
-	disallowed     = regexp.MustCompile(`[^\p{L}\p{N}\p{P}\p{Zs}•…+=$€£%]`)
+	disallowed     = regexp.MustCompile(`[^\p{L}\p{M}\p{N}\p{P}\p{Zs}•…+=$€£%]`)
 )
 
 var sectionTitles = map[string]string{
@@ -35,13 +35,13 @@ var sectionTitles = map[string]string{
 	"reverts":                  "Reverts",
 }
 
-var sectionOrder = []string{"Breaking Changes", "Features", "Bug Fixes", "Performance Improvements", "Reverts"}
+var SectionOrder = []string{"Breaking Changes", "Features", "Bug Fixes", "Performance Improvements", "Reverts"}
 
 func Render(markdown string) string {
 	if notes := Convert(markdown); notes != "" {
 		return notes
 	}
-	return fallback
+	return Fallback
 }
 
 func Convert(markdown string) string {
@@ -76,7 +76,7 @@ func Convert(markdown string) string {
 		}
 	}
 	var blocks []string
-	for _, title := range sectionOrder {
+	for _, title := range SectionOrder {
 		if lines := sections[title]; len(lines) > 0 {
 			blocks = append(blocks, title+":\n"+strings.Join(lines, "\n"))
 		}

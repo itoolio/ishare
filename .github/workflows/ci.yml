@@ -25,10 +25,14 @@ jobs:
                   cache-dependency-path: tools/go.mod
             - run: go vet ./tools/...
             - run: go test ./tools/...
-            - name: Check that the string catalog round-trips through merge-translations
+            - name: Check that the string catalogs round-trip through merge-translations
               run: |
-                  go run ./tools/cmd/ishare-tools merge-translations ishare/Localizable.xcstrings ishare/Localizable.xcstrings "$RUNNER_TEMP/Localizable.xcstrings"
-                  cmp ishare/Localizable.xcstrings "$RUNNER_TEMP/Localizable.xcstrings"
+                  for catalog in ishare/Localizable.xcstrings fastlane/metadata/Metadata.xcstrings; do
+                      go run ./tools/cmd/ishare-tools merge-translations "$catalog" "$catalog" "$RUNNER_TEMP/roundtrip.xcstrings"
+                      cmp "$catalog" "$RUNNER_TEMP/roundtrip.xcstrings"
+                  done
+            - name: Check that the localized App Store metadata matches its catalog
+              run: go run ./tools/cmd/ishare-tools metadata --check
 
     app:
         runs-on: macos-26

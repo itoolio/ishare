@@ -11,6 +11,7 @@ import (
 
 	"github.com/itoolio/ishare/tools/internal/appstore"
 	"github.com/itoolio/ishare/tools/internal/appstoreplan"
+	"github.com/itoolio/ishare/tools/internal/metadata"
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
 	"github.com/itoolio/ishare/tools/internal/repo"
@@ -36,9 +37,10 @@ var commands = map[string]command{
 	"release-notes":      {"release-notes [output-file] < release.md", releaseNotes},
 	"register-bundle-id": {"register-bundle-id [identifier...]", registerBundleID},
 	"merge-translations": {"merge-translations <base.xcstrings> <incoming.xcstrings> <output.xcstrings>", mergeTranslations},
-	"screenshots":        {"screenshots [--ci] [locale[:language]...]", captureScreenshots},
+	"screenshots":        {"screenshots [--ci] [all | locale[:language]...]", captureScreenshots},
+	"metadata":           {"metadata [--check] [--metadata dir] [--catalog Metadata.xcstrings] [--release-notes en-US/release_notes.txt]", renderMetadata},
 	"app-store-plan":     {"app-store-plan --report status.json --releases releases.json", appStorePlan},
-	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir]", releaseCheck},
+	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
 
 func main() {
@@ -173,6 +175,7 @@ func releaseCheck(env environment, arguments []string) error {
 	flags.StringVar(&options.Allowlist, "allowlist", repo.Path("fastlane", "entitlements-allowlist.json"), "")
 	flags.StringVar(&options.ReviewNotes, "review-notes", repo.Path("fastlane", "review_notes.txt"), "")
 	flags.StringVar(&options.Screenshots, "screenshots", repo.Path("fastlane", "screenshots"), "")
+	flags.StringVar(&options.Metadata, "metadata", repo.Path("fastlane", "metadata"), "")
 	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 {
 		return errUsage
 	}
@@ -206,4 +209,18 @@ func appStorePlan(env environment, arguments []string) error {
 	}
 	_, err = io.WriteString(env.stdout, appstoreplan.Decide(report, releases).Outputs())
 	return err
+}
+
+func renderMetadata(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("metadata", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	options := metadata.Options{Output: env.stdout}
+	flags.BoolVar(&options.Check, "check", false, "")
+	flags.StringVar(&options.Directory, "metadata", repo.Path("fastlane", "metadata"), "")
+	flags.StringVar(&options.Catalog, "catalog", "", "")
+	flags.StringVar(&options.ReleaseNotes, "release-notes", "", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 {
+		return errUsage
+	}
+	return metadata.Run(options)
 }
