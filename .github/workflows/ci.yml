@@ -252,7 +252,7 @@ jobs:
             - name: Resolve the virtual-hosted bucket names locally
               run: |
                   for host in s3.local ishare-integration.s3.local ishare-integration-private.s3.local; do
-                      printf '127.0.0.1 %s\n::1 %s\n' "$host" "$host" | sudo tee -a /etc/hosts
+                      printf '127.0.0.1 %s\n' "$host" | sudo tee -a /etc/hosts
                   done
                   sudo dscacheutil -flushcache
                   sudo killall -HUP mDNSResponder || true

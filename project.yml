@@ -244,6 +244,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.uitests
         LM_SKIP_METADATA_EXTRACTION: YES
+        CODE_SIGN_ENTITLEMENTS: ishareUITests/Support/UITests.entitlements
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: ishare - GitHub
 schemes:
