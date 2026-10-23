@@ -1,3 +1,46 @@
+## [5.4.0](https://github.com/itoolio/ishare/compare/v5.3.0...v5.4.0) (2026-10-23)
+
+### Features
+
+* add frame and smart shape preferences to capture settings ([c75a5ec](https://github.com/itoolio/ishare/commit/c75a5ecf7d8718ffc7a3f1628637b0a16b29a392))
+* ask for an App Store review after ten successful uploads at a calm moment ([337de58](https://github.com/itoolio/ishare/commit/337de58fd0cf8c1a1b9fcacecf87c9cbdf52fbbe))
+* **automation:** add ishare:// URL actions and the ishare command-line tool ([96e1e63](https://github.com/itoolio/ishare/commit/96e1e6323ff4f1d8e6c986d88fa9381908b7cab4))
+* **automation:** add palette commands for the last upload's QR code and local network link ([3883239](https://github.com/itoolio/ishare/commit/38832395e483e582f6fd9caedf8a748495645571))
+* combine selected captures horizontally, vertically or in a grid ([1751fdb](https://github.com/itoolio/ishare/commit/1751fdbde690fddc61ef76ecb072912580e47ca6))
+* crosshair guides and an optional last region outline in the region selector ([6ea625f](https://github.com/itoolio/ishare/commit/6ea625f2ff978c9240c6cd24081532631cd3ed62)), closes [#159](https://github.com/itoolio/ishare/issues/159)
+* export annotated captures as PDF and SVG and add editor image actions ([6e03fab](https://github.com/itoolio/ishare/commit/6e03fabc25ddccdbe4396b2e6ed20ea40042ae59))
+* **history:** sync history between Macs via iCloud key-value storage ([81a79a8](https://github.com/itoolio/ishare/commit/81a79a8d9146353e19d279064c1e59f14c12bb74))
+* **i18n:** translate the 5.4 strings into all supported languages ([5c5ed9a](https://github.com/itoolio/ishare/commit/5c5ed9a0985399739bf4df78a5e07051468b7e31))
+* **i18n:** translate the new accessibility labels ([c15c57f](https://github.com/itoolio/ishare/commit/c15c57fdd6463d0efa6a4af0aee14060b26281d9))
+* label icon-only controls, report toggle states and honor Reduce Motion and Increase Contrast ([dfbba8e](https://github.com/itoolio/ishare/commit/dfbba8e4969a7f3f2e7fc1fb69c18b8038c3ff16))
+* lift the subject of a capture into a transparent image ([faa038c](https://github.com/itoolio/ishare/commit/faa038c16509ed6dd75e10adead8913d510bd851))
+* per-uploader upload statistics with CSV export in the uploader settings ([dcfce8b](https://github.com/itoolio/ishare/commit/dcfce8bbf957278b8b903097e3b0731776a98eec))
+* **raycast:** add a Raycast extension that drives ishare through its command-line tool ([d2dbbb0](https://github.com/itoolio/ishare/commit/d2dbbb09892ad7ca85f8c7c355b107402c3d8105))
+* **recording:** draw on the screen while recording ([e78d0bd](https://github.com/itoolio/ishare/commit/e78d0bdad45237508b571c5ccaf25027cdc596c1))
+* **recording:** render auto zoom and pointer effects after recording ([2a6286c](https://github.com/itoolio/ishare/commit/2a6286c13c9ba2b59d9f67ec7cea660ed2809ae4))
+* **recording:** stop recordings at time, size and disk space limits ([6982459](https://github.com/itoolio/ishare/commit/6982459629dac9d2416ca8502cf7b6a3a8eadb86))
+* **recording:** wire effects, drawing and limits into the recorder and settings ([77a68f7](https://github.com/itoolio/ishare/commit/77a68f7b26bb8e7ab02d80fbd911e14312c5c265))
+* rotate, flip and straighten with annotations and add image adjustments ([302e013](https://github.com/itoolio/ishare/commit/302e0138856a78961db78c51f795b3ccd6842255))
+* **settings:** add sharing, command-line tool and history sync settings ([b3d20a5](https://github.com/itoolio/ishare/commit/b3d20a5d8969a9b6b4eb7723313e9848505e2848))
+* **settings:** wire the new uploader types into the model and editor ([6c23005](https://github.com/itoolio/ishare/commit/6c23005a5c529621c7cd96acc39a7bc8f0d857ce))
+* **share:** add QR codes for links and temporary local network sharing ([48cf700](https://github.com/itoolio/ishare/commit/48cf700ab6f2d2fc8bb2896f758c8775710b68fa))
+* snap editor boxes to detected interface elements ([d4afc2e](https://github.com/itoolio/ishare/commit/d4afc2e0f6627c343750aa70d678f6f13beaee2a))
+* **uploaders:** add a GitHub uploader that turns text into Gists ([515a9da](https://github.com/itoolio/ishare/commit/515a9da52fddc75aa8a00f3782f5b5ae53657b95))
+* **uploaders:** add Dropbox, Google Drive and OneDrive uploaders ([42a29ae](https://github.com/itoolio/ishare/commit/42a29aefd047e7a63b0059abf67fbb5081769774))
+* **uploaders:** add WebDAV and SFTP uploader types ([c300e9f](https://github.com/itoolio/ishare/commit/c300e9f09228db8269caae17f48ae67ed1ff986a))
+* **upload:** optimize images and remove photo metadata before upload ([ec2e839](https://github.com/itoolio/ishare/commit/ec2e839d75d491242a1c4018eed49eafffcf8c63))
+* **upload:** send webhooks after successful uploads ([156a4af](https://github.com/itoolio/ishare/commit/156a4afda55c8e03060335b6de89bc786aa6920a))
+* wrap captures in procedurally drawn device and browser frames ([c23c898](https://github.com/itoolio/ishare/commit/c23c898af71520ef97e629b2b8018b9ccd922656))
+
+### Bug Fixes
+
+* avoid the Xcode 26 compiler crash in the trim window's auto zoom toggle ([b0da610](https://github.com/itoolio/ishare/commit/b0da610e51309c10c8264b754e3fe17af83b9972))
+* count local network shares in upload statistics ([f5ab6ce](https://github.com/itoolio/ishare/commit/f5ab6ce781ea9008e773c5640e26a4e783950ab1))
+
+### Performance Improvements
+
+* show the region selector before the screen freeze-frames are ready ([3e6f4ad](https://github.com/itoolio/ishare/commit/3e6f4ad3c3ab5a3a035f87a434d668e3df33438f)), closes [#160](https://github.com/itoolio/ishare/issues/160)
+
 ## [5.3.0](https://github.com/itoolio/ishare/compare/v5.2.1...v5.3.0) (2026-10-23)
 
 ### Features
