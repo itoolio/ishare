@@ -1,13 +1,15 @@
+import Defaults
 import SwiftUI
 
 struct EditorToolOptions: View {
     @ObservedObject var document: EditorDocument
+    @Default(.editorSmartShapes) private var smartShapes
 
     @State private var showingStampPicker = false
 
     static func hasOptions(for tool: EditorTool) -> Bool {
         switch tool {
-        case .crop, .arrow, .line, .rectangle, .ellipse, .spotlight, .stamp: true
+        case .crop, .arrow, .line, .rectangle, .ellipse, .highlight, .spotlight, .stamp: true
         default: false
         }
     }
@@ -17,8 +19,14 @@ struct EditorToolOptions: View {
             switch document.tool {
             case .crop: cropOptions
             case .arrow: arrowOptions
-            case .line, .rectangle, .ellipse: dashToggle
-            case .spotlight: spotlightOptions
+            case .line, .ellipse: dashToggle
+            case .rectangle:
+                dashToggle
+                smartShapesToggle
+            case .highlight: smartShapesToggle
+            case .spotlight:
+                spotlightOptions
+                smartShapesToggle
             case .stamp: stampOptions
             default: EmptyView()
             }
@@ -123,6 +131,22 @@ struct EditorToolOptions: View {
         .toggleStyle(.button)
         .help("Dashed".localized())
         .accessibilityIdentifier("editor.style.dashed")
+    }
+
+    private var smartShapesToggle: some View {
+        Toggle(isOn: Binding(
+            get: { smartShapes },
+            set: { value in
+                smartShapes = value
+                document.prepareSnapTargetsIfNeeded()
+            }
+        )) {
+            Image(systemName: "rectangle.dashed.badge.record")
+        }
+        .toggleStyle(.button)
+        .help("Snap to detected elements (hold ⌘ to draw freely)".localized())
+        .accessibilityLabel("Snap to detected elements".localized())
+        .accessibilityIdentifier("editor.smartShapes")
     }
 
     private var spotlightOptions: some View {

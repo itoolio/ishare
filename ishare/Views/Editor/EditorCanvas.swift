@@ -24,6 +24,8 @@ struct EditorCanvas: View {
     @State private var liveAnnotation: Annotation?
     @State private var spaceHeld = false
     @State private var pinchStartZoom: CGFloat?
+    @State private var hoverSnapTarget: CGRect?
+    @State private var drawingSnapTarget: CGRect?
     @StateObject private var effectPreview = LiveEffectPreview()
     @FocusState private var textFocused: Bool
 
@@ -42,8 +44,10 @@ struct EditorCanvas: View {
                     if case let .active(location) = phase {
                         viewport.pointerLocation = location
                         cursor(at: location, transform: transform).set()
+                        updateHoverSnapTarget(at: location, transform: transform)
                     } else {
                         viewport.pointerLocation = nil
+                        hoverSnapTarget = nil
                         NSCursor.arrow.set()
                     }
                 }
@@ -95,6 +99,10 @@ struct EditorCanvas: View {
     }
 
     private func draw(in context: inout GraphicsContext, transform: CanvasTransform) {
+        if document.straightenAngle != 0 {
+            drawStraightenPreview(in: &context, transform: transform)
+            return
+        }
         let content = transform.contentRect
         var shadowed = context
         shadowed.addFilter(.shadow(color: .black.opacity(0.35), radius: 12, y: 4))
@@ -121,6 +129,9 @@ struct EditorCanvas: View {
             cg.concatenate(transform.cgTransform)
             AnnotationRenderer.draw(annotations, in: cg, source: nil, canvasSize: document.imageSize)
         }
+        if let snapOutline = interaction == nil ? hoverSnapTarget : drawingSnapTarget {
+            drawSnapOutline(snapOutline, in: &context, transform: transform)
+        }
         if document.isCropping {
             drawCropOverlay(in: &context, transform: transform)
         } else {
@@ -129,6 +140,64 @@ struct EditorCanvas: View {
                 drawSelection(of: annotation, showsHandles: selected.count == 1 && !annotation.locked, in: &context, transform: transform)
             }
         }
+    }
+
+    private func drawSnapOutline(_ rect: CGRect, in context: inout GraphicsContext, transform: CanvasTransform) {
+        let path = Path(roundedRect: transform.toView(rect).insetBy(dx: -1.5, dy: -1.5), cornerRadius: 3)
+        context.fill(path, with: .color(.accentColor.opacity(0.07)))
+        context.stroke(path, with: .color(.accentColor.opacity(0.75)), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+    }
+
+    private func drawStraightenPreview(in context: inout GraphicsContext, transform: CanvasTransform) {
+        let content = transform.contentRect
+        let imageRect = transform.toView(document.imageBounds)
+        let center = CGPoint(x: imageRect.midX, y: imageRect.midY)
+        var clipped = context
+        clipped.clip(to: Path(content))
+        var rotated = clipped
+        rotated.translateBy(x: center.x, y: center.y)
+        rotated.rotate(by: .degrees(document.straightenAngle))
+        rotated.translateBy(x: -center.x, y: -center.y)
+        rotated.draw(Image(decorative: document.effectedBase, scale: 1), in: imageRect)
+        rotated.withCGContext { cg in
+            cg.concatenate(transform.cgTransform)
+            AnnotationRenderer.draw(visibleAnnotations, in: cg, source: nil, canvasSize: document.imageSize)
+        }
+        let output = StraightenGeometry.outputSize(for: document.imageSize, degrees: document.straightenAngle)
+        let kept = CGRect(x: center.x - output.width * transform.scale / 2, y: center.y - output.height * transform.scale / 2, width: output.width * transform.scale, height: output.height * transform.scale)
+        var outside = Path(content.union(imageRect))
+        outside.addRect(kept)
+        clipped.fill(outside, with: .color(.black.opacity(0.55)), style: FillStyle(eoFill: true))
+        var grid = Path()
+        for (start, end) in CropGeometry.thirds(of: kept) {
+            grid.move(to: start)
+            grid.addLine(to: end)
+        }
+        clipped.stroke(grid, with: .color(.white.opacity(0.45)), lineWidth: 0.75)
+        clipped.stroke(Path(kept), with: .color(.white), lineWidth: 1.5)
+    }
+
+    private var snapsShapes: Bool {
+        document.smartShapesActive && !NSEvent.modifierFlags.contains(.command)
+    }
+
+    private func updateHoverSnapTarget(at location: CGPoint, transform: CanvasTransform) {
+        guard interaction == nil, snapsShapes, !spaceHeld else {
+            hoverSnapTarget = nil
+            return
+        }
+        hoverSnapTarget = SmartShapes.candidate(at: transform.toImage(location), in: document.snapTargets, tolerance: transform.toImage(SmartShapes.snapDistance))
+    }
+
+    private func snapped(from start: CGPoint, to end: CGPoint) -> (start: CGPoint, end: CGPoint) {
+        guard snapsShapes, !document.snapTargets.isEmpty else {
+            drawingSnapTarget = nil
+            return (start, end)
+        }
+        let threshold = viewport.transform.toImage(SmartShapes.snapDistance)
+        let corners = SmartShapes.snappedCorners(from: start, to: end, targets: document.snapTargets, threshold: threshold)
+        drawingSnapTarget = SmartShapes.matchedTarget(for: ScreenGeometry.rect(from: corners.start, to: corners.end), in: document.snapTargets)
+        return corners
     }
 
     private func drawSelection(of annotation: Annotation, showsHandles: Bool, in context: inout GraphicsContext, transform: CanvasTransform) {
@@ -409,7 +478,8 @@ struct EditorCanvas: View {
             case .select, .text, .step, .cursor, .crop:
                 break
             default:
-                let draft = document.makeAnnotation(tool: document.tool, from: start, to: current, points: dragPoints)
+                let corners = snapped(from: start, to: current)
+                let draft = document.makeAnnotation(tool: document.tool, from: corners.start, to: corners.end, points: dragPoints)
                 document.draft = draft
                 if let draft, draft.isEffect {
                     if effectPreview.isActive {
@@ -470,7 +540,9 @@ struct EditorCanvas: View {
             }
             document.draft = nil
         default:
-            if let draft = document.makeAnnotation(tool: document.tool, from: start, to: end, points: dragPoints), document.isSubstantial(draft) {
+            let corners = snapped(from: start, to: end)
+            drawingSnapTarget = nil
+            if let draft = document.makeAnnotation(tool: document.tool, from: corners.start, to: corners.end, points: dragPoints), document.isSubstantial(draft) {
                 document.add(draft)
                 if document.tool == .stamp || document.tool == .spotlight {
                     document.selectedID = draft.id
