@@ -153,7 +153,7 @@ enum UploadCoordinator {
                 continue
             }
             do {
-                var outcome = try await UploadService.upload(fileURL: fileURL, to: target, linkChoice: linkChoice) { fraction in
+                var outcome = try await UploadStatistics.recordingUpload(fileURL: fileURL, to: target, linkChoice: linkChoice) { fraction in
                     Task { @MainActor in
                         progressIndicator?.updateProgress(fraction: (Double(index) + fraction) / count)
                     }

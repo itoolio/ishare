@@ -73,6 +73,7 @@ struct UploaderSettingsView: View {
             UploadPresetsSettings()
             WatchFolderSettings()
             UploadQueueSettings()
+            UploadStatisticsSettings()
 
             Section {
                 LabeledContent("Shortcuts".localized()) {
@@ -329,6 +330,9 @@ struct UploaderEditorView: View {
                     FolderDestinationSection(draft: $folderDraft, suggestsICloudDrive: suggestsICloudDrive)
                 case .photos:
                     PhotosDestinationSection(draft: $photosDraft)
+                }
+                if case let .edit(uploader) = target {
+                    UploaderStatisticsSection(key: uploader.id.uuidString)
                 }
                 if !issues.isEmpty {
                     Section {
@@ -668,6 +672,9 @@ extension UploaderSettingsView: SettingsSearchable {
         ]),
         SettingsSearchEntry("Upload Presets", pane: .uploaders, keywords: [
             "Preset", "URL Shortener", "Shorten", "Short link", "is.gd", "v.gd",
+        ]),
+        SettingsSearchEntry("Upload Statistics", pane: .uploaders, keywords: [
+            "Statistics", "Stats", "Upload duration", "Failure rate", "Percentile", "CSV", "Reset statistics",
         ]),
     ]
 }
