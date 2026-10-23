@@ -1,5 +1,6 @@
 import Alamofire
 import Foundation
+import Synchronization
 
 struct CapturedRequest: Sendable {
     let method: String
@@ -15,19 +16,26 @@ struct StubResponse: Sendable {
 }
 
 final class StubURLProtocol: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var responder: (@Sendable (CapturedRequest) -> StubResponse) = { _ in StubResponse() }
-    nonisolated(unsafe) static var captured: [CapturedRequest] = []
-    private static let lock = NSLock()
+    private struct State {
+        var responder: @Sendable (CapturedRequest) -> StubResponse = { _ in StubResponse() }
+        var captured: [CapturedRequest] = []
+    }
+
+    private static let state = Mutex(State())
+
+    static var captured: [CapturedRequest] {
+        state.withLock { $0.captured }
+    }
 
     static func reset(responder: @escaping @Sendable (CapturedRequest) -> StubResponse) {
-        lock.withLock {
-            self.responder = responder
-            captured = []
+        state.withLock { state in
+            state.responder = responder
+            state.captured = []
         }
     }
 
     static var lastRequest: CapturedRequest? {
-        lock.withLock { captured.last }
+        state.withLock { $0.captured.last }
     }
 
     static func makeSession() -> Session {
@@ -47,9 +55,9 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
             headers: request.allHTTPHeaderFields ?? [:],
             body: Self.readBody(of: request)
         )
-        let response = Self.lock.withLock { () -> StubResponse in
-            Self.captured.append(captured)
-            return Self.responder(captured)
+        let response = Self.state.withLock { state -> StubResponse in
+            state.captured.append(captured)
+            return state.responder(captured)
         }
         let httpResponse = HTTPURLResponse(url: request.url!, statusCode: response.status, httpVersion: "HTTP/1.1", headerFields: response.headers)!
         client?.urlProtocol(self, didReceive: httpResponse, cacheStoragePolicy: .notAllowed)

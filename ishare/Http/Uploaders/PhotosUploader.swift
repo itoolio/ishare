@@ -1,5 +1,6 @@
 import Foundation
 import Photos
+import Synchronization
 import UniformTypeIdentifiers
 
 struct PhotosDestination: Codable, Hashable, Sendable {
@@ -150,13 +151,12 @@ struct SystemPhotoLibrary: PhotoLibraryClient {
     }
 }
 
-private final class CreatedAssetBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var storedIdentifier: String?
+private final class CreatedAssetBox: Sendable {
+    private let storedIdentifier = Mutex<String?>(nil)
 
     var identifier: String? {
-        get { lock.withLock { storedIdentifier } }
-        set { lock.withLock { storedIdentifier = newValue } }
+        get { storedIdentifier.withLock { $0 } }
+        set { storedIdentifier.withLock { $0 = newValue } }
     }
 }
 

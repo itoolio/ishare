@@ -109,10 +109,10 @@ struct PixelBuffer: Equatable {
 }
 
 final class LanguageOverrideBundle: Bundle, @unchecked Sendable {
-    nonisolated(unsafe) static var language: Bundle?
+    @MainActor static var language: Bundle?
 
     override func localizedString(forKey key: String, value: String?, table tableName: String?) -> String {
-        if Thread.isMainThread, let language = Self.language {
+        if Thread.isMainThread, let language = MainActor.assumeIsolated({ Self.language }) {
             return language.localizedString(forKey: key, value: value, table: tableName)
         }
         return super.localizedString(forKey: key, value: value, table: tableName)

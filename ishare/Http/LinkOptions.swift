@@ -223,9 +223,16 @@ enum LinkOptionsEncoder {
 
 enum LinkPasswordStore {
     static let service = "dev.adrian.ishare.link-password"
-    nonisolated(unsafe) static var backend: any SecretBackend = RuntimeEnvironment.isRunningTests
-        ? InMemorySecretBackend()
-        : KeychainSecretBackend(service: service, label: "ishare default link password")
+    private static let backendSlot = SecretBackendSlot(
+        RuntimeEnvironment.isRunningTests
+            ? InMemorySecretBackend()
+            : KeychainSecretBackend(service: service, label: "ishare default link password")
+    )
+
+    static var backend: any SecretBackend {
+        get { backendSlot.current }
+        set { backendSlot.current = newValue }
+    }
 
     static func password(for id: UUID) -> String? {
         backend.read(account: id.uuidString)

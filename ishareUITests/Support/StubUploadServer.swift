@@ -1,7 +1,8 @@
 import Foundation
 import Network
+import Synchronization
 
-final class StubUploadServer: @unchecked Sendable {
+final class StubUploadServer: Sendable {
     struct ReceivedUpload: Equatable {
         let path: String
         let bodySize: Int
@@ -14,17 +15,20 @@ final class StubUploadServer: @unchecked Sendable {
     }
 
     private let queue = DispatchQueue(label: "dev.adrian.ishare.uitests.stub-server")
-    private let lock = NSLock()
-    private var listener: NWListener?
-    private var storedUploads: [ReceivedUpload] = []
-    private var storedPort: UInt16 = 0
+    private struct State {
+        var listener: NWListener?
+        var uploads: [ReceivedUpload] = []
+        var port: UInt16 = 0
+    }
+
+    private let state = Mutex(State())
 
     var port: UInt16 {
-        lock.withLock { storedPort }
+        state.withLock { $0.port }
     }
 
     var uploads: [ReceivedUpload] {
-        lock.withLock { storedUploads }
+        state.withLock { $0.uploads }
     }
 
     var uploadURL: String {
@@ -55,16 +59,16 @@ final class StubUploadServer: @unchecked Sendable {
         listener.start(queue: queue)
         guard ready.wait(timeout: .now() + timeout) == .success else { throw StartError.timedOut }
         if let message = failure.value { throw StartError.failed(message) }
-        lock.withLock {
-            self.listener = listener
-            storedPort = listener.port?.rawValue ?? 0
+        state.withLock { state in
+            state.listener = listener
+            state.port = listener.port?.rawValue ?? 0
         }
     }
 
     func stop() {
-        lock.withLock {
-            listener?.cancel()
-            listener = nil
+        state.withLock { state in
+            state.listener?.cancel()
+            state.listener = nil
         }
     }
 
@@ -92,9 +96,9 @@ final class StubUploadServer: @unchecked Sendable {
         let status: String
         let body: Data
         if request.method == "POST" || request.method == "PUT" {
-            let returned = lock.withLock { () -> String in
-                let url = "http://127.0.0.1:\(storedPort)/u/uitest-\(storedUploads.count + 1).png"
-                storedUploads.append(ReceivedUpload(path: request.path, bodySize: request.body.count, returnedURL: url))
+            let returned = state.withLock { state -> String in
+                let url = "http://127.0.0.1:\(state.port)/u/uitest-\(state.uploads.count + 1).png"
+                state.uploads.append(ReceivedUpload(path: request.path, bodySize: request.body.count, returnedURL: url))
                 return url
             }
             status = "200 OK"
@@ -162,16 +166,15 @@ struct HTTPRequest {
     }
 }
 
-final class LockedBox<Value>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var stored: Value
+final class LockedBox<Value: Sendable>: Sendable {
+    private let stored: Mutex<Value>
 
     init(_ value: Value) {
-        stored = value
+        stored = Mutex(value)
     }
 
     var value: Value {
-        get { lock.withLock { stored } }
-        set { lock.withLock { stored = newValue } }
+        get { stored.withLock { $0 } }
+        set { stored.withLock { $0 = newValue } }
     }
 }
