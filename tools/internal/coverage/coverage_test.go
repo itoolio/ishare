@@ -13,7 +13,7 @@ const sample = `{
       {"path": "/repo/ishare/Capture/CaptureSession.swift", "name": "CaptureSession.swift", "coveredLines": 30, "executableLines": 100},
       {"path": "/repo/ishare/Capture/Recording/Recorder.swift", "name": "Recorder.swift", "coveredLines": 5, "executableLines": 50},
       {"path": "/repo/ishare/Http/UploadService.swift", "name": "UploadService.swift", "coveredLines": 80, "executableLines": 100},
-      {"path": "/repo/ishare/Http/ResponseTemplate.swift", "name": "ResponseTemplate.swift", "coveredLines": 45, "executableLines": 50},
+      {"path": "/repo/Packages/ishareCore/Sources/ishareCore/ISCU/ResponseTemplate.swift", "name": "ResponseTemplate.swift", "coveredLines": 45, "executableLines": 50},
       {"path": "/repo/ishare/Util/CustomUploader.swift", "name": "CustomUploader.swift", "coveredLines": 40, "executableLines": 50},
       {"path": "/repo/ishare/Views/Editor/Canvas.swift", "name": "Canvas.swift", "coveredLines": 10, "executableLines": 20},
       {"path": "/repo/ishare/Views/HistoryWindow.swift", "name": "HistoryWindow.swift", "coveredLines": 0, "executableLines": 30},
@@ -59,19 +59,24 @@ func TestParseRejectsInvalidReports(t *testing.T) {
 
 func TestClassify(t *testing.T) {
 	cases := map[string]string{
-		"ishare/Capture/CaptureSession.swift":      "Capture",
-		"ishare/Capture/Recording/Recorder.swift":  "Recording",
-		"ishare/Http/Upload.swift":                 "Http",
-		"ishare/Http/ResponseTemplate.swift":       "ISCU",
-		"ishare/Util/IscuImport.swift":             "ISCU",
-		"ishare/Util/Log.swift":                    "Util",
-		"ishare/Views/Editor/Tools/Arrow.swift":    "Editor",
-		"ishare/Views/Settings/SettingsView.swift": "Views",
-		"ishare/App.swift":                         "App",
-		"ishareWidgets/RecentUploads.swift":        "Widgets",
-		"sharemenuext/ShareViewController.swift":   "Share Extension",
-		"Elsewhere.swift":                          "Other",
-		"/outside/the/repo/ishare/Capture/X.swift": "outside",
+		"ishare/Capture/CaptureSession.swift":                                           "Capture",
+		"ishare/Capture/Recording/Recorder.swift":                                       "Recording",
+		"ishare/Http/Upload.swift":                                                      "Http",
+		"ishare/Util/CustomUploader.swift":                                              "ISCU",
+		"Packages/ishareCore/Sources/ishareCore/ISCU/ResponseTemplate.swift":            "ISCU",
+		"Packages/ishareCore/Sources/ishareCore/Capture/ScreenGeometry.swift":           "Capture",
+		"Packages/ishareCore/Sources/ishareCore/Requests/S3.swift":                      "Http",
+		"Packages/ishareCore/Sources/ishareCore/Destinations/WebDAVConfiguration.swift": "Http",
+		"Packages/ishareCore/Tests/ishareCoreTests/S3Tests.swift":                       "Packages",
+		"ishare/Util/IscuImport.swift":                                                  "ISCU",
+		"ishare/Util/Log.swift":                                                         "Util",
+		"ishare/Views/Editor/Tools/Arrow.swift":                                         "Editor",
+		"ishare/Views/Settings/SettingsView.swift":                                      "Views",
+		"ishare/App.swift":                                                              "App",
+		"ishareWidgets/RecentUploads.swift":                                             "Widgets",
+		"sharemenuext/ShareViewController.swift":                                        "Share Extension",
+		"Elsewhere.swift":                                                               "Other",
+		"/outside/the/repo/ishare/Capture/X.swift":                                      "outside",
 	}
 	for path, want := range cases {
 		if got := Classify(path); got != want {
@@ -116,6 +121,33 @@ func TestSummarizeGroupsAppFilesByArea(t *testing.T) {
 	total := Total(Summarize(parsed(t), "/repo", DefaultTargets))
 	if total.Covered != 211 || total.Executable != 412 || total.Files != 9 {
 		t.Errorf("total %+v", total)
+	}
+}
+
+func TestSummarizeCountsCorePackageSourcesOnceFromAnyTarget(t *testing.T) {
+	report := Report{Targets: []Target{
+		{Name: "ishare.app", Files: []File{{Path: "/repo/ishare/Http/Upload.swift", CoveredLines: 5, ExecutableLines: 10}}},
+		{Name: "ishareCoreTests", Files: []File{
+			{Path: "/repo/Packages/ishareCore/Sources/ishareCore/ISCU/CustomUploader.swift", CoveredLines: 40, ExecutableLines: 50},
+			{Path: "/repo/Packages/ishareCore/Sources/ishareCore/Requests/S3.swift", CoveredLines: 9, ExecutableLines: 10},
+			{Path: "/repo/Packages/ishareCore/Tests/ishareCoreTests/S3Tests.swift", CoveredLines: 100, ExecutableLines: 100},
+		}},
+		{Name: "ishareCore", Files: []File{
+			{Path: "/repo/Packages/ishareCore/Sources/ishareCore/ISCU/CustomUploader.swift", CoveredLines: 30, ExecutableLines: 50},
+		}},
+	}}
+	areas := map[string]Area{}
+	for _, area := range Summarize(report, "/repo", DefaultTargets) {
+		areas[area.Name] = area
+	}
+	if got := areas["ISCU"]; got.Covered != 40 || got.Executable != 50 || got.Files != 1 {
+		t.Errorf("ISCU %+v", got)
+	}
+	if got := areas["Http"]; got.Covered != 14 || got.Executable != 20 || got.Files != 2 {
+		t.Errorf("Http %+v", got)
+	}
+	if _, ok := areas["Packages"]; ok {
+		t.Error("package tests should not count towards coverage")
 	}
 }
 

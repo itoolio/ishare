@@ -57,14 +57,18 @@ var ISCUFiles = []string{
 	"ishare/Util/CustomUploader.swift",
 	"ishare/Util/IscuImport.swift",
 	"ishare/Util/UploaderValidator.swift",
-	"ishare/Util/ShareXImport.swift",
-	"ishare/Http/ResponseTemplate.swift",
 }
+
+const CorePackageSources = "Packages/ishareCore/Sources/ishareCore/"
 
 var prefixAreas = []struct {
 	prefix string
 	area   string
 }{
+	{CorePackageSources + "ISCU/", "ISCU"},
+	{CorePackageSources + "Capture/", "Capture"},
+	{CorePackageSources + "Requests/", "Http"},
+	{CorePackageSources + "Destinations/", "Http"},
 	{"ishare/Views/Editor/", "Editor"},
 	{"ishare/Capture/Recording/", "Recording"},
 	{"ishare/Capture/", "Capture"},
@@ -114,22 +118,30 @@ func Summarize(report Report, root string, targets []string) []Area {
 	for _, target := range targets {
 		included[target] = true
 	}
-	areas := map[string]*Area{}
+	files := map[string]File{}
 	for _, target := range report.Targets {
-		if !included[target.Name] {
-			continue
-		}
 		for _, file := range target.Files {
-			name := Classify(Relative(file.Path, root))
-			area, ok := areas[name]
-			if !ok {
-				area = &Area{Name: name}
-				areas[name] = area
+			relative := Relative(file.Path, root)
+			if !included[target.Name] && !strings.HasPrefix(relative, CorePackageSources) {
+				continue
 			}
-			area.Covered += file.CoveredLines
-			area.Executable += file.ExecutableLines
-			area.Files++
+			if existing, seen := files[relative]; seen && existing.CoveredLines >= file.CoveredLines {
+				continue
+			}
+			files[relative] = file
 		}
+	}
+	areas := map[string]*Area{}
+	for relative, file := range files {
+		name := Classify(relative)
+		area, ok := areas[name]
+		if !ok {
+			area = &Area{Name: name}
+			areas[name] = area
+		}
+		area.Covered += file.CoveredLines
+		area.Executable += file.ExecutableLines
+		area.Files++
 	}
 	result := make([]Area, 0, len(areas))
 	for _, area := range areas {
