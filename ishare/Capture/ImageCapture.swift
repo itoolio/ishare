@@ -210,14 +210,7 @@ enum ImageCaptureFlow {
         let addsBackground = CaptureSettings.current(for: captured.source.bundleIdentifier).addsBackground
         guard addsBackground, captured.isWindow || !Defaults[.beautifyWindowsOnly] else { return captured.image }
         let scale = captured.pointScale ?? captured.geometry?.scale ?? NSScreen.main?.backingScaleFactor ?? 2
-        let style = BeautifyStyle(
-            background: Defaults[.beautifyBackground],
-            solidColor: CaptureColor(hex: Defaults[.beautifySolidColor]) ?? CaptureColor(red: 0.12, green: 0.12, blue: 0.18),
-            padding: Defaults[.beautifyPadding],
-            cornerRadius: Defaults[.beautifyCornerRadius],
-            shadow: Defaults[.beautifyShadow],
-            scale: scale
-        )
+        let style = BeautifyStyle.current(scale: scale, windowTitle: captured.source.windowTitle)
         return Beautifier.apply(to: captured.image, style: style) ?? captured.image
     }
 

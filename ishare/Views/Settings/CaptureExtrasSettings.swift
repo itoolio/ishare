@@ -12,6 +12,10 @@ struct CaptureExtrasSettings: View {
     @Default(.beautifyShadow) var shadow
     @Default(.beautifyBackground) var background
     @Default(.beautifySolidColor) var solidColorHex
+    @Default(.beautifyFrame) var frame
+    @Default(.beautifyFrameAppearance) var frameAppearance
+    @Default(.beautifyFrameFit) var frameFit
+    @Default(.beautifyFrameTitle) var frameTitle
     @State private var isBlurredAppsSheetPresented = false
 
     var body: some View {
@@ -45,6 +49,23 @@ struct CaptureExtrasSettings: View {
                         Text("\(Int(cornerRadius)) pt").monospacedDigit().frame(width: 48, alignment: .trailing)
                     }
                     Toggle("Drop shadow".localized(), isOn: $shadow)
+                    Picker("Frame".localized(), selection: $frame) {
+                        ForEach(DeviceFrame.allCases) { Text($0.title).tag($0) }
+                    }
+                    if frame != .none {
+                        Picker("Frame appearance".localized(), selection: $frameAppearance) {
+                            ForEach(DeviceFrameAppearance.allCases) { Text($0.title).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        if frame == .browser {
+                            TextField("Address bar text".localized(), text: $frameTitle, prompt: Text("Window title".localized()))
+                        } else {
+                            Picker("Screen fit".localized(), selection: $frameFit) {
+                                ForEach(DeviceFrameFit.allCases) { Text($0.title).tag($0) }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+                    }
                     BeautifyPreview(style: previewStyle)
                 }
             }
@@ -72,12 +93,13 @@ struct CaptureExtrasSettings: View {
     private var previewStyle: BeautifyStyle {
         BeautifyStyle(
             background: background, solidColor: solidRGBA, padding: padding / 2,
-            cornerRadius: cornerRadius / 2, shadow: shadow, scale: 1
+            cornerRadius: cornerRadius / 2, shadow: shadow, scale: 1,
+            frame: frame == .none ? nil : DeviceFrameStyle(kind: frame, appearance: frameAppearance, fit: frameFit, title: frameTitle.isEmpty ? "example.com" : frameTitle)
         )
     }
 }
 
-private struct BeautifyPreview: View {
+struct BeautifyPreview: View {
     let style: BeautifyStyle
 
     var body: some View {
@@ -97,7 +119,7 @@ private struct BeautifyPreview: View {
         .accessibilityHidden(true)
     }
 
-    private static let sample: CGImage? = {
+    static let sample: CGImage? = {
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(
                   data: nil, width: 240, height: 150, bitsPerComponent: 8, bytesPerRow: 0,
@@ -125,7 +147,7 @@ private struct BeautifyPreview: View {
     }
 }
 
-private struct CheckerboardBackground: View {
+struct CheckerboardBackground: View {
     var body: some View {
         Canvas { context, size in
             let tile: CGFloat = 8

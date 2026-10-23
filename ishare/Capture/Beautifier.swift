@@ -82,15 +82,20 @@ struct BeautifyStyle: Hashable, Sendable {
     var cornerRadius: CGFloat
     var shadowRadius: CGFloat
     var fill: Fill
+    var frame: DeviceFrameStyle?
 
-    init(padding: CGFloat, cornerRadius: CGFloat, shadowRadius: CGFloat, fill: Fill) {
+    init(padding: CGFloat, cornerRadius: CGFloat, shadowRadius: CGFloat, fill: Fill, frame: DeviceFrameStyle? = nil) {
         self.padding = max(0, padding.rounded())
         self.cornerRadius = max(0, cornerRadius)
         self.shadowRadius = max(0, shadowRadius)
         self.fill = fill
+        self.frame = frame?.kind == DeviceFrame.none ? nil : frame
     }
 
-    init(background: BeautifyBackground, solidColor: CaptureColor, padding: CGFloat, cornerRadius: CGFloat, shadow: Bool, scale: CGFloat) {
+    init(
+        background: BeautifyBackground, solidColor: CaptureColor, padding: CGFloat, cornerRadius: CGFloat, shadow: Bool, scale: CGFloat,
+        frame: DeviceFrameStyle? = nil
+    ) {
         let fill: Fill = switch background {
         case .solid: .solid(solidColor)
         case .transparent: .transparent
@@ -101,7 +106,34 @@ struct BeautifyStyle: Hashable, Sendable {
             padding: scaledPadding,
             cornerRadius: cornerRadius * scale,
             shadowRadius: shadow ? min(28 * scale, max(4 * scale, scaledPadding * 0.5)) : 0,
-            fill: fill
+            fill: fill,
+            frame: frame
+        )
+    }
+
+    @MainActor static func current(scale: CGFloat, windowTitle: String? = nil) -> BeautifyStyle {
+        BeautifyStyle(
+            background: Defaults[.beautifyBackground],
+            solidColor: CaptureColor(hex: Defaults[.beautifySolidColor]) ?? CaptureColor(red: 0.12, green: 0.12, blue: 0.18),
+            padding: Defaults[.beautifyPadding],
+            cornerRadius: Defaults[.beautifyCornerRadius],
+            shadow: Defaults[.beautifyShadow],
+            scale: scale,
+            frame: DeviceFrameStyle.current(windowTitle: windowTitle)
+        )
+    }
+}
+
+extension DeviceFrameStyle {
+    @MainActor static func current(windowTitle: String? = nil) -> DeviceFrameStyle? {
+        let kind = Defaults[.beautifyFrame]
+        guard kind != .none else { return nil }
+        let custom = Defaults[.beautifyFrameTitle].trimmingCharacters(in: .whitespacesAndNewlines)
+        return DeviceFrameStyle(
+            kind: kind,
+            appearance: Defaults[.beautifyFrameAppearance],
+            fit: Defaults[.beautifyFrameFit],
+            title: custom.isEmpty ? windowTitle ?? "" : custom
         )
     }
 }
@@ -119,7 +151,9 @@ enum Beautifier {
         min(style.cornerRadius, min(size.width, size.height) / 2)
     }
 
-    static func apply(to image: CGImage, style: BeautifyStyle) -> CGImage? {
+    static func apply(to original: CGImage, style: BeautifyStyle) -> CGImage? {
+        let framed = style.frame.flatMap { DeviceFramer.apply(to: original, style: $0) }
+        let image = framed ?? original
         let imageSize = CGSize(width: image.width, height: image.height)
         let canvasSize = outputSize(for: imageSize, style: style)
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
@@ -134,7 +168,7 @@ enum Beautifier {
         fillBackground(style.fill, in: canvas, context: context, colorSpace: colorSpace)
 
         let content = contentRect(for: imageSize, style: style)
-        let radius = effectiveCornerRadius(for: imageSize, style: style)
+        let radius = framed == nil ? effectiveCornerRadius(for: imageSize, style: style) : 0
         context.saveGState()
         if style.shadowRadius > 0 {
             context.setShadow(
@@ -152,7 +186,7 @@ enum Beautifier {
         return context.makeImage()
     }
 
-    private static func fillBackground(_ fill: BeautifyStyle.Fill, in rect: CGRect, context: CGContext, colorSpace: CGColorSpace) {
+    static func fillBackground(_ fill: BeautifyStyle.Fill, in rect: CGRect, context: CGContext, colorSpace: CGColorSpace) {
         switch fill {
         case .transparent:
             context.clear(rect)
