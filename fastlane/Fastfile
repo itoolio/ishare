@@ -47,6 +47,7 @@ platform :mac do
     submit = options.fetch(:submit, "true").to_s == "true"
     key = api_key
     wait_for_processed_build(version: version, build: build)
+    withdraw_from_review(version: version) if submit
     deliver(
       api_key: key,
       platform: "osx",
@@ -84,7 +85,7 @@ platform :mac do
     submission.cancel_submission
     deadline = Time.now + timeout
     loop do
-      current = app.get_app_store_versions(filter: { versionString: version, platform: platform }).first
+      current = app.get_edit_app_store_version(platform: platform)
       state = current&.app_store_state
       UI.message("Version #{version}: #{state}")
       break if app.get_in_progress_review_submission(platform: platform).nil? && %w[DEVELOPER_REJECTED PREPARE_FOR_SUBMISSION REJECTED].include?(state)
