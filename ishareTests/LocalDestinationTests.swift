@@ -251,11 +251,11 @@ extension NetworkSuite {
         init() {
             UploadService.session = StubURLProtocol.makeSession()
             StubURLProtocol.reset { _ in StubResponse(body: Data(#"{"url": "https://cdn.example.com/a.png"}"#.utf8)) }
-            UploadCoordinator.environment = spy.environment
+            UploadCoordinator.environment = spy
         }
 
         @Test func recordsLocalIdentifiersAndDeliversTheFirstLink() async throws {
-            defer { UploadCoordinator.environment = .live }
+            defer { UploadCoordinator.environment = LiveUploadEnvironment() }
             let previous = PhotoLibrary.client
             let library = FakePhotoLibrary()
             PhotoLibrary.client = library

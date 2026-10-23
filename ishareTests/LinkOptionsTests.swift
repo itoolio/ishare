@@ -282,9 +282,9 @@ extension NetworkSuite {
         }
 
         @Test func cancellingThePromptSkipsTheUpload() async throws {
-            UploadCoordinator.environment = spy.environment
-            UploadCoordinator.environment.resolveLinkChoice = { _ in .cancel }
-            defer { UploadCoordinator.environment = .live }
+            UploadCoordinator.environment = spy
+            spy.linkChoice = .cancel
+            defer { UploadCoordinator.environment = LiveUploadEnvironment() }
             let file = try Fixtures.temporaryFile(named: "c.png", contents: TestUploaders.png)
             let target = UploadTarget.custom(uploader(LinkOptionsSpec(password: LinkPasswordField(field: "pw"))))
             let results = await UploadCoordinator.upload(fileURL: file, to: [target], localFileURL: nil)
@@ -295,9 +295,9 @@ extension NetworkSuite {
         }
 
         @Test func passesTheResolvedChoiceToTheRequest() async throws {
-            UploadCoordinator.environment = spy.environment
-            UploadCoordinator.environment.resolveLinkChoice = { _ in .use(LinkChoice(password: "chosen")) }
-            defer { UploadCoordinator.environment = .live }
+            UploadCoordinator.environment = spy
+            spy.linkChoice = .use(LinkChoice(password: "chosen"))
+            defer { UploadCoordinator.environment = LiveUploadEnvironment() }
             let file = try Fixtures.temporaryFile(named: "d.png", contents: TestUploaders.png)
             let target = UploadTarget.custom(uploader(LinkOptionsSpec(password: LinkPasswordField(field: "x-pw", location: .header))))
             _ = await UploadCoordinator.upload(fileURL: file, to: [target], localFileURL: nil)

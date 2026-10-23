@@ -342,7 +342,7 @@ extension NetworkSuite {
 
         init() {
             UploadService.session = StubURLProtocol.makeSession()
-            UploadCoordinator.environment = spy.environment
+            UploadCoordinator.environment = spy
             StubURLProtocol.reset { request in
                 switch request.url.host() {
                 case "primary.example.com":
@@ -360,7 +360,7 @@ extension NetworkSuite {
         }
 
         func finish() {
-            UploadCoordinator.environment = .live
+            UploadCoordinator.environment = LiveUploadEnvironment()
         }
 
         @Test func shortensTheDeliveredURLAndStoresBoth() async throws {
