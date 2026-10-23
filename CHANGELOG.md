@@ -1,3 +1,9 @@
+## [5.2.1](https://github.com/itoolio/ishare/compare/v5.2.0...v5.2.1) (2026-10-23)
+
+### Bug Fixes
+
+* **app-store:** declare the keychain group for App Review and keep versions out of screenshots ([bc5e28b](https://github.com/itoolio/ishare/commit/bc5e28ba3abba5de5cbc613cf01ec8c8be3905b8))
+
 ## [5.2.0](https://github.com/itoolio/ishare/compare/v5.1.1...v5.2.0) (2026-10-23)
 
 ### Features
