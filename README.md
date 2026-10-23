@@ -51,7 +51,7 @@ ishare 5.3 and later require a Mac with Apple silicon running macOS 15 or later.
 
 ## Custom uploaders
 
-ishare imports `.iscu` files: JSON documents that describe an HTTP or S3 uploader, or a local destination such as a folder, iCloud Drive or a Photos album. HTTP uploaders can declare `linkOptions` so you can protect each link with a password or let it expire. The full specification is on the [website](https://ishare.itoolio.dev/docs/iscu/), and ready-made uploaders for chibisafe, copyparty, Discord webhooks, lumen, Zipline (also with password and expiry headers), S3, a folder and Photos are in [examples](examples).
+ishare imports `.iscu` files: JSON documents that describe an HTTP, S3, WebDAV, SFTP, Dropbox, Google Drive, OneDrive or GitHub uploader, or a local destination such as a folder, iCloud Drive or a Photos album. HTTP uploaders can declare `linkOptions` so you can protect each link with a password or let it expire. The full specification is on the [website](https://ishare.itoolio.dev/docs/iscu/), and ready-made uploaders for chibisafe, copyparty, Discord webhooks, lumen, Zipline (also with password and expiry headers), S3, WebDAV, SFTP, Dropbox, Google Drive, OneDrive, GitHub, a folder and Photos are in [examples](examples).
 
 ## Development
 
