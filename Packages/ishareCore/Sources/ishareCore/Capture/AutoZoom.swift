@@ -90,13 +90,14 @@ public struct ZoomSegment: Hashable, Sendable {
 
     public func scale(at time: Double) -> Double {
         guard contains(time) else { return 1 }
-        let progress: Double = if time < peak {
-            peak > start ? Easing.smoothstep((time - start) / (peak - start)) : 1
-        } else if time >= release {
-            end > release ? 1 - Easing.smoothstep((time - release) / (end - release)) : 0
-        } else {
-            1
-        }
+        let progress: Double =
+            if time < peak {
+                peak > start ? Easing.smoothstep((time - start) / (peak - start)) : 1
+            } else if time >= release {
+                end > release ? 1 - Easing.smoothstep((time - release) / (end - release)) : 0
+            } else {
+                1
+            }
         return 1 + (zoom - 1) * progress
     }
 
@@ -184,7 +185,8 @@ public enum CameraPlanner {
     public static func plan(activity: [ActivityEvent], pointer: [PointerSample], duration: Double, frameSize: CGSize, settings: AutoZoomSettings) -> CameraPath {
         guard duration > 0, frameSize.width > 0, frameSize.height > 0 else { return CameraPath(frameSize: frameSize, segments: []) }
         let bounds = CGRect(origin: .zero, size: frameSize)
-        let events = activity
+        let events =
+            activity
             .filter { $0.time >= 0 && $0.time <= duration }
             .map { ActivityEvent(time: $0.time, point: $0.point.clamped(to: bounds), kind: $0.kind) }
             .sorted { $0.time < $1.time }
@@ -193,7 +195,9 @@ public enum CameraPlanner {
         for (index, cluster) in clusters.enumerated() {
             let next = index + 1 < clusters.count ? clusters[index + 1] : nil
             let previousEnd = segments.last?.end ?? 0
-            guard let segment = segment(for: cluster, next: next, previousEnd: previousEnd, pointer: pointer, duration: duration, frameSize: frameSize, settings: settings) else { continue }
+            guard let segment = segment(for: cluster, next: next, previousEnd: previousEnd, pointer: pointer, duration: duration, frameSize: frameSize, settings: settings) else {
+                continue
+            }
             segments.append(segment)
         }
         return CameraPath(frameSize: frameSize, segments: segments)
@@ -208,8 +212,9 @@ public enum CameraPlanner {
         var clusters: [[ActivityEvent]] = []
         for event in events {
             if let last = clusters.last?.last,
-               event.time - last.time <= settings.holdTime,
-               event.point.distance(to: last.point) <= far {
+                event.time - last.time <= settings.holdTime,
+                event.point.distance(to: last.point) <= far
+            {
                 clusters[clusters.count - 1].append(event)
             } else {
                 clusters.append([event])
@@ -224,7 +229,8 @@ public enum CameraPlanner {
         var result: [[ActivityEvent]] = []
         for cluster in clusters {
             if let previous = result.last, let last = previous.last, let first = cluster.first,
-               first.time - last.time < bridge, first.point.distance(to: last.point) <= far {
+                first.time - last.time < bridge, first.point.distance(to: last.point) <= far
+            {
                 result[result.count - 1].append(contentsOf: cluster)
             } else {
                 result.append(cluster)
@@ -233,7 +239,9 @@ public enum CameraPlanner {
         return result
     }
 
-    private static func segment(for cluster: [ActivityEvent], next: [ActivityEvent]?, previousEnd: Double, pointer: [PointerSample], duration: Double, frameSize: CGSize, settings: AutoZoomSettings) -> ZoomSegment? {
+    private static func segment(
+        for cluster: [ActivityEvent], next: [ActivityEvent]?, previousEnd: Double, pointer: [PointerSample], duration: Double, frameSize: CGSize, settings: AutoZoomSettings
+    ) -> ZoomSegment? {
         guard let first = cluster.first, let last = cluster.last else { return nil }
         let ease = settings.easeDuration
         let start = max(0, previousEnd, first.time - ease)
@@ -267,7 +275,9 @@ public enum CameraPlanner {
         )
     }
 
-    private static func focusKeyframes(for cluster: [ActivityEvent], pointer: [PointerSample], start: Double, end: Double, frameSize: CGSize, settings: AutoZoomSettings) -> (samples: [PointerSample], motion: ZoomSegment.FocusMotion) {
+    private static func focusKeyframes(for cluster: [ActivityEvent], pointer: [PointerSample], start: Double, end: Double, frameSize: CGSize, settings: AutoZoomSettings) -> (
+        samples: [PointerSample], motion: ZoomSegment.FocusMotion
+    ) {
         let eventFocus = deduplicated(cluster.map { PointerSample(time: $0.time, point: $0.point) })
         guard settings.followsPointer else { return (eventFocus, .pan) }
         let window = pointer.filter { $0.time >= start && $0.time <= end }

@@ -13,7 +13,7 @@ struct RecordingAudioLevels: Equatable, Sendable {
 enum PCMBufferConverter {
     static func pcmBuffer(from sampleBuffer: CMSampleBuffer) -> AVAudioPCMBuffer? {
         guard let description = sampleBuffer.formatDescription,
-              description.mediaType == .audio
+            description.mediaType == .audio
         else { return nil }
         let format = AVAudioFormat(cmAudioFormatDescription: description)
         let frameCount = AVAudioFrameCount(sampleBuffer.numSamples)
@@ -57,7 +57,7 @@ final class MicrophoneLevelMonitor: ObservableObject {
         }
         isDenied = false
         guard let device = CaptureDevices.microphone(id: deviceID),
-              let input = try? AVCaptureDeviceInput(device: device)
+            let input = try? AVCaptureDeviceInput(device: device)
         else { return }
 
         let runner = CaptureSessionRunner()

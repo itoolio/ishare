@@ -15,13 +15,16 @@ struct SoundSettingsSection: View {
     }
 
     private func soundPicker(_ title: String, selection: Binding<SoundChoice>, identifier: String) -> some View {
-        Picker(title, selection: Binding(
-            get: { selection.wrappedValue },
-            set: { choice in
-                selection.wrappedValue = choice
-                SoundPlayer.play(choice)
-            }
-        )) {
+        Picker(
+            title,
+            selection: Binding(
+                get: { selection.wrappedValue },
+                set: { choice in
+                    selection.wrappedValue = choice
+                    SoundPlayer.play(choice)
+                }
+            )
+        ) {
             Text(SoundChoice.none.title).tag(SoundChoice.none)
             Text(SoundChoice.beep.title).tag(SoundChoice.beep)
             Divider()

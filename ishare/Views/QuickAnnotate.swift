@@ -144,7 +144,7 @@ final class QuickAnnotateSession: ObservableObject {
             return
         }
         guard let annotation = document.makeAnnotation(tool: tool.editorTool, from: imageStart, to: imageEnd, points: []),
-              document.isSubstantial(annotation)
+            document.isSubstantial(annotation)
         else { return }
         document.add(annotation)
     }
@@ -234,10 +234,13 @@ struct QuickAnnotateCanvas: View {
     private func textField(for edit: EditorDocument.TextEdit) -> some View {
         let origin = session.geometry.toView(edit.origin)
         let fontSize = max(10, session.geometry.toView(session.document.fontSize))
-        return TextField("Text".localized(), text: Binding(
-            get: { session.document.editingText?.text ?? "" },
-            set: { session.document.editingText?.text = $0 }
-        ))
+        return TextField(
+            "Text".localized(),
+            text: Binding(
+                get: { session.document.editingText?.text ?? "" },
+                set: { session.document.editingText?.text = $0 }
+            )
+        )
         .textFieldStyle(.plain)
         .font(.system(size: fontSize, weight: .semibold))
         .foregroundStyle(Color(nsColor: session.document.color.nsColor))

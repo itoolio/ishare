@@ -72,21 +72,24 @@ struct EditorCanvas: View {
 
     private func textEditor(for edit: EditorDocument.TextEdit, transform: CanvasTransform) -> some View {
         let origin = transform.toView(edit.origin)
-        return TextField("Text".localized(), text: Binding(
-            get: { document.editingText?.text ?? "" },
-            set: { document.editingText?.text = $0 }
-        ), axis: .vertical)
-            .textFieldStyle(.plain)
-            .font(.system(size: max(10, document.fontSize * transform.scale), weight: .semibold))
-            .foregroundStyle(Color(nsColor: editingTextColor.nsColor))
-            .frame(minWidth: 120, alignment: .leading)
-            .fixedSize()
-            .padding(4)
-            .background(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.accentColor, lineWidth: 1))
-            .offset(x: origin.x - 4, y: origin.y - 4)
-            .focused($textFocused)
-            .onSubmit { document.commitText() }
-            .onAppear { textFocused = true }
+        return TextField(
+            "Text".localized(),
+            text: Binding(
+                get: { document.editingText?.text ?? "" },
+                set: { document.editingText?.text = $0 }
+            ), axis: .vertical
+        )
+        .textFieldStyle(.plain)
+        .font(.system(size: max(10, document.fontSize * transform.scale), weight: .semibold))
+        .foregroundStyle(Color(nsColor: editingTextColor.nsColor))
+        .frame(minWidth: 120, alignment: .leading)
+        .fixedSize()
+        .padding(4)
+        .background(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.accentColor, lineWidth: 1))
+        .offset(x: origin.x - 4, y: origin.y - 4)
+        .focused($textFocused)
+        .onSubmit { document.commitText() }
+        .onAppear { textFocused = true }
     }
 
     private var editingTextColor: RGBAColor {
@@ -119,7 +122,7 @@ struct EditorCanvas: View {
         let annotations = visibleAnnotations
         for annotation in annotations where annotation.isMagnifier {
             guard case let .magnify(rect) = annotation.shape,
-                  let crop = AnnotationRenderer.magnifiedSource(for: rect, in: backdrop)
+                let crop = AnnotationRenderer.magnifiedSource(for: rect, in: backdrop)
             else { continue }
             let lensRect = transform.toView(rect)
             var lens = clipped
@@ -165,7 +168,9 @@ struct EditorCanvas: View {
             AnnotationRenderer.draw(visibleAnnotations, in: cg, source: nil, canvasSize: document.imageSize)
         }
         let output = StraightenGeometry.outputSize(for: document.imageSize, degrees: document.straightenAngle)
-        let kept = CGRect(x: center.x - output.width * transform.scale / 2, y: center.y - output.height * transform.scale / 2, width: output.width * transform.scale, height: output.height * transform.scale)
+        let kept = CGRect(
+            x: center.x - output.width * transform.scale / 2, y: center.y - output.height * transform.scale / 2, width: output.width * transform.scale,
+            height: output.height * transform.scale)
         var outside = Path(content.union(imageRect))
         outside.addRect(kept)
         clipped.fill(outside, with: .color(.black.opacity(0.55)), style: FillStyle(eoFill: true))
@@ -317,16 +322,17 @@ struct EditorCanvas: View {
     }
 
     private func resizeCursor(for handle: ResizeHandle) -> NSCursor {
-        let position: NSCursor.FrameResizePosition = switch handle {
-        case .topLeft: .topLeft
-        case .top: .top
-        case .topRight: .topRight
-        case .right: .right
-        case .bottomRight: .bottomRight
-        case .bottom: .bottom
-        case .bottomLeft: .bottomLeft
-        case .left: .left
-        }
+        let position: NSCursor.FrameResizePosition =
+            switch handle {
+            case .topLeft: .topLeft
+            case .top: .top
+            case .topRight: .topRight
+            case .right: .right
+            case .bottomRight: .bottomRight
+            case .bottom: .bottom
+            case .bottomLeft: .bottomLeft
+            case .left: .left
+            }
         return NSCursor.frameResize(position: position, directions: .all)
     }
 
@@ -409,7 +415,7 @@ struct EditorCanvas: View {
             return
         }
         if document.tool != .text, let selected = document.selectedAnnotation, selected.isInteractive,
-           let handle = selected.editHandle(at: point, tolerance: tolerance)
+            let handle = selected.editHandle(at: point, tolerance: tolerance)
         {
             interaction = .editingHandle(selected, handle)
             if selected.isEffect {
@@ -534,7 +540,7 @@ struct EditorCanvas: View {
             document.add(Annotation(shape: .cursor(end), color: document.color, lineWidth: document.lineWidth, fontSize: document.fontSize))
         case .callout:
             if let draft = document.makeAnnotation(tool: .callout, from: start, to: end, points: []), document.isSubstantial(draft),
-               case let .callout(_, rect, _) = draft.shape
+                case let .callout(_, rect, _) = draft.shape
             {
                 document.add(draft)
                 document.editingText = .init(origin: AnnotationRenderer.calloutTextOrigin(for: rect, fontSize: draft.fontSize), text: "", replacing: draft.id)

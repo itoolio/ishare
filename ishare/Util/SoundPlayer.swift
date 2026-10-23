@@ -66,7 +66,8 @@ enum SoundPlayer {
 
     nonisolated static func soundNames(in directory: URL) -> [String] {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
-        let names = files
+        let names =
+            files
             .filter { soundExtensions.contains($0.pathExtension.lowercased()) }
             .map { $0.deletingPathExtension().lastPathComponent }
         return Array(Set(names)).sorted { $0.localizedStandardCompare($1) == .orderedAscending }

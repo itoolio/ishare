@@ -33,16 +33,22 @@ struct ImageUploadSettings: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                Text("PNGs are recompressed losslessly and their ancillary chunks dropped. The smaller file is uploaded only when it saves space; you can turn this off or keep the original format for single uploaders in their settings.".localized())
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "PNGs are recompressed losslessly and their ancillary chunks dropped. The smaller file is uploaded only when it saves space; you can turn this off or keep the original format for single uploaders in their settings."
+                        .localized()
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             }
             Toggle("Remove location and camera details from imported photos".localized(), isOn: $stripImportedImageMetadata)
                 .settingsEntry(Self.metadata)
             Toggle("Remove location and camera details from every upload".localized(), isOn: $stripImageMetadata)
-            Text("Removes GPS location, camera make and model, maker notes, IPTC and XMP data before uploading. Orientation and color profile are kept. Imported photos are images from Continuity Camera, dropped files, the Services menu and the watch folder.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "Removes GPS location, camera make and model, maker notes, IPTC and XMP data before uploading. Orientation and color profile are kept. Imported photos are images from Continuity Camera, dropped files, the Services menu and the watch folder."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         } header: {
             Text("Images".localized())
         }

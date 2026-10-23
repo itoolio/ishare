@@ -16,10 +16,13 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(Self.language.title.localized(), selection: Binding(
-                    get: { language },
-                    set: { if $0 != language { pendingLanguage = .some($0) } }
-                )) {
+                Picker(
+                    Self.language.title.localized(),
+                    selection: Binding(
+                        get: { language },
+                        set: { if $0 != language { pendingLanguage = .some($0) } }
+                    )
+                ) {
                     Text("System Default".localized()).tag(LanguageTypes?.none)
                     Divider()
                     ForEach(LanguageTypes.allCases, id: \.self) { language in
@@ -63,10 +66,13 @@ struct GeneralSettingsView: View {
             HistorySettingsSection()
         }
         .settingsPaneStyle()
-        .alert("Language Change".localized(), isPresented: Binding(
-            get: { pendingLanguage != nil },
-            set: { if !$0 { pendingLanguage = nil } }
-        )) {
+        .alert(
+            "Language Change".localized(),
+            isPresented: Binding(
+                get: { pendingLanguage != nil },
+                set: { if !$0 { pendingLanguage = nil } }
+            )
+        ) {
             Button("Restart Now".localized(), role: .destructive) {
                 guard let choice = pendingLanguage else { return }
                 AppLanguage.set(choice)

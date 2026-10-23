@@ -49,9 +49,12 @@ private struct AutoZoomSettingsSection: View {
         } header: {
             Text("Auto Zoom".localized())
         } footer: {
-            Text("After you stop recording, ishare zooms in smoothly where you click and zooms back out when you move far away or stop. With “Trim recordings before saving” on, you can preview it and turn it off in the trim window. Typing only counts when Input Monitoring is allowed, and only the time of each key press is used.".localized())
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "After you stop recording, ishare zooms in smoothly where you click and zooms back out when you move far away or stop. With “Trim recordings before saving” on, you can preview it and turn it off in the trim window. Typing only counts when Input Monitoring is allowed, and only the time of each key press is used."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
         .onAppear { inputMonitoringGranted = InputMonitoringPermission.isGranted }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -94,9 +97,12 @@ private struct PointerEffectsSettingsSection: View {
         } header: {
             Text("Pointer".localized())
         } footer: {
-            Text("With any of these on, ishare draws the pointer itself after you stop recording instead of recording the system pointer, so it always appears as an arrow. Click ripples replace “Record clicks”.".localized())
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "With any of these on, ishare draws the pointer itself after you stop recording instead of recording the system pointer, so it always appears as an arrow. Click ripples replace “Record clicks”."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -123,9 +129,12 @@ private struct LiveDrawingSettingsSection: View {
         } header: {
             Text("Draw on Screen".localized())
         } footer: {
-            Text("While recording the full screen or a region, press the shortcut to draw with a pen, highlighter or arrow. Your drawing is part of the recording but never of screenshots. Press Esc or the shortcut again to go back to the app you were using.".localized())
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "While recording the full screen or a region, press the shortcut to draw with a pen, highlighter or arrow. Your drawing is part of the recording but never of screenshots. Press Esc or the shortcut again to go back to the app you were using."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -151,14 +160,19 @@ private struct RecordingLimitsSettingsSection: View {
                 LabeledContent("Stop at file size".localized(), value: maxMegabytes > 0 ? "\(maxMegabytes) MB" : "No limit".localized())
             }
             Stepper(value: $lowDiskMegabytes, in: 512 ... 100_000, step: 512) {
-                LabeledContent("Warn when free space is below".localized(), value: ByteCountFormatter.string(fromByteCount: Int64(lowDiskMegabytes) * RecordingLimits.megabyte, countStyle: .file))
+                LabeledContent(
+                    "Warn when free space is below".localized(),
+                    value: ByteCountFormatter.string(fromByteCount: Int64(lowDiskMegabytes) * RecordingLimits.megabyte, countStyle: .file))
             }
         } header: {
             Text("Limits".localized())
         } footer: {
-            Text("Recordings stop on their own and are kept when a limit is reached or when less than 512 MB of disk space is left. The recording controls show the time left.".localized())
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "Recordings stop on their own and are kept when a limit is reached or when less than 512 MB of disk space is left. The recording controls show the time left."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 }

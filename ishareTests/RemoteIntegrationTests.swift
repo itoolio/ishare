@@ -51,17 +51,21 @@ extension NetworkSuite {
         }
 
         func uploader(url: String, authentication: WebDAVAuthentication? = nil) -> CustomUploader {
-            .webdav(name: "dav-integration", configuration: WebDAVConfiguration(
-                url: url, username: RemoteIntegrationEnvironment.webdavUser, password: RemoteIntegrationEnvironment.webdavPassword,
-                authentication: authentication, pathTemplate: "integration/{{uuid}}/{{date}}/{{filename}}"
-            ))
+            .webdav(
+                name: "dav-integration",
+                configuration: WebDAVConfiguration(
+                    url: url, username: RemoteIntegrationEnvironment.webdavUser, password: RemoteIntegrationEnvironment.webdavPassword,
+                    authentication: authentication, pathTemplate: "integration/{{uuid}}/{{date}}/{{filename}}"
+                ))
         }
 
         func get(_ url: URL, authenticated: Bool = true) async throws -> (Int, Data) {
             var request = URLRequest(url: url)
-            if authenticated, let header = WebDAVRequestBuilder.authorizationHeader(
-                username: RemoteIntegrationEnvironment.webdavUser, password: RemoteIntegrationEnvironment.webdavPassword
-            ) {
+            if authenticated,
+                let header = WebDAVRequestBuilder.authorizationHeader(
+                    username: RemoteIntegrationEnvironment.webdavUser, password: RemoteIntegrationEnvironment.webdavPassword
+                )
+            {
                 request.setValue(header, forHTTPHeaderField: "Authorization")
             }
             let (data, response) = try await http.data(for: request)

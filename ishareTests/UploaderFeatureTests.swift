@@ -11,7 +11,10 @@ struct S3PresignTests {
     @Test func matchesTheAWSPresignedURLExample() throws {
         let signer = SigV4Signer(accessKeyId: "AKIAIOSFODNN7EXAMPLE", secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", region: "us-east-1")
         let url = try #require(signer.presignedURL(url: URL(string: "https://examplebucket.s3.amazonaws.com/test.txt")!, expires: 86400, date: date))
-        #expect(url.absoluteString == "https://examplebucket.s3.amazonaws.com/test.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20130524%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20130524T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404")
+        #expect(
+            url.absoluteString
+                == "https://examplebucket.s3.amazonaws.com/test.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20130524%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20130524T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404"
+        )
     }
 
     @Test func returnsPresignedObjectURLsInsteadOfThePublicURL() throws {
@@ -29,21 +32,27 @@ struct S3PresignTests {
     }
 
     @Test func keepsPublicURLsWithoutExpiry() throws {
-        let configuration = S3Configuration(endpoint: "https://s3.amazonaws.com", region: "us-east-1", bucket: "b", accessKeyId: "a", secretAccessKey: "s", publicURL: "https://cdn.example.com/{{key}}")
-        let request = try S3RequestBuilder.upload(configuration: configuration, fileURL: URL(fileURLWithPath: "/tmp/k.png"), contentType: "image/png", payloadHash: "x", context: S3KeyContext(fileName: "k.png"))
+        let configuration = S3Configuration(
+            endpoint: "https://s3.amazonaws.com", region: "us-east-1", bucket: "b", accessKeyId: "a", secretAccessKey: "s", publicURL: "https://cdn.example.com/{{key}}")
+        let request = try S3RequestBuilder.upload(
+            configuration: configuration, fileURL: URL(fileURLWithPath: "/tmp/k.png"), contentType: "image/png", payloadHash: "x", context: S3KeyContext(fileName: "k.png"))
         #expect(request.publicURL.absoluteString == "https://cdn.example.com/k.png")
     }
 
     @Test(arguments: [(0, false), (1, true), (604_800, true), (604_801, false), (-5, false)])
     func validatesExpiryRange(pair: (Int, Bool)) {
-        let uploader = CustomUploader.s3(name: "s", configuration: S3Configuration(endpoint: "https://s3.example.com", region: "r", bucket: "b", accessKeyId: "a", secretAccessKey: "s", presignedExpiry: pair.0))
+        let uploader = CustomUploader.s3(
+            name: "s", configuration: S3Configuration(endpoint: "https://s3.example.com", region: "r", bucket: "b", accessKeyId: "a", secretAccessKey: "s", presignedExpiry: pair.0)
+        )
         #expect(UploaderValidator.issues(for: uploader).contains(.invalidPresignedExpiry) == !pair.1)
     }
 
     @Test func roundTripsExpiryThroughJSON() throws {
-        let original = CustomUploader.s3(name: "s", configuration: S3Configuration(endpoint: "e", region: "r", bucket: "b", accessKeyId: "a", secretAccessKey: "s", presignedExpiry: 600))
+        let original = CustomUploader.s3(
+            name: "s", configuration: S3Configuration(endpoint: "e", region: "r", bucket: "b", accessKeyId: "a", secretAccessKey: "s", presignedExpiry: 600))
         #expect(try CustomUploader.fromJSON(original.toJSON()).s3?.presignedExpiry == 600)
-        let decoded = try CustomUploader.fromJSON(Data(#"{"name": "x", "s3": {"endpoint": "e", "bucket": "b", "accessKeyId": "a", "secretAccessKey": "s", "PresignedExpiry": 60}}"#.utf8))
+        let decoded = try CustomUploader.fromJSON(
+            Data(#"{"name": "x", "s3": {"endpoint": "e", "bucket": "b", "accessKeyId": "a", "secretAccessKey": "s", "PresignedExpiry": 60}}"#.utf8))
         #expect(decoded.s3?.presignedExpiry == 60)
     }
 }
@@ -134,7 +143,8 @@ struct SettingsArchiveTests {
         source.set(["com.apple.Safari"], forKey: "ignoredApps")
         source.set(Data([1, 2]), forKey: "capturePathBookmark")
         source.set("junk", forKey: "unrelatedKey")
-        let uploader = S3SecretStore.movingSecretToKeychain(.s3(name: "r2", configuration: S3Configuration(endpoint: "https://r2.example.com", region: "auto", bucket: "b", accessKeyId: "a", secretAccessKey: "secret-r2")))
+        let uploader = S3SecretStore.movingSecretToKeychain(
+            .s3(name: "r2", configuration: S3Configuration(endpoint: "https://r2.example.com", region: "auto", bucket: "b", accessKeyId: "a", secretAccessKey: "secret-r2")))
         Defaults[SettingsTransfer.uploadersKey(in: source)] = [uploader]
         Defaults[SettingsTransfer.historyKey(in: source)] = [HistoryItem(fileUrl: "https://x.example.com/1.png", date: Date(timeIntervalSince1970: 5))]
         let sourceShortcuts = Storage()
@@ -177,7 +187,8 @@ struct SettingsArchiveTests {
         let suite = "dev.adrian.ishare.tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let uploader = S3SecretStore.movingSecretToKeychain(.s3(name: "aws", configuration: S3Configuration(endpoint: "https://s3.example.com", region: "r", bucket: "b", accessKeyId: "a", secretAccessKey: "visible")))
+        let uploader = S3SecretStore.movingSecretToKeychain(
+            .s3(name: "aws", configuration: S3Configuration(endpoint: "https://s3.example.com", region: "r", bucket: "b", accessKeyId: "a", secretAccessKey: "visible")))
         Defaults[SettingsTransfer.uploadersKey(in: defaults)] = [uploader]
         let archive = SettingsTransfer.makeArchive(includeHistory: false, includeSecrets: true, defaults: defaults, shortcuts: shortcutStore(Storage()))
         #expect(archive.uploaders.first?.s3?.secretAccessKey == "visible")
@@ -186,7 +197,8 @@ struct SettingsArchiveTests {
 
     @Test func rejectsNewerAndMalformedFiles() throws {
         #expect(throws: SettingsArchiveError.unsupportedVersion(99)) {
-            try SettingsTransfer.decode(Data(#"{"version": 99, "exportedAt": "2026-01-01T00:00:00Z", "preferences": {}, "uploaders": [], "shortcuts": {}, "includesSecrets": false}"#.utf8))
+            try SettingsTransfer.decode(
+                Data(#"{"version": 99, "exportedAt": "2026-01-01T00:00:00Z", "preferences": {}, "uploaders": [], "shortcuts": {}, "includesSecrets": false}"#.utf8))
         }
         #expect(throws: SettingsArchiveError.self) {
             try SettingsTransfer.decode(Data("nope".utf8))
@@ -257,11 +269,13 @@ struct UploadQueueTests {
     }
 
     func queue(_ box: Box) -> UploadQueue {
-        UploadQueue(directory: directory, perform: { url, destination in
-            if !box.failures.isEmpty { throw box.failures.removeFirst() }
-            box.uploaded.append((url.lastPathComponent, destination))
-            return UploadOutcome(url: URL(string: "https://cdn.example.com/\(url.lastPathComponent)")!, deletionURL: nil, uploaderID: nil, s3Key: nil)
-        }, onSuccess: { item, _ in box.succeeded.append(item.id) })
+        UploadQueue(
+            directory: directory,
+            perform: { url, destination in
+                if !box.failures.isEmpty { throw box.failures.removeFirst() }
+                box.uploaded.append((url.lastPathComponent, destination))
+                return UploadOutcome(url: URL(string: "https://cdn.example.com/\(url.lastPathComponent)")!, deletionURL: nil, uploaderID: nil, s3Key: nil)
+            }, onSuccess: { item, _ in box.succeeded.append(item.id) })
     }
 
     @Test func persistsCopiesAndRetriesSuccessfully() async throws {

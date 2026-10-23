@@ -18,12 +18,12 @@ enum ImagePhase {
 @MainActor
 class ImageLoader: ObservableObject {
     @Published var phase: ImagePhase = .empty
-    
+
     func load(url: URL) async {
         let config = URLSessionConfiguration.default
         config.httpMaximumConnectionsPerHost = 100
         let session = URLSession(configuration: config)
-        
+
         do {
             let (data, _) = try await session.data(from: url)
             if let uiImage = NSImage(data: data) {

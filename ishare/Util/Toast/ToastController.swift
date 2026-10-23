@@ -143,10 +143,11 @@ final class ToastController {
         window.alphaValue = 0
         Self.relayout(animated: true)
         window.orderFrontRegardless()
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.2
-            window.animator().alphaValue = 1
-        }, completionHandler: nil)
+        NSAnimationContext.runAnimationGroup(
+            { context in
+                context.duration = 0.2
+                window.animator().alphaValue = 1
+            }, completionHandler: nil)
         scheduleDismiss()
         await withCheckedContinuation { continuation in
             self.continuation = continuation
@@ -188,14 +189,16 @@ final class ToastController {
         cancellables.removeAll()
         guard let continuation else { return }
         self.continuation = nil
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.2
-            window.animator().alphaValue = 0
-        }, completionHandler: { [window] in
-            Task { @MainActor in
-                window.orderOut(nil)
-            }
-        })
+        NSAnimationContext.runAnimationGroup(
+            { context in
+                context.duration = 0.2
+                window.animator().alphaValue = 0
+            },
+            completionHandler: { [window] in
+                Task { @MainActor in
+                    window.orderOut(nil)
+                }
+            })
         continuation.resume()
     }
 }

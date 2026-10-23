@@ -70,10 +70,11 @@ public struct DeviceFrameLayout: Equatable, Sendable {
         guard let aspect, aspect > 0, imageSize.width > 0, imageSize.height > 0 else { return imageSize }
         let imageAspect = imageSize.width / imageSize.height
         let widthBound = imageAspect > aspect
-        let size: CGSize = switch (fit, widthBound) {
-        case (.letterbox, true), (.crop, false): CGSize(width: imageSize.width, height: imageSize.width / aspect)
-        case (.letterbox, false), (.crop, true): CGSize(width: imageSize.height * aspect, height: imageSize.height)
-        }
+        let size: CGSize =
+            switch (fit, widthBound) {
+            case (.letterbox, true), (.crop, false): CGSize(width: imageSize.width, height: imageSize.width / aspect)
+            case (.letterbox, false), (.crop, true): CGSize(width: imageSize.height * aspect, height: imageSize.height)
+            }
         return CGSize(width: max(1, size.width.rounded()), height: max(1, size.height.rounded()))
     }
 
@@ -159,10 +160,12 @@ public struct DeviceFrameLayout: Equatable, Sendable {
         let islandLong = (short * 0.3).rounded()
         let islandShort = (short * 0.088).rounded()
         let islandInset = (short * 0.032).rounded()
-        let island = portrait
+        let island =
+            portrait
             ? CGRect(x: screenRect.midX - islandLong / 2, y: screenRect.minY + islandInset, width: islandLong, height: islandShort)
             : CGRect(x: screenRect.minX + islandInset, y: screenRect.midY - islandLong / 2, width: islandShort, height: islandLong)
-        let canvas = portrait
+        let canvas =
+            portrait
             ? CGSize(width: body.width + button * 2, height: body.height)
             : CGSize(width: body.width, height: body.height + button * 2)
         return DeviceFrameLayout(
@@ -219,7 +222,11 @@ public struct DeviceFrameLayout: Equatable, Sendable {
         )
     }
 
-    public init(canvasSize: CGSize, bodyRect: CGRect, bodyCornerRadius: CGFloat, rimWidth: CGFloat, screenRect: CGRect, screenCornerRadius: CGFloat, imageRect: CGRect, baseRect: CGRect? = nil, hingeRect: CGRect? = nil, neckRect: CGRect? = nil, footRect: CGRect? = nil, islandRect: CGRect? = nil, buttons: [CGRect] = [], toolbarRect: CGRect? = nil, addressRect: CGRect? = nil, trafficLights: [CGRect] = []) {
+    public init(
+        canvasSize: CGSize, bodyRect: CGRect, bodyCornerRadius: CGFloat, rimWidth: CGFloat, screenRect: CGRect, screenCornerRadius: CGFloat, imageRect: CGRect,
+        baseRect: CGRect? = nil, hingeRect: CGRect? = nil, neckRect: CGRect? = nil, footRect: CGRect? = nil, islandRect: CGRect? = nil, buttons: [CGRect] = [],
+        toolbarRect: CGRect? = nil, addressRect: CGRect? = nil, trafficLights: [CGRect] = []
+    ) {
         self.canvasSize = canvasSize
         self.bodyRect = bodyRect
         self.bodyCornerRadius = bodyCornerRadius

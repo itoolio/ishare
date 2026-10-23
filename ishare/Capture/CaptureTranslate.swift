@@ -23,7 +23,7 @@ enum TranslationLanguages {
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
         guard let (language, confidence) = recognizer.languageHypotheses(withMaximum: 1).first,
-              language != .undetermined, confidence >= minimumDetectionConfidence
+            language != .undetermined, confidence >= minimumDetectionConfidence
         else { return nil }
         return Locale.Language(identifier: language.rawValue)
     }

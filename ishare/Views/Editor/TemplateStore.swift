@@ -11,7 +11,8 @@ final class TemplateStore: ObservableObject {
         if RuntimeEnvironment.isRunningTests {
             return FileManager.default.temporaryDirectory.appending(path: "ishare-tests/Templates", directoryHint: .isDirectory)
         }
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let base =
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return base.appending(path: "ishare/Templates", directoryHint: .isDirectory)
     }
@@ -27,7 +28,8 @@ final class TemplateStore: ObservableObject {
 
     func reload() {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
-        templates = files
+        templates =
+            files
             .filter { $0.pathExtension == "json" }
             .compactMap { url in
                 do {
@@ -104,10 +106,12 @@ enum TemplatePreview {
     static func cgImage(for template: AnnotationTemplate, size: CGSize, pixelScale: CGFloat = 2) -> CGImage? {
         let width = Int((size.width * pixelScale).rounded())
         let height = Int((size.height * pixelScale).rounded())
-        guard width > 0, height > 0, let context = CGContext(
-            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
+        guard width > 0, height > 0,
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
         let canvas = CGRect(x: 0, y: 0, width: width, height: height)
         context.setFillColor(CGColor(gray: 0.55, alpha: 1))
         context.fill(canvas)

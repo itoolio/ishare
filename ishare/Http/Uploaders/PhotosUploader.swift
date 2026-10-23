@@ -56,10 +56,11 @@ struct SystemPhotoLibrary: PhotoLibraryClient {
     func save(fileURL: URL, kind: PhotosMediaKind, to album: PhotosAlbumTarget) async throws -> String {
         let box = CreatedAssetBox()
         try await PHPhotoLibrary.shared().performChanges {
-            let request: PHAssetChangeRequest? = switch kind {
-            case .image: PHAssetChangeRequest.creationRequestForAssetFromImage(atFileURL: fileURL)
-            case .video: PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
-            }
+            let request: PHAssetChangeRequest? =
+                switch kind {
+                case .image: PHAssetChangeRequest.creationRequestForAssetFromImage(atFileURL: fileURL)
+                case .video: PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+                }
             guard let placeholder = request?.placeholderForCreatedAsset else { return }
             box.identifier = placeholder.localIdentifier
             Self.albumRequest(for: album)?.addAssets([placeholder] as NSArray)

@@ -18,9 +18,12 @@ extension UploaderEditorView {
             TextField("ACL".localized(), text: $acl, prompt: Text("public-read"))
             TextField("Public URL".localized(), text: $publicURL, prompt: Text("https://cdn.example.com/{{key}}"))
                 .disabled(expiringLinks)
-            Text("Key placeholders: {{filename}}, {{name}}, {{ext}}, {{uuid}}, {{random}}, {{timestamp}}, {{date}}. Public URL placeholders: {{key}}, {{bucket}}, {{region}}, {{host}}, {{endpoint}}.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "Key placeholders: {{filename}}, {{name}}, {{ext}}, {{uuid}}, {{random}}, {{timestamp}}, {{date}}. Public URL placeholders: {{key}}, {{bucket}}, {{region}}, {{host}}, {{endpoint}}."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
             Toggle("Expiring links".localized(), isOn: $expiringLinks)
             if expiringLinks {
                 LabeledContent("Links expire after".localized()) {

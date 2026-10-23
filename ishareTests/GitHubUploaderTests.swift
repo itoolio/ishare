@@ -54,20 +54,24 @@ extension NetworkSuite {
         }
 
         func uploader(style: GitHubLinkStyle? = nil, branch: String? = "main", publicGists: Bool? = nil) -> CustomUploader {
-            UploaderStore.prepared(.github(name: "gh", configuration: GitHubConfiguration(
-                repository: "me/shots", branch: branch, pathTemplate: "{{date}}/{{filename}}", linkStyle: style, token: "github_pat_1",
-                publicGists: publicGists
-            )))
+            UploaderStore.prepared(
+                .github(
+                    name: "gh",
+                    configuration: GitHubConfiguration(
+                        repository: "me/shots", branch: branch, pathTemplate: "{{date}}/{{filename}}", linkStyle: style, token: "github_pat_1",
+                        publicGists: publicGists
+                    )))
         }
 
         func body(_ request: CapturedRequest) -> [String: Any] {
             (try? JSONSerialization.jsonObject(with: request.body) as? [String: Any]) ?? [:]
         }
 
-        nonisolated static let contentsResponse = Data(#"""
-        {"content": {"path": "2026/01/01/shot.png", "sha": "s1", "html_url": "https://github.com/me/shots/blob/main/2026/01/01/shot.png",
-          "download_url": "https://raw.githubusercontent.com/me/shots/main/2026/01/01/shot.png"}, "commit": {"sha": "c1"}}
-        """#.utf8)
+        nonisolated static let contentsResponse = Data(
+            #"""
+            {"content": {"path": "2026/01/01/shot.png", "sha": "s1", "html_url": "https://github.com/me/shots/blob/main/2026/01/01/shot.png",
+              "download_url": "https://raw.githubusercontent.com/me/shots/main/2026/01/01/shot.png"}, "commit": {"sha": "c1"}}
+            """#.utf8)
 
         @Test func commitsImagesThroughTheContentsAPIAndReturnsTheRawURL() async throws {
             StubURLProtocol.reset { _ in StubResponse(status: 201, body: Self.contentsResponse) }
@@ -103,7 +107,11 @@ extension NetworkSuite {
 
         @Test func sendsTextSnippetsToASecretGist() async throws {
             StubURLProtocol.reset { _ in
-                StubResponse(status: 201, body: Data(#"{"id": "g1", "html_url": "https://gist.github.com/me/g1", "files": {"note.md": {"raw_url": "https://gist.githubusercontent.com/me/g1/raw/note.md"}}}"#.utf8))
+                StubResponse(
+                    status: 201,
+                    body: Data(
+                        #"{"id": "g1", "html_url": "https://gist.github.com/me/g1", "files": {"note.md": {"raw_url": "https://gist.githubusercontent.com/me/g1/raw/note.md"}}}"#
+                            .utf8))
             }
             let file = try Fixtures.temporaryFile(named: "note.md", contents: Data("# Hello".utf8))
             let outcome = try await GitHubUploader(uploader: uploader(style: .blob)).upload(fileURL: file) { _ in }

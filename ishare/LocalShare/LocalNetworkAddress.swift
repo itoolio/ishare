@@ -18,7 +18,7 @@ enum LocalNetworkAddress {
         for entry in sequence(first: first, next: { $0.pointee.ifa_next }) {
             let flags = Int32(entry.pointee.ifa_flags)
             guard flags & IFF_UP != 0, flags & IFF_RUNNING != 0, flags & IFF_LOOPBACK == 0,
-                  let socketAddress = entry.pointee.ifa_addr
+                let socketAddress = entry.pointee.ifa_addr
             else { continue }
             let family = Int32(socketAddress.pointee.sa_family)
             guard family == AF_INET || family == AF_INET6 else { continue }

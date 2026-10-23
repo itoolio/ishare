@@ -111,9 +111,9 @@ enum CLIAppGroup {
 
     static var signedIdentifier: String {
         guard let task = SecTaskCreateFromSelf(nil),
-              let value = SecTaskCopyValueForEntitlement(task, "com.apple.security.application-groups" as CFString, nil),
-              let groups = value as? [String],
-              let group = groups.first(where: { $0.hasSuffix("group.dev.adrian.ishare") })
+            let value = SecTaskCopyValueForEntitlement(task, "com.apple.security.application-groups" as CFString, nil),
+            let groups = value as? [String],
+            let group = groups.first(where: { $0.hasSuffix("group.dev.adrian.ishare") })
         else { return identifier }
         return group
     }

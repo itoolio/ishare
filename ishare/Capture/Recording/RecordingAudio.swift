@@ -196,12 +196,14 @@ final class AppAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unche
 
     private func prepareWriter(at time: CMTime) {
         guard time.isNumeric, let writer = try? AVAssetWriter(outputURL: url, fileType: .m4a) else { return }
-        let input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
-            AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: 48000,
-            AVNumberOfChannelsKey: 2,
-            AVEncoderBitRateKey: 160_000,
-        ])
+        let input = AVAssetWriterInput(
+            mediaType: .audio,
+            outputSettings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: 48000,
+                AVNumberOfChannelsKey: 2,
+                AVEncoderBitRateKey: 160_000,
+            ])
         input.expectsMediaDataInRealTime = true
         guard writer.canAdd(input) else { return }
         writer.add(input)
@@ -220,7 +222,7 @@ enum AppAudioMuxer {
         let videoDuration = try await recording.load(.duration).seconds
         let audioDuration = try await audio.load(.duration).seconds
         guard let audioTrack = try await audio.loadTracks(withMediaType: .audio).first,
-              let placement = AppAudioPlacement.make(audioStart: clip.startTime, recordingStart: recordingStart, audioDuration: audioDuration, videoDuration: videoDuration)
+            let placement = AppAudioPlacement.make(audioStart: clip.startTime, recordingStart: recordingStart, audioDuration: audioDuration, videoDuration: videoDuration)
         else { return }
 
         let composition = AVMutableComposition()

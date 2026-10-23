@@ -31,7 +31,8 @@ extension Defaults.Keys {
     static let copyLinksFromCodes = Key<Bool>("copyLinksFromCodes", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let redactBeforeUpload = Key<Bool>("redactBeforeUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let redactSavedFile = Key<Bool>("redactSavedFile", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
-    static let redactionCategories = Key<Set<RedactionCategory>>("redactionCategories", default: Set(RedactionCategory.allCases), suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let redactionCategories = Key<Set<RedactionCategory>>(
+        "redactionCategories", default: Set(RedactionCategory.allCases), suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let intervalCaptureInterval = Key<CaptureInterval>("intervalCaptureInterval", default: .two, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let intervalCaptureStopMode = Key<IntervalStopMode>("intervalCaptureStopMode", default: .frameCount, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let intervalCaptureFrameCount = Key<Int>("intervalCaptureFrameCount", default: 10, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

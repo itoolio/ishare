@@ -149,21 +149,29 @@ struct UploaderSettingsView: View {
 extension UploaderSettingsView: SettingsSearchable {
     static let searchEntries: [SettingsSearchEntry] = [
         ImageUploadSettings.optimization, ImageUploadSettings.metadata, WebhookSettings.entry,
-        SettingsSearchEntry("Upload", pane: .uploaders, keywords: [
-            "Uploader", "Destination", "Imgur", "Custom uploader", "Server", "S3", "R2", "ISCU", "Import", "Export",
-            "Assistant", "Apple Intelligence", "Delete", "Deletion URL", "Headers",
-            "WebDAV", "SFTP", "SSH", "Host key", "Fingerprint", "Dropbox", "Google Drive", "OneDrive", "GitHub", "Gist",
-            "Personal access token", "Sign in",
-        ]),
-        SettingsSearchEntry("Also upload to", pane: .uploaders, keywords: [
-            "Copy URL after upload", "Open URL in browser after upload", "Watch Folder", "Folder", "Upload Queue",
-            "Retry", "Expiring links", "Presigned", "ShareX", "SXCU", "Test Upload", "Method",
-        ]),
-        SettingsSearchEntry("Upload Presets", pane: .uploaders, keywords: [
-            "Preset", "URL Shortener", "Shorten", "Short link", "is.gd", "v.gd",
-        ]),
-        SettingsSearchEntry("Upload Statistics", pane: .uploaders, keywords: [
-            "Statistics", "Stats", "Upload duration", "Failure rate", "Percentile", "CSV", "Reset statistics",
-        ]),
+        SettingsSearchEntry(
+            "Upload", pane: .uploaders,
+            keywords: [
+                "Uploader", "Destination", "Imgur", "Custom uploader", "Server", "S3", "R2", "ISCU", "Import", "Export",
+                "Assistant", "Apple Intelligence", "Delete", "Deletion URL", "Headers",
+                "WebDAV", "SFTP", "SSH", "Host key", "Fingerprint", "Dropbox", "Google Drive", "OneDrive", "GitHub", "Gist",
+                "Personal access token", "Sign in",
+            ]),
+        SettingsSearchEntry(
+            "Also upload to", pane: .uploaders,
+            keywords: [
+                "Copy URL after upload", "Open URL in browser after upload", "Watch Folder", "Folder", "Upload Queue",
+                "Retry", "Expiring links", "Presigned", "ShareX", "SXCU", "Test Upload", "Method",
+            ]),
+        SettingsSearchEntry(
+            "Upload Presets", pane: .uploaders,
+            keywords: [
+                "Preset", "URL Shortener", "Shorten", "Short link", "is.gd", "v.gd",
+            ]),
+        SettingsSearchEntry(
+            "Upload Statistics", pane: .uploaders,
+            keywords: [
+                "Statistics", "Stats", "Upload duration", "Failure rate", "Percentile", "CSV", "Reset statistics",
+            ]),
     ]
 }

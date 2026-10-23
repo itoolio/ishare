@@ -51,15 +51,21 @@ final class InputEventMonitor {
 
     func startClicks() {
         let mask: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
-        if let global = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: { [weak self] _ in
-            MainActor.assumeIsolated { self?.onClick?(NSEvent.mouseLocation) }
-        }) {
+        if let global = NSEvent.addGlobalMonitorForEvents(
+            matching: mask,
+            handler: { [weak self] _ in
+                MainActor.assumeIsolated { self?.onClick?(NSEvent.mouseLocation) }
+            })
+        {
             mouseMonitors.append(global)
         }
-        if let local = NSEvent.addLocalMonitorForEvents(matching: mask, handler: { [weak self] event in
-            MainActor.assumeIsolated { self?.onClick?(NSEvent.mouseLocation) }
-            return event
-        }) {
+        if let local = NSEvent.addLocalMonitorForEvents(
+            matching: mask,
+            handler: { [weak self] event in
+                MainActor.assumeIsolated { self?.onClick?(NSEvent.mouseLocation) }
+                return event
+            })
+        {
             mouseMonitors.append(local)
         }
     }
@@ -68,14 +74,16 @@ final class InputEventMonitor {
     func startKeys() -> Bool {
         guard InputMonitoringPermission.isGranted, eventTap == nil else { return eventTap != nil }
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .tailAppendEventTap,
-            options: .listenOnly,
-            eventsOfInterest: mask,
-            callback: inputEventTapCallback,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else {
+        guard
+            let tap = CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .tailAppendEventTap,
+                options: .listenOnly,
+                eventsOfInterest: mask,
+                callback: inputEventTapCallback,
+                userInfo: Unmanaged.passUnretained(self).toOpaque()
+            )
+        else {
             Log.capture.error("Couldn't create the keystroke event tap")
             return false
         }
@@ -245,13 +253,13 @@ final class InputOverlayController {
 
     private func showKey(_ event: RawKeyEvent) {
         guard !event.isRepeat,
-              let keystroke = KeystrokeFormatter.keystroke(
-                  keyCode: event.keyCode,
-                  characters: event.characters,
-                  baseCharacters: event.baseCharacters,
-                  modifiers: event.modifiers,
-                  shortcutsOnly: shortcutsOnly
-              )
+            let keystroke = KeystrokeFormatter.keystroke(
+                keyCode: event.keyCode,
+                characters: event.characters,
+                baseCharacters: event.baseCharacters,
+                modifiers: event.modifiers,
+                shortcutsOnly: shortcutsOnly
+            )
         else { return }
         ticker.register(keystroke, at: Date())
         let text = ticker.text

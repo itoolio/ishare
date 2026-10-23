@@ -125,7 +125,9 @@ struct BeautifierTests {
         #expect(style.shadowRadius == 0)
         #expect(style.fill == .solid(sampleColor))
         #expect(BeautifyStyle(background: .transparent, solidColor: sampleColor, padding: 24, cornerRadius: 10, shadow: true, scale: 2).shadowRadius > 0)
-        #expect(BeautifyStyle(background: .forest, solidColor: sampleColor, padding: 0, cornerRadius: 0, shadow: false, scale: 1).fill == .gradient(BeautifyBackground.forest.gradientColors!))
+        #expect(
+            BeautifyStyle(background: .forest, solidColor: sampleColor, padding: 0, cornerRadius: 0, shadow: false, scale: 1).fill
+                == .gradient(BeautifyBackground.forest.gradientColors!))
     }
 
     @Test func everyGradientHasTwoStops() {
@@ -202,8 +204,12 @@ struct PrivacyRedactionTests {
 
     @Test func cropsTheMenuBarFromTheTopOfACapture() {
         let size = CGSize(width: 2880, height: 1800)
-        #expect(PrivacyRedaction.menuBarCrop(region: CGRect(x: 0, y: 0, width: 1440, height: 900), menuBarHeight: 33, scale: 2, pixelSize: size) == CGRect(x: 0, y: 66, width: 2880, height: 1734))
-        #expect(PrivacyRedaction.menuBarCrop(region: CGRect(x: 100, y: 20, width: 200, height: 100), menuBarHeight: 33, scale: 2, pixelSize: CGSize(width: 400, height: 200)) == CGRect(x: 0, y: 26, width: 400, height: 174))
+        #expect(
+            PrivacyRedaction.menuBarCrop(region: CGRect(x: 0, y: 0, width: 1440, height: 900), menuBarHeight: 33, scale: 2, pixelSize: size)
+                == CGRect(x: 0, y: 66, width: 2880, height: 1734))
+        #expect(
+            PrivacyRedaction.menuBarCrop(region: CGRect(x: 100, y: 20, width: 200, height: 100), menuBarHeight: 33, scale: 2, pixelSize: CGSize(width: 400, height: 200))
+                == CGRect(x: 0, y: 26, width: 400, height: 174))
     }
 
     @Test func keepsCapturesThatDoNotTouchOrOnlyContainTheMenuBar() {

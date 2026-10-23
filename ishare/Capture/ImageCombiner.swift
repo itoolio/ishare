@@ -74,11 +74,12 @@ enum ImageCombiner {
 
     static func layout(for sizes: [CGSize], style: CombineStyle) -> CombinedLayout {
         guard !sizes.isEmpty else { return CombinedLayout(canvasSize: .zero, frames: []) }
-        let columns: Int = switch style.layout {
-        case .horizontal: sizes.count
-        case .vertical: 1
-        case .grid: gridColumns(for: sizes.count, preferred: style.columns)
-        }
+        let columns: Int =
+            switch style.layout {
+            case .horizontal: sizes.count
+            case .vertical: 1
+            case .grid: gridColumns(for: sizes.count, preferred: style.columns)
+            }
         let rows = Int((Double(sizes.count) / Double(columns)).rounded(.up))
         var columnWidths = [CGFloat](repeating: 0, count: columns)
         var rowHeights = [CGFloat](repeating: 0, count: rows)
@@ -125,12 +126,12 @@ enum ImageCombiner {
         guard !images.isEmpty else { return nil }
         let layout = layout(for: images.map { CGSize(width: $0.width, height: $0.height) }, style: style)
         guard layout.canvasSize.width >= 1, layout.canvasSize.height >= 1,
-              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(
-                  data: nil, width: Int(layout.canvasSize.width), height: Int(layout.canvasSize.height),
-                  bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
-                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              )
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+            let context = CGContext(
+                data: nil, width: Int(layout.canvasSize.width), height: Int(layout.canvasSize.height),
+                bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
         else { return nil }
         context.interpolationQuality = .high
         let canvas = CGRect(origin: .zero, size: layout.canvasSize)

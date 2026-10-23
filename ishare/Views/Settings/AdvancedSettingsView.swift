@@ -45,11 +45,15 @@ extension AdvancedSettingsView: SettingsSearchable {
     }
 
     static let baseSearchEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry("Backup", pane: .advanced, keywords: [
-            "Export Settings", "Import Settings", "Include upload history", "Include S3 secret access keys",
-        ]),
-        SettingsSearchEntry("Advanced", pane: .advanced, keywords: [
-            "Imgur Client ID", "Client ID",
-        ]),
+        SettingsSearchEntry(
+            "Backup", pane: .advanced,
+            keywords: [
+                "Export Settings", "Import Settings", "Include upload history", "Include S3 secret access keys",
+            ]),
+        SettingsSearchEntry(
+            "Advanced", pane: .advanced,
+            keywords: [
+                "Imgur Client ID", "Client ID",
+            ]),
     ]
 }

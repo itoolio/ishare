@@ -49,7 +49,8 @@ struct PointerEffectPlanTests {
         let size = CGSize(width: 100, height: 100)
         let none = RecordingEffectsPlan.make(activity: activity, pointer: PointerEffectSettings(), autoZoom: nil, videoSize: size, duration: 2)
         #expect(none.isEmpty)
-        let full = RecordingEffectsPlan.make(activity: activity, pointer: PointerEffectSettings(smoothing: true, scale: 2, ripples: true), autoZoom: AutoZoomSettings(), videoSize: size, duration: 2)
+        let full = RecordingEffectsPlan.make(
+            activity: activity, pointer: PointerEffectSettings(smoothing: true, scale: 2, ripples: true), autoZoom: AutoZoomSettings(), videoSize: size, duration: 2)
         #expect(full.pointer?.scale == 2)
         #expect(full.ripples.count == 1)
         #expect(full.camera?.segments.count == 1)
@@ -130,8 +131,10 @@ struct LiveDrawingTests {
 struct RecordingEffectsSettingsTests {
     @Test func exportsTheNewPreferences() {
         let names = SettingsTransfer.preferenceNames
-        for key in ["autoZoomEnabled", "autoZoomLevel", "pointerSmoothing", "pointerScale", "clickRipples", "clickRippleColor", "hidesIdlePointer",
-                    "liveDrawingFadeDelay", "liveDrawingTool", "recordingMaxMinutes", "recordingMaxMegabytes", "recordingLowDiskWarningMB"] {
+        for key in [
+            "autoZoomEnabled", "autoZoomLevel", "pointerSmoothing", "pointerScale", "clickRipples", "clickRippleColor", "hidesIdlePointer",
+            "liveDrawingFadeDelay", "liveDrawingTool", "recordingMaxMinutes", "recordingMaxMegabytes", "recordingLowDiskWarningMB",
+        ] {
             #expect(names.contains(key))
         }
     }
@@ -150,9 +153,11 @@ struct RecordingEffectsCompositingTests {
         defer { try? FileManager.default.removeItem(at: video.deletingLastPathComponent()) }
         let tip = CGPoint(x: 320, y: 240)
         let samples = stride(from: 0.0, through: 2.0, by: 0.05).map { PointerSample(time: $0, point: tip) }
-        let camera = CameraPath(frameSize: size, segments: [
-            ZoomSegment(start: 0, peak: 0, release: 2, end: 2, zoom: 2, focus: [PointerSample(time: 0, point: tip)], motion: .pan, panDuration: 0.5),
-        ])
+        let camera = CameraPath(
+            frameSize: size,
+            segments: [
+                ZoomSegment(start: 0, peak: 0, release: 2, end: 2, zoom: 2, focus: [PointerSample(time: 0, point: tip)], motion: .pan, panDuration: 0.5)
+            ])
         let asset = AVURLAsset(url: video)
         let track = try #require(try await asset.loadTracks(withMediaType: .video).first)
         let duration = try await asset.load(.duration)
@@ -173,10 +178,10 @@ struct RecordingEffectsCompositingTests {
         let size = CGSize(width: 320, height: 240)
         let video = try await SyntheticVideo.make(size: size, seconds: 1, frameRate: 30)
         defer { try? FileManager.default.removeItem(at: video.deletingLastPathComponent()) }
-        let camera = CameraPlanner.plan(activity: [ActivityEvent(time: 0.5, point: CGPoint(x: 100, y: 100), kind: .click)], pointer: [], duration: 1, frameSize: size, settings: AutoZoomSettings())
+        let camera = CameraPlanner.plan(
+            activity: [ActivityEvent(time: 0.5, point: CGPoint(x: 100, y: 100), kind: .click)], pointer: [], duration: 1, frameSize: size, settings: AutoZoomSettings())
         let composition = try await OverlayCompositor.previewComposition(for: AVURLAsset(url: video), camera: camera)
         #expect(composition.renderSize == size)
         #expect(composition.instructions.count == 1)
     }
 }
-

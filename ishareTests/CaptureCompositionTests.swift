@@ -103,7 +103,8 @@ struct ImageCombinerTests {
 
     @Test func combineDrawsEveryImageOverTheBackground() throws {
         let images = [TestImages.solid(width: 40, height: 40, color: red), TestImages.solid(width: 40, height: 20, color: blue)]
-        let combined = try #require(ImageCombiner.combine(images, style: CombineStyle(layout: .horizontal, alignment: .leading, spacing: 10, padding: 10, cornerRadius: 0, fill: .solid(white))))
+        let combined = try #require(
+            ImageCombiner.combine(images, style: CombineStyle(layout: .horizontal, alignment: .leading, spacing: 10, padding: 10, cornerRadius: 0, fill: .solid(white))))
         #expect(combined.width == 110)
         #expect(combined.height == 60)
         #expect(isClose(TestImages.color(combined, 20, 20), red))
@@ -191,12 +192,13 @@ struct EditorGeometryTests {
         let marker = CGRect(x: 20, y: 10, width: 12, height: 8)
         let image = marked(width: 200, height: 100, marker: marker)
         let mapping = CanvasMapping.orientation(change, size: CGSize(width: 200, height: 100))
-        let transformed: CGImage = switch change {
-        case .rotateLeft: ImageProcessing.rotated(image, clockwise: false)
-        case .rotateRight: ImageProcessing.rotated(image, clockwise: true)
-        case .flipHorizontal: ImageProcessing.flipped(image, horizontally: true)
-        case .flipVertical: ImageProcessing.flipped(image, horizontally: false)
-        }
+        let transformed: CGImage =
+            switch change {
+            case .rotateLeft: ImageProcessing.rotated(image, clockwise: false)
+            case .rotateRight: ImageProcessing.rotated(image, clockwise: true)
+            case .flipHorizontal: ImageProcessing.flipped(image, horizontally: true)
+            case .flipVertical: ImageProcessing.flipped(image, horizontally: false)
+            }
         #expect(CGSize(width: transformed.width, height: transformed.height) == mapping.outputSize)
         let mapped = mapping.map(marker)
         #expect(mapped.size == (change == .rotateLeft || change == .rotateRight ? CGSize(width: 8, height: 12) : marker.size))

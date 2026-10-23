@@ -94,7 +94,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LocalShareManager.shared.stopAll()
     }
 
-
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
         false
     }

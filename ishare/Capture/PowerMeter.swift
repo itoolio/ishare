@@ -37,8 +37,9 @@ class PowerMeter: AudioLevelProvider {
 
     var levels: AudioLevels {
         if values.isEmpty || Date().timeIntervalSince(lastUpdate) > staleInterval { return AudioLevels(level: 0.0, peakLevel: 0.0) }
-        return AudioLevels(level: meterTableAverage.valueForPower(values[0].average),
-                           peakLevel: meterTablePeak.valueForPower(values[0].peak))
+        return AudioLevels(
+            level: meterTableAverage.valueForPower(values[0].average),
+            peakLevel: meterTablePeak.valueForPower(values[0].peak))
     }
 
     func processSilence() {

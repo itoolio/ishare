@@ -108,7 +108,6 @@ enum AssistantError: LocalizedError {
     }
 }
 
-
 enum AssistantRefinement {
     static func jsonObjects(in text: String) -> [Any] {
         var results: [Any] = []

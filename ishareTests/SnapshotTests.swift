@@ -47,7 +47,9 @@ struct SnapshotTests {
         case .menu:
             return AnyView(MainMenuView().appModel())
         case .toast:
-            let image = ScreenshotMode.sampleImage(size: CGSize(width: 320, height: 200), hue: 0.58, title: "Toast").map { NSImage(cgImage: $0, size: CGSize(width: 160, height: 100)) }
+            let image = ScreenshotMode.sampleImage(size: CGSize(width: 320, height: 200), hue: 0.58, title: "Toast").map {
+                NSImage(cgImage: $0, size: CGSize(width: 160, height: 100))
+            }
             let model = ToastModel(fileURL: URL(fileURLWithPath: "/tmp/ishare-1800000000.png"), isImage: true, thumbnail: image)
             return AnyView(ToastCardView(model: model).padding(12))
         case .editorToolbar:
@@ -96,7 +98,8 @@ struct OffscreenRenderingTests {
         let image = try #require(ScreenshotMode.sampleImage(size: CGSize(width: 1600, height: 1000), hue: 0.6, title: "Canvas"))
         let document = EditorDocument(image: image, fileURL: nil)
         document.add(Annotation(shape: .rectangle(CGRect(x: 236, y: 258, width: 860, height: 62)), color: .red, lineWidth: 8))
-        let rendered = try #require(SnapshotRenderer.render(EditorView(document: document, onDone: {}, onDiscard: {}, onCopy: {}), size: CGSize(width: 1000, height: 600), appearance: .darkAqua))
+        let rendered = try #require(
+            SnapshotRenderer.render(EditorView(document: document, onDone: {}, onDiscard: {}, onCopy: {}), size: CGSize(width: 1000, height: 600), appearance: .darkAqua))
         let pixels = try #require(PixelBuffer(rendered))
         #expect(pixels.width == 2000)
         let canvas = CGRect(x: 400, y: 300, width: 1200, height: 600)
@@ -123,10 +126,12 @@ struct OffscreenRenderingTests {
     }
 
     private static func stripe(at x: Int) -> PixelBuffer? {
-        guard let context = CGContext(
-            data: nil, width: 64, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: 64, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
         context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: 64, height: 40))
         context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))

@@ -101,11 +101,13 @@ enum GitHubAPI {
     }
 
     static func createGistRequest(fileName: String, text: String, isPublic: Bool, token: String) -> APIRequest {
-        .json("POST", baseURL.appending(path: "gists"), token: nil, body: [
-            "description": "Shared with ishare",
-            "public": isPublic,
-            "files": [fileName: ["content": text]],
-        ], headers: headers(token: token))
+        .json(
+            "POST", baseURL.appending(path: "gists"), token: nil,
+            body: [
+                "description": "Shared with ishare",
+                "public": isPublic,
+                "files": [fileName: ["content": text]],
+            ], headers: headers(token: token))
     }
 
     static func deleteGistRequest(id: String, token: String) -> APIRequest {
@@ -123,7 +125,9 @@ enum GitHubAPI {
         return isImage ? "![\(label)](\(url))" : "[\(label)](\(url))"
     }
 
-    static func contentsOutcome(_ data: Data, configuration: GitHubConfiguration, path: String, fileURL: URL) throws -> (link: String, clipboard: String?, reference: GitHubReference) {
+    static func contentsOutcome(_ data: Data, configuration: GitHubConfiguration, path: String, fileURL: URL) throws -> (
+        link: String, clipboard: String?, reference: GitHubReference
+    ) {
         let object = try JSONValue.object(data)
         let sha = try JSONValue.require(object, "content", "sha")
         let storedPath = JSONValue.string(object, "content", "path") ?? path
@@ -138,7 +142,8 @@ enum GitHubAPI {
             link = raw ?? blob ?? ""
         case .markdown:
             link = raw ?? blob ?? ""
-            clipboard = markdown(fileName: fileURL.lastPathComponent, url: link, isImage: MimeType.isImageOrVideo(fileURL) && !["mp4", "mov"].contains(fileURL.pathExtension.lowercased()))
+            clipboard = markdown(
+                fileName: fileURL.lastPathComponent, url: link, isImage: MimeType.isImageOrVideo(fileURL) && !["mp4", "mov"].contains(fileURL.pathExtension.lowercased()))
         }
         return (link, clipboard, .contents(path: storedPath, sha: sha))
     }
@@ -182,7 +187,7 @@ enum GitHubDeviceFlow {
 
     static func deviceCode(from object: [String: Any]) throws -> GitHubDeviceCode {
         guard let deviceCode = object["device_code"] as? String, let userCode = object["user_code"] as? String,
-              let uri = (object["verification_uri"] as? String).flatMap(URL.init(string:))
+            let uri = (object["verification_uri"] as? String).flatMap(URL.init(string:))
         else {
             throw GitHubError.deviceFlow((object["error_description"] as? String) ?? (object["error"] as? String) ?? "device_code")
         }
@@ -207,9 +212,11 @@ enum GitHubDeviceFlow {
         let deadline = Date().addingTimeInterval(TimeInterval(code.expiresIn))
         while Date() < deadline {
             try await sleep(.seconds(interval))
-            let request = OAuthRequests.formRequest(GitHubAPI.accessTokenURL, fields: [
-                ("client_id", clientID), ("device_code", code.deviceCode), ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-            ])
+            let request = OAuthRequests.formRequest(
+                GitHubAPI.accessTokenURL,
+                fields: [
+                    ("client_id", clientID), ("device_code", code.deviceCode), ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+                ])
             let object = try JSONValue.object(try await UploadService.response(of: UploadService.session.request(request)))
             switch try pollResult(from: object) {
             case .pending: continue

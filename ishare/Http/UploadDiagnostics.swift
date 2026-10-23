@@ -90,9 +90,10 @@ enum UploadTester {
     static func prettyBody(_ data: Data) -> String {
         guard !data.isEmpty else { return "" }
         if let object = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]),
-           JSONSerialization.isValidJSONObject(object),
-           let pretty = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]),
-           let string = String(data: pretty, encoding: .utf8) {
+            JSONSerialization.isValidJSONObject(object),
+            let pretty = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]),
+            let string = String(data: pretty, encoding: .utf8)
+        {
             return string
         }
         if let string = String(data: data, encoding: .utf8) {
@@ -102,10 +103,12 @@ enum UploadTester {
     }
 
     static func makeTestImage(size: Int = 16) throws -> URL {
-        guard let context = CGContext(
-            data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { throw CocoaError(.fileWriteUnknown) }
+        guard
+            let context = CGContext(
+                data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { throw CocoaError(.fileWriteUnknown) }
         context.setFillColor(CGColor(red: 0.2, green: 0.6, blue: 1, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: size, height: size))
         guard let image = context.makeImage() else { throw CocoaError(.fileWriteUnknown) }

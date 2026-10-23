@@ -142,9 +142,10 @@ struct OnboardingTryEditorStep: View {
             .disabled(model.isEditing)
             .accessibilityIdentifier("onboarding.try.editor")
         } caption: {
-            Text(model.captureURL == nil
-                ? "No capture yet, so a sample image opens. Add an arrow or some text, then click Done.".localized()
-                : "Add an arrow or some text, then click Done to bring it back here.".localized())
+            Text(
+                model.captureURL == nil
+                    ? "No capture yet, so a sample image opens. Add an arrow or some text, then click Done.".localized()
+                    : "Add an arrow or some text, then click Done to bring it back here.".localized())
         }
     }
 }
@@ -256,7 +257,9 @@ struct OnboardingTryItArea<Content: View, Actions: View, Caption: View>: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 190)
                     .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])).foregroundStyle(Color.menuAccent.opacity(0.45)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])).foregroundStyle(
+                            Color.menuAccent.opacity(0.45)))
                 Label(isDone ? "Done".localized() : "Try It".localized(), systemImage: isDone ? "checkmark.circle.fill" : "hand.tap")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(isDone ? Color.green : Color.menuAccent)

@@ -16,7 +16,9 @@ enum UploaderSecretError: LocalizedError, Equatable {
         switch self {
         case let .missingSecret(name):
             String(
-                format: "The credentials for “%@” aren't on this Mac yet. They may still be syncing via iCloud Keychain; if they don't appear, edit the uploader and enter them again.".localized(),
+                format:
+                    "The credentials for “%@” aren't on this Mac yet. They may still be syncing via iCloud Keychain; if they don't appear, edit the uploader and enter them again."
+                    .localized(),
                 name
             )
         }

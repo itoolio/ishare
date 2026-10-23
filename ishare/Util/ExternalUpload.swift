@@ -28,8 +28,8 @@ enum ExternalUpload {
             return .imageData(png)
         }
         if let tiff = pasteboard.data(forType: .tiff),
-           let bitmap = NSBitmapImageRep(data: tiff),
-           let png = bitmap.representation(using: .png, properties: [:])
+            let bitmap = NSBitmapImageRep(data: tiff),
+            let png = bitmap.representation(using: .png, properties: [:])
         {
             return .imageData(png)
         }

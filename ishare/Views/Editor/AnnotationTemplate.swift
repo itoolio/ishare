@@ -39,26 +39,27 @@ extension Annotation {
         var copy = self
         let point = mapping.point
         let rect = mapping.rect
-        copy.shape = switch shape {
-        case let .arrow(start, end): .arrow(point(start), point(end))
-        case let .line(start, end): .line(point(start), point(end))
-        case let .curvedArrow(start, control, end): .curvedArrow(point(start), point(control), point(end))
-        case let .rectangle(bounds): .rectangle(rect(bounds))
-        case let .ellipse(bounds): .ellipse(rect(bounds))
-        case let .highlight(bounds): .highlight(rect(bounds))
-        case let .spotlight(bounds): .spotlight(rect(bounds))
-        case let .blur(bounds): .blur(rect(bounds))
-        case let .pixelate(bounds): .pixelate(rect(bounds))
-        case let .eraser(bounds): .eraser(rect(bounds))
-        case let .magnify(bounds): .magnify(mapping.square(bounds))
-        case let .stamp(bounds, stamp): .stamp(mapping.square(bounds), stamp)
-        case let .pen(points): .pen(points.map(point))
-        case let .marker(points): .marker(points.map(point))
-        case let .text(origin, string): .text(point(origin), string)
-        case let .callout(tail, bounds, string): .callout(point(tail), mapping.anchored(bounds), string)
-        case let .step(center, number): .step(point(center), number)
-        case let .cursor(location): .cursor(point(location))
-        }
+        copy.shape =
+            switch shape {
+            case let .arrow(start, end): .arrow(point(start), point(end))
+            case let .line(start, end): .line(point(start), point(end))
+            case let .curvedArrow(start, control, end): .curvedArrow(point(start), point(control), point(end))
+            case let .rectangle(bounds): .rectangle(rect(bounds))
+            case let .ellipse(bounds): .ellipse(rect(bounds))
+            case let .highlight(bounds): .highlight(rect(bounds))
+            case let .spotlight(bounds): .spotlight(rect(bounds))
+            case let .blur(bounds): .blur(rect(bounds))
+            case let .pixelate(bounds): .pixelate(rect(bounds))
+            case let .eraser(bounds): .eraser(rect(bounds))
+            case let .magnify(bounds): .magnify(mapping.square(bounds))
+            case let .stamp(bounds, stamp): .stamp(mapping.square(bounds), stamp)
+            case let .pen(points): .pen(points.map(point))
+            case let .marker(points): .marker(points.map(point))
+            case let .text(origin, string): .text(point(origin), string)
+            case let .callout(tail, bounds, string): .callout(point(tail), mapping.anchored(bounds), string)
+            case let .step(center, number): .step(point(center), number)
+            case let .cursor(location): .cursor(point(location))
+            }
         copy.lineWidth = mapping.length(lineWidth)
         copy.fontSize = mapping.length(fontSize)
         return copy

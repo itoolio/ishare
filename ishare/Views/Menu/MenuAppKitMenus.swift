@@ -49,14 +49,16 @@ enum MenuAppKitMenus {
         palette.setAccessibilityIdentifier("menu.commandPalette")
         menu.addItem(palette)
         menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(title: "About ishare".localized()) {
-            MenuController.shared.showAboutPanel()
-        })
-        #if GITHUB_RELEASE
-            menu.addItem(ClosureMenuItem(title: "Check for Updates…".localized()) {
-                MenuController.shared.dismiss()
-                AppDelegate.shared.checkForUpdates()
+        menu.addItem(
+            ClosureMenuItem(title: "About ishare".localized()) {
+                MenuController.shared.showAboutPanel()
             })
+        #if GITHUB_RELEASE
+            menu.addItem(
+                ClosureMenuItem(title: "Check for Updates…".localized()) {
+                    MenuController.shared.dismiss()
+                    AppDelegate.shared.checkForUpdates()
+                })
         #endif
         let onboarding = ClosureMenuItem(title: "Welcome Guide…".localized(), handler: openOnboarding)
         onboarding.setAccessibilityIdentifier("menu.onboarding")
@@ -69,9 +71,10 @@ enum MenuAppKitMenus {
         menu.addItem(whatsNew)
 
         menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(title: "Quit".localized(), keyEquivalent: "q") {
-            NSApplication.shared.terminate(nil)
-        })
+        menu.addItem(
+            ClosureMenuItem(title: "Quit".localized(), keyEquivalent: "q") {
+                NSApplication.shared.terminate(nil)
+            })
         return menu
     }
 
@@ -100,9 +103,10 @@ enum MenuAppKitMenus {
         let submenu = NSMenu(title: "Capture with Preset".localized())
         submenu.autoenablesItems = false
         for preset in UploadPresets.all {
-            submenu.addItem(ClosureMenuItem(title: preset.name) {
-                MenuController.shared.perform(afterDismissing: { await UploadPresets.capture(preset, type: .REGION) })
-            })
+            submenu.addItem(
+                ClosureMenuItem(title: preset.name) {
+                    MenuController.shared.perform(afterDismissing: { await UploadPresets.capture(preset, type: .REGION) })
+                })
         }
         item.submenu = submenu
         return item

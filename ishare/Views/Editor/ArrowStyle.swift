@@ -105,7 +105,9 @@ enum ArrowGeometry {
         return low
     }
 
-    static func trimmed(start: CGPoint, control: CGPoint, end: CGPoint, startBy startDistance: CGFloat, endBy endDistance: CGFloat) -> (start: CGPoint, control: CGPoint, end: CGPoint) {
+    static func trimmed(start: CGPoint, control: CGPoint, end: CGPoint, startBy startDistance: CGFloat, endBy endDistance: CGFloat) -> (
+        start: CGPoint, control: CGPoint, end: CGPoint
+    ) {
         let endT = parameter(at: endDistance, fromEndOf: start, control: control, end: end)
         let firstControl = CGPoint(x: start.x + (control.x - start.x) * endT, y: start.y + (control.y - start.y) * endT)
         let firstEnd = point(onCurveFrom: start, control: control, to: end, at: endT)

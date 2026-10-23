@@ -71,7 +71,7 @@ public struct S3Configuration: Codable, Hashable, Sendable {
 
     public func objectURL(for key: String) -> URL? {
         guard let endpointURL, var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false),
-              let host = components.host
+            let host = components.host
         else { return nil }
         let basePath = components.path.hasSuffix("/") ? String(components.path.dropLast()) : components.path
         let encodedKey = S3Path.encode(key)
@@ -122,7 +122,9 @@ public struct S3KeyContext: Sendable {
     public var uuid: UUID = .init()
     var randomToken: String = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8)).lowercased()
 
-    public init(fileName: String, date: Date = .init(), uuid: UUID = .init(), randomToken: String = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8)).lowercased()) {
+    public init(
+        fileName: String, date: Date = .init(), uuid: UUID = .init(), randomToken: String = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8)).lowercased()
+    ) {
         self.fileName = fileName
         self.date = date
         self.uuid = uuid

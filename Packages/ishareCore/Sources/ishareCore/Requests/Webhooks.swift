@@ -77,7 +77,10 @@ public struct WebhookEvent: Codable, Equatable, Sendable {
 
     public var isImage: Bool { type.hasPrefix("image/") }
 
-    public init(event: String, link: String, shortLink: String? = nil, deletionLink: String? = nil, fileName: String, size: Int? = nil, type: String, uploader: String, timestamp: String, altText: String? = nil, savedBytes: Int? = nil) {
+    public init(
+        event: String, link: String, shortLink: String? = nil, deletionLink: String? = nil, fileName: String, size: Int? = nil, type: String, uploader: String, timestamp: String,
+        altText: String? = nil, savedBytes: Int? = nil
+    ) {
         self.event = event
         self.link = link
         self.shortLink = shortLink

@@ -273,15 +273,21 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private func makeHUDWindow(near rect: CGRect, on screen: NSScreen) -> NSPanel {
-        RegionOverlay.hudWindow(RecordingHUD(model: hudModel, levels: audioLevelsProvider, onMarker: { [weak self] in
-            self?.addMarker()
-        }, onNotes: { [weak self] in
-            self?.toggleNotes()
-        }, onDraw: { [weak self] in
-            self?.toggleDrawing()
-        }, onStop: {
-            CaptureSession.stopRecording()
-        }), near: rect, on: screen)
+        RegionOverlay.hudWindow(
+            RecordingHUD(
+                model: hudModel, levels: audioLevelsProvider,
+                onMarker: { [weak self] in
+                    self?.addMarker()
+                },
+                onNotes: { [weak self] in
+                    self?.toggleNotes()
+                },
+                onDraw: { [weak self] in
+                    self?.toggleDrawing()
+                },
+                onStop: {
+                    CaptureSession.stopRecording()
+                }), near: rect, on: screen)
     }
 
     private func showCaptureOverlays(areas: [RecordingArea], bubbleArea: CGRect?) async {
@@ -446,7 +452,8 @@ final class ScreenRecorder: ObservableObject {
     private func showWebcamPreview(for source: OverlaySource) {
         guard let session = overlayRecorder.webcamSession else { return }
         let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
-        let area = source.currentRect().map { WebcamBubblePreviewArea.cocoaRect(fromCGGlobal: $0, primaryScreenHeight: primaryHeight) }
+        let area =
+            source.currentRect().map { WebcamBubblePreviewArea.cocoaRect(fromCGGlobal: $0, primaryScreenHeight: primaryHeight) }
             ?? NSScreen.main?.visibleFrame
         guard let area else { return }
         webcamBubble.showPreview(of: session, in: area)
@@ -454,9 +461,9 @@ final class ScreenRecorder: ObservableObject {
 
     private func capturableFilter(_ filter: SCContentFilter) async -> SCContentFilter {
         guard filter.style == .display,
-              let screen = recordedScreen(for: filter),
-              let content = try? await ScreenshotEngine.shareableContent(),
-              let display = ScreenshotEngine.display(for: screen, in: content)
+            let screen = recordedScreen(for: filter),
+            let content = try? await ScreenshotEngine.shareableContent(),
+            let display = ScreenshotEngine.display(for: screen, in: content)
         else { return filter }
         let overlayIDs = captureOverlayWindowIDs
         let overlayWindows = content.windows.filter { overlayIDs.contains($0.windowID) }
@@ -469,7 +476,8 @@ final class ScreenRecorder: ObservableObject {
         guard case let .applications(bundleIDs) = audioPlan else { return }
         let content = if let knownContent { knownContent } else { try? await ScreenshotEngine.shareableContent() }
         guard let screen, let content, let display = ScreenshotEngine.display(for: screen, in: content),
-              let filter = RecordingAudioFilter.filter(display: display, bundleIDs: bundleIDs, in: content) else {
+            let filter = RecordingAudioFilter.filter(display: display, bundleIDs: bundleIDs, in: content)
+        else {
             Log.capture.info("None of the selected audio apps are running")
             return
         }
@@ -491,7 +499,9 @@ final class ScreenRecorder: ObservableObject {
         startAudioMetering()
         startLimitMonitor(fileURL: fileURL, startDate: startDate)
         do {
-            for try await _ in captureEngine.startCapture(configuration: configuration, filter: filter, fileURL: fileURL, showsNativeClicks: showsNativeClicks, showsCursor: showsSystemCursor, audioPlan: audioPlan) {}
+            for try await _ in captureEngine.startCapture(
+                configuration: configuration, filter: filter, fileURL: fileURL, showsNativeClicks: showsNativeClicks, showsCursor: showsSystemCursor, audioPlan: audioPlan)
+            {}
         } catch {
             NSLog("Capture stream ended: %@", error.localizedDescription)
         }

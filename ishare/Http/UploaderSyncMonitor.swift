@@ -106,7 +106,8 @@ final class UploaderSyncMonitor {
 
     private func notify(_ conflicts: [UploaderConflict]) {
         guard let first = conflicts.first else { return }
-        let message = conflicts.count == 1
+        let message =
+            conflicts.count == 1
             ? String(format: "“%@” was also changed on another Mac. Both versions were kept.".localized(), first.local.name)
             : String(format: "%d uploaders were also changed on another Mac. Both versions were kept.".localized(), conflicts.count)
         BezelNotification.show(messageText: message, icon: ToastIcon)

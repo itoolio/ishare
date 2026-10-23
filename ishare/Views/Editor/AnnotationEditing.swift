@@ -11,7 +11,7 @@ extension Annotation {
     var editableRect: CGRect? {
         switch shape {
         case let .rectangle(rect), let .ellipse(rect), let .highlight(rect), let .magnify(rect), let .spotlight(rect),
-             let .blur(rect), let .pixelate(rect), let .eraser(rect), let .stamp(rect, _):
+            let .blur(rect), let .pixelate(rect), let .eraser(rect), let .stamp(rect, _):
             rect
         default:
             nil

@@ -81,7 +81,8 @@ private struct UploadQueueSection: View {
 
     private func status(for item: QueuedUpload) -> String {
         let attempts = String(format: "%@ · %d attempts".localized(), item.destinationName, item.attempts)
-        let next = item.isPaused
+        let next =
+            item.isPaused
             ? "Retrying paused".localized()
             : String(format: "Next try %@".localized(), item.nextAttemptAt.formatted(.relative(presentation: .named)))
         return [attempts, next, item.lastError].compactMap { $0 }.joined(separator: " · ")

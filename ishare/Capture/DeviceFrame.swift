@@ -40,12 +40,12 @@ enum DeviceFramer {
     static func apply(to image: CGImage, style: DeviceFrameStyle) -> CGImage? {
         let imageSize = CGSize(width: image.width, height: image.height)
         guard let layout = DeviceFrameLayout.make(for: imageSize, style: style),
-              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(
-                  data: nil, width: Int(layout.canvasSize.width.rounded(.up)), height: Int(layout.canvasSize.height.rounded(.up)),
-                  bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
-                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              )
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+            let context = CGContext(
+                data: nil, width: Int(layout.canvasSize.width.rounded(.up)), height: Int(layout.canvasSize.height.rounded(.up)),
+                bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
         else { return nil }
         context.interpolationQuality = .high
         context.translateBy(x: 0, y: CGFloat(context.height))

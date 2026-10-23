@@ -17,10 +17,12 @@ public struct GrayFrame: Sendable {
         let height = image.height
         var pixels = [UInt8](repeating: 0, count: width * height)
         let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
-                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
-            ) else { return false }
+            guard
+                let context = CGContext(
+                    data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
+                    space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
+                )
+            else { return false }
             context.interpolationQuality = .none
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
             return true
@@ -121,11 +123,13 @@ public enum ScrollStitcher {
         let frameHeight = first.height
         let appended = zip(frames.dropFirst(), offsets).map { min($0.1, $0.0.height) }.filter { $0 > 0 }
         let totalHeight = frameHeight + appended.reduce(0, +)
-        guard let context = CGContext(
-            data: nil, width: width, height: totalHeight, bitsPerComponent: 8, bytesPerRow: 0,
-            space: first.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: width, height: totalHeight, bitsPerComponent: 8, bytesPerRow: 0,
+                space: first.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
         context.interpolationQuality = .none
         context.draw(first, in: CGRect(x: 0, y: totalHeight - frameHeight, width: width, height: frameHeight))
         var cursor = frameHeight

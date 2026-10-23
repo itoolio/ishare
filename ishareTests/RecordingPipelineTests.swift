@@ -11,11 +11,12 @@ struct RecordingChapterTests {
         log.add(at: 2)
         let late = log.add(at: 9)
         #expect(late.title == "Marker 3")
-        #expect(log.markers == [
-            RecordingMarker(time: 2, title: "Marker 1"),
-            RecordingMarker(time: 5, title: "Marker 2"),
-            RecordingMarker(time: 9, title: "Marker 3"),
-        ])
+        #expect(
+            log.markers == [
+                RecordingMarker(time: 2, title: "Marker 1"),
+                RecordingMarker(time: 5, title: "Marker 2"),
+                RecordingMarker(time: 9, title: "Marker 3"),
+            ])
     }
 
     @Test func clampsNegativeMarkerTimes() {
@@ -26,11 +27,12 @@ struct RecordingChapterTests {
     @Test func buildsChaptersThatCoverTheWholeRecording() {
         let markers = RecordingChapters.markers(at: [3, 7.5])
         let chapters = RecordingChapters.chapters(for: markers, duration: 12)
-        #expect(chapters == [
-            RecordingChapter(title: "Start", start: 0, end: 3),
-            RecordingChapter(title: "Marker 1", start: 3, end: 7.5),
-            RecordingChapter(title: "Marker 2", start: 7.5, end: 12),
-        ])
+        #expect(
+            chapters == [
+                RecordingChapter(title: "Start", start: 0, end: 3),
+                RecordingChapter(title: "Marker 1", start: 3, end: 7.5),
+                RecordingChapter(title: "Marker 2", start: 7.5, end: 12),
+            ])
     }
 
     @Test func aMarkerAtTheBeginningReplacesTheOpeningChapter() {
@@ -43,10 +45,11 @@ struct RecordingChapterTests {
     @Test func dropsMarkersAtTheEndAndMergesMarkersTooCloseTogether() {
         let markers = RecordingChapters.markers(at: [2, 2.05, 9.97])
         let chapters = RecordingChapters.chapters(for: markers, duration: 10)
-        #expect(chapters == [
-            RecordingChapter(title: "Start", start: 0, end: 2),
-            RecordingChapter(title: "Marker 2", start: 2, end: 10),
-        ])
+        #expect(
+            chapters == [
+                RecordingChapter(title: "Start", start: 0, end: 2),
+                RecordingChapter(title: "Marker 2", start: 2, end: 10),
+            ])
         #expect(RecordingChapters.chapters(for: [], duration: 10).isEmpty)
         #expect(RecordingChapters.chapters(for: markers, duration: 0).isEmpty)
     }
@@ -215,13 +218,18 @@ struct OverlayMappingTests {
     }
 
     @Test func placesTheWebcamInTheChosenCornerOfTheVideo() throws {
-        let layout = OverlayCompositionLayout.make(videoSize: CGSize(width: 2000, height: 1200), sourceSize: CGSize(width: 1000, height: 600), webcamDiameter: 180, corner: .bottomRight)
+        let layout = OverlayCompositionLayout.make(
+            videoSize: CGSize(width: 2000, height: 1200), sourceSize: CGSize(width: 1000, height: 600), webcamDiameter: 180, corner: .bottomRight)
         let frame = try #require(layout.webcamFrame)
         #expect(layout.pixelsPerPoint == 2)
         #expect(frame == CGRect(x: 2000 - 48 - 360, y: 48, width: 360, height: 360))
-        let topLeft = try #require(OverlayCompositionLayout.make(videoSize: CGSize(width: 2000, height: 1200), sourceSize: CGSize(width: 1000, height: 600), webcamDiameter: 180, corner: .topLeft).webcamFrame)
+        let topLeft = try #require(
+            OverlayCompositionLayout.make(videoSize: CGSize(width: 2000, height: 1200), sourceSize: CGSize(width: 1000, height: 600), webcamDiameter: 180, corner: .topLeft)
+                .webcamFrame)
         #expect(topLeft.origin == CGPoint(x: 48, y: 1200 - 48 - 360))
-        #expect(OverlayCompositionLayout.make(videoSize: CGSize(width: 100, height: 100), sourceSize: CGSize(width: 100, height: 100), webcamDiameter: nil, corner: .topLeft).webcamFrame == nil)
+        #expect(
+            OverlayCompositionLayout.make(videoSize: CGSize(width: 100, height: 100), sourceSize: CGSize(width: 100, height: 100), webcamDiameter: nil, corner: .topLeft)
+                .webcamFrame == nil)
         #expect(layout.keystrokeCenter() == CGPoint(x: 1000, y: 128))
     }
 }
@@ -342,7 +350,8 @@ struct RecordingPipelineMediaTests {
             keystrokes: [OverlayKeystrokeSpan(start: 0, end: 2, text: "⌘K")],
             webcam: OverlayWebcamClip(url: webcam, offset: -0.5)
         )
-        let layout = OverlayCompositionLayout.make(videoSize: CGSize(width: 640, height: 480), sourceSize: CGSize(width: 640, height: 480), webcamDiameter: 120, corner: .bottomRight)
+        let layout = OverlayCompositionLayout.make(
+            videoSize: CGSize(width: 640, height: 480), sourceSize: CGSize(width: 640, height: 480), webcamDiameter: 120, corner: .bottomRight)
         try await OverlayCompositor.composite(asset, screenTrack: track, duration: duration, timeline: timeline, layout: layout, replacing: video, hevc: false, progress: nil)
 
         let result = AVURLAsset(url: video)
@@ -382,8 +391,8 @@ struct RecordingPipelineMediaTests {
 enum PixelProbe {
     static func rgb(in image: CGImage, x: Int, y: Int) -> (red: Int, green: Int, blue: Int)? {
         guard x >= 0, y >= 0, x < image.width, y < image.height,
-              let space = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            let space = CGColorSpace(name: CGColorSpace.sRGB),
+            let context = CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         context.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
         guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return nil }
@@ -407,7 +416,8 @@ extension SyntheticVideo {
         let audioTrack = try #require(try await audioAsset.loadTracks(withMediaType: .audio).first)
         let audioDuration = try await audioAsset.load(.duration)
         try composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)?.insertTimeRange(range, of: videoTrack, at: .zero)
-        try composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)?.insertTimeRange(CMTimeRange(start: .zero, duration: min(duration, audioDuration)), of: audioTrack, at: .zero)
+        try composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)?.insertTimeRange(
+            CMTimeRange(start: .zero, duration: min(duration, audioDuration)), of: audioTrack, at: .zero)
 
         let output = directory.appending(path: "clip-audio.mov")
         let session = try #require(AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough))
@@ -420,11 +430,13 @@ extension SyntheticVideo {
     private static func writeTone(to url: URL, seconds: Double) throws {
         let sampleRate = 44100.0
         let format = try #require(AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1))
-        let file = try AVAudioFile(forWriting: url, settings: [
-            AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: sampleRate,
-            AVNumberOfChannelsKey: 1,
-        ])
+        let file = try AVAudioFile(
+            forWriting: url,
+            settings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: sampleRate,
+                AVNumberOfChannelsKey: 1,
+            ])
         let frameCount = AVAudioFrameCount(sampleRate * seconds)
         let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount))
         buffer.frameLength = frameCount

@@ -2,7 +2,7 @@ import AppKit
 import Defaults
 import Foundation
 #if APP_STORE
-import StoreKit
+    import StoreKit
 #endif
 
 struct ReviewPromptState: Codable, Equatable, Sendable, Defaults.Serializable {
@@ -35,8 +35,8 @@ struct ReviewPromptPolicy: Sendable {
 
     func isEligible(_ state: ReviewPromptState, now: Date) -> Bool {
         guard state.successesSincePrompt >= requiredSuccesses,
-              let installDate = state.installDate,
-              now.timeIntervalSince(installDate) >= installGracePeriod
+            let installDate = state.installDate,
+            now.timeIntervalSince(installDate) >= installGracePeriod
         else { return false }
         if let lastFailure = state.lastFailure, now.timeIntervalSince(lastFailure) < failureGracePeriod {
             return false
@@ -74,9 +74,9 @@ enum ReviewPrompt {
 
     static var isSupported: Bool {
         #if APP_STORE
-        !ScreenshotMode.isActive && !RuntimeEnvironment.isRunningTests
+            !ScreenshotMode.isActive && !RuntimeEnvironment.isRunningTests
         #else
-        false
+            false
         #endif
     }
 
@@ -139,8 +139,8 @@ enum ReviewPromptPresenter {
         guard ReviewPrompt.policy.isEligible(state, now: now) else { return }
         Defaults[.reviewPromptState] = ReviewPrompt.policy.prompted(state, now: now)
         #if APP_STORE
-        Log.upload.info("Requesting an App Store review")
-        AppStore.requestReview(in: hostViewController())
+            Log.upload.info("Requesting an App Store review")
+            AppStore.requestReview(in: hostViewController())
         #endif
     }
 

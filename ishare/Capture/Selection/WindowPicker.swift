@@ -113,10 +113,11 @@ final class WindowPickerView: NSView {
         self.screen = screen
         self.picker = picker
         super.init(frame: CGRect(origin: .zero, size: screen.frame.size))
-        addTrackingArea(NSTrackingArea(
-            rect: .zero, options: [.mouseMoved, .activeAlways, .inVisibleRect, .cursorUpdate, .mouseEnteredAndExited],
-            owner: self, userInfo: nil
-        ))
+        addTrackingArea(
+            NSTrackingArea(
+                rect: .zero, options: [.mouseMoved, .activeAlways, .inVisibleRect, .cursorUpdate, .mouseEnteredAndExited],
+                owner: self, userInfo: nil
+            ))
     }
 
     @available(*, unavailable)

@@ -46,9 +46,12 @@ struct WebhookSettings: View {
                 Label("Add Webhook".localized(), systemImage: "plus")
             }
             .settingsEntry(Self.entry)
-            Text("After every successful upload ishare sends a POST request with the link, deletion link, file name, size, type, uploader, time and alt text. With a secret, the body is signed with HMAC-SHA256 in the X-ishare-Signature header. Failed deliveries are retried in the background and never delay the upload.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "After every successful upload ishare sends a POST request with the link, deletion link, file name, size, type, uploader, time and alt text. With a secret, the body is signed with HMAC-SHA256 in the X-ishare-Signature header. Failed deliveries are retried in the background and never delay the upload."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         } header: {
             Text("Webhooks".localized())
         }

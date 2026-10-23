@@ -256,9 +256,10 @@ struct OnboardingUploaderStep: View {
             } preAction: {
                 app.settings.pane = .uploaders
                 NSApp.activate(ignoringOtherApps: true)
-            } postAction: {}
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("onboarding.uploader.settings")
+            } postAction: {
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("onboarding.uploader.settings")
         }
     }
 
@@ -329,10 +330,16 @@ struct OnboardingAfterCaptureStep: View {
         OnboardingCard {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(AfterCaptureStep.allCases.filter { $0.group != .share }) { step in
-                    Toggle(step.title.localized(), isOn: Binding(
-                        get: { _ = (copyToClipboard, saveToDisk, openInFinder, uploadMedia, openEditorAfterCapture); return step.isEnabled },
-                        set: { step.isEnabled = $0 }
-                    ))
+                    Toggle(
+                        step.title.localized(),
+                        isOn: Binding(
+                            get: {
+                                _ = (copyToClipboard, saveToDisk, openInFinder, uploadMedia, openEditorAfterCapture)
+                                return step.isEnabled
+                            },
+                            set: { step.isEnabled = $0 }
+                        )
+                    )
                     .disabled(step.dependsOn.map { !$0.isEnabled } ?? false)
                 }
             }
@@ -352,7 +359,9 @@ struct OnboardingCard<Content: View>: View {
             .padding(14)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(contrast.isHigh ? contrast.fillOpacity : 0.05)))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(contrast.isHigh ? contrast.borderOpacity : 0.08), lineWidth: contrast.borderWidth))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(
+                    Color.primary.opacity(contrast.isHigh ? contrast.borderOpacity : 0.08), lineWidth: contrast.borderWidth))
     }
 }
 

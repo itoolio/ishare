@@ -89,21 +89,22 @@ enum MenuFocusLayout {
 
     static func rows(sections: [MenuSection], isRecording: Bool, chipCount: Int, recentCount: Int, showsDonate: Bool = false, favoriteCount: Int = 0) -> [[MenuFocusTarget]] {
         let favorites = favoriteCount > 0 ? [(0 ..< favoriteCount).map(MenuFocusTarget.favorite)] : []
-        return [headerRow(showsDonate: showsDonate)] + favorites + sections.compactMap { section in
+        return [headerRow(showsDonate: showsDonate)] + favorites
+            + sections.compactMap { section in
 
-            switch section {
-            case .capture:
-                (0 ..< 4).map(MenuFocusTarget.capture)
-            case .record:
-                isRecording ? [.stopRecording] : [.record(0), .record(1)]
-            case .afterCapture:
-                (0 ..< chipCount).map(MenuFocusTarget.chip)
-            case .recentUploads:
-                recentCount > 0 ? (0 ..< recentCount).map(MenuFocusTarget.recent) + [.history] : nil
-            case .footer:
-                [.footer(0), .footer(1)]
+                switch section {
+                case .capture:
+                    (0 ..< 4).map(MenuFocusTarget.capture)
+                case .record:
+                    isRecording ? [.stopRecording] : [.record(0), .record(1)]
+                case .afterCapture:
+                    (0 ..< chipCount).map(MenuFocusTarget.chip)
+                case .recentUploads:
+                    recentCount > 0 ? (0 ..< recentCount).map(MenuFocusTarget.recent) + [.history] : nil
+                case .footer:
+                    [.footer(0), .footer(1)]
+                }
             }
-        }
     }
 }
 

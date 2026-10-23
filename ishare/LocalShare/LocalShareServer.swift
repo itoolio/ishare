@@ -59,8 +59,8 @@ struct LocalShareRequest: Equatable, Sendable {
 
     static func parse(_ data: Data) -> LocalShareRequest? {
         guard let end = headerEnd(in: data),
-              let head = String(data: data.prefix(end), encoding: .utf8),
-              let requestLine = head.components(separatedBy: "\r\n").first
+            let head = String(data: data.prefix(end), encoding: .utf8),
+            let requestLine = head.components(separatedBy: "\r\n").first
         else { return nil }
         let parts = requestLine.split(separator: " ", omittingEmptySubsequences: true)
         guard parts.count == 3, parts[2].hasPrefix("HTTP/1.") else { return nil }
@@ -299,25 +299,29 @@ final class LocalShareServer: @unchecked Sendable {
     private func send(_ response: LocalShareResponse, on connection: NWConnection) {
         guard case let .file(entry, includeBody) = response else {
             let body = response.errorBody
-            connection.send(content: response.header(contentLength: body.count) + body, isComplete: true, completion: .contentProcessed { _ in
-                connection.cancel()
-            })
+            connection.send(
+                content: response.header(contentLength: body.count) + body, isComplete: true,
+                completion: .contentProcessed { _ in
+                    connection.cancel()
+                })
             return
         }
         guard let handle = try? FileHandle(forReadingFrom: entry.fileURL),
-              let size = try? entry.fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize
+            let size = try? entry.fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize
         else {
             send(.gone, on: connection)
             return
         }
-        connection.send(content: response.header(contentLength: size), completion: .contentProcessed { [weak self] error in
-            guard error == nil, includeBody, let self else {
-                try? handle.close()
-                connection.cancel()
-                return
-            }
-            streamBody(from: handle, on: connection)
-        })
+        connection.send(
+            content: response.header(contentLength: size),
+            completion: .contentProcessed { [weak self] error in
+                guard error == nil, includeBody, let self else {
+                    try? handle.close()
+                    connection.cancel()
+                    return
+                }
+                streamBody(from: handle, on: connection)
+            })
     }
 
     private func streamBody(from handle: FileHandle, on connection: NWConnection) {
@@ -327,14 +331,16 @@ final class LocalShareServer: @unchecked Sendable {
             connection.send(content: nil, isComplete: true, completion: .contentProcessed { _ in connection.cancel() })
             return
         }
-        connection.send(content: chunk, completion: .contentProcessed { [weak self] error in
-            guard error == nil, let self else {
-                try? handle.close()
-                connection.cancel()
-                return
-            }
-            streamBody(from: handle, on: connection)
-        })
+        connection.send(
+            content: chunk,
+            completion: .contentProcessed { [weak self] error in
+                guard error == nil, let self else {
+                    try? handle.close()
+                    connection.cancel()
+                    return
+                }
+                streamBody(from: handle, on: connection)
+            })
     }
 }
 

@@ -41,7 +41,7 @@ enum TextSnippet {
         Rule(fileExtension: "swift") { _, lines in
             anyLine(lines, /import (SwiftUI|Foundation|UIKit|AppKit|Combine|XCTest|Testing)/)
                 || anyLine(lines, /\s*(@\w+\s+)*(public |private |internal |fileprivate |static )*func \w+(<.*>)?\(.*\).*\{\s*/)
-                && anyLine(lines, /\s*(let|var|guard|return) .*/)
+                    && anyLine(lines, /\s*(let|var|guard|return) .*/)
         },
         Rule(fileExtension: "go") { _, lines in
             anyLine(lines, /package \w+/) && anyLine(lines, /func .*\{\s*/)

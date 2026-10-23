@@ -88,7 +88,7 @@ enum MediaPump {
                 lane.input.requestMediaDataWhenReady(on: queue) {
                     while lane.input.isReadyForMoreMediaData {
                         guard session.writer.status == .writing,
-                              let buffer = lane.output.copyNextSampleBuffer()
+                            let buffer = lane.output.copyNextSampleBuffer()
                         else {
                             lane.input.markAsFinished()
                             if finished.markFinished() { group.leave() }

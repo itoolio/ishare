@@ -10,7 +10,9 @@ struct CameraPlannerTests {
         ActivityEvent(time: time, point: CGPoint(x: x, y: y), kind: .click)
     }
 
-    private func plan(_ events: [ActivityEvent], pointer: [PointerSample] = [], duration: Double = 30, settings: AutoZoomSettings = AutoZoomSettings(followsPointer: false)) -> CameraPath {
+    private func plan(_ events: [ActivityEvent], pointer: [PointerSample] = [], duration: Double = 30, settings: AutoZoomSettings = AutoZoomSettings(followsPointer: false))
+        -> CameraPath
+    {
         CameraPlanner.plan(activity: events, pointer: pointer, duration: duration, frameSize: frame, settings: settings)
     }
 

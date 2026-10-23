@@ -66,32 +66,32 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             sidebar
-            .overlay {
-                if matches.isEmpty {
-                    Text("No Results".localized())
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .safeAreaInset(edge: .top) {
-                SettingsSearchField(text: $searchText)
-                    .padding(.horizontal, 10)
-                    .padding(.top, 6)
-                    .padding(.bottom, 4)
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 190, max: 220)
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 2) {
-                    if !ScreenshotMode.isCapturingScreenshots {
-                        Text("v" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""))
-                            .font(.caption)
+                .overlay {
+                    if matches.isEmpty {
+                        Text("No Results".localized())
+                            .font(.callout)
                             .foregroundStyle(.secondary)
                     }
-                    Link("ishare.itoolio.dev", destination: URL(string: "https://ishare.itoolio.dev")!)
-                        .font(.caption)
                 }
-                .padding(.bottom, 10)
-            }
+                .safeAreaInset(edge: .top) {
+                    SettingsSearchField(text: $searchText)
+                        .padding(.horizontal, 10)
+                        .padding(.top, 6)
+                        .padding(.bottom, 4)
+                }
+                .navigationSplitViewColumnWidth(min: 180, ideal: 190, max: 220)
+                .safeAreaInset(edge: .bottom) {
+                    VStack(spacing: 2) {
+                        if !ScreenshotMode.isCapturingScreenshots {
+                            Text("v" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Link("ishare.itoolio.dev", destination: URL(string: "https://ishare.itoolio.dev")!)
+                            .font(.caption)
+                    }
+                    .padding(.bottom, 10)
+                }
         } detail: {
             ScrollViewReader { proxy in
                 Group {
@@ -182,7 +182,6 @@ struct SettingsView: View {
     private func reveal(_ anchor: String) {
         navigator.reveal(anchor)
     }
-
 
     private func scroll(to anchor: String, with proxy: ScrollViewProxy) {
         withMotionAnimation(.snappy(duration: 0.35)) {

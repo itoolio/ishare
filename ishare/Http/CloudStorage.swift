@@ -171,9 +171,11 @@ enum GoogleDriveAPI {
     }
 
     static func startUploadRequest(name: String, parent: String, mimeType: String, size: Int, token: String) -> APIRequest {
-        .json("POST", resumableUpload, token: token, body: ["name": name, "parents": [parent]], headers: [
-            "X-Upload-Content-Type": mimeType, "X-Upload-Content-Length": String(size),
-        ])
+        .json(
+            "POST", resumableUpload, token: token, body: ["name": name, "parents": [parent]],
+            headers: [
+                "X-Upload-Content-Type": mimeType, "X-Upload-Content-Length": String(size),
+            ])
     }
 
     static func permissionRequest(fileID: String, token: String) -> APIRequest {
@@ -389,9 +391,11 @@ struct CloudStorageUploader: Uploader {
         for range in OneDriveAPI.chunkRanges(size: size) {
             try handle.seek(toOffset: UInt64(range.lowerBound))
             let chunk = try handle.read(upToCount: range.count) ?? Data()
-            let request = UploadService.session.upload(chunk, to: uploadURL, method: .put, headers: [
-                "Content-Range": OneDriveAPI.contentRange(range, total: size),
-            ])
+            let request = UploadService.session.upload(
+                chunk, to: uploadURL, method: .put,
+                headers: [
+                    "Content-Range": OneDriveAPI.contentRange(range, total: size)
+                ])
             last = try await UploadService.perform(request) { _ in }
             progress(Double(range.upperBound) / Double(max(size, 1)))
         }

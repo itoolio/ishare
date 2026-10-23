@@ -51,14 +51,16 @@ enum WebcamBubbleLayout {
     static func frame(diameter: CGFloat, corner: WebcamCorner, in area: CGRect) -> CGRect {
         let available = min(area.width, area.height) - inset * 2
         let side = max(min(diameter, available), min(minimumDiameter, max(available, 0)))
-        let x = switch corner {
-        case .topLeft, .bottomLeft: area.minX + inset
-        case .topRight, .bottomRight: area.maxX - inset - side
-        }
-        let y = switch corner {
-        case .bottomLeft, .bottomRight: area.minY + inset
-        case .topLeft, .topRight: area.maxY - inset - side
-        }
+        let x =
+            switch corner {
+            case .topLeft, .bottomLeft: area.minX + inset
+            case .topRight, .bottomRight: area.maxX - inset - side
+            }
+        let y =
+            switch corner {
+            case .bottomLeft, .bottomRight: area.minY + inset
+            case .topLeft, .topRight: area.maxY - inset - side
+            }
         return CGRect(x: x, y: y, width: side, height: side)
     }
 }
@@ -148,7 +150,7 @@ final class WebcamBubbleController {
             return
         }
         guard let device = CaptureDevices.camera(id: Defaults[.webcamDeviceID]),
-              let input = try? AVCaptureDeviceInput(device: device)
+            let input = try? AVCaptureDeviceInput(device: device)
         else {
             Log.capture.error("No camera is available for the webcam bubble")
             return

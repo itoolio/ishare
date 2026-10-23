@@ -219,7 +219,8 @@ enum StatusIconRenderer {
     static func result(succeeded: Bool, template: Bool) -> NSImage {
         let name = succeeded ? "checkmark.circle.fill" : "xmark.circle.fill"
         let configuration = NSImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
-        let symbol = NSImage(systemSymbolName: name, accessibilityDescription: succeeded ? "Upload complete".localized() : "Upload failed".localized())?
+        let symbol =
+            NSImage(systemSymbolName: name, accessibilityDescription: succeeded ? "Upload complete".localized() : "Upload failed".localized())?
             .withSymbolConfiguration(configuration) ?? NSImage(size: size)
         symbol.isTemplate = template
         return symbol

@@ -49,7 +49,8 @@ public struct SFTPConfiguration: Codable, Hashable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: DynamicCodingKey.self)
-        let rawHost = try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "host"))
+        let rawHost =
+            try container.decodeDynamicIfPresent(String.self, forKey: .key(named: "host"))
             ?? container.decodeDynamic(String.self, forKey: .key(named: "url"))
         let parsed = Self.parse(rawHost)
         host = parsed.host

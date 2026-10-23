@@ -39,10 +39,13 @@ struct EditorToolOptions: View {
 
     private var cropOptions: some View {
         Group {
-            Picker("Aspect Ratio".localized(), selection: Binding(
-                get: { document.cropAspect },
-                set: { document.setCropAspect($0) }
-            )) {
+            Picker(
+                "Aspect Ratio".localized(),
+                selection: Binding(
+                    get: { document.cropAspect },
+                    set: { document.setCropAspect($0) }
+                )
+            ) {
                 ForEach(CropAspect.allCases) { aspect in
                     Text(aspect.title).tag(aspect)
                 }
@@ -64,13 +67,16 @@ struct EditorToolOptions: View {
 
     private var arrowOptions: some View {
         Group {
-            Picker("Arrow Style".localized(), selection: Binding(
-                get: { document.arrowPath },
-                set: { path in
-                    document.arrowPath = path
-                    document.updateSelection { $0.setArrowPath(path) }
-                }
-            )) {
+            Picker(
+                "Arrow Style".localized(),
+                selection: Binding(
+                    get: { document.arrowPath },
+                    set: { path in
+                        document.arrowPath = path
+                        document.updateSelection { $0.setArrowPath(path) }
+                    }
+                )
+            ) {
                 ForEach(ArrowPath.allCases) { path in
                     Image(systemName: path.symbol)
                         .help(path.title)
@@ -82,26 +88,31 @@ struct EditorToolOptions: View {
             .labelsHidden()
             .fixedSize()
             .accessibilityIdentifier("editor.arrow.path")
-            Toggle(isOn: Binding(
-                get: { document.doubleHeaded },
-                set: { value in
-                    document.doubleHeaded = value
-                    document.updateSelection { if $0.isArrow { $0.doubleHeaded = value } }
-                }
-            )) {
+            Toggle(
+                isOn: Binding(
+                    get: { document.doubleHeaded },
+                    set: { value in
+                        document.doubleHeaded = value
+                        document.updateSelection { if $0.isArrow { $0.doubleHeaded = value } }
+                    }
+                )
+            ) {
                 Image(systemName: "arrow.left.and.right")
             }
             .toggleStyle(.button)
             .help("Double-Headed".localized())
             .accessibilityIdentifier("editor.arrow.double")
             Menu {
-                Picker("Arrowhead".localized(), selection: Binding(
-                    get: { document.arrowHead },
-                    set: { head in
-                        document.arrowHead = head
-                        document.updateSelection { if $0.isArrow { $0.arrowHead = head } }
-                    }
-                )) {
+                Picker(
+                    "Arrowhead".localized(),
+                    selection: Binding(
+                        get: { document.arrowHead },
+                        set: { head in
+                            document.arrowHead = head
+                            document.updateSelection { if $0.isArrow { $0.arrowHead = head } }
+                        }
+                    )
+                ) {
                     ForEach(ArrowHead.allCases) { head in
                         Label(head.title, systemImage: head.symbol).tag(head)
                     }
@@ -119,13 +130,15 @@ struct EditorToolOptions: View {
     }
 
     private var dashToggle: some View {
-        Toggle(isOn: Binding(
-            get: { document.dashed },
-            set: { value in
-                document.dashed = value
-                document.updateSelection { if $0.supportsDash { $0.dashed = value } }
-            }
-        )) {
+        Toggle(
+            isOn: Binding(
+                get: { document.dashed },
+                set: { value in
+                    document.dashed = value
+                    document.updateSelection { if $0.supportsDash { $0.dashed = value } }
+                }
+            )
+        ) {
             Image(systemName: "rectangle.dashed")
         }
         .toggleStyle(.button)
@@ -134,13 +147,15 @@ struct EditorToolOptions: View {
     }
 
     private var smartShapesToggle: some View {
-        Toggle(isOn: Binding(
-            get: { smartShapes },
-            set: { value in
-                smartShapes = value
-                document.prepareSnapTargetsIfNeeded()
-            }
-        )) {
+        Toggle(
+            isOn: Binding(
+                get: { smartShapes },
+                set: { value in
+                    smartShapes = value
+                    document.prepareSnapTargetsIfNeeded()
+                }
+            )
+        ) {
             Image(systemName: "rectangle.dashed.badge.record")
         }
         .toggleStyle(.button)
@@ -151,13 +166,16 @@ struct EditorToolOptions: View {
 
     private var spotlightOptions: some View {
         Group {
-            Picker("Spotlight Shape".localized(), selection: Binding(
-                get: { document.spotlightShape },
-                set: { shape in
-                    document.spotlightShape = shape
-                    document.updateSelection { if $0.isSpotlight { $0.spotlightShape = shape } }
-                }
-            )) {
+            Picker(
+                "Spotlight Shape".localized(),
+                selection: Binding(
+                    get: { document.spotlightShape },
+                    set: { shape in
+                        document.spotlightShape = shape
+                        document.updateSelection { if $0.isSpotlight { $0.spotlightShape = shape } }
+                    }
+                )
+            ) {
                 ForEach(SpotlightShape.allCases) { shape in
                     Image(systemName: shape.symbol)
                         .help(shape.title)
@@ -172,10 +190,12 @@ struct EditorToolOptions: View {
             Label("Dim".localized(), systemImage: "circle.lefthalf.filled")
                 .labelStyle(.iconOnly)
                 .help("Dim".localized())
-            Slider(value: Binding(
-                get: { document.dimAmount },
-                set: { document.setDimAmount($0) }
-            ), in: 0.1 ... 0.95) { editing in
+            Slider(
+                value: Binding(
+                    get: { document.dimAmount },
+                    set: { document.setDimAmount($0) }
+                ), in: 0.1 ... 0.95
+            ) { editing in
                 if editing {
                     document.beginContinuousChange()
                 } else {

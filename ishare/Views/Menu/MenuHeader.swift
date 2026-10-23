@@ -33,12 +33,13 @@ struct MenuHeader: View {
             } preAction: {
                 app.menuActions.dismiss()
                 NSApp.activate(ignoringOtherApps: true)
-            } postAction: {}
-                .buttonStyle(MenuIconButtonStyle())
-                .help("Settings".localized())
-                .keyboardShortcut(",")
-                .menuFocusRing(.settings, shape: .circle)
-                .accessibilityIdentifier("menu.settings")
+            } postAction: {
+            }
+            .buttonStyle(MenuIconButtonStyle())
+            .help("Settings".localized())
+            .keyboardShortcut(",")
+            .menuFocusRing(.settings, shape: .circle)
+            .accessibilityIdentifier("menu.settings")
             moreMenu
         }
     }

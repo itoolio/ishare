@@ -65,7 +65,9 @@ enum WebhookDispatcher {
         let size = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize)
         Task { @MainActor in
             let altText = waitsForAltText ? await waitForAltText(link: outcome.historyURL) : nil
-            guard var event = WebhookEvent.upload(outcome: outcome, fileURL: fileURL, uploaderName: uploaderName, altText: altText, date: date, savedBytes: savedBytes) else { return }
+            guard var event = WebhookEvent.upload(outcome: outcome, fileURL: fileURL, uploaderName: uploaderName, altText: altText, date: date, savedBytes: savedBytes) else {
+                return
+            }
             event.size = event.size ?? size
             for webhook in webhooks {
                 Task { @MainActor in

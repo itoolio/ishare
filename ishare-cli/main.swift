@@ -18,7 +18,7 @@ enum HostApp {
 
     static var version: String {
         guard let url = bundleURL, let bundle = Bundle(url: url),
-              let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         else { return "unknown" }
         return version
     }

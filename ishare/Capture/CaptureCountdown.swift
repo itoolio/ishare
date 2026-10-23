@@ -127,7 +127,7 @@ final class CountdownKeyKeeper {
 
     private func restoreFocus() {
         guard let processID = focus.appToRestore,
-              let app = NSRunningApplication(processIdentifier: processID), !app.isTerminated
+            let app = NSRunningApplication(processIdentifier: processID), !app.isTerminated
         else { return }
         if NSApp.isActive {
             NSApp.yieldActivation(to: app)

@@ -21,7 +21,8 @@ struct RemoteUploaderDefinitionTests {
         let uploader = try CustomUploader.fromJSON(Fixtures.data("examples/sftp.iscu"))
         #expect(uploader.kind == .sftp)
         #expect(UploaderValidator.issues(for: uploader).isEmpty)
-        let parsed = try CustomUploader.fromJSON(Data(#"{"name": "box", "uploaderType": "sftp", "sftp": {"url": "sftp://deploy@files.example.com:2222/srv/i", "password": "x"}}"#.utf8))
+        let parsed = try CustomUploader.fromJSON(
+            Data(#"{"name": "box", "uploaderType": "sftp", "sftp": {"url": "sftp://deploy@files.example.com:2222/srv/i", "password": "x"}}"#.utf8))
         #expect(parsed.sftp?.host == "files.example.com")
         #expect(parsed.sftp?.resolvedPort == 2222)
         #expect(parsed.sftp?.username == "deploy")
@@ -38,10 +39,12 @@ struct RemoteUploaderDefinitionTests {
     }
 
     @Test func roundTripsTheNewConfigurationsThroughJSON() throws {
-        let uploader = CustomUploader.sftp(name: "box", configuration: SFTPConfiguration(
-            host: "h", port: 2200, username: "u", password: "p", pathTemplate: "{{uuid}}.{{ext}}", publicURL: "https://h/{{path}}",
-            hostKeyFingerprint: "SHA256:abc"
-        ))
+        let uploader = CustomUploader.sftp(
+            name: "box",
+            configuration: SFTPConfiguration(
+                host: "h", port: 2200, username: "u", password: "p", pathTemplate: "{{uuid}}.{{ext}}", publicURL: "https://h/{{path}}",
+                hostKeyFingerprint: "SHA256:abc"
+            ))
         var withOverride = uploader
         withOverride.imageOptimization = ImageOptimizationOverride(enabled: true, format: .lossless)
         let decoded = try CustomUploader.fromJSON(withOverride.toJSON())
@@ -72,9 +75,11 @@ struct RemoteUploaderDefinitionTests {
     }
 
     @Test func movesRemoteSecretsIntoTheKeychainAndBack() throws {
-        let uploader = CustomUploader.sftp(name: "box", configuration: SFTPConfiguration(
-            host: "h", username: "u", privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----", passphrase: "pp"
-        ))
+        let uploader = CustomUploader.sftp(
+            name: "box",
+            configuration: SFTPConfiguration(
+                host: "h", username: "u", privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----", passphrase: "pp"
+            ))
         let stored = UploaderStore.prepared(uploader)
         #expect(stored.sftp?.privateKey == UploaderSecrets.placeholder)
         #expect(stored.sftp?.passphrase == UploaderSecrets.placeholder)
@@ -158,10 +163,12 @@ extension NetworkSuite {
         }
 
         func uploader(authentication: WebDAVAuthentication? = nil, publicURL: String? = "https://files.example.com/{{path}}", createDirectories: Bool? = nil) -> CustomUploader {
-            .webdav(name: "dav", configuration: WebDAVConfiguration(
-                url: "https://dav.example.com/remote.php/dav/files/me/", username: "me", password: "secret", authentication: authentication,
-                pathTemplate: "{{date}}/{{filename}}", createDirectories: createDirectories, publicURL: publicURL
-            ))
+            .webdav(
+                name: "dav",
+                configuration: WebDAVConfiguration(
+                    url: "https://dav.example.com/remote.php/dav/files/me/", username: "me", password: "secret", authentication: authentication,
+                    pathTemplate: "{{date}}/{{filename}}", createDirectories: createDirectories, publicURL: publicURL
+                ))
         }
 
         @Test func buildsMKCOLRequestsForEveryFolderAndAPUTForTheFile() throws {
@@ -169,11 +176,12 @@ extension NetworkSuite {
                 configuration: try #require(uploader().webdav), fileName: "Shot 1.png", contentType: "image/png", date: date
             )
             #expect(plan.directories.map(\.method) == ["MKCOL", "MKCOL", "MKCOL"])
-            #expect(plan.directories.map(\.url.absoluteString) == [
-                "https://dav.example.com/remote.php/dav/files/me/2026/",
-                "https://dav.example.com/remote.php/dav/files/me/2026/01/",
-                "https://dav.example.com/remote.php/dav/files/me/2026/01/01/",
-            ])
+            #expect(
+                plan.directories.map(\.url.absoluteString) == [
+                    "https://dav.example.com/remote.php/dav/files/me/2026/",
+                    "https://dav.example.com/remote.php/dav/files/me/2026/01/",
+                    "https://dav.example.com/remote.php/dav/files/me/2026/01/01/",
+                ])
             #expect(plan.upload.url.absoluteString == "https://dav.example.com/remote.php/dav/files/me/2026/01/01/Shot%201.png")
             #expect(plan.upload.headers["Authorization"] == "Basic bWU6c2VjcmV0")
             #expect(plan.upload.headers["Content-Type"] == "image/png")

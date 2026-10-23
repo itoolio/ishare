@@ -146,7 +146,6 @@ private struct SettingsAnchorModifier: ViewModifier {
     }
 }
 
-
 struct FolderRow: View {
     let title: String
     let kind: SaveLocation.Kind

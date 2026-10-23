@@ -15,7 +15,10 @@ struct PointerEffectSettings: Hashable, Sendable {
     var hidesWhenIdle: Bool
     var idleDelay: Double
 
-    init(recordsPointer: Bool = true, smoothing: Bool = false, scale: Double = 1, ripples: Bool = false, rippleColor: CaptureColor = .defaultRipple, hidesWhenIdle: Bool = false, idleDelay: Double = 3) {
+    init(
+        recordsPointer: Bool = true, smoothing: Bool = false, scale: Double = 1, ripples: Bool = false, rippleColor: CaptureColor = .defaultRipple, hidesWhenIdle: Bool = false,
+        idleDelay: Double = 3
+    ) {
         self.recordsPointer = recordsPointer
         self.smoothing = smoothing
         self.scale = scale.clamped(to: Self.scaleRange)
@@ -132,7 +135,7 @@ struct PointerActivityLog: Sendable {
         entries.compactMap { entry in
             let time = entry.time - recordingStart
             guard time >= 0, time <= duration,
-                  let point = OverlayCoordinateMapper.videoPoint(entry.point, sourceRect: entry.sourceRect, videoSize: videoSize)
+                let point = OverlayCoordinateMapper.videoPoint(entry.point, sourceRect: entry.sourceRect, videoSize: videoSize)
             else { return nil }
             return PointerSample(time: time, point: point)
         }
@@ -159,7 +162,8 @@ struct RecordingEffectsPlan: Hashable, Sendable {
 
     static func make(activity: PointerActivity, pointer settings: PointerEffectSettings, autoZoom: AutoZoomSettings?, videoSize: CGSize, duration: Double) -> RecordingEffectsPlan {
         let clickTimes = activity.clicks.map(\.time)
-        let track = settings.rendersPointer && !activity.pointer.isEmpty
+        let track =
+            settings.rendersPointer && !activity.pointer.isEmpty
             ? PointerTrack.make(samples: activity.pointer, clicks: clickTimes, settings: settings, duration: duration)
             : nil
         let ripples = settings.ripples ? activity.clicks.map { OverlayClick(time: $0.time, point: $0.point) } : []

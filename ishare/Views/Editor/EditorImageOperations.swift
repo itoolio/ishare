@@ -35,9 +35,11 @@ struct CanvasMapping {
     static func orientation(_ change: OrientationChange, size: CGSize) -> CanvasMapping {
         switch change {
         case .rotateRight:
-            CanvasMapping(transform: CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: size.height, ty: 0), outputSize: CGSize(width: size.height, height: size.width), preservesExtents: false)
+            CanvasMapping(
+                transform: CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: size.height, ty: 0), outputSize: CGSize(width: size.height, height: size.width), preservesExtents: false)
         case .rotateLeft:
-            CanvasMapping(transform: CGAffineTransform(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: size.width), outputSize: CGSize(width: size.height, height: size.width), preservesExtents: false)
+            CanvasMapping(
+                transform: CGAffineTransform(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: size.width), outputSize: CGSize(width: size.height, height: size.width), preservesExtents: false)
         case .flipHorizontal:
             CanvasMapping(transform: CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: size.width, ty: 0), outputSize: size, preservesExtents: false)
         case .flipVertical:
@@ -95,26 +97,27 @@ extension Annotation {
     func mapped(by mapping: CanvasMapping) -> Annotation {
         var copy = self
         let point: (CGPoint) -> CGPoint = mapping.map
-        copy.shape = switch shape {
-        case let .arrow(start, end): .arrow(point(start), point(end))
-        case let .line(start, end): .line(point(start), point(end))
-        case let .curvedArrow(start, control, end): .curvedArrow(point(start), point(control), point(end))
-        case let .stamp(rect, stamp): .stamp(mapping.mapKeepingSize(rect), stamp)
-        case let .rectangle(rect): .rectangle(mapping.map(rect))
-        case let .ellipse(rect): .ellipse(mapping.map(rect))
-        case let .highlight(rect): .highlight(mapping.map(rect))
-        case let .pen(points): .pen(points.map(point))
-        case let .marker(points): .marker(points.map(point))
-        case let .text(_, string): .text(mapping.mapKeepingSize(bounds).origin, string)
-        case let .callout(tail, rect, string): .callout(point(tail), mapping.mapKeepingSize(rect), string)
-        case let .step(center, number): .step(point(center), number)
-        case let .magnify(rect): .magnify(mapping.map(rect))
-        case let .spotlight(rect): .spotlight(mapping.map(rect))
-        case let .blur(rect): .blur(mapping.map(rect))
-        case let .pixelate(rect): .pixelate(mapping.map(rect))
-        case let .eraser(rect): .eraser(mapping.map(rect))
-        case .cursor: .cursor(mapping.mapKeepingSize(bounds).origin)
-        }
+        copy.shape =
+            switch shape {
+            case let .arrow(start, end): .arrow(point(start), point(end))
+            case let .line(start, end): .line(point(start), point(end))
+            case let .curvedArrow(start, control, end): .curvedArrow(point(start), point(control), point(end))
+            case let .stamp(rect, stamp): .stamp(mapping.mapKeepingSize(rect), stamp)
+            case let .rectangle(rect): .rectangle(mapping.map(rect))
+            case let .ellipse(rect): .ellipse(mapping.map(rect))
+            case let .highlight(rect): .highlight(mapping.map(rect))
+            case let .pen(points): .pen(points.map(point))
+            case let .marker(points): .marker(points.map(point))
+            case let .text(_, string): .text(mapping.mapKeepingSize(bounds).origin, string)
+            case let .callout(tail, rect, string): .callout(point(tail), mapping.mapKeepingSize(rect), string)
+            case let .step(center, number): .step(point(center), number)
+            case let .magnify(rect): .magnify(mapping.map(rect))
+            case let .spotlight(rect): .spotlight(mapping.map(rect))
+            case let .blur(rect): .blur(mapping.map(rect))
+            case let .pixelate(rect): .pixelate(mapping.map(rect))
+            case let .eraser(rect): .eraser(mapping.map(rect))
+            case .cursor: .cursor(mapping.mapKeepingSize(bounds).origin)
+            }
         return copy
     }
 }

@@ -48,7 +48,7 @@ struct LastRegions: Codable, Hashable, Sendable, Defaults.Serializable {
 enum LastRegionStore {
     static func key(for displayID: CGDirectDisplayID) -> String {
         guard let uuid = CGDisplayCreateUUIDFromDisplayID(displayID)?.takeRetainedValue(),
-              let string = CFUUIDCreateString(nil, uuid) as String?
+            let string = CFUUIDCreateString(nil, uuid) as String?
         else { return "display-\(displayID)" }
         return string
     }

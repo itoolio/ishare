@@ -122,10 +122,10 @@ struct BeautifyPreview: View {
 
     static let sample: CGImage? = {
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(
-                  data: nil, width: 240, height: 150, bitsPerComponent: 8, bytesPerRow: 0,
-                  space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              )
+            let context = CGContext(
+                data: nil, width: 240, height: 150, bitsPerComponent: 8, bytesPerRow: 0,
+                space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
         else { return nil }
         context.setFillColor(CGColor(srgbRed: 0.97, green: 0.97, blue: 0.98, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: 240, height: 150))

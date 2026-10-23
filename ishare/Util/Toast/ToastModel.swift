@@ -120,7 +120,8 @@ final class ToastModel: ObservableObject {
         } catch {
             annotation = nil
             Log.app.error("Saving quick annotations failed: \(error.localizedDescription, privacy: .public)")
-            ToastController.showMessage(title: "Couldn’t save the annotations".localized(), message: error.localizedDescription, symbol: "exclamationmark.triangle.fill", tint: .orange)
+            ToastController.showMessage(
+                title: "Couldn’t save the annotations".localized(), message: error.localizedDescription, symbol: "exclamationmark.triangle.fill", tint: .orange)
         }
     }
 

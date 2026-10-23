@@ -40,10 +40,12 @@ struct MenuLayoutSettingsSection: View {
 
     private func row(_ section: MenuSection, index: Int) -> some View {
         HStack(spacing: 10) {
-            Toggle(isOn: Binding(
-                get: { layout.isVisible(section) },
-                set: { MenuLayout.current = layout.setting(section, visible: $0) }
-            )) {
+            Toggle(
+                isOn: Binding(
+                    get: { layout.isVisible(section) },
+                    set: { MenuLayout.current = layout.setting(section, visible: $0) }
+                )
+            ) {
                 Label(section.title.localized(), systemImage: section.symbol)
             }
             .accessibilityIdentifier("settings.menu.section.\(section.rawValue)")
@@ -135,7 +137,11 @@ private struct MenuPreviewTile: View {
             .environment(\.colorScheme, scheme)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.15), lineWidth: 1))
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+            .onGeometryChange(for: CGFloat.self) {
+                $0.size.height
+            } action: {
+                height = $0
+            }
             .allowsHitTesting(false)
             .scaleEffect(scale, anchor: .topLeading)
             .frame(width: 360 * scale, height: height * scale, alignment: .topLeading)

@@ -25,7 +25,9 @@ enum ToastPlacement {
         }
     }
 
-    static func resolve(_ choice: ToastScreenChoice, screens: [ToastScreenCandidate], main: ToastScreenCandidate?, pointer: CGPoint, capturedDisplayID: CGDirectDisplayID?) -> ToastScreenCandidate? {
+    static func resolve(_ choice: ToastScreenChoice, screens: [ToastScreenCandidate], main: ToastScreenCandidate?, pointer: CGPoint, capturedDisplayID: CGDirectDisplayID?)
+        -> ToastScreenCandidate?
+    {
         let pointerScreen = screens.first { $0.frame.contains(pointer) }
         switch choice {
         case .main:

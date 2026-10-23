@@ -28,9 +28,12 @@ struct CaptureToolsSettings: View {
             } header: {
                 Text("Timer & Codes".localized())
             } footer: {
-                Text("The delay applies to screen and window captures. A countdown appears next to the pointer; press Esc to cancel it, even after you click into another app.".localized())
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "The delay applies to screen and window captures. A countdown appears next to the pointer; press Esc to cancel it, even after you click into another app."
+                        .localized()
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             }
             Section {
                 Toggle("Redact sensitive text before uploading".localized(), isOn: $redactBeforeUpload)

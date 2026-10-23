@@ -20,9 +20,10 @@ extension KeyboardShortcuts.Shortcut {
         }
         let layoutData = Unmanaged<CFData>.fromOpaque(ptr).takeUnretainedValue() as Data
         let osStatus = layoutData.withUnsafeBytes {
-            UCKeyTranslate($0.bindMemory(to: UCKeyboardLayout.self).baseAddress, carbonKeyCode, UInt16(kUCKeyActionDown),
-                           modifierKeys, keyboardType, UInt32(kUCKeyTranslateNoDeadKeysMask),
-                           &deadKeys, maxNameLength, &nameLength, &nameBuffer)
+            UCKeyTranslate(
+                $0.bindMemory(to: UCKeyboardLayout.self).baseAddress, carbonKeyCode, UInt16(kUCKeyActionDown),
+                modifierKeys, keyboardType, UInt32(kUCKeyTranslateNoDeadKeysMask),
+                &deadKeys, maxNameLength, &nameLength, &nameBuffer)
         }
         guard osStatus == noErr else {
             NSLog("Code: 0x%04X  Status: %+i", carbonKeyCode, osStatus)

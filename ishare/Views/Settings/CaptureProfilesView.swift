@@ -47,7 +47,7 @@ struct ProfileCandidateApp: Identifiable, Hashable {
             .filter { $0.activationPolicy == .regular }
             .compactMap { app -> ProfileCandidateApp? in
                 guard let bundleID = app.bundleIdentifier, bundleID != ownBundleID,
-                      !taken.contains(bundleID.lowercased()), seen.insert(bundleID).inserted
+                    !taken.contains(bundleID.lowercased()), seen.insert(bundleID).inserted
                 else { return nil }
                 return ProfileCandidateApp(bundleIdentifier: bundleID, name: app.localizedName ?? bundleID)
             }
@@ -118,10 +118,13 @@ private struct CaptureProfileSection: View {
             overridePicker("Blur private apps".localized(), value: $profile.blursPrivateApps)
             overridePicker("Include window shadow".localized(), value: $profile.includesWindowShadow)
             LabeledContent("File prefix:".localized()) {
-                TextField("", text: Binding(
-                    get: { profile.fileNamePrefix ?? "" },
-                    set: { profile.fileNamePrefix = $0.isEmpty ? nil : $0 }
-                ), prompt: Text("Default".localized()))
+                TextField(
+                    "",
+                    text: Binding(
+                        get: { profile.fileNamePrefix ?? "" },
+                        set: { profile.fileNamePrefix = $0.isEmpty ? nil : $0 }
+                    ), prompt: Text("Default".localized())
+                )
                 .labelsHidden()
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 200)
@@ -143,10 +146,13 @@ private struct CaptureProfileSection: View {
     }
 
     private func overridePicker(_ title: String, value: Binding<Bool?>) -> some View {
-        Picker(title, selection: Binding(
-            get: { ProfileOverride(value.wrappedValue) },
-            set: { value.wrappedValue = $0.value }
-        )) {
+        Picker(
+            title,
+            selection: Binding(
+                get: { ProfileOverride(value.wrappedValue) },
+                set: { value.wrappedValue = $0.value }
+            )
+        ) {
             ForEach(ProfileOverride.allCases) { Text($0.title.localized()).tag($0) }
         }
     }

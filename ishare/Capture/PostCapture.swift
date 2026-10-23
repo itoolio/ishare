@@ -11,8 +11,8 @@ enum PostCapture {
 
     static func compressedIfNeeded(_ fileURL: URL) async -> URL {
         guard Defaults[.compressBeforeUpload], fileURL.pathExtension.lowercased() != "gif",
-              let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-              VideoCompressor.needsCompression(fileSize: Int64(size), thresholdMB: Defaults[.compressionThresholdMB])
+            let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+            VideoCompressor.needsCompression(fileSize: Int64(size), thresholdMB: Defaults[.compressionThresholdMB])
         else { return fileURL }
         do {
             return try await VideoCompressor.compress(fileURL, preset: Defaults[.compressionPreset], hevc: Defaults[.useHEVC])

@@ -190,7 +190,11 @@ struct UploadPresetsSettings: View {
         }
         .confirmationDialog(
             String(format: "Delete “%@”?".localized(), pendingDeletion?.name ?? ""),
-            isPresented: Binding { pendingDeletion != nil } set: { if !$0 { pendingDeletion = nil } }
+            isPresented: Binding {
+                pendingDeletion != nil
+            } set: {
+                if !$0 { pendingDeletion = nil }
+            }
         ) {
             Button("Delete".localized(), role: .destructive) {
                 if let pendingDeletion { UploadPresets.delete(pendingDeletion) }

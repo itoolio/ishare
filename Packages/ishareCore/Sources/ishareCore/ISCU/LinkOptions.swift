@@ -211,9 +211,10 @@ public enum LinkOptionsEncoder {
 
     public static func rendered(_ value: String, template: String?) -> String {
         guard let template, !template.trimmingCharacters(in: .whitespaces).isEmpty else { return value }
-        return (try? ResponseTemplate.render(template) { name in
-            name.lowercased() == valuePlaceholder ? value : nil
-        }) ?? value
+        return
+            (try? ResponseTemplate.render(template) { name in
+                name.lowercased() == valuePlaceholder ? value : nil
+            }) ?? value
     }
 
     private static func place(_ value: String, named name: String, at location: LinkOptionLocation, in parts: inout HTTPRequestParts) {

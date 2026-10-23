@@ -63,7 +63,8 @@ public enum UploaderIssue: Equatable, Sendable {
     public var argument: String? {
         switch self {
         case let .malformedTemplate(field), let .missingS3Field(field), let .missingLinkOptionField(field),
-             let .linkOptionTemplateWithoutValue(field), let .linkOptionFormWithBinaryBody(field): field
+            let .linkOptionTemplateWithoutValue(field), let .linkOptionFormWithBinaryBody(field):
+            field
         default: nil
         }
     }
@@ -184,8 +185,8 @@ public enum UploaderValidator {
 
     static func isHTTPURL(_ string: String) -> Bool {
         guard let url = URL(string: string.trimmingCharacters(in: .whitespaces)),
-              let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
-              let host = url.host(), !host.isEmpty
+            let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+            let host = url.host(), !host.isEmpty
         else { return false }
         return true
     }

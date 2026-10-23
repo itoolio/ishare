@@ -94,7 +94,9 @@ struct ScrollStitcherTests {
 
     @Test func stitchesFramesIntoOneImage() throws {
         func solid(_ gray: CGFloat, height: Int) -> CGImage {
-            let context = CGContext(data: nil, width: 10, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            let context = CGContext(
+                data: nil, width: 10, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
             context.setFillColor(CGColor(gray: gray, alpha: 1))
             context.fill(CGRect(x: 0, y: 0, width: 10, height: height))
             return context.makeImage()!

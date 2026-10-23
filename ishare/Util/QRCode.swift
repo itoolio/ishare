@@ -33,10 +33,12 @@ enum QRCodeRenderer {
     static func scaledNearestNeighbor(_ image: CGImage, by scale: Int) -> CGImage? {
         let width = image.width * scale
         let height = image.height * scale
-        guard let context = CGContext(
-            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
-        ) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
+            )
+        else { return nil }
         context.interpolationQuality = .none
         context.setShouldAntialias(false)
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))

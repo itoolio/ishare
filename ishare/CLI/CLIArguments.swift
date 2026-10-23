@@ -39,22 +39,22 @@ enum CLIArguments {
     static let interactiveTimeout: TimeInterval = 600
 
     static let usage = """
-    Usage: ishare <command> [options]
+        Usage: ishare <command> [options]
 
-    Commands:
-      upload <file…> [--uploader NAME]    Upload files and print their links
-      capture region|window|screen|scrolling [--upload]
-                                          Take a screenshot and print its file or link
-      record start|stop|toggle            Start or stop a screen recording
-      uploaders list                      List the configured uploaders
-      history [--limit N]                 Print recent uploads
+        Commands:
+          upload <file…> [--uploader NAME]    Upload files and print their links
+          capture region|window|screen|scrolling [--upload]
+                                              Take a screenshot and print its file or link
+          record start|stop|toggle            Start or stop a screen recording
+          uploaders list                      List the configured uploaders
+          history [--limit N]                 Print recent uploads
 
-    Options:
-      --json                              Print machine-readable JSON
-      --timeout SECONDS                   How long to wait for ishare (default 120, 600 for capture and record)
-      -h, --help                          Show this help
-      --version                           Show the version
-    """
+        Options:
+          --json                              Print machine-readable JSON
+          --timeout SECONDS                   How long to wait for ishare (default 120, 600 for capture and record)
+          -h, --help                          Show this help
+          --version                           Show the version
+        """
 
     static func parse(_ arguments: [String], workingDirectory: String = FileManager.default.currentDirectoryPath) throws(CLIArgumentError) -> CLIAction {
         var positional: [String] = []
@@ -146,10 +146,11 @@ enum CLIArguments {
         if uploader != nil, !command.accepts(.uploader) { throw .unknownOption("--uploader") }
         if upload, !command.accepts(.upload) { throw .unknownOption("--upload") }
         if limit != nil, !command.accepts(.limit) { throw .unknownOption("--limit") }
-        let defaultTimeout: TimeInterval = switch command {
-        case .capture, .record: interactiveTimeout
-        default: defaultTimeout
-        }
+        let defaultTimeout: TimeInterval =
+            switch command {
+            case .capture, .record: interactiveTimeout
+            default: defaultTimeout
+            }
         return .run(CLIInvocation(command: command, json: json, timeout: timeout ?? defaultTimeout))
     }
 

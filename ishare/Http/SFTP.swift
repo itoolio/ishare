@@ -21,7 +21,9 @@ enum SFTPError: LocalizedError, Equatable {
             String(format: "The private key couldn't be read (%@). Use an unencrypted or passphrase-protected OpenSSH Ed25519 or RSA key.".localized(), detail)
         case let .hostKeyMismatch(expected, presented):
             String(
-                format: "The SFTP server's host key changed. ishare expected %@ but the server presented %@. If the server was reinstalled, clear the trusted fingerprint in the uploader settings.".localized(),
+                format:
+                    "The SFTP server's host key changed. ishare expected %@ but the server presented %@. If the server was reinstalled, clear the trusted fingerprint in the uploader settings."
+                    .localized(),
                 expected, presented
             )
         case let .connectionFailed(detail):

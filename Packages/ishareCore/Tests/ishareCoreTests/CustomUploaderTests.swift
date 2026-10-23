@@ -12,10 +12,11 @@ struct CustomUploaderTests {
     }
 
     @Test func decodesKeysCaseInsensitively() throws {
-        let json = Data("""
-        {"NAME": "mixed", "RequestUrl": "https://up.example.com", "RESPONSEURL": "{{url}}",
-         "FileFormName": "upload", "RequestBodyType": "binary", "DeleteRequestType": "delete"}
-        """.utf8)
+        let json = Data(
+            """
+            {"NAME": "mixed", "RequestUrl": "https://up.example.com", "RESPONSEURL": "{{url}}",
+             "FileFormName": "upload", "RequestBodyType": "binary", "DeleteRequestType": "delete"}
+            """.utf8)
         let uploader = try CustomUploader.fromJSON(json)
         #expect(uploader.requestURL == "https://up.example.com")
         #expect(uploader.fileFormName == "upload")
@@ -32,11 +33,12 @@ struct CustomUploaderTests {
     }
 
     @Test func decodesS3UploadersWithoutRequestURL() throws {
-        let json = Data("""
-        {"name": "r2", "uploaderType": "S3", "s3": {"endpoint": "https://acc.r2.cloudflarestorage.com",
-         "region": "auto", "bucket": "shots", "accessKeyId": "AK", "secretAccessKey": "SK",
-         "keyTemplate": "{{date}}/{{uuid}}.{{ext}}", "publicURL": "https://img.example.com/{{key}}"}}
-        """.utf8)
+        let json = Data(
+            """
+            {"name": "r2", "uploaderType": "S3", "s3": {"endpoint": "https://acc.r2.cloudflarestorage.com",
+             "region": "auto", "bucket": "shots", "accessKeyId": "AK", "secretAccessKey": "SK",
+             "keyTemplate": "{{date}}/{{uuid}}.{{ext}}", "publicURL": "https://img.example.com/{{key}}"}}
+            """.utf8)
         let uploader = try CustomUploader.fromJSON(json)
         #expect(uploader.kind == .s3)
         #expect(uploader.s3?.bucket == "shots")
@@ -55,7 +57,8 @@ struct CustomUploaderTests {
     @Test func roundTripsThroughJSON() throws {
         let original = CustomUploader.s3(
             name: "aws",
-            configuration: S3Configuration(endpoint: "https://s3.eu-west-1.amazonaws.com", region: "eu-west-1", bucket: "b", accessKeyId: "a", secretAccessKey: "s", pathStyle: false, acl: "public-read")
+            configuration: S3Configuration(
+                endpoint: "https://s3.eu-west-1.amazonaws.com", region: "eu-west-1", bucket: "b", accessKeyId: "a", secretAccessKey: "s", pathStyle: false, acl: "public-read")
         )
         let decoded = try CustomUploader.fromJSON(original.toJSON())
         #expect(decoded.id == original.id)
@@ -115,40 +118,40 @@ struct UploaderValidatorTests {
 
 struct ShareXImportTests {
     static let imgurStyle = """
-    {
-      "Version": "15.0.0",
-      "Name": "Zipline",
-      "DestinationType": "ImageUploader, TextUploader, FileUploader",
-      "RequestMethod": "POST",
-      "RequestURL": "https://zipline.example.com/api/upload",
-      "Headers": {
-        "Authorization": "secret-token",
-        "Format": "random"
-      },
-      "Body": "MultipartFormData",
-      "Arguments": {
-        "album": "shots"
-      },
-      "FileFormName": "file",
-      "URL": "{json:files[0]}",
-      "DeletionURL": "https://zipline.example.com/api/delete/{json:id}",
-      "ErrorMessage": "{json:error}"
-    }
-    """
+        {
+          "Version": "15.0.0",
+          "Name": "Zipline",
+          "DestinationType": "ImageUploader, TextUploader, FileUploader",
+          "RequestMethod": "POST",
+          "RequestURL": "https://zipline.example.com/api/upload",
+          "Headers": {
+            "Authorization": "secret-token",
+            "Format": "random"
+          },
+          "Body": "MultipartFormData",
+          "Arguments": {
+            "album": "shots"
+          },
+          "FileFormName": "file",
+          "URL": "{json:files[0]}",
+          "DeletionURL": "https://zipline.example.com/api/delete/{json:id}",
+          "ErrorMessage": "{json:error}"
+        }
+        """
 
     static let legacyBinary = """
-    {
-      "Name": "Legacy",
-      "DestinationType": "ImageUploader",
-      "RequestType": "PUT",
-      "RequestMethod": "put",
-      "RequestURL": "https://legacy.example.com/upload",
-      "Parameters": { "key": "abc" },
-      "Body": "Binary",
-      "URL": "$json:data.link$",
-      "DeletionURL": "$json:data.delete$",
-    }
-    """
+        {
+          "Name": "Legacy",
+          "DestinationType": "ImageUploader",
+          "RequestType": "PUT",
+          "RequestMethod": "put",
+          "RequestURL": "https://legacy.example.com/upload",
+          "Parameters": { "key": "abc" },
+          "Body": "Binary",
+          "URL": "$json:data.link$",
+          "DeletionURL": "$json:data.delete$",
+        }
+        """
 
     @Test func importsMultipartUploadersWithModernSyntax() throws {
         let uploader = try ShareXImport.uploader(from: Data(Self.imgurStyle.utf8))

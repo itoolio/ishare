@@ -92,13 +92,15 @@ struct EditorBeautifySheet: View {
                 ForEach(BeautifyBackground.allCases) { Text($0.title).tag($0) }
             }
             if background == .solid {
-                ColorPicker("Color".localized(), selection: Binding(
-                    get: { Color(cgColor: solidColor.cgColor) },
-                    set: { color in
-                        guard let srgb = NSColor(color).usingColorSpace(.sRGB) else { return }
-                        solidColor = CaptureColor(red: srgb.redComponent, green: srgb.greenComponent, blue: srgb.blueComponent)
-                    }
-                ), supportsOpacity: false)
+                ColorPicker(
+                    "Color".localized(),
+                    selection: Binding(
+                        get: { Color(cgColor: solidColor.cgColor) },
+                        set: { color in
+                            guard let srgb = NSColor(color).usingColorSpace(.sRGB) else { return }
+                            solidColor = CaptureColor(red: srgb.redComponent, green: srgb.greenComponent, blue: srgb.blueComponent)
+                        }
+                    ), supportsOpacity: false)
             }
             LabeledContent("Padding".localized()) {
                 Slider(value: $padding, in: 0 ... 160, step: 4)
@@ -175,10 +177,12 @@ struct EditorAdjustPanel: View {
 
     private func adjustmentSlider(_ title: String, value: WritableKeyPath<ImageAdjustments, Double>, range: ClosedRange<Double>, identifier: String) -> some View {
         LabeledContent(title) {
-            Slider(value: Binding(
-                get: { document.adjustments[keyPath: value] },
-                set: { newValue in document.updateAdjustments { $0[keyPath: value] = newValue } }
-            ), in: range) { editing in
+            Slider(
+                value: Binding(
+                    get: { document.adjustments[keyPath: value] },
+                    set: { newValue in document.updateAdjustments { $0[keyPath: value] = newValue } }
+                ), in: range
+            ) { editing in
                 if editing {
                     document.beginContinuousChange()
                 } else {

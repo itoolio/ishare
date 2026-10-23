@@ -14,11 +14,13 @@ enum CaptionStyle {
     static func attributedText(_ text: String, fontSize: CGFloat) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
-        return NSAttributedString(string: text, attributes: [
-            .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
-            .foregroundColor: NSColor.white,
-            .paragraphStyle: paragraph,
-        ])
+        return NSAttributedString(
+            string: text,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
+                .foregroundColor: NSColor.white,
+                .paragraphStyle: paragraph,
+            ])
     }
 
     static func boxFrame(for textSize: CGSize, fontSize: CGFloat, renderSize: CGSize) -> CGRect {

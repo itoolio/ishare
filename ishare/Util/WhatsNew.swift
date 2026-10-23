@@ -157,10 +157,12 @@ enum WhatsNew {
         let current = currentVersion
         let lastLaunched = Defaults[.lastLaunchedVersion]
         Defaults[.lastLaunchedVersion] = current
-        guard shouldPresent(
-            current: current, lastLaunched: lastLaunched, hasCompletedOnboarding: Defaults[.hasCompletedOnboarding],
-            showsWhatsNew: Defaults[.showsWhatsNew], isSuppressed: isSuppressed
-        ) else { return }
+        guard
+            shouldPresent(
+                current: current, lastLaunched: lastLaunched, hasCompletedOnboarding: Defaults[.hasCompletedOnboarding],
+                showsWhatsNew: Defaults[.showsWhatsNew], isSuppressed: isSuppressed
+            )
+        else { return }
         let notes = releases(in: bundledReleases(), after: lastLaunched, upTo: current)
         guard !notes.isEmpty else { return }
         WhatsNewWindow.show(releases: notes)

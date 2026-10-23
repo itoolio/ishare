@@ -16,7 +16,8 @@ enum WidgetSnapshotWriter {
     }
 
     static func snapshot(from history: [HistoryItem], hasThumbnail: (HistoryItem) -> Bool) -> WidgetSnapshot {
-        let items = history
+        let items =
+            history
             .filter { $0.remoteURL != nil || $0.localFileURL != nil }
             .prefix(WidgetSnapshot.maximumItems)
             .map { item in
@@ -54,7 +55,7 @@ enum WidgetSnapshotWriter {
             kCGImageSourceThumbnailMaxPixelSize: thumbnailPixelSize,
         ]
         guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary),
-              let output = CGImageDestinationCreateWithURL(destination as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
+            let output = CGImageDestinationCreateWithURL(destination as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
         else { return false }
         CGImageDestinationAddImage(output, thumbnail, [kCGImageDestinationLossyCompressionQuality: 0.75] as CFDictionary)
         return CGImageDestinationFinalize(output)

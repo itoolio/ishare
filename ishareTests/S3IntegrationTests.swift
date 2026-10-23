@@ -80,9 +80,10 @@ extension NetworkSuite {
             let (created, body) = try await fetch(signedRequest("PUT", bucketURL(configuration), configuration: configuration))
             #expect(created == 200 || created == 409, "Creating the bucket failed: \(String(decoding: body, as: UTF8.self))")
             guard publicRead else { return }
-            let policy = Data("""
-            {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::\(configuration.bucket)/*"]}]}
-            """.utf8)
+            let policy = Data(
+                """
+                {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::\(configuration.bucket)/*"]}]}
+                """.utf8)
             let (applied, policyBody) = try await fetch(signedRequest("PUT", bucketURL(configuration, query: "policy"), body: policy, configuration: configuration))
             #expect(applied == 204 || applied == 200, "Setting the bucket policy failed: \(String(decoding: policyBody, as: UTF8.self))")
         }

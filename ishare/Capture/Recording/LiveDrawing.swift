@@ -454,10 +454,12 @@ final class LiveDrawingController {
     }
 
     private func makeToolbar() -> LiveDrawingToolbarPanel {
-        let view = LiveDrawingToolbar(model: toolbarModel, onUndo: { [weak self] in self?.undo() }, onClear: { [weak self] in self?.clear() }, onDone: { [weak self] in self?.endDrawing() })
+        let view = LiveDrawingToolbar(
+            model: toolbarModel, onUndo: { [weak self] in self?.undo() }, onClear: { [weak self] in self?.clear() }, onDone: { [weak self] in self?.endDrawing() })
         let hosting = NSHostingView(rootView: view)
         hosting.layoutSubtreeIfNeeded()
-        let panel = LiveDrawingToolbarPanel(contentRect: CGRect(origin: .zero, size: hosting.fittingSize), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let panel = LiveDrawingToolbarPanel(
+            contentRect: CGRect(origin: .zero, size: hosting.fittingSize), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true

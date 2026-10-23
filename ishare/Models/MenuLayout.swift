@@ -99,8 +99,10 @@ enum MenuDensity: String, CaseIterable, Identifiable, Codable, Sendable, Default
 
     var metrics: MenuMetrics {
         switch self {
-        case .comfortable: MenuMetrics(stackSpacing: 12, sectionSpacing: 8, padding: 12, tileHeight: 58, tileSymbolSize: 17, tileSpacing: 5, wideHeight: 40, footerHeight: 32, thumbnailSize: 44)
-        case .compact: MenuMetrics(stackSpacing: 8, sectionSpacing: 5, padding: 10, tileHeight: 44, tileSymbolSize: 15, tileSpacing: 3, wideHeight: 32, footerHeight: 26, thumbnailSize: 36)
+        case .comfortable:
+            MenuMetrics(stackSpacing: 12, sectionSpacing: 8, padding: 12, tileHeight: 58, tileSymbolSize: 17, tileSpacing: 5, wideHeight: 40, footerHeight: 32, thumbnailSize: 44)
+        case .compact:
+            MenuMetrics(stackSpacing: 8, sectionSpacing: 5, padding: 10, tileHeight: 44, tileSymbolSize: 15, tileSpacing: 3, wideHeight: 32, footerHeight: 26, thumbnailSize: 36)
         }
     }
 }

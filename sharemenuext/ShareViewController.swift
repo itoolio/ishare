@@ -36,10 +36,10 @@ class ShareViewController: SLComposeServiceViewController {
         ]
 
         guard let extensionContext,
-              let item = (extensionContext.inputItems as? [NSExtensionItem])?.first,
-              let provider = item.attachments?.first(where: { provider in
-                  supportedTypes.contains(where: { provider.hasItemConformingToTypeIdentifier($0.identifier) })
-              })
+            let item = (extensionContext.inputItems as? [NSExtensionItem])?.first,
+            let provider = item.attachments?.first(where: { provider in
+                supportedTypes.contains(where: { provider.hasItemConformingToTypeIdentifier($0.identifier) })
+            })
         else {
             NSLog("Error: No valid attachment found in share extension")
             extensionContext?.completeRequest(returningItems: nil)
@@ -58,7 +58,10 @@ class ShareViewController: SLComposeServiceViewController {
                 if let urlItem = item as? URL {
                     return urlItem
                 } else if let data = item as? Data {
-                    guard let sharedContainerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as! String) else {
+                    guard
+                        let sharedContainerURL = FileManager.default.containerURL(
+                            forSecurityApplicationGroupIdentifier: Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as! String)
+                    else {
                         NSLog("Failed to get shared container URL")
                         return nil
                     }
@@ -91,7 +94,7 @@ class ShareViewController: SLComposeServiceViewController {
 
             if let url = processItem(item) {
                 if let encodedURLString = url.absoluteString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                   let shareURL = URL(string: "ishare://upload?file=\(encodedURLString)")
+                    let shareURL = URL(string: "ishare://upload?file=\(encodedURLString)")
                 {
                     Task { @MainActor in
                         NSWorkspace.shared.open(shareURL)

@@ -79,7 +79,8 @@ struct HistoryGridView: View {
     @ViewBuilder
     private var content: some View {
         if uploadHistory.isEmpty {
-            ContentUnavailableView("No uploads yet".localized(), systemImage: "clock.arrow.circlepath", description: Text("Uploads appear here after you share a capture.".localized()))
+            ContentUnavailableView(
+                "No uploads yet".localized(), systemImage: "clock.arrow.circlepath", description: Text("Uploads appear here after you share a capture.".localized()))
         } else if filteredHistory.isEmpty {
             ContentUnavailableView {
                 Label("No Matching Uploads".localized(), systemImage: "magnifyingglass")
@@ -252,7 +253,6 @@ struct HistoryGridView: View {
         .adaptiveGlassBar()
     }
 
-
     private func title(for uploader: HistoryUploader) -> String {
         switch uploader {
         case .imgur: "Imgur"
@@ -308,7 +308,9 @@ struct HistoryCard: View {
         .padding(8)
         .adaptiveGlass(cornerRadius: 14)
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.menuAccent.opacity(isSelected ? 0.12 : 0)).allowsHitTesting(false))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.menuAccent.opacity(isSelected ? 1 : isHovered ? 0.6 : 0), lineWidth: isSelected ? 2 : 1.5))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.menuAccent.opacity(isSelected ? 1 : isHovered ? 0.6 : 0), lineWidth: isSelected ? 2 : 1.5)
+        )
         .overlay {
             let contrast = MenuContrast.resolve(colorSchemeContrast)
             if contrast.isHigh, !isSelected, !isHovered {

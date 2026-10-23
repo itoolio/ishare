@@ -85,7 +85,7 @@ enum TextRecognition {
         let text = candidate.string
         let words = TextLayout.wordRanges(in: text).compactMap { range -> RecognizedWord? in
             guard let swiftRange = Range(range, in: text),
-                  let box = try? candidate.boundingBox(for: swiftRange)?.boundingBox
+                let box = try? candidate.boundingBox(for: swiftRange)?.boundingBox
             else { return nil }
             return RecognizedWord(range: range, boundingBox: box)
         }

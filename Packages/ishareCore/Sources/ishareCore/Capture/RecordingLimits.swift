@@ -24,7 +24,6 @@ public struct RecordingLimits: Equatable, Sendable {
         )
     }
 
-
     public var hasRecordingLimit: Bool {
         maxDuration != nil || maxBytes != nil
     }
@@ -83,7 +82,8 @@ public enum DiskSpace {
         let candidates = [url, url.deletingLastPathComponent()]
         for candidate in candidates {
             if let values = try? candidate.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]),
-               let capacity = values.volumeAvailableCapacityForImportantUsage {
+                let capacity = values.volumeAvailableCapacityForImportantUsage
+            {
                 return capacity
             }
         }

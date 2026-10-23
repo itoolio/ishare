@@ -104,8 +104,10 @@ struct CommandPaletteTests {
     @Test @MainActor func registryCoversEveryKindOfAction() {
         let ids = AppCommand.all().map(\.id)
         #expect(Set(ids).count == ids.count)
-        for id in ["capture.region", "capture.window", "capture.screen", "capture.scrolling", "record.screen", "record.gif",
-                   "editor.open", "upload.clipboard", "history.open", "destination.imgur", "app.about", "app.quit"] {
+        for id in [
+            "capture.region", "capture.window", "capture.screen", "capture.scrolling", "record.screen", "record.gif",
+            "editor.open", "upload.clipboard", "history.open", "destination.imgur", "app.about", "app.quit",
+        ] {
             #expect(ids.contains(id), "\(id)")
         }
         #expect(SettingsPane.allCases.allSatisfy { ids.contains("settings.\($0.rawValue)") })

@@ -21,7 +21,9 @@ struct AssistantMessage: Identifiable, Equatable {
 enum AssistantDraftReport {
     static func summary(for uploader: CustomUploader) -> String {
         let issues = UploaderValidator.issues(for: uploader)
-        let state = "The draft now uploads to \(uploader.requestURL) and reads the link with the template \(uploader.responseURL)" + (uploader.deletionURL.map { " and deletes with \($0)" } ?? "") + ". "
+        let state =
+            "The draft now uploads to \(uploader.requestURL) and reads the link with the template \(uploader.responseURL)"
+            + (uploader.deletionURL.map { " and deletes with \($0)" } ?? "") + ". "
         guard !issues.isEmpty else {
             return state + "It is valid. Tell the user it is ready to test and save, describing these exact values."
         }
@@ -49,7 +51,10 @@ enum AssistantDraftReport {
         var formFieldNames: [String]
         @Guide(description: "Values of the extra multipart text fields, in the same order as formFieldNames")
         var formFieldValues: [String]
-        @Guide(description: "Template for the public file URL. Wrap JSON paths from the response in double braces, for example {{data.url}} or {{files[0].url}}, or use {{response}} for a plain-text response")
+        @Guide(
+            description:
+                "Template for the public file URL. Wrap JSON paths from the response in double braces, for example {{data.url}} or {{files[0].url}}, or use {{response}} for a plain-text response"
+        )
         var responseURL: String
         @Guide(description: "Template for the deletion URL using the same placeholder syntax, or an empty string if the service has none")
         var deletionURL: String
@@ -86,14 +91,14 @@ enum AssistantDraftReport {
     @MainActor
     final class AssistantConversation {
         static let instructions = """
-        You are the ishare uploader assistant. ishare is a macOS screenshot tool that uploads files to the user's own web service.
-        Chat with the user in a friendly, concise way and in the language they write in.
-        Work out how their service accepts uploads: the upload URL, authentication headers, the multipart field name or a raw binary body, and where the public link appears in the JSON response.
-        Ask one short question at a time when something important is missing. If the user mentions a well-known service such as Zipline, chibisafe, copyparty, XBackBone or a Discord webhook, use what you know about its API and confirm the details.
-        ishare sends one HTTP POST per file and reads the link from the response with templates like {{url}}, {{data.link}} or {{files[0].url}}, or {{response}} when the reply is plain text.
-        Whenever you can build or improve the uploader, call updateUploaderDraft with the complete configuration, then briefly tell the user what you set up.
-        Never invent secrets. Use the values the user provides, or placeholders such as YOUR_API_KEY.
-        """
+            You are the ishare uploader assistant. ishare is a macOS screenshot tool that uploads files to the user's own web service.
+            Chat with the user in a friendly, concise way and in the language they write in.
+            Work out how their service accepts uploads: the upload URL, authentication headers, the multipart field name or a raw binary body, and where the public link appears in the JSON response.
+            Ask one short question at a time when something important is missing. If the user mentions a well-known service such as Zipline, chibisafe, copyparty, XBackBone or a Discord webhook, use what you know about its API and confirm the details.
+            ishare sends one HTTP POST per file and reads the link from the response with templates like {{url}}, {{data.link}} or {{files[0].url}}, or {{response}} when the reply is plain text.
+            Whenever you can build or improve the uploader, call updateUploaderDraft with the complete configuration, then briefly tell the user what you set up.
+            Never invent secrets. Use the values the user provides, or placeholders such as YOUR_API_KEY.
+            """
 
         private let session: LanguageModelSession
 
@@ -110,7 +115,8 @@ enum AssistantDraftReport {
 @MainActor
 final class UploaderAssistantChatModel: ObservableObject {
     @Published var messages: [AssistantMessage] = [
-        AssistantMessage(role: .assistant, text: "Hi! Tell me about the service you want to upload to, like where it runs and how you sign in, and I'll build the uploader for you.".localized()),
+        AssistantMessage(
+            role: .assistant, text: "Hi! Tell me about the service you want to upload to, like where it runs and how you sign in, and I'll build the uploader for you.".localized())
     ]
     @Published var input = ""
     @Published var draft: CustomUploader?
@@ -150,9 +156,11 @@ final class UploaderAssistantChatModel: ObservableObject {
     private func respond(to text: String) async throws -> String {
         #if canImport(FoundationModels)
             if #available(macOS 26.0, *) {
-                let conversation = (self.conversation as? AssistantConversation) ?? AssistantConversation { [weak self] spec in
-                    await MainActor.run { self?.apply(spec) ?? "" }
-                }
+                let conversation =
+                    (self.conversation as? AssistantConversation)
+                    ?? AssistantConversation { [weak self] spec in
+                        await MainActor.run { self?.apply(spec) ?? "" }
+                    }
                 self.conversation = conversation
                 return try await conversation.send(text)
             }
@@ -166,7 +174,7 @@ final class UploaderAssistantChatModel: ObservableObject {
         Task { @MainActor in
             let file = FileManager.default.temporaryDirectory.appending(path: "ishare-assistant-test.png")
             if let icon = NSImage(named: NSImage.applicationIconName)?.tiffRepresentation,
-               let png = NSBitmapImageRep(data: icon)?.representation(using: .png, properties: [:])
+                let png = NSBitmapImageRep(data: icon)?.representation(using: .png, properties: [:])
             {
                 try? png.write(to: file)
             }
@@ -184,7 +192,10 @@ final class UploaderAssistantChatModel: ObservableObject {
         messages = [
             messages[0],
             AssistantMessage(role: .user, text: "I run Zipline at share.example.com, my token is in the Authorization header"),
-            AssistantMessage(role: .assistant, text: "Got it! Zipline takes uploads at /api/upload with a file field and returns the link as files[0].url. I set up a draft for you, test it whenever you're ready."),
+            AssistantMessage(
+                role: .assistant,
+                text:
+                    "Got it! Zipline takes uploads at /api/upload with a file field and returns the link as files[0].url. I set up a draft for you, test it whenever you're ready."),
         ]
         _ = apply(ScreenshotMode.sampleAssistantSpec)
     }

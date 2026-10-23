@@ -110,11 +110,13 @@ extension UploaderEditorView {
         case .github:
             return .github(id: id, name: name, configuration: githubDraft.configuration)
         case .s3:
-            return .s3(id: id, name: name, configuration: S3Configuration(
-                endpoint: endpoint, region: region, bucket: bucket, accessKeyId: accessKeyId, secretAccessKey: secretAccessKey,
-                pathStyle: pathStyle, keyTemplate: nonEmpty(keyTemplate), acl: nonEmpty(acl), publicURL: nonEmpty(publicURL),
-                presignedExpiry: expiringLinks ? presignedExpiry : nil
-            ))
+            return .s3(
+                id: id, name: name,
+                configuration: S3Configuration(
+                    endpoint: endpoint, region: region, bucket: bucket, accessKeyId: accessKeyId, secretAccessKey: secretAccessKey,
+                    pathStyle: pathStyle, keyTemplate: nonEmpty(keyTemplate), acl: nonEmpty(acl), publicURL: nonEmpty(publicURL),
+                    presignedExpiry: expiringLinks ? presignedExpiry : nil
+                ))
         case .folder:
             return .folder(id: id, name: name, destination: folderDraft.destination)
         case .photos:

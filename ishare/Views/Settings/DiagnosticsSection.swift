@@ -64,8 +64,11 @@ struct DiagnosticsSection: View {
         } header: {
             Text("Diagnostics".localized())
         } footer: {
-            Text("macOS hands ishare crash and hang reports, which stay on this Mac. Nothing is uploaded; reporting an issue opens a prefilled GitHub issue you can review first.".localized())
-                .foregroundStyle(.secondary)
+            Text(
+                "macOS hands ishare crash and hang reports, which stay on this Mac. Nothing is uploaded; reporting an issue opens a prefilled GitHub issue you can review first."
+                    .localized()
+            )
+            .foregroundStyle(.secondary)
         }
         .onAppear { model.reload() }
     }

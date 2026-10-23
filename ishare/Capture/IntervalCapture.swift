@@ -105,7 +105,7 @@ enum IntervalGIF {
         var added = 0
         for frame in frames {
             guard let source = CGImageSourceCreateWithURL(frame as CFURL, nil),
-                  let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary)
+                let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary)
             else { continue }
             CGImageDestinationAddImage(output, image, frameProperties as CFDictionary)
             added += 1
@@ -188,10 +188,11 @@ enum IntervalCapture {
     @discardableResult
     static func start(plan: IntervalPlan = .current, makesGIF: Bool = Defaults[.intervalCaptureMakesGIF]) async -> IntervalCaptureResult? {
         guard !isRunning, ScreenshotEngine.ensurePermission() else { return nil }
-        let outcome = await RegionSelector.select(options: .init(
-            showsMagnifier: Defaults[.showMagnifier], allowsWindowMode: false,
-            hint: "Select an area, or press Return for the whole screen".localized()
-        ))
+        let outcome = await RegionSelector.select(
+            options: .init(
+                showsMagnifier: Defaults[.showMagnifier], allowsWindowMode: false,
+                hint: "Select an area, or press Return for the whole screen".localized()
+            ))
         let target: (screen: NSScreen, region: CGRect?)
         switch outcome {
         case let .region(screen, rect): target = (screen, rect)

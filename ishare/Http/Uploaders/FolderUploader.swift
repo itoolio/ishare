@@ -56,7 +56,8 @@ enum LocalFolderAccess {
 
     private static func resolve(_ data: Data, for id: UUID) -> URL? {
         var isStale = false
-        let url = (try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale))
+        let url =
+            (try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale))
             ?? (try? URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &isStale))
         guard let url else { return nil }
         if isStale {

@@ -32,8 +32,9 @@ enum AltText {
 
     static func generate(from context: SceneContext, usesModel: Bool = OnDeviceModel.isAvailable) async -> String? {
         if usesModel,
-           let response = try? await OnDeviceModel.respond(to: SceneContextPrompt.altText(for: context), instructions: SceneContextPrompt.altTextInstructions),
-           let sentence = sanitized(response) {
+            let response = try? await OnDeviceModel.respond(to: SceneContextPrompt.altText(for: context), instructions: SceneContextPrompt.altTextInstructions),
+            let sentence = sanitized(response)
+        {
             return sentence
         }
         return AltTextTemplate.sentence(for: context)
@@ -54,7 +55,8 @@ enum AltText {
     }
 
     static func markdown(alt: String, url: URL) -> String {
-        let escaped = alt
+        let escaped =
+            alt
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "[", with: "\\[")
             .replacingOccurrences(of: "]", with: "\\]")

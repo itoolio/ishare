@@ -9,41 +9,53 @@ struct KeybindSettingsView: View {
     @Default(.forceUploadModifier) var forceUploadModifier
 
     static let groups: [(String, [(String, KeyboardShortcuts.Name)])] = [
-        ("Capture", [
-            ("Capture Region:", .captureRegion),
-            ("Capture Window:", .captureWindow),
-            ("Capture Screen:", .captureScreen),
-            ("Scrolling Capture:", .captureScrolling),
-            ("Capture Last Region:", .captureLastRegion),
-            ("Capture Text:", .captureText),
-            ("Interval Capture:", .intervalCapture),
-            ("Capture and Translate:", .captureTranslate),
-        ] + (OnDeviceModel.isAvailable ? [("Capture and Ask:", .captureAsk)] : [])),
-        ("Record", [
-            ("Record Screen:", .recordScreen),
-            ("Record Region:", .recordRegion),
-            ("Record GIF:", .recordGif),
-            ("Record Region as GIF:", .recordRegionGif),
-            ("Add Recording Marker:", .addRecordingMarker),
-            ("Show or Hide Notes:", .toggleRecordingNotes),
-            ("Save Instant Replay:", .saveInstantReplay),
-            ("Draw on Screen:", .toggleRecordingDrawing),
-        ]),
-        ("Capture and Upload", [
-            ("Capture Region:", .captureRegionForceUpload),
-            ("Capture Window:", .captureWindowForceUpload),
-            ("Capture Screen:", .captureScreenForceUpload),
-            ("Record Screen:", .recordScreenForceUpload),
-            ("Record GIF:", .recordGifForceUpload),
-        ]),
-        ("Other", [
-            ("Open Main Menu:", .toggleMainMenu),
-            ("Open Command Palette:", .openCommandPalette),
-            ("Open History Window:", .openHistoryWindow),
-            ("Open Editor:", .openEditor),
-            ("Open most recent item:", .openMostRecentItem),
-            ("Upload from Pasteboard:", .uploadPasteBoardItem),
-        ]),
+        (
+            "Capture",
+            [
+                ("Capture Region:", .captureRegion),
+                ("Capture Window:", .captureWindow),
+                ("Capture Screen:", .captureScreen),
+                ("Scrolling Capture:", .captureScrolling),
+                ("Capture Last Region:", .captureLastRegion),
+                ("Capture Text:", .captureText),
+                ("Interval Capture:", .intervalCapture),
+                ("Capture and Translate:", .captureTranslate),
+            ] + (OnDeviceModel.isAvailable ? [("Capture and Ask:", .captureAsk)] : [])
+        ),
+        (
+            "Record",
+            [
+                ("Record Screen:", .recordScreen),
+                ("Record Region:", .recordRegion),
+                ("Record GIF:", .recordGif),
+                ("Record Region as GIF:", .recordRegionGif),
+                ("Add Recording Marker:", .addRecordingMarker),
+                ("Show or Hide Notes:", .toggleRecordingNotes),
+                ("Save Instant Replay:", .saveInstantReplay),
+                ("Draw on Screen:", .toggleRecordingDrawing),
+            ]
+        ),
+        (
+            "Capture and Upload",
+            [
+                ("Capture Region:", .captureRegionForceUpload),
+                ("Capture Window:", .captureWindowForceUpload),
+                ("Capture Screen:", .captureScreenForceUpload),
+                ("Record Screen:", .recordScreenForceUpload),
+                ("Record GIF:", .recordGifForceUpload),
+            ]
+        ),
+        (
+            "Other",
+            [
+                ("Open Main Menu:", .toggleMainMenu),
+                ("Open Command Palette:", .openCommandPalette),
+                ("Open History Window:", .openHistoryWindow),
+                ("Open Editor:", .openEditor),
+                ("Open most recent item:", .openMostRecentItem),
+                ("Upload from Pasteboard:", .uploadPasteBoardItem),
+            ]
+        ),
     ]
 
     var body: some View {
@@ -71,9 +83,11 @@ struct KeybindSettingsView: View {
 
 extension KeybindSettingsView: SettingsSearchable {
     static let searchEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry("Keybinds", pane: .keybinds, keywords: [
-            "Keyboard", "Shortcut", "Hotkey", "Reset All Keybinds", "Force upload", "Modifier",
-        ]),
+        SettingsSearchEntry(
+            "Keybinds", pane: .keybinds,
+            keywords: [
+                "Keyboard", "Shortcut", "Hotkey", "Reset All Keybinds", "Force upload", "Modifier",
+            ]),
         shortcutsEntry,
     ]
 

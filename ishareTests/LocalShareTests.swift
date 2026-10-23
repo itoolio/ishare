@@ -70,9 +70,10 @@ struct LocalNetworkAddressTests {
 
     @Test func buildsURLsWithBracketedIPv6Hosts() {
         let urls = LocalNetworkAddress.urls(port: 5123, path: "/token/a.png", interfaces: interfaces)
-        #expect(urls.map(\.absoluteString) == [
-            "http://192.168.1.20:5123/token/a.png", "http://10.0.0.7:5123/token/a.png", "http://[fd00::5]:5123/token/a.png",
-        ])
+        #expect(
+            urls.map(\.absoluteString) == [
+                "http://192.168.1.20:5123/token/a.png", "http://10.0.0.7:5123/token/a.png", "http://[fd00::5]:5123/token/a.png",
+            ])
     }
 
     @Test func recognizesPrivateHosts() {

@@ -61,9 +61,12 @@ struct RemotePathSection: View {
             TextField("Path template".localized(), text: $pathTemplate, prompt: Text(RemotePath.defaultTemplate))
             Toggle("Create missing folders".localized(), isOn: $createDirectories)
             TextField("Public URL".localized(), text: $publicURL, prompt: Text("https://files.example.com/{{path}}"))
-            Text("Path placeholders: {{filename}}, {{name}}, {{ext}}, {{uuid}}, {{random}}, {{timestamp}}, {{date}}, {{year}}, {{month}}, {{day}}. Public URL placeholders: {{path}}, {{filename}}, {{directory}}.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "Path placeholders: {{filename}}, {{name}}, {{ext}}, {{uuid}}, {{random}}, {{timestamp}}, {{date}}, {{year}}, {{month}}, {{day}}. Public URL placeholders: {{path}}, {{filename}}, {{directory}}."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
             if publicURLRequired, publicURL.trimmingCharacters(in: .whitespaces).isEmpty {
                 Text("Without a public URL the upload is saved to history but no link is copied.".localized())
                     .font(.footnote)
@@ -178,9 +181,12 @@ struct SFTPSections: View {
                     .foregroundStyle(.orange)
                     .font(.footnote)
             }
-            Text("ishare remembers the server's host key the first time it connects and refuses to upload if the key changes. Compare the fingerprint with ssh-keygen -lf on the server.".localized())
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "ishare remembers the server's host key the first time it connects and refuses to upload if the key changes. Compare the fingerprint with ssh-keygen -lf on the server."
+                    .localized()
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
         Section("Remote Folder".localized()) {
             TextField("Folder".localized(), text: $draft.directory, prompt: Text("/var/www/uploads"))

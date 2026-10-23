@@ -78,7 +78,7 @@ enum ScreenshotMode {
 
     @MainActor static func fixtureCapture() -> CapturedImage? {
         guard usesFixtureCapture,
-              let image = sampleImage(size: fixtureCaptureSize, hue: 0.45, title: "UI test capture")
+            let image = sampleImage(size: fixtureCaptureSize, hue: 0.45, title: "UI test capture")
         else { return nil }
         return CapturedImage(image: image, suffix: "fixture", pointScale: 1, source: CaptureSource(appName: "ishare UI tests"))
     }
@@ -127,11 +127,13 @@ enum ScreenshotMode {
             name: "zipline", requestURL: "https://share.example.com/api/upload", headers: ["Authorization": "YOUR_API_KEY"],
             formData: nil, fileFormName: "file", responseURL: "{{files[0].url}}"
         )
-        let r2 = CustomUploader.s3(name: "cloudflare r2", configuration: S3Configuration(
-            endpoint: "https://account.r2.cloudflarestorage.com", region: "auto", bucket: "screenshots",
-            accessKeyId: "ACCESS_KEY", secretAccessKey: "SECRET", keyTemplate: "{{date}}/{{uuid}}.{{ext}}",
-            publicURL: "https://img.example.com/{{key}}"
-        ))
+        let r2 = CustomUploader.s3(
+            name: "cloudflare r2",
+            configuration: S3Configuration(
+                endpoint: "https://account.r2.cloudflarestorage.com", region: "auto", bucket: "screenshots",
+                accessKeyId: "ACCESS_KEY", secretAccessKey: "SECRET", keyTemplate: "{{date}}/{{uuid}}.{{ext}}",
+                publicURL: "https://img.example.com/{{key}}"
+            ))
         let chibisafe = CustomUploader(
             name: "chibisafe", requestURL: "https://chibisafe.example.com/api/upload", headers: ["x-api-key": "API_KEY"],
             formData: nil, fileFormName: "file[]", responseURL: "{{url}}", deletionURL: "{{deleteUrl}}", deleteRequestType: .delete
@@ -198,10 +200,12 @@ enum ScreenshotMode {
     nonisolated static func sampleImage(size: CGSize, hue: CGFloat, title: String) -> CGImage? {
         let width = Int(size.width)
         let height = Int(size.height)
-        guard let context = CGContext(
-            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
         let top = NSColor(hue: hue, saturation: 0.55, brightness: 0.95, alpha: 1).cgColor
         let bottom = NSColor(hue: (hue + 0.12).truncatingRemainder(dividingBy: 1), saturation: 0.7, brightness: 0.7, alpha: 1).cgColor
         let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: [top, bottom] as CFArray, locations: [0, 1])!
@@ -259,7 +263,9 @@ enum ScreenshotMode {
     @MainActor private static func presentForTesting(_ scene: ScreenshotScene) {
         let hostingView = NSHostingView(rootView: UITestCanvas(scene: scene, document: testDocument(for: scene)).appModel())
         hostingView.sizingOptions = [.minSize]
-        let window = NSWindow(contentRect: CGRect(origin: .zero, size: testWindowSize(for: scene, fitting: hostingView.fittingSize)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: CGRect(origin: .zero, size: testWindowSize(for: scene, fitting: hostingView.fittingSize)), styleMask: [.titled, .closable, .resizable], backing: .buffered,
+            defer: false)
         window.identifier = NSUserInterfaceItemIdentifier(testWindowIdentifier)
         window.title = testWindowIdentifier
         window.setAccessibilityIdentifier(testWindowIdentifier)

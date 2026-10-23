@@ -269,7 +269,8 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
         imageOptimization = try container.decodeDynamicIfPresent(ImageOptimizationOverride.self, forKey: .key(named: "imageoptimization"))
         linkOptions = try container.decodeDynamicIfPresent(LinkOptionsSpec.self, forKey: .key(named: "linkoptions"))
         let declaredKind = try container.decodeDynamicIfPresent(UploaderKind.self, forKey: .key(named: "uploadertype"))
-        uploaderType = declaredKind ?? Self.inferredKind(s3: s3, folder: folder, photos: photos)
+        uploaderType =
+            declaredKind ?? Self.inferredKind(s3: s3, folder: folder, photos: photos)
             ?? Self.inferredRemoteKind(webdav: webdav, sftp: sftp, github: github)
         let needsRequest = uploaderType == nil || uploaderType == .custom
         if !needsRequest {

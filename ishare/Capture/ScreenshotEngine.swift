@@ -129,7 +129,7 @@ enum ScreenshotEngine {
         return content.windows
             .filter { window in
                 guard window.isOnScreen, window.windowLayer == 0, window.frame.width >= 40, window.frame.height >= 40,
-                      let app = window.owningApplication
+                    let app = window.owningApplication
                 else { return false }
                 return app.bundleIdentifier != ownBundleID && !ignored.contains(app.bundleIdentifier)
             }

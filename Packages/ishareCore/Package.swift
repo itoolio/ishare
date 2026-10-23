@@ -5,10 +5,10 @@ let package = Package(
     name: "ishareCore",
     platforms: [.macOS(.v15)],
     products: [
-        .library(name: "ishareCore", targets: ["ishareCore"]),
+        .library(name: "ishareCore", targets: ["ishareCore"])
     ],
     dependencies: [
-        .package(url: "https://github.com/SwiftyJSON/SwiftyJSON", from: "5.0.2"),
+        .package(url: "https://github.com/SwiftyJSON/SwiftyJSON", from: "5.0.2")
     ],
     targets: [
         .target(

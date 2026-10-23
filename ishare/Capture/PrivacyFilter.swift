@@ -35,11 +35,11 @@ enum PrivacyRedaction {
             (rect: imageRect(forGlobal: window.frame, captureOrigin: captureOrigin, scale: scale).intersection(bounds), window.isSensitive)
         }
         guard mapped.contains(where: { $0.1 && !$0.rect.isNull && !$0.rect.isEmpty }),
-              let context = CGContext(
-                  data: nil, width: Int(pixelSize.width), height: Int(pixelSize.height),
-                  bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceGray(),
-                  bitmapInfo: CGImageAlphaInfo.none.rawValue
-              )
+            let context = CGContext(
+                data: nil, width: Int(pixelSize.width), height: Int(pixelSize.height),
+                bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceGray(),
+                bitmapInfo: CGImageAlphaInfo.none.rawValue
+            )
         else { return nil }
         context.setFillColor(gray: 0, alpha: 1)
         context.fill(bounds)
@@ -86,7 +86,7 @@ enum PrivacyFilter {
         return content.windows
             .compactMap { window -> (SCWindow, Bool)? in
                 guard window.isOnScreen, window.windowLayer >= 0, !window.frame.isEmpty,
-                      let bundleID = window.owningApplication?.bundleIdentifier, !hidden.contains(bundleID)
+                    let bundleID = window.owningApplication?.bundleIdentifier, !hidden.contains(bundleID)
                 else { return nil }
                 let isSensitive = sensitive.contains(bundleID)
                 guard isSensitive || window.windowLayer == 0 else { return nil }

@@ -9,10 +9,12 @@ final class UploadFlowTests: AppUITestCase {
         server = StubUploadServer()
         try server.start()
         NSPasteboard.general.clearContents()
-        launch(scene: "menu", extraArguments: [
-            "-ishareUITestCaptureSource", "fixture",
-            "-ishareUITestUploadURL", server.uploadURL,
-        ])
+        launch(
+            scene: "menu",
+            extraArguments: [
+                "-ishareUITestCaptureSource", "fixture",
+                "-ishareUITestUploadURL", server.uploadURL,
+            ])
     }
 
     override func tearDown() async throws {

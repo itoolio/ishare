@@ -135,7 +135,9 @@ struct UploadFileIntent: AppIntent {
 
 struct CaptureIntent: AppIntent {
     static var title: LocalizedStringResource { "Capture with ishare" }
-    static var description: IntentDescription { IntentDescription("Takes a screenshot and returns the image. ishare runs its usual post-capture actions, such as copying and uploading.") }
+    static var description: IntentDescription {
+        IntentDescription("Takes a screenshot and returns the image. ishare runs its usual post-capture actions, such as copying and uploading.")
+    }
 
     @Parameter(title: "Type", default: .region)
     var type: CaptureKindEnum
@@ -298,6 +300,7 @@ struct ishareShortcuts: AppShortcutsProvider {
             shortTitle: "Capture and Translate",
             systemImageName: "translate"
         )
-        AppShortcut(intent: CaptureWithPresetIntent(), phrases: ["Capture with an \(.applicationName) preset"], shortTitle: "Capture with Preset", systemImageName: "square.stack.3d.up")
+        AppShortcut(
+            intent: CaptureWithPresetIntent(), phrases: ["Capture with an \(.applicationName) preset"], shortTitle: "Capture with Preset", systemImageName: "square.stack.3d.up")
     }
 }

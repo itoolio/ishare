@@ -4,11 +4,12 @@ import Testing
 
 struct LinkOptionsDecodingTests {
     @Test func decodesTheLinkOptionsBlockCaseInsensitively() throws {
-        let json = Data("""
-        {"name": "zip", "requestURL": "https://zip.example.com/api/upload", "responseURL": "{{files[0].url}}",
-         "LinkOptions": {"Password": {"Field": "x-password", "Location": "Header"},
-                         "expiry": {"field": "expires", "location": "query", "format": "ISO8601", "template": "date={{value}}"}}}
-        """.utf8)
+        let json = Data(
+            """
+            {"name": "zip", "requestURL": "https://zip.example.com/api/upload", "responseURL": "{{files[0].url}}",
+             "LinkOptions": {"Password": {"Field": "x-password", "Location": "Header"},
+                             "expiry": {"field": "expires", "location": "query", "format": "ISO8601", "template": "date={{value}}"}}}
+            """.utf8)
         let uploader = try CustomUploader.fromJSON(json)
         let options = try #require(uploader.linkOptions)
         #expect(options.password == LinkPasswordField(field: "x-password", location: .header))
@@ -25,7 +26,8 @@ struct LinkOptionsDecodingTests {
 
     @Test(arguments: [("formdata", LinkOptionLocation.form), ("headers", .header), ("querystring", .query)])
     func acceptsLocationAliases(alias: String, location: LinkOptionLocation) throws {
-        let json = Data(#"{"name": "a", "requestURL": "https://a.example.com", "responseURL": "{{url}}", "linkOptions": {"password": {"field": "p", "location": "\#(alias)"}}}"#.utf8)
+        let json = Data(
+            #"{"name": "a", "requestURL": "https://a.example.com", "responseURL": "{{url}}", "linkOptions": {"password": {"field": "p", "location": "\#(alias)"}}}"#.utf8)
         #expect(try CustomUploader.fromJSON(json).linkOptions?.password?.location == location)
     }
 

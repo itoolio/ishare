@@ -115,7 +115,7 @@ public enum WebDAVRequestBuilder {
 
     public static func headers(for configuration: WebDAVConfiguration) -> [String: String] {
         guard configuration.authenticationMethod == .basic,
-              let authorization = authorizationHeader(username: configuration.username, password: configuration.password)
+            let authorization = authorizationHeader(username: configuration.username, password: configuration.password)
         else { return [:] }
         return ["Authorization": authorization]
     }

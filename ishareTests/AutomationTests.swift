@@ -329,7 +329,9 @@ struct CLIProtocolTests {
         #expect(uploads?.first?["link"] as? String == "https://x/a.png")
 
         var uploaders = CLIResponse(id: UUID(), success: true)
-        uploaders.payload.uploaders = [CLIUploaderInfo(id: "imgur", name: "Imgur", kind: "imgur", selected: true), CLIUploaderInfo(id: "2", name: "S3", kind: "s3", selected: false)]
+        uploaders.payload.uploaders = [
+            CLIUploaderInfo(id: "imgur", name: "Imgur", kind: "imgur", selected: true), CLIUploaderInfo(id: "2", name: "S3", kind: "s3", selected: false),
+        ]
         #expect(CLIOutput.text(for: uploaders, command: .listUploaders) == "* Imgur (imgur)\n  S3 (s3)")
         #expect(CLIOutput.exitCode(for: .failure(UUID(), "x")) == 1)
     }
@@ -379,11 +381,13 @@ struct CommandLineEndToEndTests {
         let server = CommandLineServer(mailbox: mailbox, actions: actions)
         server.postsNotifications = false
         let router = URLSchemeRouter(actions: actions, commandLine: server)
-        let client = CLIClient(mailbox: mailbox, launch: { url in
-            Task { @MainActor in
-                await router.handle(url)
-            }
-        })
+        let client = CLIClient(
+            mailbox: mailbox,
+            launch: { url in
+                Task { @MainActor in
+                    await router.handle(url)
+                }
+            })
         return (client, server, files)
     }
 
@@ -454,7 +458,9 @@ struct CommandLineEndToEndTests {
 struct CommandLineToolInstallerTests {
     @Test func quotesPathsForTheShellAndAppleScript() {
         let tool = URL(fileURLWithPath: "/Applications/ishare's copy.app/Contents/Helpers/ishare")
-        #expect(CommandLineToolInstaller.shellCommand(tool: tool) == "sudo mkdir -p '/usr/local/bin' && sudo ln -sf '/Applications/ishare'\\''s copy.app/Contents/Helpers/ishare' '/usr/local/bin/ishare'")
+        #expect(
+            CommandLineToolInstaller.shellCommand(tool: tool)
+                == "sudo mkdir -p '/usr/local/bin' && sudo ln -sf '/Applications/ishare'\\''s copy.app/Contents/Helpers/ishare' '/usr/local/bin/ishare'")
         #expect(CommandLineToolInstaller.appleScriptQuoted("a\"b\\c") == "\"a\\\"b\\\\c\"")
         #expect(CommandLineToolInstaller.administratorScript(tool: URL(fileURLWithPath: "/A/ishare")).hasSuffix("with administrator privileges"))
     }

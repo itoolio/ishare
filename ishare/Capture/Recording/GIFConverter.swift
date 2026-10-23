@@ -145,10 +145,13 @@ enum GIFConverter {
             try Task.checkCancellation()
             guard let image = (try? result.image) ?? lastImage else { continue }
             let delay = Double(delays[min(frameIndex, delays.count - 1)]) / 100
-            let frameProperties = [kCGImagePropertyGIFDictionary: [
-                kCGImagePropertyGIFDelayTime: delay,
-                kCGImagePropertyGIFUnclampedDelayTime: delay,
-            ]] as CFDictionary
+            let frameProperties =
+                [
+                    kCGImagePropertyGIFDictionary: [
+                        kCGImagePropertyGIFDelayTime: delay,
+                        kCGImagePropertyGIFUnclampedDelayTime: delay,
+                    ]
+                ] as CFDictionary
             CGImageDestinationAddImage(destination, image, frameProperties)
             lastImage = image
             frameIndex += 1

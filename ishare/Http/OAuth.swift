@@ -72,13 +72,15 @@ enum OAuthRequests {
     }
 
     static func tokenRequest(provider: CloudProvider, clientID: String, code: String, verifier: String) -> URLRequest {
-        formRequest(provider.tokenEndpoint, fields: [
-            ("grant_type", "authorization_code"),
-            ("code", code),
-            ("client_id", clientID),
-            ("redirect_uri", provider.redirectURI(clientID: clientID)),
-            ("code_verifier", verifier),
-        ])
+        formRequest(
+            provider.tokenEndpoint,
+            fields: [
+                ("grant_type", "authorization_code"),
+                ("code", code),
+                ("client_id", clientID),
+                ("redirect_uri", provider.redirectURI(clientID: clientID)),
+                ("code_verifier", verifier),
+            ])
     }
 
     static func refreshRequest(provider: CloudProvider, clientID: String, refreshToken: String) -> URLRequest {
