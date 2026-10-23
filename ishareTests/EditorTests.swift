@@ -127,7 +127,7 @@ struct EditorToolTests {
         document.add(Annotation(shape: .rectangle(CGRect(x: 10, y: 10, width: 20, height: 20)), color: .blue, lineWidth: 2))
         document.apply(.rotateRight)
         #expect(document.imageSize == CGSize(width: 100, height: 200))
-        #expect(document.annotations.isEmpty)
+        #expect(document.annotations.first?.shape == .rectangle(CGRect(x: 70, y: 10, width: 20, height: 20)))
         document.apply(.flipHorizontal)
         #expect(document.imageSize == CGSize(width: 100, height: 200))
         document.undo()
