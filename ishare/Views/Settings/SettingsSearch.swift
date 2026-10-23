@@ -26,6 +26,11 @@ enum SettingsSearchIndex {
             "Clipboard", "Copy image to clipboard instead of URL", "Toast", "Toast Timeout", "Notification",
         ]),
         SettingsSearchEntry(pane: .general, keywords: [
+            "Menu", "Density", "Compact", "Comfortable", "Sections", "Restore Default Layout",
+            "Appearance", "Menu theme", "Dark", "Light", "High contrast menu", "Contrast", "Menu preview",
+            "Position", "Corner", "Screen", "Show results as", "Notification Center",
+        ]),
+        SettingsSearchEntry(pane: .general, keywords: [
             "Sounds", "Sound", "Capture sound", "Upload complete sound", "Mute", "Beep",
         ]),
         SettingsSearchEntry(pane: .general, keywords: [

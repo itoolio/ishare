@@ -28,6 +28,7 @@ enum CaptureSession {
         let captured = await ImageCaptureFlow.capture(type: type, display: display)
         isCapturingImage = false
         guard let captured else { return }
+        ToastPlacement.capturedDisplayID = captured.geometry?.displayID
         var options = options
         if wantsDestinationChoice, let target = DestinationChooser.choose() {
             options.destinations = [target]
@@ -122,6 +123,7 @@ enum CaptureSession {
 
     static func finish(fileURL originalURL: URL, kind: PostCapture.Kind, options: CaptureOptions = .standard) async {
         var fileURL = originalURL
+        var uploadToast: (model: ToastModel, presentation: Task<Void, Never>)?
         let saveToDisk = AfterCaptureStep.saveToDisk.isEnabled
         for step in AfterCaptureStep.allCases where step.runs(for: kind, options: options) {
             switch step {
@@ -144,11 +146,18 @@ enum CaptureSession {
                     NSSharingService(named: service)?.perform(withItems: [fileURL])
                 }
             case .upload:
+                uploadToast = beginUploadToast(fileURL: fileURL)
                 await upload(fileURL, kind: kind, options: options, keepsLocalFile: saveToDisk)
+                uploadToast?.model.resolveUpload()
             }
         }
 
-        await showToast(fileURL: fileURL)
+        if let uploadToast {
+            await uploadToast.presentation.value
+        } else {
+            await showToast(fileURL: fileURL)
+        }
+        ToastPlacement.capturedDisplayID = nil
         SoundPlayer.play(.capture)
         if !saveToDisk {
             try? FileManager.default.removeItem(at: fileURL)

@@ -62,11 +62,80 @@ enum HistoryActions {
         }
     }
 
-    static func deleteFromServer(_ item: HistoryItem) async {
+    static func undoUpload(_ item: HistoryItem) async {
+        await deleteFromServer(item, announcement: "Upload Undone".localized())
+    }
+
+    static func copyLinks(_ items: [HistoryItem]) {
+        let links = HistorySelection.links(for: items)
+        guard !links.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(links.joined(separator: "\n"), forType: .string)
+        BezelNotification.show(messageText: links.count == 1 ? "Copied URL".localized() : String(format: "Copied %d Links".localized(), links.count), icon: ToastIcon)
+    }
+
+    static func removeFromHistory(_ items: [HistoryItem]) {
+        guard !items.isEmpty else { return }
+        let removed = Set(items)
+        Defaults[.uploadHistory].removeAll { removed.contains($0) }
+        BezelNotification.show(messageText: "Removed from History".localized(), icon: ToastIcon)
+    }
+
+    static func confirmDeleteFromServer(_ items: [HistoryItem]) {
+        let deletable = items.filter(\.canDeleteFromServer)
+        guard !deletable.isEmpty else { return }
+        guard deletable.count > 1 else {
+            confirmDeleteFromServer(deletable[0])
+            return
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = String(format: "Delete %d Uploads from Server?".localized(), deletable.count)
+        var details = "They will be deleted from the server and removed from your history. This can’t be undone.".localized()
+        if deletable.count < items.count {
+            details += "\n\n" + String(format: "%d selected uploads can’t be deleted from the server and are kept.".localized(), items.count - deletable.count)
+        }
+        alert.informativeText = details
+        alert.addButton(withTitle: "Delete".localized())
+        alert.addButton(withTitle: "Cancel".localized())
+        alert.buttons.first?.hasDestructiveAction = true
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task { @MainActor in
+            await deleteFromServer(deletable)
+        }
+    }
+
+    static func deleteFromServer(_ items: [HistoryItem]) async {
+        var failures: [String] = []
+        var deleted = 0
+        for item in items {
+            do {
+                try await UploadCoordinator.delete(item)
+                removeFromUploadHistory(item)
+                deleted += 1
+            } catch {
+                Log.upload.error("Deleting from the server failed: \(error.localizedDescription, privacy: .public)")
+                failures.append(error.localizedDescription)
+            }
+        }
+        if failures.isEmpty {
+            BezelNotification.show(messageText: String(format: "Deleted %d Uploads from Server".localized(), deleted), icon: ToastIcon)
+        } else {
+            ToastController.showMessage(
+                title: String(format: "Couldn’t delete %d uploads".localized(), failures.count),
+                message: failures.first ?? "",
+                symbol: "exclamationmark.triangle.fill",
+                tint: .orange
+            )
+        }
+    }
+
+    static func deleteFromServer(_ item: HistoryItem, announcement: String = "Deleted from Server".localized()) async {
         do {
             try await UploadCoordinator.delete(item)
             removeFromUploadHistory(item)
-            BezelNotification.show(messageText: "Deleted from Server".localized(), icon: ToastIcon)
+            BezelNotification.show(messageText: announcement, icon: ToastIcon)
         } catch {
             Log.upload.error("Deleting from the server failed: \(error.localizedDescription, privacy: .public)")
             ToastController.showMessage(
@@ -96,6 +165,7 @@ enum HistoryActions {
 struct HistoryItemMenuItems: View {
     let item: HistoryItem
     var showsFinder = true
+    var shareAnchor: ViewAnchor?
 
     var body: some View {
         Button("Copy URL".localized()) { HistoryActions.copyURL(item) }
@@ -107,6 +177,9 @@ struct HistoryItemMenuItems: View {
         }
         if showsFinder, item.existingLocalFileURL != nil {
             Button("Show in Finder".localized()) { HistoryActions.revealInFinder(item) }
+        }
+        if let shareAnchor {
+            Button("Share…".localized()) { SharePicker.show(SharePicker.items(for: item), from: shareAnchor) }
         }
         Divider()
         if item.canDeleteFromServer {

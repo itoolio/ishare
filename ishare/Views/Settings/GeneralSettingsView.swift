@@ -40,6 +40,8 @@ struct GeneralSettingsView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
             }
+            MenuLayoutSettingsSection()
+            AppearanceSettingsSection()
             Section("Clipboard".localized()) {
                 Toggle("Copy image to clipboard instead of URL".localized(), isOn: $copyImageToClipboard)
             }
@@ -48,6 +50,8 @@ struct GeneralSettingsView: View {
                     Slider(value: $toastTimeout, in: 1 ... 10, step: 1)
                         .frame(width: 220)
                 }
+                ToastPlacementSettings()
+                ResultPresentationSettings()
             }
             SoundSettingsSection()
             HistorySettingsSection()

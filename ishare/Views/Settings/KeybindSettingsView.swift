@@ -31,6 +31,7 @@ struct KeybindSettingsView: View {
         ]),
         ("Other", [
             ("Open Main Menu:", .toggleMainMenu),
+            ("Open Command Palette:", .openCommandPalette),
             ("Open History Window:", .openHistoryWindow),
             ("Open Editor:", .openEditor),
             ("Open most recent item:", .openMostRecentItem),
