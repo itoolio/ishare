@@ -43,13 +43,13 @@ brew install --cask ishare
 - **Capture**: regions with a pixel magnifier, coordinates, colors and a measuring tool, windows with or without shadows, whole displays, your last region and scrolling pages, all through ScreenCaptureKit. Optional gradient backgrounds for window captures, privacy blur for chosen apps, text recognition, QR links, self-timer, interval capture and per-app profiles.
 - **Record**: displays, windows or a region you draw, as video or GIF, with a webcam bubble, click and keystroke overlays, system audio and microphone meters, trimming, chapter markers, on-device captions and exports to MP4, MOV, GIF or audio.
 - **Annotate**: arrows in several styles, lines, shapes, highlights, pen, marker, text, speech balloons, numbered steps, emoji and symbol stamps, magnifier, spotlight, blur, pixelate, smart eraser, crop with handles and aspect presets, rotate, flip, zoom and pan, a layers sidebar and templates. Done runs your after-capture actions.
-- **Upload**: Imgur, custom HTTP uploaders, ShareX `.sxcu` import and S3-compatible storage (AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2, MinIO) with expiring links and Keychain-stored secrets. Upload to several destinations, pick one per capture, upload text snippets, watch a folder, retry failed uploads, shorten links and redact sensitive text. Upload presets get their own shortcuts. An Apple Intelligence assistant builds uploaders from a conversation.
+- **Upload**: Imgur, custom HTTP uploaders with optional password-protected and expiring links, ShareX `.sxcu` import, S3-compatible storage (AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2, MinIO) with expiring links and Keychain-stored secrets, and local destinations: a folder, iCloud Drive or a Photos album. Upload to several destinations, pick one per capture, upload text snippets, watch a folder, retry failed uploads, shorten links and redact sensitive text. Upload presets get their own shortcuts. An Apple Intelligence assistant builds uploaders from a conversation.
 - **Automate**: global keyboard shortcuts, Shortcuts actions, a share menu extension, "Upload with ishare" in Finder and drag and drop onto the menu bar icon.
 - **Everything else**: a customizable, keyboard-friendly menu with a ⌘K command palette and previews, a Recent Uploads widget, searchable upload history with server-side deletion, settings search and backup, sound options, a welcome guide, AirDrop, Photos, Messages and Mail sharing, 11 languages, and Liquid Glass on macOS 26.
 
 ## Custom uploaders
 
-ishare imports `.iscu` files: JSON documents that describe an HTTP or S3 uploader. The full specification is on the [website](https://ishare.itoolio.dev/docs/iscu/), and ready-made uploaders for chibisafe, copyparty, Discord webhooks, lumen, Zipline and S3 are in [examples](examples).
+ishare imports `.iscu` files: JSON documents that describe an HTTP or S3 uploader, or a local destination such as a folder, iCloud Drive or a Photos album. HTTP uploaders can declare `linkOptions` so you can protect each link with a password or let it expire. The full specification is on the [website](https://ishare.itoolio.dev/docs/iscu/), and ready-made uploaders for chibisafe, copyparty, Discord webhooks, lumen, Zipline (also with password and expiry headers), S3, a folder and Photos are in [examples](examples).
 
 ## Development
 
@@ -63,6 +63,7 @@ open ishare.xcodeproj
 
 - The `ishare` scheme builds the sandboxed App Store app, and the `GitHub` scheme builds the direct download app with Sparkle and runs the unit tests.
 - The `UITests` scheme runs the menu and editor UI tests against a deterministic test mode of the app.
+- The S3 integration tests in `ishareTests/S3IntegrationTests.swift` run only when `ISHARE_S3_ENDPOINT` is set. Start a local MinIO server (`brew install minio && MINIO_DOMAIN=s3.local minio server /tmp/minio`) and run `TEST_RUNNER_ISHARE_S3_ENDPOINT=http://127.0.0.1:9000 xcodebuild test -scheme GitHub -only-testing:ishareTests/NetworkSuite`; set `TEST_RUNNER_ISHARE_S3_VIRTUAL_HOST_ENDPOINT=http://s3.local:9000` (with `s3.local` and the bucket subdomains in `/etc/hosts`; App Transport Security allows plain HTTP to `.local` hosts) to cover virtual-hosted URLs. The `s3-integration` CI job does this on every pull request.
 - Release and maintenance tasks live in one Go CLI, `go run ./tools/cmd/ishare-tools <command>`:
   - `set-version <version>` writes the marketing version and build number to `Config.xcconfig`;
   - `release-notes [file]` turns release markdown on stdin into App Store release notes, merging several releases into one set of notes;

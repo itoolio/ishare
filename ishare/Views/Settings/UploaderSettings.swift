@@ -34,6 +34,10 @@ struct UploaderSettingsView: View {
                     Menu {
                         Button("Custom HTTP uploader".localized()) { editor = .new(.custom) }
                         Button("S3-compatible storage".localized()) { editor = .new(.s3) }
+                        Divider()
+                        Button("Folder".localized()) { editor = .new(.folder) }
+                        Button("iCloud Drive folder".localized()) { editor = .iCloudDrive }
+                        Button("Photos".localized()) { editor = .new(.photos) }
                     } label: {
                         Label("Create".localized(), systemImage: "plus")
                     }
@@ -124,10 +128,10 @@ struct UploaderSettingsView: View {
 
     private func row(for uploader: CustomUploader) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: uploader.kind == .s3 ? "externaldrive.connected.to.line.below" : "server.rack")
+            Image(systemName: uploader.kind.symbolName)
                 .foregroundStyle(.white)
                 .frame(width: 26, height: 26)
-                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill((uploader.kind == .s3 ? Color.orange : Color.teal).gradient))
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(color(for: uploader.kind).gradient))
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(uploader.name)
@@ -149,7 +153,9 @@ struct UploaderSettingsView: View {
             Spacer()
             Group {
                 iconButton("checkmark.circle", help: "Use") { activate(uploader) }
-                iconButton("paperplane", help: "Test Uploader") { testedUploader = uploader }
+                if uploader.kind != .photos {
+                    iconButton("paperplane", help: "Test Uploader") { testedUploader = uploader }
+                }
                 iconButton("pencil", help: "Edit Uploader") { editor = .edit(uploader) }
                 iconButton("square.and.arrow.up", help: "Export Uploader") { export(uploader) }
                 iconButton("trash", help: "Delete Uploader") { delete(uploader) }
@@ -162,10 +168,27 @@ struct UploaderSettingsView: View {
     }
 
     private func subtitle(for uploader: CustomUploader) -> String {
-        if let s3 = uploader.s3, uploader.kind == .s3 {
+        switch uploader.kind {
+        case .s3:
+            guard let s3 = uploader.s3 else { return "" }
             return "\(s3.bucket) · \(s3.endpointURL?.host() ?? s3.endpoint)"
+        case .folder:
+            return ((uploader.folder?.path ?? "") as NSString).abbreviatingWithTildeInPath
+        case .photos:
+            let name = uploader.photos?.albumName ?? ""
+            return name.isEmpty ? "Photos library".localized() : name
+        case .custom:
+            return uploader.requestURL
         }
-        return uploader.requestURL
+    }
+
+    private func color(for kind: UploaderKind) -> Color {
+        switch kind {
+        case .custom: .teal
+        case .s3: .orange
+        case .folder: .blue
+        case .photos: .pink
+        }
     }
 
     private func iconButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
@@ -189,6 +212,7 @@ struct UploaderSettingsView: View {
     }
 
     private func delete(_ uploader: CustomUploader) {
+        forgetLocalState(of: uploader.id)
         UploaderStore.delete(uploader)
         Defaults[.additionalUploadDestinations].removeAll { $0 == .custom(uploader.id) }
         if uploader.id == activeCustomUploader {
@@ -198,7 +222,13 @@ struct UploaderSettingsView: View {
         }
     }
 
+    private func forgetLocalState(of id: UUID) {
+        LinkOptionsResolver.forget(id)
+        LocalFolderAccess.setBookmark(nil, for: id)
+    }
+
     private func clearAllUploaders() {
+        CustomUploader.allCases.forEach { forgetLocalState(of: $0.id) }
         UploaderStore.deleteAll()
         Defaults[.additionalUploadDestinations].removeAll { $0 != .builtIn(.IMGUR) }
         activeCustomUploader = nil
@@ -231,11 +261,13 @@ struct UploaderSettingsView: View {
 
 enum UploaderEditorTarget: Identifiable {
     case new(UploaderKind)
+    case iCloudDrive
     case edit(CustomUploader)
 
     var id: String {
         switch self {
         case let .new(kind): "new-\(kind.rawValue)"
+        case .iCloudDrive: "new-icloud-drive"
         case let .edit(uploader): uploader.id.uuidString
         }
     }
@@ -270,6 +302,12 @@ struct UploaderEditorView: View {
     @State private var expiringLinks = false
     @State private var presignedExpiry = 86400
     @State private var testedUploader: CustomUploader?
+    @State private var linkDraft = LinkOptionsDraft()
+    @State private var linkPreferences = LinkOptionPreferences()
+    @State private var defaultLinkPassword = ""
+    @State private var folderDraft = FolderDraft()
+    @State private var photosDraft = PhotosDraft()
+    @State private var suggestsICloudDrive = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -278,14 +316,18 @@ struct UploaderEditorView: View {
                     TextField("Name".localized(), text: $name)
                         .accessibilityIdentifier("uploaderEditor.name")
                     Picker("Type".localized(), selection: $kind) {
-                        Text("Custom HTTP uploader".localized()).tag(UploaderKind.custom)
-                        Text("S3-compatible storage".localized()).tag(UploaderKind.s3)
+                        ForEach(UploaderKind.allCases, id: \.self) { Text($0.titleKey.localized()).tag($0) }
                     }
                 }
-                if kind == .custom {
+                switch kind {
+                case .custom:
                     customSections
-                } else {
+                case .s3:
                     s3Sections
+                case .folder:
+                    FolderDestinationSection(draft: $folderDraft, suggestsICloudDrive: suggestsICloudDrive)
+                case .photos:
+                    PhotosDestinationSection(draft: $photosDraft)
                 }
                 if !issues.isEmpty {
                     Section {
@@ -305,7 +347,7 @@ struct UploaderEditorView: View {
                 Spacer()
                 Button("Test Upload".localized()) { testedUploader = build() }
                     .disabled(!issues.isEmpty)
-                Button("Save".localized()) { onSave(build()) }
+                Button("Save".localized(), action: save)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!issues.isEmpty)
                     .accessibilityIdentifier("uploaderEditor.save")
@@ -348,6 +390,10 @@ struct UploaderEditorView: View {
         EntrySection(title: "Headers", entries: $headers)
         if bodyType == .multipartFormData {
             EntrySection(title: "Form Data", entries: $formData)
+        }
+        LinkOptionsSpecSection(draft: $linkDraft, allowsForm: bodyType == .multipartFormData)
+        if let spec = linkDraft.spec {
+            LinkOptionDefaultsSection(spec: spec, preferences: $linkPreferences, password: $defaultLinkPassword)
         }
     }
 
@@ -393,10 +439,27 @@ struct UploaderEditorView: View {
         UploaderValidator.issues(for: build())
     }
 
+    private func save() {
+        let uploader = build()
+        if uploader.kind == .custom, uploader.linkOptions != nil {
+            LinkOptionsResolver.setPreferences(linkPreferences, for: uploader.id)
+            LinkPasswordStore.setPassword(linkPreferences.usesPassword ? defaultLinkPassword : nil, for: uploader.id)
+        } else {
+            LinkOptionsResolver.forget(uploader.id)
+        }
+        LocalFolderAccess.setBookmark(uploader.kind == .folder ? folderDraft.bookmark : nil, for: uploader.id)
+        onSave(uploader)
+    }
+
     private func load() {
         switch target {
         case let .new(newKind):
             kind = newKind
+            name = newKind.isLocal ? newKind.titleKey.localized() : ""
+        case .iCloudDrive:
+            kind = .folder
+            name = "iCloud Drive"
+            suggestsICloudDrive = true
         case let .edit(uploader):
             id = uploader.id
             kind = uploader.kind
@@ -423,6 +486,11 @@ struct UploaderEditorView: View {
                 presignedExpiry = s3.presignedExpiry ?? presignedExpiry
             }
             requestMethod = uploader.requestMethod ?? .post
+            linkDraft = LinkOptionsDraft(spec: uploader.linkOptions)
+            linkPreferences = LinkOptionsResolver.preferences(for: uploader.id)
+            defaultLinkPassword = LinkPasswordStore.password(for: uploader.id) ?? ""
+            folderDraft = FolderDraft(destination: uploader.folder, bookmark: LocalFolderAccess.bookmark(for: uploader.id))
+            photosDraft = PhotosDraft(destination: uploader.photos)
         }
     }
 
@@ -445,6 +513,10 @@ struct UploaderEditorView: View {
                 pathStyle: pathStyle, keyTemplate: nonEmpty(keyTemplate), acl: nonEmpty(acl), publicURL: nonEmpty(publicURL),
                 presignedExpiry: expiringLinks ? presignedExpiry : nil
             ))
+        case .folder:
+            return .folder(id: id, name: name, destination: folderDraft.destination)
+        case .photos:
+            return .photos(id: id, name: name, destination: photosDraft.destination)
         case .custom:
             return CustomUploader(
                 id: id, name: name, requestURL: requestURL.trimmingCharacters(in: .whitespaces),
@@ -452,7 +524,7 @@ struct UploaderEditorView: View {
                 fileFormName: bodyType == .multipartFormData ? nonEmpty(fileFormName) : nil,
                 requestBodyType: bodyType, responseURL: responseURL.trimmingCharacters(in: .whitespaces),
                 deletionURL: nonEmpty(deletionURL), deleteRequestType: nonEmpty(deletionURL) == nil ? nil : deleteMethod,
-                requestMethod: requestMethod == .post ? nil : requestMethod
+                requestMethod: requestMethod == .post ? nil : requestMethod, linkOptions: linkDraft.spec
             )
         }
     }

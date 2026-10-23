@@ -89,7 +89,7 @@ enum KeychainQueries {
         return request
     }
 
-    static func synchronizedItem(service: String, account: String, accessGroup: String?, data: Data) -> [String: Any] {
+    static func synchronizedItem(service: String, account: String, accessGroup: String?, data: Data, label: String = KeychainQueries.label) -> [String: Any] {
         var item = legacy(service: service, account: account)
         item[kSecUseDataProtectionKeychain as String] = true
         item[kSecAttrSynchronizable as String] = true
@@ -102,7 +102,7 @@ enum KeychainQueries {
         return item
     }
 
-    static func legacyItem(service: String, account: String, data: Data) -> [String: Any] {
+    static func legacyItem(service: String, account: String, data: Data, label: String = KeychainQueries.label) -> [String: Any] {
         var item = legacy(service: service, account: account)
         item[kSecAttrLabel as String] = label
         item[kSecValueData as String] = data
@@ -114,6 +114,7 @@ struct KeychainSecretBackend: SecretBackend {
     let service: String
     var accessGroup: String? = SharedKeychainGroup.current
     var client: any KeychainClient = SecurityKeychainClient()
+    var label = KeychainQueries.label
 
     private func synchronizedQuery(_ account: String) -> [String: Any] {
         KeychainQueries.synchronized(service: service, account: account, accessGroup: accessGroup)
@@ -153,7 +154,7 @@ struct KeychainSecretBackend: SecretBackend {
     }
 
     private func addSynchronized(_ data: Data, account: String) throws {
-        let status = client.add(KeychainQueries.synchronizedItem(service: service, account: account, accessGroup: accessGroup, data: data))
+        let status = client.add(KeychainQueries.synchronizedItem(service: service, account: account, accessGroup: accessGroup, data: data, label: label))
         switch status {
         case errSecSuccess:
             _ = client.delete(legacyQuery(account))
@@ -167,7 +168,7 @@ struct KeychainSecretBackend: SecretBackend {
     private func writeLegacy(_ data: Data, account: String) throws {
         let status = client.update(legacyQuery(account), with: [kSecValueData as String: data])
         if status == errSecItemNotFound {
-            let addStatus = client.add(KeychainQueries.legacyItem(service: service, account: account, data: data))
+            let addStatus = client.add(KeychainQueries.legacyItem(service: service, account: account, data: data, label: label))
             guard addStatus == errSecSuccess else { throw KeychainError(status: addStatus) }
         } else if status != errSecSuccess {
             throw KeychainError(status: status)
@@ -186,7 +187,7 @@ struct KeychainSecretBackend: SecretBackend {
 
     @discardableResult
     private func promoteToSynchronizable(_ data: Data, account: String) -> Bool {
-        let item = KeychainQueries.synchronizedItem(service: service, account: account, accessGroup: accessGroup, data: data)
+        let item = KeychainQueries.synchronizedItem(service: service, account: account, accessGroup: accessGroup, data: data, label: label)
         let status = client.add(item)
         guard status == errSecSuccess || status == errSecDuplicateItem else {
             guard status != errSecMissingEntitlement else { return false }

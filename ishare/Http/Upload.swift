@@ -15,6 +15,7 @@ struct UploadEnvironment {
     var enqueue: @MainActor (URL, UploadTarget, String?, any Error) throws -> Void
     var deliver: @MainActor (URL) -> Void
     var showsProgress = true
+    var resolveLinkChoice: @MainActor (UploadTarget) async -> LinkChoiceResolution = { _ in .use(.none) }
 
     @MainActor static let live = UploadEnvironment(
         recordHistory: { addToUploadHistory($0) },
@@ -33,7 +34,8 @@ struct UploadEnvironment {
             if actions.open {
                 NSWorkspace.shared.open(url)
             }
-        }
+        },
+        resolveLinkChoice: { await LinkOptionsResolver.resolve(for: $0) }
     )
 }
 
@@ -49,6 +51,10 @@ enum UploadPlan {
 
     static func hasSuccess(_ results: [Result<UploadOutcome, any Error>]) -> Bool {
         results.contains { if case .success = $0 { true } else { false } }
+    }
+
+    static func hasShareableSuccess(_ results: [Result<UploadOutcome, any Error>]) -> Bool {
+        results.contains { (try? $0.get().deliveredURL) != nil }
     }
 
     static func deliveryActions(copyURL: Bool, copyImage: Bool, openURL: Bool) -> (copy: Bool, open: Bool) {
@@ -128,14 +134,19 @@ enum UploadCoordinator {
         }
         let count = Double(targets.count)
         for (index, target) in targets.enumerated() {
+            guard case let .use(linkChoice) = await environment.resolveLinkChoice(target) else {
+                environment.notify("Upload cancelled".localized())
+                results.append(.failure(UploadFailure.cancelled))
+                continue
+            }
             do {
-                var outcome = try await UploadService.upload(fileURL: fileURL, to: target) { fraction in
+                var outcome = try await UploadService.upload(fileURL: fileURL, to: target, linkChoice: linkChoice) { fraction in
                     Task { @MainActor in
                         progressIndicator?.updateProgress(fraction: (Double(index) + fraction) / count)
                     }
                 }
                 Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
-                if !UploadPlan.hasSuccess(results) {
+                if !UploadPlan.hasShareableSuccess(results), outcome.canBeShortened {
                     outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: shortener)
                 }
                 record(outcome, localFileURL: localFileURL)
@@ -150,9 +161,13 @@ enum UploadCoordinator {
 
     static func completeQueued(_ outcome: UploadOutcome, localFileURL: URL?) async {
         var outcome = outcome
-        outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: Defaults[.urlShortener])
+        if outcome.canBeShortened {
+            outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: Defaults[.urlShortener])
+        }
         record(outcome, localFileURL: localFileURL)
-        deliver(outcome.deliveredURL)
+        if let url = outcome.deliveredURL {
+            deliver(url)
+        }
     }
 
     static func handleFailure(_ error: any Error, fileURL: URL, target: UploadTarget, localFileURL: URL?) {
@@ -174,13 +189,14 @@ enum UploadCoordinator {
     static func record(_ outcome: UploadOutcome, localFileURL: URL?) {
         environment.recordHistory(
             HistoryItem(
-                fileUrl: outcome.url.absoluteString,
+                fileUrl: outcome.historyURL,
                 deletionUrl: outcome.deletionURL,
                 uploaderId: outcome.uploaderID,
                 s3Key: outcome.s3Key,
                 localPath: localFileURL?.path,
                 date: Date(),
-                shortUrl: outcome.shortURL?.absoluteString
+                shortUrl: outcome.shortURL?.absoluteString,
+                localIdentifier: outcome.localIdentifier
             )
         )
     }

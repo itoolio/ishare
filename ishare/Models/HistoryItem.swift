@@ -10,6 +10,7 @@ struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var date: Date?
     var shortUrl: String?
     var altText: String?
+    var localIdentifier: String?
     var id: Self { self }
 }
 
@@ -82,7 +83,7 @@ extension HistoryItem {
     }
 
     var canDeleteFromServer: Bool {
-        !(deletionUrl ?? "").trimmingCharacters(in: .whitespaces).isEmpty || !(s3Key ?? "").isEmpty
+        !(deletionUrl ?? "").trimmingCharacters(in: .whitespaces).isEmpty || !(s3Key ?? "").isEmpty || !(localIdentifier ?? "").isEmpty
     }
 
     var uploader: HistoryUploader {
