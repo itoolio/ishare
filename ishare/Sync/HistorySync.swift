@@ -16,7 +16,6 @@ final class HistorySync {
         #endif
     }
 
-    static let legacyHistoryKey = "uploadHistory"
     static let previewCount = 20
 
     let store: KeyValueSyncStore
@@ -38,7 +37,6 @@ final class HistorySync {
 
     func start() {
         guard Self.isAvailable, tasks.isEmpty else { return }
-        store.removeObject(forKey: Self.legacyHistoryKey)
         tasks.append(Task { @MainActor [weak self] in
             for await enabled in Defaults.updates(.historySyncEnabled) {
                 self?.setActive(enabled)

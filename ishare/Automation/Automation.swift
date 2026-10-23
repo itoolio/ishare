@@ -256,7 +256,8 @@ final class URLSchemeRouter {
             if let failure = results.first(where: { $0.error != nil }), results.allSatisfy({ $0.link == nil }) {
                 return .failure(.failed(failure.error ?? ""))
             }
-            return .success(results.compactMap(\.link).joined(separator: "\n"))
+            let links = results.compactMap(\.link)
+            return .success(links.isEmpty ? nil : links.joined(separator: "\n"))
         case let .selectUploader(name):
             return actions.selectUploader(named: name) ? .success(nil) : .failure(.failed(String(format: "No uploader named “%@”".localized(), name)))
         case let .open(target):

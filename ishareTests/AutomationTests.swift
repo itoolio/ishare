@@ -1,3 +1,4 @@
+import Defaults
 import Foundation
 import Testing
 @testable import ishare
@@ -474,5 +475,19 @@ struct CommandLineToolInstallerTests {
 
     @Test func theAppBundleEmbedsTheTool() {
         #expect(FileManager.default.isExecutableFile(atPath: CommandLineToolInstaller.toolURL().path))
+    }
+}
+
+@MainActor
+struct LatestUploadCommandTests {
+    @Test func offersAQRCodeForTheLastUploadedLink() {
+        let saved = Defaults[.uploadHistory]
+        defer { Defaults[.uploadHistory] = saved }
+        Defaults[.uploadHistory] = [HistoryItem(fileUrl: "https://example.com/latest.png", date: Date())]
+        let ids = AppCommand.all().map(\.id)
+        #expect(ids.contains("history.qr"))
+        #expect(!ids.contains("history.localNetwork"))
+        Defaults[.uploadHistory] = []
+        #expect(!AppCommand.all().map(\.id).contains("history.qr"))
     }
 }
