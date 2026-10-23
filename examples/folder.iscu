@@ -1,0 +1,9 @@
+{
+	"name": "folder",
+	"uploaderType": "folder",
+	"folder": {
+		"path": "~/Sites/screenshots",
+		"subfolderTemplate": "{{date}}",
+		"publicURL": "https://example.com/screenshots/{{path}}"
+	}
+}

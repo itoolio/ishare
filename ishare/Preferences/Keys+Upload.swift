@@ -18,5 +18,7 @@ extension Defaults.Keys {
     static let watchFolderProcessed = Key<[String]>("watchFolderProcessed", default: [], suite: .ishare)
     static let urlShortener = Key<URLShortenerConfiguration>("urlShortener", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let uploadPresets = Key<[UploadPreset]>("uploadPresets", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let linkOptionPreferences = Key<[String: LinkOptionPreferences]>("linkOptionPreferences", default: [:], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let localFolderBookmarks = Key<[String: Data]>("localFolderBookmarks", default: [:], suite: .ishare)
     static let uploadersLastSyncedAt = Key<Date?>("uploadersLastSyncedAt", default: nil, suite: .ishare)
 }

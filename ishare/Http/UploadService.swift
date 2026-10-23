@@ -8,22 +8,41 @@ struct UploadOutcome: Sendable, Equatable {
     let uploaderID: UUID?
     let s3Key: String?
     var shortURL: URL? = nil
+    var localIdentifier: String? = nil
+    var isShareable = true
 
-    var deliveredURL: URL { shortURL ?? url }
+    var deliveredURL: URL? {
+        isShareable ? shortURL ?? url : nil
+    }
+
+    var canBeShortened: Bool {
+        isShareable && !url.isFileURL
+    }
+
+    var historyURL: String? {
+        isShareable ? url.absoluteString : nil
+    }
 }
 
 enum UploadTarget: Sendable {
     case imgur(clientID: String)
     case custom(CustomUploader)
 
-    var uploader: any Uploader {
+    @MainActor var uploader: any Uploader {
+        uploader(linkChoice: nil)
+    }
+
+    @MainActor func uploader(linkChoice: LinkChoice?) -> any Uploader {
         switch self {
         case let .imgur(clientID):
             ImgurUploader(clientID: clientID)
-        case let .custom(uploader) where uploader.kind == .s3:
-            S3Uploader(uploader: uploader)
         case let .custom(uploader):
-            HTTPUploader(uploader: uploader)
+            switch uploader.kind {
+            case .s3: S3Uploader(uploader: uploader)
+            case .folder: FolderUploader(uploader: uploader)
+            case .photos: PhotosUploader(uploader: uploader)
+            case .custom: HTTPUploader(uploader: uploader, linkChoice: linkChoice)
+            }
         }
     }
 
@@ -49,6 +68,7 @@ enum UploadFailure: LocalizedError, Equatable {
     case responseParsing(String)
     case transport(String)
     case unsupportedFile(destination: String, fileExtension: String)
+    case cancelled
 
     var isRetryable: Bool {
         switch self {
@@ -72,6 +92,8 @@ enum UploadFailure: LocalizedError, Equatable {
             detail
         case let .unsupportedFile(destination, fileExtension):
             "\(destination) doesn't accept .\(fileExtension) files"
+        case .cancelled:
+            "The upload was cancelled"
         }
     }
 }
@@ -129,10 +151,10 @@ enum UploadService {
     static let successCodes = Set(200 ..< 300)
 
     static func upload(
-        fileURL: URL, to target: UploadTarget,
+        fileURL: URL, to target: UploadTarget, linkChoice: LinkChoice? = nil,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> UploadOutcome {
-        try await target.uploader.upload(fileURL: fileURL, progress: progress)
+        try await target.uploader(linkChoice: linkChoice).upload(fileURL: fileURL, progress: progress)
     }
 
     static func perform(_ request: UploadRequest, progress: @escaping @Sendable (Double) -> Void) async throws -> Data {

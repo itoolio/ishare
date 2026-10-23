@@ -30,7 +30,7 @@ enum UploadDestinationSwitcher {
         guard case let .custom(id) = destination, let uploader = CustomUploader.allCases.first(where: { $0.id == id }) else {
             return "photo"
         }
-        return uploader.kind == .s3 ? "externaldrive.connected.to.line.below" : "server.rack"
+        return uploader.kind.symbolName
     }
 
     static func select(_ destination: UploadDestination) {
