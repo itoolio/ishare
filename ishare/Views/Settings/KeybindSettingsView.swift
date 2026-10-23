@@ -17,7 +17,8 @@ struct KeybindSettingsView: View {
             ("Capture Last Region:", .captureLastRegion),
             ("Capture Text:", .captureText),
             ("Interval Capture:", .intervalCapture),
-        ]),
+            ("Capture and Translate:", .captureTranslate),
+        ] + (OnDeviceModel.isAvailable ? [("Capture and Ask:", .captureAsk)] : [])),
         ("Record", [
             ("Record Screen:", .recordScreen),
             ("Record Region:", .recordRegion),

@@ -16,6 +16,18 @@ enum MenuAppKitMenus {
         }
         interval.setAccessibilityIdentifier("menu.intervalCapture")
         menu.addItem(interval)
+        let translate = ClosureMenuItem(title: "Capture and Translate".localized(), symbol: "translate") {
+            MenuController.shared.perform(afterDismissing: { await CaptureTranslateFlow.run() })
+        }
+        translate.setAccessibilityIdentifier("menu.captureTranslate")
+        menu.addItem(translate)
+        if CaptureAskFlow.isAvailable {
+            let ask = ClosureMenuItem(title: "Capture and Ask".localized(), symbol: "sparkles") {
+                MenuController.shared.perform(afterDismissing: { await CaptureAskFlow.run() })
+            }
+            ask.setAccessibilityIdentifier("menu.captureAsk")
+            menu.addItem(ask)
+        }
         if CaptureSession.isRecording {
             let marker = ClosureMenuItem(title: "Add Recording Marker".localized(), symbol: "flag") {
                 AppDelegate.shared.screenRecorder.addMarker()

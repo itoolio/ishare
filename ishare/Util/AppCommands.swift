@@ -107,7 +107,17 @@ extension AppCommand {
                        perform: afterDismissing { await CaptureSession.captureImage(.REGION, options: CaptureOptions(delay: 5)) }),
             AppCommand(id: "capture.interval", title: IntervalCapture.isRunning ? "Stop Interval Capture" : "Interval Capture", keywords: ["burst", "time-lapse", "repeat"], symbol: "stopwatch",
                        perform: afterDismissing { await IntervalCapture.toggle() }),
-        ] + presetCommands()
+            AppCommand(id: "capture.translate", title: "Capture and Translate", keywords: ["translation", "ocr", "language", "text"], symbol: "translate",
+                       perform: afterDismissing { await CaptureTranslateFlow.run() }),
+        ] + askCommands() + presetCommands()
+    }
+
+    @MainActor private static func askCommands() -> [AppCommand] {
+        guard CaptureAskFlow.isAvailable else { return [] }
+        return [
+            AppCommand(id: "capture.ask", title: "Capture and Ask", keywords: ["apple intelligence", "question", "describe", "summarize", "explain"], symbol: "sparkles",
+                       perform: afterDismissing { await CaptureAskFlow.run() }),
+        ]
     }
 
     @MainActor private static func presetCommands() -> [AppCommand] {
