@@ -124,6 +124,39 @@ enum ImageProcessing {
         return render(output.transformed(by: CGAffineTransform(translationX: -output.extent.minX, y: -output.extent.minY)), colorSpace: image.colorSpace) ?? image
     }
 
+    static func straightened(_ image: CGImage, degrees: Double) -> CGImage {
+        guard abs(degrees) > 0.001 else { return image }
+        let size = CGSize(width: image.width, height: image.height)
+        let output = StraightenGeometry.outputSize(for: size, degrees: degrees)
+        let transform = CGAffineTransform(translationX: output.width / 2, y: output.height / 2)
+            .rotated(by: -degrees * .pi / 180)
+            .translatedBy(x: -size.width / 2, y: -size.height / 2)
+        let rotated = CIImage(cgImage: image).clampedToExtent().transformed(by: transform)
+        let extent = CGRect(origin: .zero, size: output)
+        return render(rotated.cropped(to: extent), extent: extent, colorSpace: image.colorSpace) ?? image
+    }
+
+    static func adjusted(_ image: CGImage, _ adjustments: ImageAdjustments) -> CGImage {
+        guard !adjustments.isIdentity else { return image }
+        var output = CIImage(cgImage: image)
+        if adjustments.exposure != 0 {
+            let exposure = CIFilter.exposureAdjust()
+            exposure.inputImage = output
+            exposure.ev = Float(adjustments.exposure)
+            output = exposure.outputImage ?? output
+        }
+        if adjustments.usesColorControls {
+            let controls = CIFilter.colorControls()
+            controls.inputImage = output
+            controls.brightness = Float(adjustments.brightness)
+            controls.contrast = Float(adjustments.contrast)
+            controls.saturation = Float(adjustments.saturation)
+            output = controls.outputImage ?? output
+        }
+        let extent = CGRect(x: 0, y: 0, width: image.width, height: image.height)
+        return render(output.cropped(to: extent), extent: extent, colorSpace: image.colorSpace) ?? image
+    }
+
     static func resized(_ image: CGImage, maxPixelSize: CGFloat) -> CGImage {
         let longest = CGFloat(max(image.width, image.height))
         guard longest > maxPixelSize else { return image }

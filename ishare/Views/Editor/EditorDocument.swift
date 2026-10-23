@@ -8,13 +8,22 @@ final class EditorDocument: ObservableObject {
         var base: CGImage
         var annotations: [Annotation]
         var crop: CGRect?
+        var adjustments: ImageAdjustments
 
         func matches(_ other: Snapshot) -> Bool {
-            base === other.base && annotations == other.annotations && crop == other.crop
+            base === other.base && annotations == other.annotations && crop == other.crop && adjustments == other.adjustments
         }
     }
 
     @Published private(set) var base: CGImage
+    @Published private(set) var adjustments = ImageAdjustments.identity
+    @Published private(set) var adjustedBase: CGImage
+    @Published var straightenAngle: Double = 0
+    @Published private(set) var isProcessing = false
+    @Published private(set) var snapTargets: [CGRect] = []
+    private let originalBase: CGImage
+    private var snapTargetsSource: CGImage?
+    private var snapDetection: Task<Void, Never>?
     let fileURL: URL?
     @Published private(set) var annotations: [Annotation] = []
     @Published private(set) var crop: CGRect?
@@ -51,6 +60,8 @@ final class EditorDocument: ObservableObject {
 
     init(image: CGImage, fileURL: URL?) {
         base = image
+        originalBase = image
+        adjustedBase = image
         self.fileURL = fileURL
         effectedBase = image
         let longest = CGFloat(max(image.width, image.height))
@@ -65,7 +76,7 @@ final class EditorDocument: ObservableObject {
     var defaultStampSize: CGFloat { max(48, (CGFloat(max(base.width, base.height)) / 12).rounded()) }
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
-    var hasChanges: Bool { !annotations.isEmpty || crop != nil }
+    var hasChanges: Bool { !annotations.isEmpty || crop != nil || base !== originalBase || !adjustments.isIdentity }
     var nextStepNumber: Int {
         (annotations.compactMap { annotation -> Int? in
             if case let .step(_, number) = annotation.shape { return number }
@@ -73,7 +84,7 @@ final class EditorDocument: ObservableObject {
         }.max() ?? 0) + 1
     }
 
-    private var snapshot: Snapshot { Snapshot(base: base, annotations: annotations, crop: crop) }
+    private var snapshot: Snapshot { Snapshot(base: base, annotations: annotations, crop: crop, adjustments: adjustments) }
 
     private func commit(_ change: () -> Void) {
         let before = snapshot
@@ -83,20 +94,17 @@ final class EditorDocument: ObservableObject {
         guard !snapshot.matches(before) else { return }
         undoStack.append(before)
         redoStack.removeAll()
-        if annotations.filter(\.isEffect) != effectsBefore || base !== before.base {
-            refreshEffects()
-        }
+        refreshImages(baseChanged: base !== before.base || adjustments != before.adjustments, effectsChanged: annotations.filter(\.isEffect) != effectsBefore)
     }
 
     private func restore(_ snapshot: Snapshot) {
         let effectsBefore = annotations.filter(\.isEffect)
-        let baseChanged = base !== snapshot.base
+        let baseChanged = base !== snapshot.base || adjustments != snapshot.adjustments
         base = snapshot.base
         annotations = snapshot.annotations
         crop = snapshot.crop
-        if annotations.filter(\.isEffect) != effectsBefore || baseChanged {
-            refreshEffects()
-        }
+        adjustments = snapshot.adjustments
+        refreshImages(baseChanged: baseChanged, effectsChanged: annotations.filter(\.isEffect) != effectsBefore)
         if isCropping {
             draftCrop = crop ?? imageBounds
         }
@@ -170,6 +178,7 @@ final class EditorDocument: ObservableObject {
     func select(tool newTool: EditorTool) {
         commitText()
         guard newTool != tool else { return }
+        defer { prepareSnapTargetsIfNeeded() }
         if isCropping {
             applyPendingCrop()
         }
@@ -211,36 +220,114 @@ final class EditorDocument: ObservableObject {
         applyPendingCrop()
     }
 
-    enum Transform {
-        case rotateLeft
-        case rotateRight
-        case flipHorizontal
-        case flipVertical
-    }
+    typealias Transform = OrientationChange
 
     func apply(_ transform: Transform) {
-        commitText()
-        guard let flattened = render() else { return }
+        commitPendingEdits()
+        let mapping = CanvasMapping.orientation(transform, size: imageSize)
         let transformed: CGImage = switch transform {
-        case .rotateLeft: ImageProcessing.rotated(flattened, clockwise: false)
-        case .rotateRight: ImageProcessing.rotated(flattened, clockwise: true)
-        case .flipHorizontal: ImageProcessing.flipped(flattened, horizontally: true)
-        case .flipVertical: ImageProcessing.flipped(flattened, horizontally: false)
+        case .rotateLeft: ImageProcessing.rotated(base, clockwise: false)
+        case .rotateRight: ImageProcessing.rotated(base, clockwise: true)
+        case .flipHorizontal: ImageProcessing.flipped(base, horizontally: true)
+        case .flipVertical: ImageProcessing.flipped(base, horizontally: false)
         }
         commit {
             base = transformed
-            annotations = []
+            annotations = annotations.map { $0.mapped(by: mapping) }
+            crop = crop.map { mapping.map($0).integral }
+        }
+    }
+
+    func applyStraighten() {
+        let angle = straightenAngle
+        straightenAngle = 0
+        guard abs(angle) > 0.001 else { return }
+        commitPendingEdits()
+        let mapping = CanvasMapping.straighten(degrees: angle, size: imageSize)
+        let straightened = ImageProcessing.straightened(base, degrees: angle)
+        commit {
+            base = straightened
+            annotations = annotations.map { $0.mapped(by: mapping) }
             crop = nil
         }
-        selectedID = nil
+    }
+
+    func updateAdjustments(_ change: (inout ImageAdjustments) -> Void) {
+        var updated = adjustments
+        change(&updated)
+        guard updated != adjustments else { return }
+        if continuousChangeStart != nil {
+            adjustments = updated
+            refreshImages(baseChanged: true, effectsChanged: false)
+        } else {
+            commit { adjustments = updated }
+        }
+    }
+
+    func resetAdjustments() {
+        commit { adjustments = .identity }
+    }
+
+    func applyBeautify(_ style: BeautifyStyle) {
+        commitPendingEdits()
+        guard let rendered = render(), let beautified = Beautifier.apply(to: rendered, style: style) else { return }
+        commit {
+            base = beautified
+            annotations = []
+            crop = nil
+            adjustments = .identity
+        }
+    }
+
+    func liftSubject() async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        guard let lifted = await SubjectLiftFlow.lift(adjustedBase, croppedToSubject: false) else { return }
+        commit {
+            base = lifted
+            adjustments = .identity
+        }
+    }
+
+    var smartShapesActive: Bool {
+        SmartShapes.supports(tool) && Defaults[.editorSmartShapes]
+    }
+
+    func prepareSnapTargetsIfNeeded() {
+        guard smartShapesActive, snapTargetsSource !== base else { return }
+        let image = base
+        snapTargetsSource = image
+        snapTargets = []
+        snapDetection?.cancel()
+        snapDetection = Task { [weak self] in
+            let targets = await UIElementDetector.detect(in: image)
+            guard !Task.isCancelled, let self, self.snapTargetsSource === image else { return }
+            self.snapTargets = targets
+        }
+    }
+
+    private func refreshImages(baseChanged: Bool, effectsChanged: Bool) {
+        if baseChanged {
+            adjustedBase = ImageProcessing.adjusted(base, adjustments)
+            if snapTargetsSource !== base {
+                snapTargets = []
+                snapTargetsSource = nil
+                prepareSnapTargetsIfNeeded()
+            }
+        }
+        if baseChanged || effectsChanged {
+            refreshEffects()
+        }
     }
 
     private func refreshEffects() {
-        effectedBase = AnnotationRenderer.applyingEffects(annotations, to: base)
+        effectedBase = AnnotationRenderer.applyingEffects(annotations, to: adjustedBase)
     }
 
     func effectedBase(excluding id: UUID) -> CGImage {
-        AnnotationRenderer.applyingEffects(annotations.filter { $0.id != id }, to: base)
+        AnnotationRenderer.applyingEffects(annotations.filter { $0.id != id }, to: adjustedBase)
     }
 
     func undo() {
@@ -398,6 +485,6 @@ final class EditorDocument: ObservableObject {
     }
 
     func render() -> CGImage? {
-        AnnotationRenderer.render(base: base, annotations: annotations.filter { !$0.hidden }, crop: crop)
+        AnnotationRenderer.render(base: adjustedBase, annotations: annotations.filter { !$0.hidden }, crop: crop)
     }
 }
