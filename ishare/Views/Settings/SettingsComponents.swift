@@ -120,17 +120,17 @@ extension View {
         modifier(SettingsPaneStyle())
     }
 
-    func settingsAnchor(_ anchor: String) -> some View {
-        modifier(SettingsAnchorModifier(anchor: anchor))
+    func settingsEntry(_ entry: SettingsSearchEntry) -> some View {
+        modifier(SettingsAnchorModifier(anchor: entry.anchor ?? "\(entry.pane.rawValue).\(entry.title)"))
     }
 }
 
 private struct SettingsAnchorModifier: ViewModifier {
     let anchor: String
-    @ObservedObject private var navigator = SettingsNavigator.shared
+    @EnvironmentObject private var app: AppModel
 
     func body(content: Content) -> some View {
-        let isHighlighted = navigator.highlightedAnchor == anchor
+        let isHighlighted = app.settings.highlightedAnchor == anchor
         content
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)

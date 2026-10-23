@@ -1,5 +1,6 @@
-@preconcurrency import AVFoundation
+import AVFoundation
 import Foundation
+import Synchronization
 
 enum MediaPumpError: LocalizedError {
     case readerFailed(String?)
@@ -107,14 +108,13 @@ enum MediaPump {
     }
 }
 
-private final class LaneCompletion: @unchecked Sendable {
-    private let lock = NSLock()
-    private var isFinished = false
+private final class LaneCompletion: Sendable {
+    private let isFinished = Mutex(false)
 
     func markFinished() -> Bool {
-        lock.withLock {
-            guard !isFinished else { return false }
-            isFinished = true
+        isFinished.withLock { finished in
+            guard !finished else { return false }
+            finished = true
             return true
         }
     }

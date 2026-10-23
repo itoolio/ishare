@@ -3,7 +3,7 @@ import BezelNotification
 import Defaults
 import ImageIO
 import KeyboardShortcuts
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 import SwiftUI
 import UniformTypeIdentifiers
 

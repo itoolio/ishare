@@ -4,7 +4,7 @@ import CoreImage.CIFilterBuiltins
 import ImageIO
 
 enum ImageProcessing {
-    nonisolated(unsafe) static let context = CIContext(options: [.cacheIntermediates: false, .useSoftwareRenderer: false])
+    static let context = CIContext(options: [.cacheIntermediates: false, .useSoftwareRenderer: false])
 
     static func ciRect(fromTopLeft rect: CGRect, imageHeight: CGFloat) -> CGRect {
         CGRect(x: rect.minX, y: imageHeight - rect.maxY, width: rect.width, height: rect.height)

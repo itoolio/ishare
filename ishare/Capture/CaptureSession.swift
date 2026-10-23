@@ -1,4 +1,4 @@
-@preconcurrency import AppKit
+import AppKit
 import BezelNotification
 import Defaults
 import Foundation
@@ -20,7 +20,7 @@ enum CaptureSession {
     private static var pendingRecording: (gif: Bool, options: CaptureOptions)?
 
     static var isRecording: Bool {
-        AppDelegate.shared.screenRecorder.isRunning
+        AppModel.shared.recorder.isRunning
     }
 
     static func captureImage(_ type: CaptureType, display: Int = 1, options: CaptureOptions = .standard) async {
@@ -70,7 +70,7 @@ enum CaptureSession {
     }
 
     private static func startRecording(region: Bool) async {
-        let recorder = AppDelegate.shared.screenRecorder
+        let recorder = AppModel.shared.recorder
         guard await recorder.canRecord else {
             BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
             return
@@ -97,13 +97,13 @@ enum CaptureSession {
         let wantsDestinationChoice = DestinationChooser.isRequested()
         Task { @MainActor in
             ContentSharingPickerManager.shared.deactivatePicker()
-            switch await AppDelegate.shared.screenRecorder.stop() {
+            switch await AppModel.shared.recorder.stop() {
             case let .success(url):
                 var options = pending.options
                 if wantsDestinationChoice, let target = DestinationChooser.choose() {
                     options.destinations = [target]
                 }
-                await finishRecording(url, gif: pending.gif, options: options, sidecar: AppDelegate.shared.screenRecorder.takeSidecar())
+                await finishRecording(url, gif: pending.gif, options: options, sidecar: AppModel.shared.recorder.takeSidecar())
             case let .failure(error):
                 Log.capture.error("Stopping the recording failed: \(error.localizedDescription, privacy: .public)")
             }

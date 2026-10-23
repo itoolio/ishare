@@ -13,7 +13,7 @@ struct SnapshotTests {
         case editorToolbar
         case generalSettings
 
-        var size: CGSize {
+        @MainActor var size: CGSize {
             switch self {
             case .menu: CGSize(width: 360, height: 420)
             case .toast: CGSize(width: ToastCardView.width + 24, height: 120)
@@ -45,7 +45,7 @@ struct SnapshotTests {
     func view(for subject: Subject) -> AnyView {
         switch subject {
         case .menu:
-            return AnyView(MainMenuView())
+            return AnyView(MainMenuView().appModel())
         case .toast:
             let image = ScreenshotMode.sampleImage(size: CGSize(width: 320, height: 200), hue: 0.58, title: "Toast").map { NSImage(cgImage: $0, size: CGSize(width: 160, height: 100)) }
             let model = ToastModel(fileURL: URL(fileURLWithPath: "/tmp/ishare-1800000000.png"), isImage: true, thumbnail: image)
@@ -55,7 +55,7 @@ struct SnapshotTests {
             let document = EditorDocument(image: image, fileURL: nil)
             return AnyView(EditorView(document: document, onDone: {}, onDiscard: {}, onCopy: {}))
         case .generalSettings:
-            return AnyView(GeneralSettingsView())
+            return AnyView(GeneralSettingsView().appModel())
         }
     }
 

@@ -22,7 +22,7 @@ defaults:
 
 jobs:
     tools:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         steps:
             - uses: actions/checkout@v7
             - uses: actions/setup-go@v7
@@ -48,6 +48,10 @@ jobs:
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
             - run: xcodegen generate
@@ -58,14 +62,19 @@ jobs:
                     -scheme ishare \
                     -configuration Release \
                     -destination "generic/platform=macOS" \
-                    CODE_SIGNING_ALLOWED=NO | xcbeautify
+                    CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/app-store-build.log" | xcbeautify
             - name: Run unit tests
               run: |
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
-                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+                    -destination "platform=macOS,arch=arm64" \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | tee "$RUNNER_TEMP/unit-tests.log" | xcbeautify
+            - name: Fail on build warnings
+              run: |
+                  go run ./tools/cmd/ishare-tools build-warnings \
+                    --ignore "the target atom is ambiguous" \
+                    "$RUNNER_TEMP/app-store-build.log" "$RUNNER_TEMP/unit-tests.log"
             - name: Collect the snapshot renderings that differ from their references
               if: failure()
               run: |
@@ -106,7 +115,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -only-testing:ishareTests/SnapshotTests \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
             - name: Check the recorded references
@@ -121,7 +130,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -only-testing:ishareTests/SnapshotTests \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
             - uses: actions/upload-artifact@v7
@@ -153,6 +162,10 @@ jobs:
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
             - run: xcodegen generate
@@ -161,11 +174,13 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme AppStoreTests \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -derivedDataPath build/DerivedData \
                     -resultBundlePath build/AppStoreTests.xcresult \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
-                    ISHARE_APP_STORE_ENTITLEMENTS=ishareTests/SandboxedTestHost.entitlements | xcbeautify
+                    ISHARE_APP_STORE_ENTITLEMENTS=ishareTests/SandboxedTestHost.entitlements | tee "$RUNNER_TEMP/app-store-tests.log" | xcbeautify
+            - name: Fail on build warnings
+              run: go run ./tools/cmd/ishare-tools build-warnings "$RUNNER_TEMP/app-store-tests.log"
             - name: Check that the test host really was sandboxed
               run: codesign -d --entitlements - --xml build/DerivedData/Build/Products/Debug/ishare.app | grep -q com.apple.security.app-sandbox
             - uses: actions/upload-artifact@v7
@@ -182,6 +197,10 @@ jobs:
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
             - name: Install XcodeGen
               run: brew install xcodegen
             - run: xcodegen generate
@@ -190,10 +209,12 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme UITests \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -derivedDataPath build/DerivedData \
                     -resultBundlePath build/UITests.xcresult \
-                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | tee "$RUNNER_TEMP/ui-tests.log" | xcbeautify
+            - name: Fail on build warnings
+              run: go run ./tools/cmd/ishare-tools build-warnings "$RUNNER_TEMP/ui-tests.log"
             - uses: actions/upload-artifact@v7
               if: failure()
               with:
@@ -244,7 +265,7 @@ jobs:
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
-                    -destination "platform=macOS" \
+                    -destination "platform=macOS,arch=arm64" \
                     -derivedDataPath build/DerivedData \
                     -resultBundlePath build/S3Integration.xcresult \
                     -only-testing:ishareTests/NetworkSuite \

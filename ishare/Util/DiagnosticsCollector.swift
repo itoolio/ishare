@@ -1,7 +1,7 @@
 import Foundation
 import MetricKit
 
-final class DiagnosticsCollector: NSObject, MXMetricManagerSubscriber, @unchecked Sendable {
+final class DiagnosticsCollector: NSObject, MXMetricManagerSubscriber, Sendable {
     static let shared = DiagnosticsCollector()
 
     private let store: DiagnosticsStore
@@ -14,7 +14,7 @@ final class DiagnosticsCollector: NSObject, MXMetricManagerSubscriber, @unchecke
         MXMetricManager.shared.add(self)
         let past = MXMetricManager.shared.pastDiagnosticPayloads
         if !past.isEmpty {
-            DispatchQueue.global(qos: .utility).async { self.record(past) }
+            Task.detached(priority: .utility) { self.record(past) }
         }
     }
 

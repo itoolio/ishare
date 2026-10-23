@@ -19,13 +19,14 @@ import SwiftUI
 @main
 struct ishare: App {
     @Default(.menuBarIcon) var menubarIcon
-    @StateObject private var menu = MenuController.shared
+    @StateObject private var menu = AppModel.shared.menu
     @StateObject private var appState = AppState.shared
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
     var body: some Scene {
         MenuBarExtra {
             MainMenuView()
+                .appModel()
         } label: {
             switch menubarIcon {
             case .DEFAULT: Image(.menubar)
@@ -39,10 +40,12 @@ struct ishare: App {
         .menuBarExtraStyle(.window)
         Settings {
             SettingsView()
+                .appModel()
         }
         .windowResizability(.contentSize)
         Window("Welcome to ishare".localized(), id: Onboarding.windowID) {
             OnboardingView()
+                .appModel()
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
@@ -55,8 +58,6 @@ struct ishare: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let sharedInstance = AppDelegate()
     static var shared: AppDelegate { sharedInstance }
-
-    let screenRecorder = ScreenRecorder()
 
     #if GITHUB_RELEASE
         private let updater = SparkleUpdater()

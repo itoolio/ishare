@@ -14,12 +14,12 @@ struct MenuLayoutSettingsSection: View {
 
     var body: some View {
         Section {
-            Picker("Density".localized(), selection: $density) {
+            Picker(Self.density.title.localized(), selection: $density) {
                 ForEach(MenuDensity.allCases) { Text($0.title.localized()).tag($0) }
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("settings.menu.density")
-            .settingsAnchor(SettingsAnchor.menuDensity)
+            .settingsEntry(Self.density)
             ForEach(Array(layout.order.enumerated()), id: \.element) { index, section in
                 row(section, index: index)
             }
@@ -28,9 +28,9 @@ struct MenuLayoutSettingsSection: View {
             }
             .disabled(layout == MenuLayout())
             .accessibilityIdentifier("settings.menu.reset")
-            .settingsAnchor(SettingsAnchor.menuLayout)
+            .settingsEntry(Self.layout)
         } header: {
-            Text("Menu".localized())
+            Text(Self.layout.title.localized())
         } footer: {
             Text("Choose which sections the menu shows and in which order.".localized())
                 .font(.caption)
@@ -77,21 +77,21 @@ struct AppearanceSettingsSection: View {
     @ObservedObject private var system = SystemContrastObserver.shared
 
     var body: some View {
-        Section("Appearance".localized()) {
+        Section(Self.appearance.title.localized()) {
             Picker("Menu theme".localized(), selection: $theme) {
                 ForEach(MenuTheme.allCases) { Text($0.title.localized()).tag($0) }
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("settings.appearance.theme")
-            .settingsAnchor(SettingsAnchor.appearance)
+            .settingsEntry(Self.appearance)
             Toggle(isOn: $highContrast) {
-                Text("High contrast menu".localized())
+                Text(Self.highContrast.title.localized())
                 if system.increaseContrast {
                     Text("“Increase contrast” is turned on in Accessibility settings, so the menu already uses high contrast.".localized())
                 }
             }
             .accessibilityIdentifier("settings.appearance.highContrast")
-            .settingsAnchor(SettingsAnchor.highContrast)
+            .settingsEntry(Self.highContrast)
             MenuPreview()
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
@@ -163,11 +163,11 @@ struct ToastPlacementSettings: View {
     @Default(.toastScreen) private var screen
 
     var body: some View {
-        Picker("Position".localized(), selection: $corner) {
+        Picker(Self.placement.title.localized(), selection: $corner) {
             ForEach(ToastCorner.allCases) { Text($0.title.localized()).tag($0) }
         }
         .accessibilityIdentifier("settings.toast.corner")
-        .settingsAnchor(SettingsAnchor.toastPlacement)
+        .settingsEntry(Self.placement)
         Picker("Screen".localized(), selection: $screen) {
             ForEach(ToastScreenChoice.allCases) { Text($0.title.localized()).tag($0) }
         }
@@ -180,12 +180,11 @@ struct ResultPresentationSettings: View {
     @State private var status: UNAuthorizationStatus?
 
     var body: some View {
-        Picker("Show results as".localized(), selection: $presentation) {
+        Picker(Self.presentation.title.localized(), selection: $presentation) {
             ForEach(ResultPresentation.allCases) { Text($0.title.localized()).tag($0) }
         }
         .accessibilityIdentifier("settings.toast.presentation")
-        .settingsAnchor(SettingsAnchor.resultPresentation)
-
+        .settingsEntry(Self.presentation)
         .onChange(of: presentation) { _, choice in
             guard choice.postsNotification else { return }
             Task { @MainActor in
@@ -209,4 +208,32 @@ struct ResultPresentationSettings: View {
             }
         }
     }
+}
+
+extension MenuLayoutSettingsSection: SettingsSearchable {
+    static let density = SettingsSearchEntry("Density", pane: .general, keywords: ["Compact", "Comfortable"], anchor: SettingsAnchor.menuDensity)
+    static let layout = SettingsSearchEntry(
+        "Menu", pane: .general, keywords: ["Sections", "Restore Default Layout", "Favorites", "Reorder"], anchor: SettingsAnchor.menuLayout
+    )
+    static let searchEntries = [density, layout]
+}
+
+extension AppearanceSettingsSection: SettingsSearchable {
+    static let appearance = SettingsSearchEntry(
+        "Appearance", pane: .general, keywords: ["Menu theme", "Dark", "Light", "Menu preview"], anchor: SettingsAnchor.appearance
+    )
+    static let highContrast = SettingsSearchEntry("High contrast menu", pane: .general, keywords: ["Contrast"], anchor: SettingsAnchor.highContrast)
+    static let searchEntries = [appearance, highContrast]
+}
+
+extension ToastPlacementSettings: SettingsSearchable {
+    static let placement = SettingsSearchEntry("Position", pane: .general, keywords: ["Corner", "Screen"], anchor: SettingsAnchor.toastPlacement)
+    static let searchEntries = [placement]
+}
+
+extension ResultPresentationSettings: SettingsSearchable {
+    static let presentation = SettingsSearchEntry(
+        "Show results as", pane: .general, keywords: ["Notification", "Notification Center"], anchor: SettingsAnchor.resultPresentation
+    )
+    static let searchEntries = [presentation]
 }

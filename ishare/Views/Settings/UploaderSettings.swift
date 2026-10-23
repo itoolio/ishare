@@ -655,3 +655,19 @@ struct CustomEntryModel: Identifiable, Equatable {
     var key: String
     var value: String
 }
+
+extension UploaderSettingsView: SettingsSearchable {
+    static let searchEntries: [SettingsSearchEntry] = [
+        SettingsSearchEntry("Upload", pane: .uploaders, keywords: [
+            "Uploader", "Destination", "Imgur", "Custom uploader", "Server", "S3", "R2", "ISCU", "Import", "Export",
+            "Assistant", "Apple Intelligence", "Delete", "Deletion URL", "Headers",
+        ]),
+        SettingsSearchEntry("Also upload to", pane: .uploaders, keywords: [
+            "Copy URL after upload", "Open URL in browser after upload", "Watch Folder", "Folder", "Upload Queue",
+            "Retry", "Expiring links", "Presigned", "ShareX", "SXCU", "Test Upload", "Method",
+        ]),
+        SettingsSearchEntry("Upload Presets", pane: .uploaders, keywords: [
+            "Preset", "URL Shortener", "Shorten", "Short link", "is.gd", "v.gd",
+        ]),
+    ]
+}

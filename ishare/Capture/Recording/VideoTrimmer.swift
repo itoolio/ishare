@@ -1,4 +1,4 @@
-@preconcurrency import AVFoundation
+import AVFoundation
 import Foundation
 
 struct TrimSelection: Equatable, Sendable {

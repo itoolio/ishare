@@ -18,7 +18,7 @@ jobs:
         if: >-
             github.event.pull_request.head.ref == 'l10n_main' &&
             github.event.pull_request.head.repo.full_name == github.repository
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         env:
             GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
             PR_NUMBER: ${{ github.event.pull_request.number }}

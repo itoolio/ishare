@@ -10,7 +10,7 @@ extension NetworkSuite {
 
         init() {
             UploadService.session = StubURLProtocol.makeSession()
-            UploadCoordinator.environment = spy.environment
+            UploadCoordinator.environment = spy
             StubURLProtocol.reset { request in
                 switch request.url.host() {
                 case "primary.example.com":
@@ -26,7 +26,7 @@ extension NetworkSuite {
         }
 
         func finish() {
-            UploadCoordinator.environment = .live
+            UploadCoordinator.environment = LiveUploadEnvironment()
         }
 
         @Test func uploadsToEveryTargetAndRecordsEachResult() async throws {
@@ -54,6 +54,15 @@ extension NetworkSuite {
             #expect(UploadPlan.urlToDeliver(results)?.absoluteString == "https://cdn.mirror.example.com/a.png")
             #expect(spy.enqueued.map(\.1) == [.custom(down.id)])
             #expect(spy.notifications == ["Upload failed, ishare will retry it later".localized()])
+        }
+
+        @Test func reportsAPlainFailureWhenTheQueueRejectsARetryableUpload() async throws {
+            defer { finish() }
+            UploadCoordinator.environment = FailingQueueUploadEnvironment(wrapped: spy)
+            let file = try Fixtures.temporaryFile(named: "e.png", contents: TestUploaders.png)
+            _ = await UploadCoordinator.upload(fileURL: file, to: [.custom(TestUploaders.http(name: "down", host: "down.example.com"))], localFileURL: nil)
+            #expect(spy.enqueued.isEmpty)
+            #expect(spy.notifications == ["Upload failed".localized()])
         }
 
         @Test func doesNotQueueClientErrors() async throws {

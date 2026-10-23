@@ -55,7 +55,9 @@ struct SettingsView: View {
     @State private var searchText = ""
     @State private var revealTask: Task<Void, Never>?
 
-    @ObservedObject private var navigator = SettingsNavigator.shared
+    @EnvironmentObject private var app: AppModel
+
+    private var navigator: SettingsNavigator { app.settings }
 
     private var matches: [SettingsSearchMatch] {
         SettingsSearchIndex.matches(for: searchText)

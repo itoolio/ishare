@@ -2,7 +2,8 @@
 import Combine
 import Defaults
 import Foundation
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
+import Synchronization
 
 struct CapturedFrame: Sendable {
     static let invalid = CapturedFrame(surface: nil, contentRect: .zero, contentScale: 0, scaleFactor: 0)
@@ -14,22 +15,21 @@ struct CapturedFrame: Sendable {
     var size: CGSize { contentRect.size }
 }
 
-final class RecordingStartClock: @unchecked Sendable {
-    private let lock = NSLock()
-    private var firstFrameTime: Double?
+final class RecordingStartClock: Sendable {
+    private let firstFrameTime = Mutex<Double?>(nil)
 
     var time: Double? {
-        lock.withLock { firstFrameTime }
+        firstFrameTime.withLock { $0 }
     }
 
     func reset() {
-        lock.withLock { firstFrameTime = nil }
+        firstFrameTime.withLock { $0 = nil }
     }
 
     func mark(_ time: CMTime) {
         guard time.isNumeric else { return }
-        lock.withLock {
-            if firstFrameTime == nil { firstFrameTime = time.seconds }
+        firstFrameTime.withLock { first in
+            if first == nil { first = time.seconds }
         }
     }
 }

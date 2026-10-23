@@ -1,4 +1,4 @@
-@preconcurrency import AVFoundation
+import AVFoundation
 import Carbon.HIToolbox
 import CoreGraphics
 import Foundation

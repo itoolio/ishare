@@ -138,28 +138,34 @@ final class ScreenRecorder: ObservableObject {
     private func startWithPicker(_ fileURL: URL) {
         isRunning = true
         let pickerManager = ContentSharingPickerManager.shared
+        let onSelected: @Sendable (SCContentFilter, SCStream?) -> Void = { [weak self] filter, _ in
+            Task { @MainActor [weak self] in
+                await self?.startCapture(with: filter, fileURL: fileURL)
+            }
+        }
+        let onCancelled: @Sendable (SCStream?) -> Void = { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.resetPickerState()
+            }
+        }
+        let onFailed: @Sendable (any Error) -> Void = { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.resetPickerState()
+            }
+        }
         Task {
-            await pickerManager.setContentSelectedCallback { [weak self] filter, _ in
-                Task { @MainActor [weak self] in
-                    await self?.startCapture(with: filter, fileURL: fileURL)
-                }
-            }
-            await pickerManager.setContentSelectionCancelledCallback { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.isRunning = false
-                    self?.startDate = nil
-                }
-            }
-            await pickerManager.setContentSelectionFailedCallback { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.isRunning = false
-                    self?.startDate = nil
-                }
-            }
+            await pickerManager.setContentSelectedCallback(onSelected)
+            await pickerManager.setContentSelectionCancelledCallback(onCancelled)
+            await pickerManager.setContentSelectionFailedCallback(onFailed)
             let stream = SCStream(filter: SCContentFilter(), configuration: SCStreamConfiguration(), delegate: nil)
             pickerManager.setupPicker(stream: stream)
             pickerManager.showPicker()
         }
+    }
+
+    private func resetPickerState() {
+        isRunning = false
+        startDate = nil
     }
 
     private func startRegion(_ fileURL: URL, screen: NSScreen, rect: CGRect) async {

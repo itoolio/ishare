@@ -1,6 +1,6 @@
 import AppKit
 import Defaults
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 enum CaptureError: LocalizedError {
     case permissionDenied

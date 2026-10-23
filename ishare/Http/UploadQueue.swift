@@ -24,19 +24,23 @@ final class UploadQueue: ObservableObject {
     static let maxAttempts = 8
     static let metadataName = "item.json"
 
-    static let shared = UploadQueue(
-        directory: defaultDirectory,
-        perform: { fileURL, destination in
-            guard let target = UploadCoordinator.target(for: destination) else { throw UploadFailure.missingUploader }
-            return try await UploadService.upload(fileURL: fileURL, to: target)
-        },
-        onSuccess: { item, outcome in
-            Task { @MainActor in
-                await UploadCoordinator.completeQueued(outcome, localFileURL: item.localPath.map { URL(fileURLWithPath: $0) })
+    static var shared: UploadQueue { AppModel.shared.uploadQueue }
+
+    static func live() -> UploadQueue {
+        UploadQueue(
+            directory: defaultDirectory,
+            perform: { fileURL, destination in
+                guard let target = UploadCoordinator.target(for: destination) else { throw UploadFailure.missingUploader }
+                return try await UploadService.upload(fileURL: fileURL, to: target)
+            },
+            onSuccess: { item, outcome in
+                Task { @MainActor in
+                    await UploadCoordinator.completeQueued(outcome, localFileURL: item.localPath.map { URL(fileURLWithPath: $0) })
+                }
+                BezelNotification.show(messageText: "Queued upload finished".localized(), icon: ToastIcon)
             }
-            BezelNotification.show(messageText: "Queued upload finished".localized(), icon: ToastIcon)
-        }
-    )
+        )
+    }
 
     static var defaultDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first

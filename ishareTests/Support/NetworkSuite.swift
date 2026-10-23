@@ -6,20 +6,60 @@ import Testing
 struct NetworkSuite {}
 
 @MainActor
-final class UploadEnvironmentSpy {
+final class UploadEnvironmentSpy: UploadEnvironment {
     var history: [HistoryItem] = []
     var notifications: [String] = []
     var enqueued: [(URL, UploadDestination)] = []
     var delivered: [URL] = []
+    var linkChoice: LinkChoiceResolution = .use(.none)
+    let showsProgress = false
 
-    var environment: UploadEnvironment {
-        UploadEnvironment(
-            recordHistory: { [unowned self] in history.append($0) },
-            notify: { [unowned self] in notifications.append($0) },
-            enqueue: { [unowned self] url, target, _, _ in enqueued.append((url, target.destination)) },
-            deliver: { [unowned self] in delivered.append($0) },
-            showsProgress: false
-        )
+    func recordHistory(_ item: HistoryItem) {
+        history.append(item)
+    }
+
+    func notify(_ message: String) {
+        notifications.append(message)
+    }
+
+    func enqueue(_ fileURL: URL, target: UploadTarget, localPath _: String?, error _: any Error) throws {
+        enqueued.append((fileURL, target.destination))
+    }
+
+    func deliver(_ url: URL) {
+        delivered.append(url)
+    }
+
+    func resolveLinkChoice(for _: UploadTarget) async -> LinkChoiceResolution {
+        linkChoice
+    }
+}
+
+@MainActor
+struct FailingQueueUploadEnvironment: UploadEnvironment {
+    struct QueueUnavailable: Error {}
+
+    let wrapped: UploadEnvironmentSpy
+    var showsProgress: Bool { wrapped.showsProgress }
+
+    func recordHistory(_ item: HistoryItem) {
+        wrapped.recordHistory(item)
+    }
+
+    func notify(_ message: String) {
+        wrapped.notify(message)
+    }
+
+    func enqueue(_: URL, target _: UploadTarget, localPath _: String?, error _: any Error) throws {
+        throw QueueUnavailable()
+    }
+
+    func deliver(_ url: URL) {
+        wrapped.deliver(url)
+    }
+
+    func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution {
+        await wrapped.resolveLinkChoice(for: target)
     }
 }
 

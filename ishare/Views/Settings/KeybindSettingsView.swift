@@ -67,3 +67,17 @@ struct KeybindSettingsView: View {
         .formStyle(.grouped)
     }
 }
+
+extension KeybindSettingsView: SettingsSearchable {
+    static let searchEntries: [SettingsSearchEntry] = [
+        SettingsSearchEntry("Keybinds", pane: .keybinds, keywords: [
+            "Keyboard", "Shortcut", "Hotkey", "Reset All Keybinds", "Force upload", "Modifier",
+        ]),
+        shortcutsEntry,
+    ]
+
+    private static var shortcutsEntry: SettingsSearchEntry {
+        let titles = groups.flatMap { [$0.0] + $0.1.map(\.0) }
+        return SettingsSearchEntry(titles[0], pane: .keybinds, keywords: Array(titles.dropFirst()))
+    }
+}

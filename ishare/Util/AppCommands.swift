@@ -136,7 +136,7 @@ extension AppCommand {
                 },
                 AppCommand(id: "record.marker", title: "Add Recording Marker", keywords: ["chapter", "bookmark", "marker"], symbol: "flag") {
                     MenuController.shared.dismiss()
-                    AppDelegate.shared.screenRecorder.addMarker()
+                    AppModel.shared.recorder.addMarker()
                 },
             ] + recordingExtraCommands()
         }
@@ -156,7 +156,7 @@ extension AppCommand {
         var commands = [
             AppCommand(id: "record.notes", title: RecordingNotesController.shared.isVisible ? "Hide Notes" : "Show Notes", keywords: ["teleprompter", "script", "notes"], symbol: "list.bullet.rectangle") {
                 MenuController.shared.dismiss()
-                AppDelegate.shared.screenRecorder.toggleNotes()
+                AppModel.shared.recorder.toggleNotes()
             },
         ]
         if InstantReplay.isRunning {

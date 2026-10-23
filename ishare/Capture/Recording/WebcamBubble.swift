@@ -1,4 +1,4 @@
-@preconcurrency import AppKit
+import AppKit
 @preconcurrency import AVFoundation
 import Defaults
 

@@ -146,6 +146,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.sharemenuext
         INFOPLIST_FILE: sharemenuext/Info.plist
+        LM_SKIP_METADATA_EXTRACTION: YES
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: ishare
         CODE_SIGN_ENTITLEMENTS: sharemenuext/sharemenuext.entitlements
@@ -241,6 +242,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.ishare.uitests
+        LM_SKIP_METADATA_EXTRACTION: YES
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: ishare - GitHub
 schemes:

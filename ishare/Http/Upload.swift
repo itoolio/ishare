@@ -9,34 +9,47 @@ enum UploadType: String, CaseIterable, Identifiable, Codable, Defaults.Serializa
     var id: Self { self }
 }
 
-struct UploadEnvironment {
-    var recordHistory: @MainActor (HistoryItem) -> Void
-    var notify: @MainActor (String) -> Void
-    var enqueue: @MainActor (URL, UploadTarget, String?, any Error) throws -> Void
-    var deliver: @MainActor (URL) -> Void
-    var showsProgress = true
-    var resolveLinkChoice: @MainActor (UploadTarget) async -> LinkChoiceResolution = { _ in .use(.none) }
+@MainActor
+protocol UploadEnvironment {
+    var showsProgress: Bool { get }
+    func recordHistory(_ item: HistoryItem)
+    func notify(_ message: String)
+    func enqueue(_ fileURL: URL, target: UploadTarget, localPath: String?, error: any Error) throws
+    func deliver(_ url: URL)
+    func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution
+}
 
-    @MainActor static let live = UploadEnvironment(
-        recordHistory: { addToUploadHistory($0) },
-        notify: { BezelNotification.show(messageText: $0, icon: ToastIcon) },
-        enqueue: { fileURL, target, localPath, error in
-            try UploadQueue.shared.enqueue(fileURL: fileURL, target: target, localPath: localPath, error: error)
-        },
-        deliver: { url in
-            let actions = UploadPlan.deliveryActions(
-                copyURL: Defaults[.copyURLAfterUpload], copyImage: Defaults[.copyImageToClipboard], openURL: Defaults[.openURLAfterUpload]
-            )
-            if actions.copy {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(url.absoluteString, forType: .string)
-            }
-            if actions.open {
-                NSWorkspace.shared.open(url)
-            }
-        },
-        resolveLinkChoice: { await LinkOptionsResolver.resolve(for: $0) }
-    )
+struct LiveUploadEnvironment: UploadEnvironment {
+    var showsProgress: Bool { true }
+
+    func recordHistory(_ item: HistoryItem) {
+        addToUploadHistory(item)
+    }
+
+    func notify(_ message: String) {
+        BezelNotification.show(messageText: message, icon: ToastIcon)
+    }
+
+    func enqueue(_ fileURL: URL, target: UploadTarget, localPath: String?, error: any Error) throws {
+        try UploadQueue.shared.enqueue(fileURL: fileURL, target: target, localPath: localPath, error: error)
+    }
+
+    func deliver(_ url: URL) {
+        let actions = UploadPlan.deliveryActions(
+            copyURL: Defaults[.copyURLAfterUpload], copyImage: Defaults[.copyImageToClipboard], openURL: Defaults[.openURLAfterUpload]
+        )
+        if actions.copy {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(url.absoluteString, forType: .string)
+        }
+        if actions.open {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution {
+        await LinkOptionsResolver.resolve(for: target)
+    }
 }
 
 enum UploadPlan {
@@ -64,7 +77,7 @@ enum UploadPlan {
 
 @MainActor
 enum UploadCoordinator {
-    static var environment = UploadEnvironment.live
+    static var environment: any UploadEnvironment = LiveUploadEnvironment()
 
     static func currentTarget() -> UploadTarget? {
         switch Defaults[.uploadType] {
@@ -134,7 +147,7 @@ enum UploadCoordinator {
         }
         let count = Double(targets.count)
         for (index, target) in targets.enumerated() {
-            guard case let .use(linkChoice) = await environment.resolveLinkChoice(target) else {
+            guard case let .use(linkChoice) = await environment.resolveLinkChoice(for: target) else {
                 environment.notify("Upload cancelled".localized())
                 results.append(.failure(UploadFailure.cancelled))
                 continue
@@ -175,7 +188,7 @@ enum UploadCoordinator {
         let failure = error as? UploadFailure
         if case let .unsupportedFile(destination, fileExtension) = failure {
             environment.notify(String(format: "%@ can't host .%@ files. Choose a custom uploader instead.".localized(), destination, fileExtension))
-        } else if failure?.isRetryable == true, (try? environment.enqueue(fileURL, target, localFileURL?.path, error)) != nil {
+        } else if failure?.isRetryable == true, (try? environment.enqueue(fileURL, target: target, localPath: localFileURL?.path, error: error)) != nil {
             environment.notify("Upload failed, ishare will retry it later".localized())
         } else {
             environment.notify("Upload failed".localized())

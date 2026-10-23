@@ -2,7 +2,7 @@ import AppKit
 import BezelNotification
 import Defaults
 import Foundation
-@preconcurrency import Vision
+import Vision
 
 enum CodeDetection {
     static func payloads(in image: CGImage) async throws -> [String] {

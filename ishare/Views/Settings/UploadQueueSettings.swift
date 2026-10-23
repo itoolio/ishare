@@ -1,7 +1,15 @@
 import SwiftUI
 
 struct UploadQueueSettings: View {
-    @ObservedObject private var queue = UploadQueue.shared
+    @EnvironmentObject private var app: AppModel
+
+    var body: some View {
+        UploadQueueSection(queue: app.uploadQueue)
+    }
+}
+
+private struct UploadQueueSection: View {
+    @ObservedObject var queue: UploadQueue
     @State private var retrying: Set<UUID> = []
 
     var body: some View {

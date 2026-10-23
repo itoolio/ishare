@@ -1,6 +1,6 @@
-@preconcurrency import AVFoundation
+import AVFoundation
 import Defaults
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 enum RecordingAudioSource: String, CaseIterable, Identifiable, Defaults.Serializable, Sendable {
     case allSystemAudio

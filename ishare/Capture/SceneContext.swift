@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
-@preconcurrency import Vision
+import Vision
 
 struct SceneContext: Hashable, Sendable {
     var text: String

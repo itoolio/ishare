@@ -47,7 +47,7 @@ struct UploadTracker: Equatable {
 
 @MainActor
 final class UploadManager: ObservableObject {
-    static let shared = UploadManager()
+    static var shared: UploadManager { AppModel.shared.uploads }
     static let resultDisplayDuration: Duration = .seconds(1.4)
 
     @Published private(set) var activity: UploadActivity = .idle
@@ -56,7 +56,7 @@ final class UploadManager: ObservableObject {
     private var tracker = UploadTracker()
     private var resetTask: Task<Void, Never>?
 
-    private init() {}
+    init() {}
 
     var isUploading: Bool { tracker.isActive }
 
