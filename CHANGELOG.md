@@ -1,3 +1,9 @@
+## [5.4.1](https://github.com/itoolio/ishare/compare/v5.4.0...v5.4.1) (2026-10-23)
+
+### Bug Fixes
+
+* keep the App Review notes under App Store Connect's limit and build the docs without docbuild ([952b90c](https://github.com/itoolio/ishare/commit/952b90c46dab3b8ee70c3d66e966e1220e9942b2))
+
 ## [5.4.0](https://github.com/itoolio/ishare/compare/v5.3.0...v5.4.0) (2026-10-23)
 
 ### Features
