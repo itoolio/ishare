@@ -111,3 +111,78 @@ jobs:
               with:
                   name: ui-tests-xcresult
                   path: build/UITests.xcresult
+
+    s3-integration:
+        runs-on: macos-26
+        timeout-minutes: 60
+        env:
+            MINIO_ROOT_USER: ishare-ci
+            MINIO_ROOT_PASSWORD: ishare-ci-secret
+            MINIO_DOMAIN: s3.local
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen and MinIO
+              run: brew install xcodegen minio
+            - name: Resolve the virtual-hosted bucket names locally
+              run: |
+                  for host in s3.local ishare-integration.s3.local ishare-integration-private.s3.local; do
+                      printf '127.0.0.1 %s\n::1 %s\n' "$host" "$host" | sudo tee -a /etc/hosts
+                  done
+                  sudo dscacheutil -flushcache
+                  sudo killall -HUP mDNSResponder || true
+            - name: Start MinIO
+              run: |
+                  mkdir -p "$RUNNER_TEMP/minio"
+                  nohup minio server "$RUNNER_TEMP/minio" --address ":9000" > "$RUNNER_TEMP/minio.log" 2>&1 &
+                  for _ in $(seq 1 60); do
+                      if curl -sf http://127.0.0.1:9000/minio/health/live; then
+                          exit 0
+                      fi
+                      sleep 1
+                  done
+                  cat "$RUNNER_TEMP/minio.log"
+                  exit 1
+            - run: xcodegen generate
+            - name: Run the S3 integration tests against MinIO
+              env:
+                  TEST_RUNNER_ISHARE_S3_ENDPOINT: http://127.0.0.1:9000
+                  TEST_RUNNER_ISHARE_S3_VIRTUAL_HOST_ENDPOINT: http://s3.local:9000
+                  TEST_RUNNER_ISHARE_S3_ACCESS_KEY: ishare-ci
+                  TEST_RUNNER_ISHARE_S3_SECRET_KEY: ishare-ci-secret
+              run: |
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS" \
+                    -derivedDataPath build/DerivedData \
+                    -resultBundlePath build/S3Integration.xcresult \
+                    -only-testing:ishareTests/NetworkSuite \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - name: Check that the integration tests ran
+              run: |
+                  xcrun xcresulttool get test-results tests --path build/S3Integration.xcresult > "$RUNNER_TEMP/tests.json"
+                  python3 - "$RUNNER_TEMP/tests.json" <<'PY'
+                  import json, sys
+
+                  def walk(node):
+                      yield node
+                      for child in node.get("children", []):
+                          yield from walk(child)
+
+                  nodes = [node for root in json.load(open(sys.argv[1]))["testNodes"] for node in walk(root)]
+                  integration = [node for node in nodes if node.get("nodeType") == "Test Case" and "S3IntegrationTests" in node.get("nodeIdentifier", "")]
+                  passed = [node for node in integration if node.get("result") == "Passed"]
+                  print(f"{len(passed)} of {len(integration)} S3 integration tests passed")
+                  sys.exit(0 if integration and len(passed) == len(integration) else 1)
+                  PY
+            - name: Show the MinIO log
+              if: failure()
+              run: cat "$RUNNER_TEMP/minio.log"
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: s3-integration-xcresult
+                  path: build/S3Integration.xcresult
