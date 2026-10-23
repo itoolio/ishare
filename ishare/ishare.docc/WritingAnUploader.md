@@ -38,7 +38,7 @@ Return an ``UploadOutcome`` that describes the result:
 | --- | --- |
 | ``UploadOutcome/url`` | The link people share, or a `file://` URL for local destinations. |
 | ``UploadOutcome/deletionURL`` | A URL that deletes the upload, kept in the history. |
-| ``UploadOutcome/uploaderID`` | The ID of the ``CustomUploader`` that made the upload, so the history can find the uploader again to delete it. |
+| ``UploadOutcome/uploaderID`` | The ID of the `CustomUploader` that made the upload, so the history can find the uploader again to delete it. |
 | ``UploadOutcome/s3Key`` | The object key for S3 uploads. |
 | ``UploadOutcome/localIdentifier`` | An identifier for items without a URL, such as a Photos asset. |
 | ``UploadOutcome/isShareable`` | `false` when the destination has no link to copy or shorten. |
@@ -47,7 +47,7 @@ Return an ``UploadOutcome`` that describes the result:
 
 Throw ``UploadFailure`` so the coordinator can decide what to do:
 
-- ``UploadFailure/invalidSpecification(_:)`` when the configuration is incomplete. Validate with ``UploaderValidator/issues(for:)`` before you start, as every built-in uploader does.
+- ``UploadFailure/invalidSpecification(_:)`` when the configuration is incomplete. Validate with `UploaderValidator.issues(for:)` before you start, as every built-in uploader does.
 - ``UploadFailure/transport(_:)`` for network errors, and ``UploadFailure/http(status:body:)`` for error responses. Transport errors and 408, 429 and 5xx responses are retryable, so the coordinator moves the file to the upload queue and tries again later.
 - ``UploadFailure/responseParsing(_:)`` when the response doesn't contain a link.
 - ``UploadFailure/cancelled`` when the person cancelled, which is not counted as a failure.
@@ -58,11 +58,11 @@ Throw ``UploadFailure`` so the coordinator can decide what to do:
 
 ### Wiring it up
 
-1. Add a case to ``UploaderKind`` and give it a symbol and a title.
-2. Add a configuration type for its settings as an optional property of ``CustomUploader``, decoded case-insensitively like the existing `s3`, `folder` and `photos` blocks, so the new kind can be imported and exported as an `.iscu` file.
+1. Add a case to `UploaderKind` in `Packages/ishareCore` and give it a symbol and a title.
+2. Add a configuration type for its settings as an optional property of `CustomUploader`, decoded case-insensitively like the existing `s3`, `folder` and `photos` blocks, so the new kind can be imported and exported as an `.iscu` file.
 3. Write the uploader in `ishare/Http/Uploaders` as a `struct` that conforms to ``Uploader``.
 4. Return it from ``UploadTarget/uploader(linkChoice:)`` for the new kind.
-5. Validate its configuration in ``UploaderValidator/issues(for:)``.
+5. Validate its configuration in `UploaderValidator.issues(for:)`.
 6. Add a section to the uploader editor for its settings, and document the new `uploaderType` in this catalog.
 
 ### Testing
