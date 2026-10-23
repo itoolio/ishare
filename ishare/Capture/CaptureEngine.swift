@@ -2,7 +2,7 @@
 import Combine
 import Defaults
 import Foundation
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 struct CapturedFrame: Sendable {
     static let invalid = CapturedFrame(surface: nil, contentRect: .zero, contentScale: 0, scaleFactor: 0)

@@ -1,8 +1,8 @@
-@preconcurrency import AVFoundation
+import AVFoundation
 import BezelNotification
 import Defaults
 import IOKit.ps
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 enum InstantReplayDuration: Int, CaseIterable, Identifiable, Defaults.Serializable, Sendable {
     case seconds30 = 30

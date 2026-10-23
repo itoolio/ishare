@@ -1,5 +1,5 @@
-@preconcurrency import AppKit
-@preconcurrency import AVFoundation
+import AppKit
+import AVFoundation
 import AVKit
 import BezelNotification
 import SwiftUI

@@ -1,6 +1,6 @@
-@preconcurrency import AVFoundation
+import AVFoundation
 import Foundation
-@preconcurrency import Speech
+import Speech
 
 enum SpeechCaptionError: LocalizedError {
     case notAuthorized

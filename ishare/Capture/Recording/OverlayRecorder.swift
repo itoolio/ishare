@@ -1,7 +1,7 @@
-@preconcurrency import AppKit
-@preconcurrency import AVFoundation
+import AppKit
+import AVFoundation
 import Defaults
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 struct OverlaySource: Sendable {
     var windowID: CGWindowID?

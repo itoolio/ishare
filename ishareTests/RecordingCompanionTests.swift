@@ -1,7 +1,7 @@
-@preconcurrency import AVFoundation
+import AVFoundation
 import CoreGraphics
 import Foundation
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 import Testing
 @testable import ishare
 

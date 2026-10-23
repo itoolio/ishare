@@ -7,7 +7,7 @@
 
 import Defaults
 import Foundation
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 actor CallbackStore {
     private var contentSelected: (@Sendable (SCContentFilter, SCStream?) -> Void)?

@@ -1,5 +1,5 @@
-@preconcurrency import AppKit
-@preconcurrency import AVFoundation
+import AppKit
+import AVFoundation
 import CoreImage
 
 final class OverlayCompositionInstruction: NSObject, AVVideoCompositionInstructionProtocol, @unchecked Sendable {

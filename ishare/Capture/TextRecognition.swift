@@ -1,6 +1,6 @@
 import CoreGraphics
 import Foundation
-@preconcurrency import Vision
+import Vision
 
 struct RecognizedWord: Hashable, Sendable {
     var range: NSRange
