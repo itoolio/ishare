@@ -9,6 +9,7 @@ extension Color {
 }
 
 struct MainMenuView: View {
+    var isPreview = false
     @ObservedObject private var recorder = AppDelegate.shared.screenRecorder
     @ObservedObject private var menu = MenuController.shared
     @Environment(\.openWindow) private var openWindow
@@ -19,6 +20,8 @@ struct MainMenuView: View {
     @State private var hoveredRecentItem: HistoryItem?
     @State private var isHoveringPreview = false
     @State private var previewTask: Task<Void, Never>?
+    @State private var destinationAnchor = ViewAnchor()
+    @State private var moreAnchor = ViewAnchor()
 
     @Default(.copyToClipboard) var copyToClipboard
     @Default(.openInFinder) var openInFinder
@@ -32,36 +35,80 @@ struct MainMenuView: View {
     @Default(.uploadHistory) var uploadHistory
     @Default(.menuRecordsGIF) var recordsGIF
     @Default(.aussieMode) var aussieMode
+    @Default(.menuSectionOrder) var sectionOrder
+    @Default(.hiddenMenuSections) var hiddenSections
+    @Default(.menuDensity) var density
+
+    private var metrics: MenuMetrics { density.metrics }
+
+    private var layout: MenuLayout {
+        MenuLayout(order: sectionOrder, hidden: hiddenSections)
+    }
+
+    private var showsPalette: Bool {
+        menu.showsCommandPalette && !isPreview
+    }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: metrics.stackSpacing) {
             header
-            section("Capture") { captureRow }
-            section("Record", accessory: { recordFormatPicker }) { recordSection }
-            section("After Capture") { afterCaptureSection }
-            if !uploadHistory.isEmpty {
-                section("Recent Uploads") { recentStrip }
+            if showsPalette {
+                CommandPaletteView(onClose: closePalette)
+            } else {
+                ForEach(renderedSections) { section in
+                    sectionView(section)
+                }
             }
-            footer
         }
-        .padding(12)
+        .padding(metrics.padding)
         .frame(width: 360)
         .environment(\.menuFocusedTarget, focusedTarget)
-        .focusable()
+        .focusable(!isPreview)
         .focusEffectDisabled()
         .focused($hasKeyboardFocus)
         .onKeyPress(phases: .down) { press in
             handleKeyPress(press)
         }
-        .onAppear(perform: prepareKeyboardFocus)
+        .onAppear {
+            guard !isPreview else { return }
+            MenuController.shared.openSettingsAction = { [openSettings] in openSettings() }
+            prepareKeyboardFocus()
+        }
         .onChange(of: menu.isPresented) { _, presented in
+            guard !isPreview else { return }
             if presented {
                 prepareKeyboardFocus()
             } else {
                 closePreview()
             }
         }
+        .onChange(of: menu.showsCommandPalette) { _, showing in
+            guard !isPreview, !showing else { return }
+            prepareKeyboardFocus()
+        }
+        .menuAppearance(appliesToWindow: !isPreview)
         .rotationEffect(aussieMode ? .degrees(180) : .zero)
+    }
+
+    private var renderedSections: [MenuSection] {
+        layout.visibleSections.filter { $0 != .recentUploads || !uploadHistory.isEmpty }
+    }
+
+    @ViewBuilder
+    private func sectionView(_ section: MenuSection) -> some View {
+        switch section {
+        case .capture:
+            self.section("Capture") { captureRow }
+        case .record:
+            self.section("Record", accessory: { recordFormatPicker }) { recordSection }
+        case .afterCapture:
+            self.section("After Capture") { afterCaptureSection }
+        case .recentUploads:
+            self.section("Recent Uploads") { recentStrip }
+                .zIndex(1)
+        case .footer:
+            footer
+        }
     }
 
     private var header: some View {
@@ -74,6 +121,9 @@ struct MainMenuView: View {
                 .fixedSize()
             Spacer(minLength: 4)
             destinationPicker
+            if showsDonate {
+                donateButton
+            }
             SettingsLink {
                 Image(systemName: "gearshape")
                     .font(.system(size: 13, weight: .medium))
@@ -92,47 +142,75 @@ struct MainMenuView: View {
         }
     }
 
+    private var showsDonate: Bool {
+        #if GITHUB_RELEASE
+            !ScreenshotMode.isActive
+        #else
+            false
+        #endif
+    }
+
+    private var donateButton: some View {
+        Button(action: openDonation) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.menuAccent)
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(MenuIconButtonStyle())
+        .fixedSize()
+        .help("Donate".localized())
+        .menuFocusRing(.donate, shape: .circle)
+        .accessibilityLabel("Donate".localized())
+        .accessibilityIdentifier("menu.donate")
+    }
+
+    private func openDonation() {
+        guard !isPreview else { return }
+        dismissMenu()
+        NSWorkspace.shared.open(URL(string: "https://github.com/sponsors/castdrian")!)
+    }
+
     private var moreMenu: some View {
-        Menu {
-            Button("About ishare".localized()) {
-                dismissMenu()
-                NSApp.activate(ignoringOtherApps: true)
-                NSApp.orderFrontStandardAboutPanel(options: [
-                    NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): "© \(Calendar.current.component(.year, from: Date())) ADRIAN CASTRO",
-                ])
-            }
-            #if GITHUB_RELEASE
-                Button("Check for Updates…".localized()) {
-                    dismissMenu()
-                    AppDelegate.shared.checkForUpdates()
-                }
-                Button("Donate".localized()) {
-                    NSWorkspace.shared.open(URL(string: "https://github.com/sponsors/castdrian")!)
-                }
-            #endif
-            Button("Welcome Guide…".localized()) {
-                dismissMenu()
-                NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: Onboarding.windowID)
-            }
-            .accessibilityIdentifier("menu.onboarding")
-            Divider()
-            Button("Quit".localized()) {
-                NSApplication.shared.terminate(nil)
-            }
-            .keyboardShortcut("q")
+        Button {
+            showOverflowMenu()
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 13, weight: .semibold))
                 .frame(width: 26, height: 26)
                 .contentShape(Rectangle())
         }
-        .menuStyle(.button)
         .buttonStyle(MenuIconButtonStyle())
-        .menuIndicator(.hidden)
+        .anchored(to: moreAnchor)
         .fixedSize()
         .help("More".localized())
+        .menuFocusRing(.more, shape: .circle)
+        .accessibilityLabel("More".localized())
         .accessibilityIdentifier("menu.more")
+    }
+
+    private func showOverflowMenu() {
+        guard !isPreview else { return }
+        let overflow = MenuAppKitMenus.overflowMenu(
+            openOnboarding: { [openWindow] in
+                MenuController.shared.dismiss()
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: Onboarding.windowID)
+            },
+            openCommandPalette: { MenuController.shared.showsCommandPalette = true }
+        )
+        AppKitMenuPresenter.popUp(overflow, from: moreAnchor)
+    }
+
+    private func showRecentLinksMenu() {
+        guard !isPreview, let submenu = MenuAppKitMenus.recentLinksItem(history: uploadHistory).submenu else { return }
+        AppKitMenuPresenter.popUp(submenu, from: moreAnchor)
+    }
+
+    private func showDestinationMenu() {
+        guard !isPreview else { return }
+        AppKitMenuPresenter.popUp(MenuAppKitMenus.destinationMenu(), from: destinationAnchor)
     }
 
     private func section(
@@ -140,11 +218,9 @@ struct MainMenuView: View {
         @ViewBuilder accessory: () -> some View = { EmptyView() },
         @ViewBuilder content: () -> some View
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: metrics.sectionSpacing) {
             HStack {
-                Text(title.localized())
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                MenuSectionTitle(title: title)
                 Spacer()
                 accessory()
             }
@@ -228,7 +304,7 @@ struct MainMenuView: View {
                 }
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)
-                .frame(height: 40)
+                .frame(height: metrics.wideHeight)
                 .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.red))
                 .contentShape(Rectangle())
             }
@@ -272,11 +348,9 @@ struct MainMenuView: View {
                         .menuFocusRing(.chip(index), shape: .circle)
                 }
             }
-            Text(afterCaptureSummary)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+            if density == .comfortable {
+                MenuSecondaryText(text: afterCaptureSummary)
+            }
         }
     }
 
@@ -301,74 +375,31 @@ struct MainMenuView: View {
     }
 
     private var destinationTitle: String {
-        if case let .custom(id) = uploadDestination, let uploader = CustomUploader.allCases.first(where: { $0.id == id }) {
-            return uploader.name
-        }
-        return "Imgur"
+        _ = (uploadType, activeCustomUploader)
+        return UploadDestinationSwitcher.title(for: uploadDestination)
     }
 
     private var destinationPicker: some View {
-        Menu {
-            Button {
-                select(.builtIn(.IMGUR))
-            } label: {
-                Label { Text("Imgur") } icon: { Image(nsImage: ImgurIcon) }
-            }
-            if !CustomUploader.allCases.isEmpty {
-                Divider()
-                ForEach(CustomUploader.allCases) { uploader in
-                    Button {
-                        select(.custom(uploader.id))
-                    } label: {
-                        Label(uploader.name, systemImage: uploader.kind == .s3 ? "externaldrive.connected.to.line.below" : "server.rack")
-                    }
-                }
-            }
+        Button {
+            showDestinationMenu()
         } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "icloud.and.arrow.up")
-                    .font(.system(size: 11, weight: .semibold))
-                Text(destinationTitle)
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 9)
-            .frame(height: 26)
-            .background(Capsule().fill(Color.primary.opacity(0.09)))
-            .contentShape(Capsule())
+            DestinationPillLabel(title: destinationTitle)
         }
-        .menuStyle(.button)
         .buttonStyle(.plain)
-        .menuIndicator(.hidden)
+        .anchored(to: destinationAnchor)
         .fixedSize(horizontal: false, vertical: true)
         .layoutPriority(1)
         .help(String(format: "%@: %@", "Upload Destination".localized(), destinationTitle))
         .menuFocusRing(.destination, shape: .roundedRectangle(13))
+        .accessibilityLabel("Upload Destination".localized())
         .accessibilityValue(destinationTitle)
         .accessibilityIdentifier("menu.destination")
-    }
-
-    private func select(_ destination: UploadDestination) {
-        uploadDestination = destination
-        switch destination {
-        case .builtIn:
-            activeCustomUploader = nil
-            uploadType = .IMGUR
-        case let .custom(id):
-            activeCustomUploader = id
-            uploadType = .CUSTOM
-        }
-        BezelNotification.show(messageText: String(format: "Selected %@".localized(), destinationTitle), icon: ToastIcon)
     }
 
     private var recentStrip: some View {
         HStack(spacing: 6) {
             ForEach(Array(uploadHistory.prefix(5).enumerated()), id: \.element) { index, item in
-                RecentUploadThumbnail(item: item, index: index) { hovering in
+                RecentUploadThumbnail(item: item, index: index, size: metrics.thumbnailSize) { hovering in
                     hoverRecent(hovering ? item : nil)
                 }
                 .menuFocusRing(.recent(index), shape: .roundedRectangle(8))
@@ -379,7 +410,7 @@ struct MainMenuView: View {
             } label: {
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 14, weight: .medium))
-                    .frame(width: 44, height: 44)
+                    .frame(width: metrics.thumbnailSize, height: metrics.thumbnailSize)
                     .contentShape(Rectangle())
             }
             .buttonStyle(ActionTileStyle())
@@ -395,7 +426,7 @@ struct MainMenuView: View {
                 } onFinish: {
                     closePreview()
                 }
-                .offset(y: -52)
+                .offset(y: -(metrics.thumbnailSize + 8))
                 .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
             }
         }
@@ -418,19 +449,14 @@ struct MainMenuView: View {
         }
     }
 
-    private var chipBindings: [Binding<Bool>] {
-        AfterCaptureStep.allCases.map(binding(for:))
-    }
-
     private var focusRows: [[MenuFocusTarget]] {
-        var rows: [[MenuFocusTarget]] = [[.destination, .settings], (0 ..< 4).map(MenuFocusTarget.capture)]
-        rows.append(recorder.isRunning ? [.stopRecording] : [.record(0), .record(1)])
-        rows.append(chipBindings.indices.map(MenuFocusTarget.chip))
-        if !uploadHistory.isEmpty {
-            rows.append((0 ..< min(5, uploadHistory.count)).map(MenuFocusTarget.recent) + [.history])
-        }
-        rows.append([.footer(0), .footer(1)])
-        return rows
+        MenuFocusLayout.rows(
+            sections: renderedSections,
+            isRecording: recorder.isRunning,
+            chipCount: AfterCaptureStep.allCases.count,
+            recentCount: min(5, uploadHistory.count),
+            showsDonate: showsDonate
+        )
     }
 
     private func prepareKeyboardFocus() {
@@ -438,7 +464,21 @@ struct MainMenuView: View {
         hasKeyboardFocus = true
     }
 
+    private func closePalette() {
+        menu.showsCommandPalette = false
+    }
+
     private func handleKeyPress(_ press: KeyPress) -> KeyPress.Result {
+        if press.modifiers.contains(.command), press.characters.lowercased() == "k" {
+            closePreview()
+            menu.showsCommandPalette.toggle()
+            return .handled
+        }
+        if press.modifiers.contains(.command), press.characters.lowercased() == "q" {
+            NSApplication.shared.terminate(nil)
+            return .handled
+        }
+        guard !showsPalette else { return .ignored }
         let directions: [KeyEquivalent: MenuFocusDirection] = [.upArrow: .up, .downArrow: .down, .leftArrow: .left, .rightArrow: .right]
         if let direction = directions[press.key] {
             closePreview()
@@ -454,11 +494,13 @@ struct MainMenuView: View {
             activate(focusedTarget)
             return .handled
         }
-        if press.modifiers.isDisjoint(with: [.command, .control, .option]),
-           let character = press.characters.first,
-           let index = MenuFocusNavigator.captureIndex(forKey: character)
-        {
+        guard press.modifiers.isDisjoint(with: [.command, .control, .option]), let character = press.characters.first else { return .ignored }
+        if let index = MenuFocusNavigator.captureIndex(forKey: character) {
             triggerCapture(index)
+            return .handled
+        }
+        if MenuFocusNavigator.isRecentLinksKey(character) {
+            showRecentLinksMenu()
             return .handled
         }
         return .ignored
@@ -467,11 +509,15 @@ struct MainMenuView: View {
     private func activate(_ target: MenuFocusTarget) {
         switch target {
         case .destination:
-            selectNextDestination()
+            showDestinationMenu()
         case .settings:
             dismissMenu()
             NSApp.activate(ignoringOtherApps: true)
             openSettings()
+        case .donate:
+            openDonation()
+        case .more:
+            showOverflowMenu()
         case let .capture(index):
             triggerCapture(index)
         case let .record(index):
@@ -501,12 +547,6 @@ struct MainMenuView: View {
         guard types.indices.contains(index) else { return }
         let type = types[index]
         run { await CaptureSession.captureImage(type) }
-    }
-
-    private func selectNextDestination() {
-        let destinations = [UploadDestination.builtIn(.IMGUR)] + CustomUploader.allCases.map { UploadDestination.custom($0.id) }
-        let current = destinations.firstIndex(of: uploadDestination) ?? -1
-        select(destinations[(current + 1) % destinations.count])
     }
 
     private func openHistory() {
@@ -554,11 +594,61 @@ struct MainMenuView: View {
     }
 }
 
+private struct MenuSectionTitle: View {
+    let title: String
+    @Environment(\.menuContrast) private var contrast
+
+    var body: some View {
+        Text(title.localized())
+            .font(.system(size: 11, weight: Font.Weight.semibold.emphasized(contrast)))
+            .foregroundStyle(contrast.isHigh ? AnyShapeStyle(Color.primary.opacity(contrast.secondaryOpacity)) : AnyShapeStyle(.secondary))
+    }
+}
+
+private struct MenuSecondaryText: View {
+    let text: String
+    @Environment(\.menuContrast) private var contrast
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: Font.Weight.regular.emphasized(contrast)))
+            .foregroundStyle(contrast.isHigh ? AnyShapeStyle(Color.primary.opacity(contrast.secondaryOpacity)) : AnyShapeStyle(.secondary))
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct DestinationPillLabel: View {
+    let title: String
+    @Environment(\.menuContrast) private var contrast
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "icloud.and.arrow.up")
+                .font(.system(size: 11, weight: .semibold))
+            Text(title)
+                .font(.system(size: 12, weight: Font.Weight.medium.emphasized(contrast)))
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 9)
+        .frame(height: 26)
+        .background(Capsule().fill(Color.primary.opacity(contrast.isHigh ? 0.18 : 0.09)))
+        .overlay { if contrast.isHigh { Capsule().strokeBorder(Color.primary.opacity(contrast.borderOpacity), lineWidth: 1) } }
+        .contentShape(Capsule())
+    }
+}
+
+
 @MainActor
 private func shortcutHelp(_ title: String, _ shortcut: KeyboardShortcuts.Name?) -> String {
     guard let shortcut, let keys = KeyboardShortcuts.getShortcut(for: shortcut) else { return title.localized() }
     return "\(title.localized()) (\(keys.description))"
 }
+
 
 struct ActionTileStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -572,14 +662,21 @@ private struct ActionTileBackground<Content: View>: View {
     let isPressed: Bool
     @ViewBuilder var content: Content
     @State private var isHovered = false
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
         content
             .foregroundStyle(isHovered ? Color.white : Color.primary)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isHovered ? Color.menuAccent : Color.primary.opacity(0.08))
+                    .fill(isHovered ? Color.menuAccent : Color.primary.opacity(contrast.fillOpacity))
             )
+            .overlay {
+                if contrast.isHigh {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(isHovered ? 0 : contrast.borderOpacity), lineWidth: 1)
+                }
+            }
             .scaleEffect(isPressed ? 0.96 : 1)
             .animation(.easeOut(duration: 0.12), value: isHovered)
             .onHover { isHovered = $0 }
@@ -589,19 +686,21 @@ private struct ActionTileBackground<Content: View>: View {
 struct ActionTileLabel: View {
     let symbol: String
     let title: String
+    @Environment(\.menuMetrics) private var metrics
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: metrics.tileSpacing) {
             Image(systemName: symbol)
-                .font(.system(size: 17, weight: .medium))
-                .frame(height: 20)
+                .font(.system(size: metrics.tileSymbolSize, weight: Font.Weight.medium.emphasized(contrast)))
+                .frame(height: metrics.tileSymbolSize + 3)
             Text(title.localized())
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: Font.Weight.medium.emphasized(contrast)))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 58)
+        .frame(height: metrics.tileHeight)
         .contentShape(Rectangle())
     }
 }
@@ -630,21 +729,23 @@ struct WideActionButton: View {
     var shortcut: KeyboardShortcuts.Name?
     var identifier: String = ""
     let action: () -> Void
+    @Environment(\.menuMetrics) private var metrics
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: symbol)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 15, weight: Font.Weight.medium.emphasized(contrast)))
                 Text(title.localized())
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12, weight: Font.Weight.medium.emphasized(contrast)))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
-            .frame(height: 40)
+            .frame(height: metrics.wideHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(ActionTileStyle())
@@ -665,11 +766,13 @@ private struct MenuIconButtonBody<Content: View>: View {
     let isPressed: Bool
     @ViewBuilder var content: Content
     @State private var isHovered = false
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
         content
             .foregroundStyle(.primary)
-            .background(Circle().fill(Color.primary.opacity(isHovered || isPressed ? 0.14 : 0.07)))
+            .background(Circle().fill(Color.primary.opacity(isHovered || isPressed ? contrast.hoverFillOpacity : contrast.iconFillOpacity)))
+            .overlay { if contrast.isHigh { Circle().strokeBorder(Color.primary.opacity(contrast.borderOpacity), lineWidth: 1) } }
             .onHover { isHovered = $0 }
     }
 }
@@ -679,17 +782,18 @@ struct ToggleChip: View {
     let title: String
     @Binding var isOn: Bool
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
         Button {
             isOn.toggle()
         } label: {
             Image(systemName: symbol)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 12, weight: Font.Weight.semibold.emphasized(contrast)))
                 .foregroundStyle(isOn ? Color.white : Color.primary)
                 .frame(width: 26, height: 26)
-                .background(Circle().fill(isOn ? Color.menuAccent : Color.primary.opacity(0.08)))
-                .overlay(Circle().strokeBorder(Color.primary.opacity(isOn ? 0 : 0.12), lineWidth: 1))
+                .background(Circle().fill(isOn ? Color.menuAccent : Color.primary.opacity(contrast.fillOpacity)))
+                .overlay(Circle().strokeBorder(Color.primary.opacity(isOn ? 0 : contrast.borderOpacity), lineWidth: contrast.borderWidth))
                 .opacity(isEnabled ? 1 : 0.4)
                 .contentShape(Circle())
         }
@@ -704,6 +808,7 @@ struct ShareChip: View {
     let image: NSImage?
     let title: String
     @Binding var isOn: Bool
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
         Button {
@@ -713,10 +818,10 @@ struct ShareChip: View {
                 .resizable()
                 .frame(width: 18, height: 18)
                 .saturation(isOn ? 1 : 0)
-                .opacity(isOn ? 1 : 0.55)
+                .opacity(isOn ? 1 : contrast.dimmedOpacity)
                 .frame(width: 26, height: 26)
                 .background(Circle().fill(isOn ? Color.menuAccent.opacity(0.35) : Color.clear))
-                .overlay(Circle().strokeBorder(isOn ? Color.menuAccent : Color.primary.opacity(0.12), lineWidth: isOn ? 1.5 : 1))
+                .overlay(Circle().strokeBorder(isOn ? Color.menuAccent : Color.primary.opacity(contrast.borderOpacity), lineWidth: isOn ? 1.5 : contrast.borderWidth))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -730,15 +835,17 @@ struct FooterButton: View {
     let symbol: String
     let title: String
     let action: () -> Void
+    @Environment(\.menuMetrics) private var metrics
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
         Button(action: action) {
             Label(title.localized(), systemImage: symbol)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12, weight: Font.Weight.medium.emphasized(contrast)))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
-                .frame(height: 32)
+                .frame(height: metrics.footerHeight)
                 .contentShape(Rectangle())
         }
         .buttonStyle(ActionTileStyle())
@@ -748,21 +855,25 @@ struct FooterButton: View {
 struct RecentUploadThumbnail: View {
     let item: HistoryItem
     let index: Int
+    var size: CGFloat = 44
     let onHover: (Bool) -> Void
+    @State private var shareAnchor = ViewAnchor()
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
         Button {
             HistoryActions.copyURL(item)
         } label: {
-            HistoryThumbnail(item: item, pointSize: 44)
-                .frame(width: 44, height: 44)
+            HistoryThumbnail(item: item, pointSize: size)
+                .frame(width: size, height: size)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.primary.opacity(0.1), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.primary.opacity(contrast.isHigh ? contrast.borderOpacity : 0.1), lineWidth: 1))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .anchored(to: shareAnchor)
         .onHover(perform: onHover)
-        .contextMenu { HistoryItemMenuItems(item: item, showsFinder: false) }
+        .contextMenu { HistoryItemMenuItems(item: item, showsFinder: false, shareAnchor: shareAnchor) }
         .accessibilityLabel(item.fileName)
         .accessibilityIdentifier("menu.recent.\(index)")
     }
@@ -773,6 +884,7 @@ struct RecentUploadPreview: View {
     let uploaderName: String?
     let onHover: (Bool) -> Void
     let onFinish: () -> Void
+    @Environment(\.menuContrast) private var contrast
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -782,7 +894,7 @@ struct RecentUploadPreview: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.fileName)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12, weight: Font.Weight.semibold.emphasized(contrast)))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if let url = item.fileUrl {
@@ -816,6 +928,7 @@ struct RecentUploadPreview: View {
                         HistoryActions.edit(item)
                     }
                 }
+                ShareActionButton(items: { SharePicker.items(for: item) }, iconOnly: true, identifier: "menu.preview.share")
                 Menu {
                     if item.canDeleteFromServer {
                         Button("Delete from Server…".localized(), role: .destructive) {
@@ -844,7 +957,7 @@ struct RecentUploadPreview: View {
                 .fill(.regularMaterial)
                 .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
         )
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(contrast.borderOpacity), lineWidth: 1))
         .onHover(perform: onHover)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("menu.preview")

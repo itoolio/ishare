@@ -1,0 +1,92 @@
+import AppKit
+import Defaults
+
+@MainActor
+enum MenuAppKitMenus {
+    static func overflowMenu(openOnboarding: @escaping @MainActor () -> Void, openCommandPalette: @escaping @MainActor () -> Void) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        menu.addItem(recentLinksItem())
+        menu.addItem(ContinuityCameraImport.menuItem())
+        let palette = ClosureMenuItem(title: "Command Palette…".localized(), symbol: "command", keyEquivalent: "k", handler: openCommandPalette)
+        palette.setAccessibilityIdentifier("menu.commandPalette")
+        menu.addItem(palette)
+        menu.addItem(.separator())
+        menu.addItem(ClosureMenuItem(title: "About ishare".localized()) {
+            MenuController.shared.showAboutPanel()
+        })
+        #if GITHUB_RELEASE
+            menu.addItem(ClosureMenuItem(title: "Check for Updates…".localized()) {
+                MenuController.shared.dismiss()
+                AppDelegate.shared.checkForUpdates()
+            })
+        #endif
+        let onboarding = ClosureMenuItem(title: "Welcome Guide…".localized(), handler: openOnboarding)
+        onboarding.setAccessibilityIdentifier("menu.onboarding")
+        menu.addItem(onboarding)
+        menu.addItem(.separator())
+        menu.addItem(ClosureMenuItem(title: "Quit".localized(), keyEquivalent: "q") {
+            NSApplication.shared.terminate(nil)
+        })
+        return menu
+    }
+
+    static func recentLinksItem(history: [HistoryItem] = Defaults[.uploadHistory]) -> NSMenuItem {
+        let item = NSMenuItem(title: "Recent Links".localized(), action: nil, keyEquivalent: "")
+        item.image = NSImage(systemSymbolName: "link", accessibilityDescription: nil)
+        item.setAccessibilityIdentifier("menu.recentLinks")
+        let submenu = NSMenu(title: "Recent Links".localized())
+        submenu.autoenablesItems = false
+        let links = RecentLinks.links(from: history)
+        if links.isEmpty {
+            let empty = NSMenuItem(title: "No Recent Links".localized(), action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            submenu.addItem(empty)
+        } else {
+            for (index, link) in links.enumerated() {
+                let copy = ClosureMenuItem(title: link.displayTitle) {
+                    HistoryActions.copyURL(link.item)
+                }
+                copy.toolTip = String(format: "%@ — click to copy, ⌥-click to open".localized(), link.url)
+                copy.setAccessibilityIdentifier("menu.recentLinks.\(index)")
+                let open = ClosureMenuItem(title: String(format: "Open %@".localized(), link.displayTitle)) {
+                    MenuController.shared.dismiss()
+                    HistoryActions.open(link.item)
+                }
+                open.isAlternate = true
+                open.keyEquivalentModifierMask = .option
+                submenu.addItem(copy)
+                submenu.addItem(open)
+            }
+            submenu.addItem(.separator())
+            let hint = NSMenuItem(title: "Click to copy, ⌥-click to open".localized(), action: nil, keyEquivalent: "")
+            hint.isEnabled = false
+            submenu.addItem(hint)
+        }
+        item.submenu = submenu
+        return item
+    }
+
+    static func destinationMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        let current = UploadDestinationSwitcher.current
+        for (index, destination) in UploadDestinationSwitcher.destinations.enumerated() {
+            if index == 1 {
+                menu.addItem(.separator())
+            }
+            let item = ClosureMenuItem(title: UploadDestinationSwitcher.title(for: destination)) {
+                UploadDestinationSwitcher.select(destination)
+            }
+            if case .builtIn = destination {
+                item.image = ImgurIcon
+            } else {
+                item.image = NSImage(systemSymbolName: UploadDestinationSwitcher.symbol(for: destination), accessibilityDescription: nil)
+            }
+            item.state = destination == current ? .on : .off
+            item.setAccessibilityIdentifier("menu.destination.\(UploadDestinationSwitcher.identifier(for: destination))")
+            menu.addItem(item)
+        }
+        return menu
+    }
+}
