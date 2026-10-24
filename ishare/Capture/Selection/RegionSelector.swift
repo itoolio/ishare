@@ -56,6 +56,10 @@ final class RegionSelector {
         }
     }
 
+    static var panelWindowIDs: Set<CGWindowID> {
+        Set(active?.panels.map { CGWindowID($0.windowNumber) } ?? [])
+    }
+
     static func provide(backdrops: [CGDirectDisplayID: CGImage]) {
         active?.provide(backdrops: backdrops)
     }

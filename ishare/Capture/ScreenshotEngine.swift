@@ -58,6 +58,17 @@ enum ScreenshotEngine {
         try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
     }
 
+    static func shareableContent(listing windowIDs: Set<CGWindowID>, timeout: Duration = .milliseconds(500)) async -> SCShareableContent? {
+        let deadline = ContinuousClock.now + timeout
+        while true {
+            guard let content = try? await shareableContent() else { return nil }
+            if windowIDs.isSubset(of: Set(content.windows.map(\.windowID))) || ContinuousClock.now >= deadline {
+                return content
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
     static func excludedApplications(in content: SCShareableContent) -> [SCRunningApplication] {
         let ignored = Set(Defaults[.ignoredBundleIdentifiers])
         let ownBundleID = Bundle.main.bundleIdentifier
