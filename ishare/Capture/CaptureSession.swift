@@ -80,9 +80,14 @@ enum CaptureSession {
             await recorder.start(fileURL, target: .picker)
             return
         }
-        let outcome = await RegionSelector.select(options: .init(allowsWindowMode: false, hint: "Select the area to record".localized()))
+        let lastRegions = LastRegionStore.regions(for: NSScreen.screens.compactMap(\.displayID))
+        let outcome = await RegionSelector.select(
+            options: .init(allowsWindowMode: false, hint: "Select the area to record".localized(), lastRegions: lastRegions))
         switch outcome {
         case let .region(screen, rect):
+            if let displayID = screen.displayID {
+                LastRegionStore.remember(rect, for: displayID)
+            }
             await recorder.start(fileURL, target: .region(screen, rect))
         case let .fullScreen(screen):
             await recorder.start(fileURL, target: .region(screen, CGRect(origin: .zero, size: screen.frame.size)))
