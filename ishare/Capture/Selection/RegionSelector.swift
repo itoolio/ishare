@@ -17,6 +17,7 @@ final class RegionSelector {
         var allowsWindowMode = true
         var hint: String?
         var lastRegions: [CGDirectDisplayID: CGRect] = [:]
+        var awaitsBackdrops = false
     }
 
     private static var active: RegionSelector?
@@ -66,8 +67,11 @@ final class RegionSelector {
 
     private func provide(backdrops: [CGDirectDisplayID: CGImage]) {
         for panel in panels {
-            guard let view = panel.contentView as? RegionSelectionView, let displayID = view.displayID, let backdrop = backdrops[displayID] else { continue }
-            view.backdrop = backdrop
+            guard let view = panel.contentView as? RegionSelectionView else { continue }
+            if let displayID = view.displayID, let backdrop = backdrops[displayID] {
+                view.backdrop = backdrop
+            }
+            view.awaitsMagnifier = false
         }
     }
 
@@ -89,6 +93,10 @@ final class RegionSelectionView: NSView {
     fileprivate var backdrop: CGImage? {
         didSet { needsDisplay = true }
     }
+    // Holds back the coordinate pill until the frozen frame arrives, so it doesn't flash before the magnifier replaces it.
+    fileprivate var awaitsMagnifier: Bool {
+        didSet { needsDisplay = true }
+    }
     private let options: RegionSelector.Options
     private let onFinish: (RegionSelector.Outcome) -> Void
 
@@ -107,6 +115,7 @@ final class RegionSelectionView: NSView {
     init(screen: NSScreen, backdrop: CGImage?, options: RegionSelector.Options, onFinish: @escaping (RegionSelector.Outcome) -> Void) {
         self.screen = screen
         self.backdrop = backdrop
+        awaitsMagnifier = options.showsMagnifier && options.awaitsBackdrops && backdrop == nil
         self.options = options
         self.onFinish = onFinish
         super.init(frame: CGRect(origin: .zero, size: screen.frame.size))
@@ -394,7 +403,7 @@ final class RegionSelectionView: NSView {
         }
         if options.showsMagnifier, let backdrop {
             drawMagnifier(backdrop: backdrop, at: location, context: context)
-        } else if selection == nil, !isMeasureModifierHeld {
+        } else if selection == nil, !isMeasureModifierHeld, !awaitsMagnifier {
             SelectionStyle.drawPill(DisplayCoordinates.label(for: location, in: bounds), near: CGPoint(x: location.x + 14, y: location.y - 34), in: bounds)
         }
     }
@@ -445,7 +454,7 @@ final class RegionSelectionView: NSView {
         guides.setLineDash([4, 4], count: 2, phase: 0)
         SelectionStyle.accentColor.setStroke()
         guides.stroke()
-        if labelled, !options.showsMagnifier || backdrop == nil {
+        if labelled, !options.showsMagnifier || backdrop == nil, !awaitsMagnifier {
             SelectionStyle.drawPill(DisplayCoordinates.label(for: location, in: bounds), near: CGPoint(x: location.x + 8, y: location.y + 4), in: bounds)
         }
     }

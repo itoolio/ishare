@@ -106,7 +106,8 @@ enum ImageCaptureFlow {
             return backdrops
         }
         let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
-        let outcome = await RegionSelector.select(options: .init(showsMagnifier: Defaults[.showMagnifier], lastRegions: lastRegions))
+        let outcome = await RegionSelector.select(
+            options: .init(showsMagnifier: Defaults[.showMagnifier], lastRegions: lastRegions, awaitsBackdrops: true))
         let backdrops = await backdropLoading.value
         switch outcome {
         case let .region(screen, rect):
