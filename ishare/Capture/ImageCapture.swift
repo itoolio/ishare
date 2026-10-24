@@ -136,7 +136,7 @@ enum ImageCaptureFlow {
             }
             return try await captureScreen(screen: screen, content: content)
         case .switchToWindow:
-            return try await captureWindow(content: content, allowsRegionMode: false, delay: delay)
+            return try await captureWindow(content: content, delay: delay)
         case .cancelled:
             return nil
         }
@@ -155,8 +155,8 @@ enum ImageCaptureFlow {
         return try await captureDisplayImage(displayID: target, region: rect, content: live, suffix: frontmostAppName())
     }
 
-    static func captureWindow(content: SCShareableContent, allowsRegionMode: Bool = true, delay: Int = 0) async throws -> CapturedImage? {
-        let outcome = await WindowPicker.pick(from: ScreenshotEngine.candidateWindows(in: content), allowsRegionMode: allowsRegionMode)
+    static func captureWindow(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
+        let outcome = await WindowPicker.pick(from: ScreenshotEngine.candidateWindows(in: content))
         switch outcome {
         case let .window(window):
             guard await CaptureCountdown.run(seconds: delay) else { return nil }
