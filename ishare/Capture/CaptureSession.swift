@@ -80,7 +80,7 @@ enum CaptureSession {
             await recorder.start(fileURL, target: .picker)
             return
         }
-        let outcome = await RegionSelector.select(options: .init(showsMagnifier: false, allowsWindowMode: false, hint: "Select the area to record".localized()))
+        let outcome = await RegionSelector.select(options: .init(allowsWindowMode: false, hint: "Select the area to record".localized()))
         switch outcome {
         case let .region(screen, rect):
             await recorder.start(fileURL, target: .region(screen, rect))
