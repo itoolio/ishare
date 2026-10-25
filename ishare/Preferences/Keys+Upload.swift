@@ -32,6 +32,20 @@ extension Defaults.Keys {
     static let showQRCodeAfterUpload = Key<Bool>("showQRCodeAfterUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let localShareExpiry = Key<LocalShareExpiry>("localShareExpiry", default: .oneHour, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let localShareMaxDownloads = Key<Int?>("localShareMaxDownloads", default: nil, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let keepsExpiredUploadsInHistory = Key<Bool>("keepsExpiredUploadsInHistory", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let duplicateUploadPolicy = Key<DuplicatePolicy>("duplicateUploadPolicy", default: .ask, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let uploaderHealthCheckFrequency = Key<HealthCheckFrequency>(
+        "uploaderHealthCheckFrequency", default: .off, suite: .ishare, iCloud: SettingsStorage.syncsToCloud
+    )
+    static let uploadHashIndex = Key<DuplicateIndex>("uploadHashIndex", default: DuplicateIndex(), suite: .ishare)
+    static let uploaderHealthRecords = Key<[String: HealthCheckRecord]>("uploaderHealthRecords", default: [:], suite: .ishare)
+    static let uploaderHealthLastCheck = Key<Date?>("uploaderHealthLastCheck", default: nil, suite: .ishare)
+    static let lastUploadLinks = Key<[String: String]>("lastUploadLinks", default: [:], suite: .ishare)
+    static let uploadExpiryLastRun = Key<Date?>("uploadExpiryLastRun", default: nil, suite: .ishare)
 }
 
 extension LocalShareExpiry: Defaults.Serializable {}
+extension DuplicatePolicy: Defaults.Serializable {}
+extension HealthCheckFrequency: Defaults.Serializable {}
+extension DuplicateIndex: Defaults.Serializable {}
+extension HealthCheckRecord: Defaults.Serializable {}

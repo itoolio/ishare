@@ -156,6 +156,7 @@ enum SettingsTransfer {
         .stripImportedImageMetadata, .uploadWebhooks,
         .cutSilenceEnabled, .cutSilenceSpeed, .cutSilenceAudioThreshold, .cutSilenceMotionThreshold, .cutSilenceMinimumDuration, .cutSilencePadding,
         .recordingConvertTo, .recordingUploadFormat, .voiceOverMode, .voiceOverDuckAmount, .blurRegionStyle, .blurDetectionInterval,
+        .keepsExpiredUploadsInHistory, .duplicateUploadPolicy, .uploaderHealthCheckFrequency,
     ]
 
     static var preferenceNames: Set<String> {

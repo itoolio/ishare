@@ -79,6 +79,7 @@ extension UploaderEditorView {
             cloudDraft = CloudDraft(uploader: uploader)
             githubDraft = GitHubDraft(uploader: uploader)
             optimizationOverride = uploader.imageOptimization ?? ImageOptimizationOverride()
+            loadMaintenance(from: uploader)
         }
     }
 
@@ -96,6 +97,7 @@ extension UploaderEditorView {
     func build() -> CustomUploader {
         var uploader = buildDefinition()
         uploader.imageOptimization = kind == .photos || optimizationOverride.isEmpty ? nil : optimizationOverride
+        applyMaintenance(to: &uploader)
         return uploader
     }
 

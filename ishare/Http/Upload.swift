@@ -19,10 +19,21 @@ protocol UploadEnvironment {
     func deliver(_ url: URL)
     func copyText(_ text: String)
     func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution
+    var currentHistory: [HistoryItem] { get }
+    func resolveDuplicate(of item: HistoryItem, fileURL: URL, target: UploadTarget) async -> DuplicateDecision
+    func promote(_ item: HistoryItem)
 }
 
 extension UploadEnvironment {
     func copyText(_: String) {}
+
+    var currentHistory: [HistoryItem] { Defaults[.uploadHistory] }
+
+    func resolveDuplicate(of _: HistoryItem, fileURL _: URL, target _: UploadTarget) async -> DuplicateDecision {
+        .uploadAgain
+    }
+
+    func promote(_: HistoryItem) {}
 }
 
 struct LiveUploadEnvironment: UploadEnvironment {
@@ -65,6 +76,28 @@ struct LiveUploadEnvironment: UploadEnvironment {
     func resolveLinkChoice(for target: UploadTarget) async -> LinkChoiceResolution {
         await LinkOptionsResolver.resolve(for: target)
     }
+
+    func resolveDuplicate(of item: HistoryItem, fileURL: URL, target: UploadTarget) async -> DuplicateDecision {
+        DuplicatePrompt.ask(existing: item, fileURL: fileURL, uploaderName: target.displayName)
+    }
+
+    func promote(_ item: HistoryItem) {
+        let key = item.storageKey
+        var history = Defaults[.uploadHistory]
+        guard let index = history.firstIndex(where: { $0.storageKey == key }), index > 0 else { return }
+        history.insert(history.remove(at: index), at: 0)
+        Defaults[.uploadHistory] = history
+    }
+}
+
+struct UploadJob: Sendable {
+    var fileURL: URL
+    var target: UploadTarget
+    var linkChoice: LinkChoice
+    var localFileURL: URL?
+    var shortener: URLShortenerConfiguration?
+    var contentHash: String?
+    var origin: UploadOrigin? = nil
 }
 
 enum UploadPlan {
@@ -136,6 +169,18 @@ enum UploadCoordinator {
         return await upload(fileURL: fileURL, primary: primary, additional: additional, shortener: Defaults[.urlShortener], localFileURL: localFileURL)
     }
 
+    static func uploadOnce(fileURL: URL, target: UploadTarget, localFileURL: URL? = nil) async throws -> UploadOutcome {
+        let hash = await DuplicateUploads.hash(of: fileURL)
+        if let reused = await reuseExistingUpload(hash: hash, fileURL: fileURL, target: target) {
+            return reused
+        }
+        let job = UploadJob(
+            fileURL: fileURL, target: target, linkChoice: LinkOptionsResolver.storedChoice(for: target), localFileURL: localFileURL,
+            shortener: nil, contentHash: hash
+        )
+        return try await process(job)
+    }
+
     @discardableResult
     static func upload(fileURL: URL, preset: UploadPreset, localFileURL: URL? = nil) async -> Result<UploadOutcome, any Error> {
         guard let primary = target(for: preset.destination) else {
@@ -170,34 +215,27 @@ enum UploadCoordinator {
             progressIndicator?.uploadCompleted(succeeded: UploadPlan.hasSuccess(results))
         }
         let count = Double(targets.count)
+        let contentHash = await DuplicateUploads.hash(of: fileURL)
         for (index, target) in targets.enumerated() {
+            if let reused = await reuseExistingUpload(hash: contentHash, fileURL: fileURL, target: target) {
+                results.append(.success(reused))
+                continue
+            }
             guard case let .use(linkChoice) = await environment.resolveLinkChoice(for: target) else {
                 environment.notify("Upload cancelled".localized())
                 results.append(.failure(UploadFailure.cancelled))
                 continue
             }
-            let prepared = await UploadPreparation.prepare(fileURL, policy: .current(for: target))
-            defer { prepared.discard() }
+            let job = UploadJob(
+                fileURL: fileURL, target: target, linkChoice: linkChoice, localFileURL: localFileURL,
+                shortener: UploadPlan.hasShareableSuccess(results) ? nil : shortener, contentHash: contentHash
+            )
             do {
-                var outcome = try await UploadStatistics.recordingUpload(fileURL: prepared.fileURL, to: target, linkChoice: linkChoice) { fraction in
+                let outcome = try await process(job) { fraction in
                     Task { @MainActor in
                         progressIndicator?.updateProgress(fraction: (Double(index) + fraction) / count)
                     }
                 }
-                outcome.originalBytes = prepared.originalBytes
-                outcome.uploadedBytes = prepared.optimizedBytes
-                Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
-                if let saved = outcome.savedBytes, let original = outcome.originalBytes {
-                    Log.upload.info("\(ByteSavings.description(saved: saved, original: original), privacy: .public)")
-                }
-                if !UploadPlan.hasShareableSuccess(results), outcome.canBeShortened {
-                    outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: shortener)
-                }
-                record(outcome, localFileURL: localFileURL)
-                WebhookDispatcher.uploadCompleted(
-                    outcome, fileURL: prepared.fileURL, uploaderName: target.displayName, savedBytes: outcome.savedBytes,
-                    waitsForAltText: AltText.isEnabled && MimeType.isImageOrVideo(prepared.fileURL)
-                )
                 results.append(.success(outcome))
             } catch {
                 handleFailure(error, fileURL: fileURL, target: target, localFileURL: localFileURL)
@@ -207,12 +245,60 @@ enum UploadCoordinator {
         return results
     }
 
-    static func completeQueued(_ outcome: UploadOutcome, localFileURL: URL?) async {
-        var outcome = outcome
-        if outcome.canBeShortened {
-            outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: Defaults[.urlShortener])
+    static func process(_ job: UploadJob, progress: @escaping @Sendable (Double) -> Void = { _ in }) async throws -> UploadOutcome {
+        let policy = UploadPreparationPolicy.current(for: job.target, origin: job.origin ?? UploadOrigin.current)
+        let prepared = await UploadPreparation.prepare(job.fileURL, policy: policy)
+        defer { prepared.discard() }
+        var outcome = try await UploadStatistics.recordingUpload(fileURL: prepared.fileURL, to: job.target, linkChoice: job.linkChoice, progress: progress)
+        outcome.originalBytes = prepared.originalBytes
+        outcome.uploadedBytes = prepared.optimizedBytes
+        outcome = LinkRewriting.rewrite(outcome, for: job.target)
+        Log.upload.info("Uploaded to \(outcome.url.absoluteString, privacy: .public)")
+        if let saved = outcome.savedBytes, let original = outcome.originalBytes {
+            Log.upload.info("\(ByteSavings.description(saved: saved, original: original), privacy: .public)")
         }
-        record(outcome, localFileURL: localFileURL)
+        if let shortener = job.shortener, outcome.canBeShortened {
+            outcome.shortURL = await URLShortenerService.shortenedOrNil(outcome.url, with: shortener)
+        }
+        record(outcome, target: job.target, localFileURL: job.localFileURL)
+        var hash = job.contentHash
+        if hash == nil {
+            hash = await DuplicateUploads.hash(of: job.fileURL)
+        }
+        DuplicateUploads.remember(hash: hash, target: job.target, outcome: outcome)
+        WebhookDispatcher.uploadCompleted(
+            outcome, fileURL: prepared.fileURL, uploaderName: job.target.displayName, savedBytes: outcome.savedBytes,
+            waitsForAltText: AltText.isEnabled && MimeType.isImageOrVideo(prepared.fileURL)
+        )
+        return outcome
+    }
+
+    static func reuseExistingUpload(hash: String?, fileURL: URL, target: UploadTarget) async -> UploadOutcome? {
+        guard let hash, let existing = DuplicateUploads.existingItem(hash: hash, target: target, history: environment.currentHistory) else { return nil }
+        let decision: DuplicateDecision
+        if let automatic = DuplicateUploads.policy.automaticDecision {
+            decision = automatic
+        } else {
+            decision = await environment.resolveDuplicate(of: existing, fileURL: fileURL, target: target)
+        }
+        guard decision == .reuse, let outcome = DuplicateUploads.outcome(reusing: existing) else { return nil }
+        Log.upload.info("Reusing the existing link for \(fileURL.lastPathComponent, privacy: .public)")
+        environment.promote(existing)
+        environment.notify("Already uploaded".localized())
+        return outcome
+    }
+
+    static func retryQueued(fileURL: URL, item: QueuedUpload) async throws -> UploadOutcome {
+        guard let target = target(for: item.destination) else { throw UploadFailure.missingUploader }
+        let job = UploadJob(
+            fileURL: fileURL, target: target, linkChoice: LinkOptionsResolver.storedChoice(for: target),
+            localFileURL: item.localPath.map { URL(fileURLWithPath: $0) }, shortener: Defaults[.urlShortener],
+            contentHash: nil, origin: item.isImported == true ? .imported : .capture
+        )
+        return try await process(job)
+    }
+
+    static func completeQueued(_ outcome: UploadOutcome) {
         if let url = outcome.deliveredURL {
             deliver(url)
         }
@@ -234,21 +320,27 @@ enum UploadCoordinator {
         environment.deliver(url)
     }
 
-    static func record(_ outcome: UploadOutcome, localFileURL: URL?) {
-        environment.recordHistory(
-            HistoryItem(
-                fileUrl: outcome.historyURL,
-                deletionUrl: outcome.deletionURL,
-                uploaderId: outcome.uploaderID,
-                s3Key: outcome.s3Key,
-                localPath: localFileURL?.path,
-                date: Date(),
-                shortUrl: outcome.shortURL?.absoluteString,
-                localIdentifier: outcome.localIdentifier,
-                originalSize: outcome.savedBytes == nil ? nil : outcome.originalBytes,
-                uploadedSize: outcome.savedBytes == nil ? nil : outcome.uploadedBytes
-            )
+    static func record(_ outcome: UploadOutcome, target: UploadTarget? = nil, localFileURL: URL?, now: Date = Date()) {
+        environment.recordHistory(historyItem(for: outcome, target: target, localFileURL: localFileURL, now: now))
+    }
+
+    static func historyItem(for outcome: UploadOutcome, target: UploadTarget?, localFileURL: URL?, now: Date) -> HistoryItem {
+        var item = HistoryItem(
+            fileUrl: outcome.historyURL,
+            deletionUrl: outcome.deletionURL,
+            uploaderId: outcome.uploaderID,
+            s3Key: outcome.s3Key,
+            localPath: localFileURL?.path,
+            date: now,
+            shortUrl: outcome.shortURL?.absoluteString,
+            localIdentifier: outcome.localIdentifier,
+            originalSize: outcome.savedBytes == nil ? nil : outcome.originalBytes,
+            uploadedSize: outcome.savedBytes == nil ? nil : outcome.uploadedBytes
         )
+        if case let .custom(uploader) = target, item.canDeleteFromServer, item.remoteURL != nil {
+            item.expiresAt = UploadExpiry.expiryDate(uploadedAt: now, days: uploader.effectiveAutoDeleteDays)
+        }
+        return item
     }
 
     static func delete(_ item: HistoryItem) async throws {

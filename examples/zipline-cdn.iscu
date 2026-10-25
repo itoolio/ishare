@@ -1,0 +1,18 @@
+{
+	"name": "zipline-cdn",
+	"requestURL": "https://your-zipline-host.com/api/upload",
+	"headers": {
+		"Authorization": "API_KEY"
+	},
+	"responseURL": "{{files[0].url}}",
+	"deletionURL": "{{files[0].removeUrl}}",
+	"deleteRequestType": "GET",
+	"fileFormName": "file",
+	"linkRewrite": {
+		"host": "cdn.example.com",
+		"scheme": "https",
+		"pathPrefix": "/i",
+		"stripQuery": true
+	},
+	"autoDeleteAfterDays": 30
+}

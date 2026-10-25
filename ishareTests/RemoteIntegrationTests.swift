@@ -34,6 +34,24 @@ enum RemoteIntegrationEnvironment {
     }
 }
 
+@MainActor
+enum ExpiryIntegration {
+    static func expireAndDelete(_ outcome: UploadOutcome, uploader: CustomUploader) async throws -> HistoryBox {
+        let uploadedAt = Date().addingTimeInterval(-2 * 86400)
+        let item = UploadCoordinator.historyItem(for: outcome, target: .custom(uploader), localFileURL: nil, now: uploadedAt)
+        #expect(item.expiresAt == uploadedAt.addingTimeInterval(86400))
+        let box = HistoryBox([item])
+        let runner = UploadExpiryRunner(
+            history: { box.items }, update: { item, transform in box.update(item, transform) },
+            delete: { item in try await UploadExpiryService.deleteFromServer(item, uploaders: [uploader]) }, keepsExpiredItems: true, clock: .system
+        )
+        let summary = await runner.run()
+        #expect(summary == UploadExpirySummary(deleted: 1), "\(summary.errors)")
+        #expect(box.items.first?.isExpired == true)
+        return box
+    }
+}
+
 extension NetworkSuite {
     @MainActor
     @Suite(.enabled(if: RemoteIntegrationEnvironment.hasWebDAV, "Set ISHARE_WEBDAV_URL to run the WebDAV integration tests against a live server"))
@@ -86,6 +104,18 @@ extension NetworkSuite {
             let second = try await UploadService.upload(fileURL: file, to: .custom(uploader))
             #expect(second.s3Key != path)
             try await WebDAVUploader(uploader: uploader).delete(HistoryItem(fileUrl: outcome.url.absoluteString, s3Key: path))
+            let (deleted, _) = try await get(outcome.url)
+            #expect(deleted == 404)
+        }
+
+        @Test func deletesExpiredUploadsThroughTheExpiryRunner() async throws {
+            var uploader = uploader(url: try #require(RemoteIntegrationEnvironment.webdavURL))
+            uploader.autoDeleteAfterDays = 1
+            let file = try Fixtures.temporaryFile(named: "expire.png", contents: RemoteIntegrationEnvironment.payload(20000))
+            let outcome = try await UploadService.upload(fileURL: file, to: .custom(uploader))
+            let (uploaded, _) = try await get(outcome.url)
+            #expect(uploaded == 200)
+            _ = try await ExpiryIntegration.expireAndDelete(outcome, uploader: uploader)
             let (deleted, _) = try await get(outcome.url)
             #expect(deleted == 404)
         }
@@ -160,6 +190,22 @@ extension NetworkSuite {
             #expect(trusted.count == 1)
             try await SFTPUploader(uploader: pinnedUploader).delete(HistoryItem(fileUrl: outcome.url.absoluteString, s3Key: remotePath))
             #expect(try await exists(remotePath, configuration: pinned) == false)
+        }
+
+        @Test(.enabled(if: RemoteIntegrationEnvironment.sftpPassword != nil, "Set ISHARE_SFTP_PASSWORD to test password sign-in"))
+        func deletesExpiredUploadsThroughTheExpiryRunner() async throws {
+            let original = SFTPHostKeyTrust.persist
+            SFTPHostKeyTrust.persist = { _, _ in }
+            defer { SFTPHostKeyTrust.persist = original }
+            let configuration = try configuration()
+            var uploader = CustomUploader.sftp(name: "sftp-expiry", configuration: configuration)
+            uploader.autoDeleteAfterDays = 1
+            let file = try Fixtures.temporaryFile(named: "expire.png", contents: RemoteIntegrationEnvironment.payload(20000))
+            let outcome = try await UploadService.upload(fileURL: file, to: .custom(uploader))
+            let remotePath = try #require(outcome.s3Key)
+            #expect(try await exists(remotePath, configuration: configuration))
+            _ = try await ExpiryIntegration.expireAndDelete(outcome, uploader: uploader)
+            #expect(try await exists(remotePath, configuration: configuration) == false)
         }
 
         @Test(.enabled(if: RemoteIntegrationEnvironment.sftpPassword != nil, "Set ISHARE_SFTP_PASSWORD to test password sign-in"))

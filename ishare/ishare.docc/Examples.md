@@ -116,6 +116,31 @@ The same service with a `linkOptions` block that sends a password and an expiry 
 }
 ```
 
+### Zipline behind a CDN with auto-delete
+
+Rewrites every returned link to a CDN host and deletes uploads after 30 days. See <doc:LinkRewritingAndAutoDelete>.
+
+```json
+{
+  "name": "zipline-cdn",
+  "requestURL": "https://your-zipline-host.com/api/upload",
+  "headers": {
+    "Authorization": "API_KEY"
+  },
+  "responseURL": "{{files[0].url}}",
+  "deletionURL": "{{files[0].removeUrl}}",
+  "deleteRequestType": "GET",
+  "fileFormName": "file",
+  "linkRewrite": {
+    "host": "cdn.example.com",
+    "scheme": "https",
+    "pathPrefix": "/i",
+    "stripQuery": true
+  },
+  "autoDeleteAfterDays": 30
+}
+```
+
 ### Amazon S3
 
 A virtual-hosted bucket with dated keys and public objects. See <doc:S3Uploaders>.

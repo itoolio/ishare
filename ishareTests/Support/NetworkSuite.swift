@@ -15,6 +15,20 @@ final class UploadEnvironmentSpy: UploadEnvironment {
     var copiedText: [String] = []
     var linkChoice: LinkChoiceResolution = .use(.none)
     let showsProgress = false
+    var duplicateDecision: DuplicateDecision = .uploadAgain
+    var duplicatePrompts: [HistoryItem] = []
+    var promoted: [HistoryItem] = []
+
+    var currentHistory: [HistoryItem] { history }
+
+    func resolveDuplicate(of item: HistoryItem, fileURL _: URL, target _: UploadTarget) async -> DuplicateDecision {
+        duplicatePrompts.append(item)
+        return duplicateDecision
+    }
+
+    func promote(_ item: HistoryItem) {
+        promoted.append(item)
+    }
 
     func recordHistory(_ item: HistoryItem) {
         history.append(item)

@@ -14,11 +14,12 @@ struct QueuedUpload: Codable, Identifiable, Equatable, Sendable {
     var lastError: String?
     var nextAttemptAt: Date
     var isPaused: Bool
+    var isImported: Bool? = nil
 }
 
 @MainActor
 final class UploadQueue: ObservableObject {
-    typealias Perform = @MainActor (URL, UploadDestination) async throws -> UploadOutcome
+    typealias Perform = @MainActor (URL, QueuedUpload) async throws -> UploadOutcome
     typealias Completion = @MainActor (QueuedUpload, UploadOutcome) -> Void
 
     static let maxAttempts = 8
@@ -29,14 +30,11 @@ final class UploadQueue: ObservableObject {
     static func live() -> UploadQueue {
         UploadQueue(
             directory: defaultDirectory,
-            perform: { fileURL, destination in
-                guard let target = UploadCoordinator.target(for: destination) else { throw UploadFailure.missingUploader }
-                return try await UploadService.upload(fileURL: fileURL, to: target)
+            perform: { fileURL, item in
+                try await UploadCoordinator.retryQueued(fileURL: fileURL, item: item)
             },
-            onSuccess: { item, outcome in
-                Task { @MainActor in
-                    await UploadCoordinator.completeQueued(outcome, localFileURL: item.localPath.map { URL(fileURLWithPath: $0) })
-                }
+            onSuccess: { _, outcome in
+                UploadCoordinator.completeQueued(outcome)
                 BezelNotification.show(messageText: "Queued upload finished".localized(), icon: ToastIcon)
             }
         )
@@ -94,7 +92,8 @@ final class UploadQueue: ObservableObject {
         let item = QueuedUpload(
             id: UUID(), fileName: fileURL.lastPathComponent, destination: target.destination, destinationName: target.displayName,
             localPath: localPath, createdAt: now, attempts: 1, lastError: error.localizedDescription,
-            nextAttemptAt: now.addingTimeInterval(Self.backoff(afterAttempts: 1)), isPaused: false
+            nextAttemptAt: now.addingTimeInterval(Self.backoff(afterAttempts: 1)), isPaused: false,
+            isImported: UploadOrigin.current == .imported ? true : nil
         )
         try FileManager.default.createDirectory(at: itemDirectory(item.id), withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: fileURL, to: self.fileURL(for: item))
@@ -141,7 +140,7 @@ final class UploadQueue: ObservableObject {
 
     private func attempt(_ item: QueuedUpload, now: Date) async {
         do {
-            let outcome = try await perform(fileURL(for: item), item.destination)
+            let outcome = try await perform(fileURL(for: item), item)
             discard(item.id)
             onSuccess(item, outcome)
         } catch {

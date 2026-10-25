@@ -55,6 +55,9 @@ struct UploaderEditorView: View {
     @State var cloudDraft = CloudDraft()
     @State var githubDraft = GitHubDraft()
     @State var optimizationOverride = ImageOptimizationOverride()
+    @State var linkRewriteDraft = LinkRewriteDraft()
+    @State var autoDeletePreset: AutoDeletePreset = .off
+    @State var autoDeleteCustomDays = 14
 
     var body: some View {
         VStack(spacing: 0) {
@@ -89,6 +92,7 @@ struct UploaderEditorView: View {
                 if kind != .photos {
                     ImageOptimizationOverrideSection(override: $optimizationOverride)
                 }
+                maintenanceSections
                 if case let .edit(uploader) = target {
                     UploaderStatisticsSection(key: uploader.id.uuidString)
                 }

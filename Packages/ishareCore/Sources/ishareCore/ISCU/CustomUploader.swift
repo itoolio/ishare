@@ -83,6 +83,13 @@ public enum UploaderKind: String, Codable, CaseIterable, Sendable {
         self == .folder || self == .photos
     }
 
+    public var supportsServerDeletion: Bool {
+        switch self {
+        case .custom, .s3, .webdav, .sftp, .dropbox, .googleDrive, .oneDrive, .github: true
+        case .folder, .photos: false
+        }
+    }
+
     public var cloudProvider: CloudProvider? {
         switch self {
         case .dropbox: .dropbox
@@ -146,6 +153,8 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
     public var cloud: CloudStorageConfiguration?
     public var github: GitHubConfiguration?
     public var imageOptimization: ImageOptimizationOverride?
+    public var linkRewrite: LinkRewrite?
+    public var autoDeleteAfterDays: Int?
 
     public init(
         id: UUID = UUID(), name: String, requestURL: String, headers: [String: String]?,
@@ -155,7 +164,7 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
         modifiedAt: Date? = nil, linkOptions: LinkOptionsSpec? = nil, folder: FolderDestination? = nil,
         photos: PhotosDestination? = nil, webdav: WebDAVConfiguration? = nil, sftp: SFTPConfiguration? = nil,
         cloud: CloudStorageConfiguration? = nil, github: GitHubConfiguration? = nil,
-        imageOptimization: ImageOptimizationOverride? = nil
+        imageOptimization: ImageOptimizationOverride? = nil, linkRewrite: LinkRewrite? = nil, autoDeleteAfterDays: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -179,6 +188,8 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
         self.cloud = cloud
         self.github = github
         self.imageOptimization = imageOptimization
+        self.linkRewrite = linkRewrite
+        self.autoDeleteAfterDays = autoDeleteAfterDays
     }
 
     public static func folder(id: UUID = UUID(), name: String, destination: FolderDestination) -> CustomUploader {
@@ -253,6 +264,8 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
         case cloud
         case github
         case imageOptimization = "imageoptimization"
+        case linkRewrite = "linkrewrite"
+        case autoDeleteAfterDays = "autodeleteafterdays"
     }
 
     public init(from decoder: any Decoder) throws {
@@ -268,6 +281,8 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
         github = try container.decodeDynamicIfPresent(GitHubConfiguration.self, forKey: .key(named: "github"))
         imageOptimization = try container.decodeDynamicIfPresent(ImageOptimizationOverride.self, forKey: .key(named: "imageoptimization"))
         linkOptions = try container.decodeDynamicIfPresent(LinkOptionsSpec.self, forKey: .key(named: "linkoptions"))
+        linkRewrite = try container.decodeDynamicIfPresent(LinkRewrite.self, forKey: .key(named: "linkrewrite"))
+        autoDeleteAfterDays = try container.decodeDynamicIfPresent(Int.self, forKey: .key(named: "autodeleteafterdays"))
         let declaredKind = try container.decodeDynamicIfPresent(UploaderKind.self, forKey: .key(named: "uploadertype"))
         uploaderType =
             declaredKind ?? Self.inferredKind(s3: s3, folder: folder, photos: photos)
@@ -308,6 +323,17 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
 
     public var isLocalOnly: Bool {
         kind == .folder || kind == .photos
+    }
+
+    public var supportsAutoDelete: Bool {
+        guard kind.supportsServerDeletion else { return false }
+        guard kind == .custom else { return true }
+        return !(deletionURL ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    public var effectiveAutoDeleteDays: Int? {
+        guard supportsAutoDelete, let days = autoDeleteAfterDays, UploadExpiry.isValid(days: days) else { return nil }
+        return days
     }
 
     public static func == (lhs: CustomUploader, rhs: CustomUploader) -> Bool {
@@ -352,6 +378,8 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
         copy.cloud = cloud
         copy.github = github
         copy.imageOptimization = imageOptimization
+        copy.linkRewrite = linkRewrite
+        copy.autoDeleteAfterDays = autoDeleteAfterDays
         return copy
     }
 

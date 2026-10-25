@@ -127,8 +127,7 @@ struct UploadFileIntent: AppIntent {
             target = UploadCoordinator.currentTarget()
         }
         guard let target else { throw IntentError.noUploader }
-        let outcome = try await UploadService.upload(fileURL: fileURL, to: target)
-        UploadCoordinator.record(outcome, localFileURL: nil)
+        let outcome = try await UploadCoordinator.uploadOnce(fileURL: fileURL, target: target)
         return .result(value: outcome.url, dialog: "\(outcome.url.absoluteString)")
     }
 }

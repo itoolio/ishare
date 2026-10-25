@@ -94,6 +94,17 @@ enum DropboxAPI {
     static let listSharedLinks = URL(string: "https://api.dropboxapi.com/2/sharing/list_shared_links")!
     static let delete = URL(string: "https://api.dropboxapi.com/2/files/delete_v2")!
     static let currentAccount = URL(string: "https://api.dropboxapi.com/2/users/get_current_account")!
+    static let uploadSessionStart = URL(string: "https://content.dropboxapi.com/2/files/upload_session/start")!
+    static let uploadSessionAppend = URL(string: "https://content.dropboxapi.com/2/files/upload_session/append_v2")!
+    static let uploadSessionFinish = URL(string: "https://content.dropboxapi.com/2/files/upload_session/finish")!
+
+    static func sessionHeaders(argument: [String: Any], token: String) -> [String: String] {
+        [
+            "Authorization": "Bearer \(token)",
+            "Content-Type": "application/octet-stream",
+            "Dropbox-API-Arg": apiArgument(argument),
+        ]
+    }
 
     static func apiArgument(_ object: [String: Any]) -> String {
         guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes]) else { return "{}" }
@@ -255,6 +266,8 @@ struct CloudStorageUploader: Uploader {
     let uploader: CustomUploader
     let provider: CloudProvider
     var now: @Sendable () -> Date = { Date() }
+    var dropboxSessionThreshold = DropboxUploadSession.singleRequestLimit
+    var dropboxChunkSize = DropboxUploadSession.defaultChunkSize
 
     func upload(fileURL: URL, progress: @escaping @Sendable (Double) -> Void) async throws -> UploadOutcome {
         let issues = UploaderValidator.issues(for: uploader)
@@ -295,12 +308,62 @@ struct CloudStorageUploader: Uploader {
     private func uploadToDropbox(
         _ fileURL: URL, path: String, token: String, configuration: CloudStorageConfiguration, progress: @escaping @Sendable (Double) -> Void
     ) async throws -> UploadOutcome {
-        let data = try await CloudHTTP.upload(fileURL, to: DropboxAPI.upload, method: .post, headers: DropboxAPI.uploadHeaders(path: path, token: token), progress: progress)
+        let size = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        let data: Data
+        if DropboxUploadSession.usesSession(size: size, limit: dropboxSessionThreshold) {
+            data = try await uploadDropboxSession(fileURL, path: path, size: size, token: token, progress: progress)
+        } else {
+            data = try await CloudHTTP.upload(fileURL, to: DropboxAPI.upload, method: .post, headers: DropboxAPI.uploadHeaders(path: path, token: token), progress: progress)
+        }
         let metadata = try JSONValue.object(data)
         let identifier = try JSONValue.require(metadata, "id")
         let displayPath = JSONValue.string(metadata, "path_lower") ?? JSONValue.string(metadata, "path_display") ?? "/" + path
         let link = try await dropboxSharedLink(path: displayPath, token: token)
         return try outcome(configuration.directLink == true ? DropboxAPI.directURL(link) : link, identifier: identifier)
+    }
+
+    private func uploadDropboxSession(
+        _ fileURL: URL, path: String, size: Int, token: String, progress: @escaping @Sendable (Double) -> Void
+    ) async throws -> Data {
+        let handle = try FileHandle(forReadingFrom: fileURL)
+        defer { try? handle.close() }
+        var sessionID: String?
+        var offset = 0
+        var corrections = 0
+        while true {
+            let step = DropboxUploadSession.nextStep(offset: offset, size: size, chunkSize: dropboxChunkSize, started: sessionID != nil)
+            try handle.seek(toOffset: UInt64(step.range.lowerBound))
+            let chunk = step.range.isEmpty ? Data() : try handle.read(upToCount: step.range.count) ?? Data()
+            do {
+                switch step {
+                case .start:
+                    let response = try await sendDropboxChunk(chunk, to: DropboxAPI.uploadSessionStart, argument: DropboxUploadSession.startArgument(), token: token)
+                    sessionID = try JSONValue.require(try JSONValue.object(response), "session_id")
+                case .append:
+                    let argument = DropboxUploadSession.appendArgument(sessionID: sessionID ?? "", offset: step.range.lowerBound)
+                    _ = try await sendDropboxChunk(chunk, to: DropboxAPI.uploadSessionAppend, argument: argument, token: token)
+                case .finish:
+                    let argument = DropboxUploadSession.finishArgument(sessionID: sessionID ?? "", offset: step.range.lowerBound, path: "/" + path)
+                    let metadata = try await sendDropboxChunk(chunk, to: DropboxAPI.uploadSessionFinish, argument: argument, token: token)
+                    progress(1)
+                    return metadata
+                }
+                offset = step.range.upperBound
+                progress(Double(offset) / Double(max(size, 1)))
+            } catch let UploadFailure.http(status, body) {
+                guard sessionID != nil, let correct = DropboxUploadSession.correctOffset(fromErrorBody: body), (0 ... size).contains(correct),
+                    corrections < DropboxUploadSession.maximumOffsetCorrections
+                else { throw UploadFailure.http(status: status, body: body) }
+                Log.upload.info("Dropbox expected offset \(correct) instead of \(step.range.lowerBound), resuming from there")
+                corrections += 1
+                offset = correct
+            }
+        }
+    }
+
+    private func sendDropboxChunk(_ chunk: Data, to url: URL, argument: [String: Any], token: String) async throws -> Data {
+        let request = UploadService.session.upload(chunk, to: url, method: .post, headers: HTTPHeaders(DropboxAPI.sessionHeaders(argument: argument, token: token)))
+        return try await UploadService.perform(request) { _ in }
     }
 
     private func dropboxSharedLink(path: String, token: String) async throws -> String {
