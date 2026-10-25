@@ -1,5 +1,6 @@
 import AppKit
 import Defaults
+import SwiftUI
 import UserNotifications
 
 struct ResultNotificationPayload: Equatable, Sendable {
@@ -40,6 +41,8 @@ enum ResultNotificationAction: String, Sendable {
     case copy = "dev.adrian.ishare.notification.copy"
     case open = "dev.adrian.ishare.notification.open"
     case edit = "dev.adrian.ishare.notification.edit"
+    case openUploaderSettings = "dev.adrian.ishare.notification.openUploaderSettings"
+    case testUploader = "dev.adrian.ishare.notification.testUploader"
 }
 
 @MainActor
@@ -47,6 +50,7 @@ final class ResultNotifier: NSObject, UNUserNotificationCenterDelegate {
     static let shared = ResultNotifier()
     nonisolated static let editableCategory = "dev.adrian.ishare.result.editable"
     nonisolated static let linkCategory = "dev.adrian.ishare.result.link"
+    nonisolated static let healthCategory = "dev.adrian.ishare.maintenance.health"
 
     private var center: UNUserNotificationCenter { .current() }
 
@@ -58,7 +62,30 @@ final class ResultNotifier: NSObject, UNUserNotificationCenterDelegate {
         center.setNotificationCategories([
             UNNotificationCategory(identifier: Self.editableCategory, actions: [copy, open, edit], intentIdentifiers: []),
             UNNotificationCategory(identifier: Self.linkCategory, actions: [copy, open], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Self.healthCategory, actions: Self.healthActions, intentIdentifiers: []),
         ])
+    }
+
+    static var healthActions: [UNNotificationAction] {
+        [
+            UNNotificationAction(identifier: ResultNotificationAction.openUploaderSettings.rawValue, title: "Open Settings".localized(), options: [.foreground]),
+            UNNotificationAction(identifier: ResultNotificationAction.testUploader.rawValue, title: "Test Now".localized()),
+        ]
+    }
+
+    func postMessage(title: String, body: String, category: String?) async {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        if let category {
+            content.categoryIdentifier = category
+        }
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        do {
+            try await center.add(request)
+        } catch {
+            Log.app.error("Posting the maintenance notification failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     func requestAuthorization() async -> Bool {
@@ -121,6 +148,12 @@ final class ResultNotifier: NSObject, UNUserNotificationCenterDelegate {
             }
         case .open:
             open(payload)
+        case .openUploaderSettings:
+            MenuController.shared.openSettings(pane: .uploaders)
+        case .testUploader:
+            Task { @MainActor in
+                await UploaderHealthCheck.run(forced: true)
+            }
         case nil where identifier == UNNotificationDefaultActionIdentifier:
             open(payload)
         case nil:
@@ -154,6 +187,18 @@ final class ResultNotifier: NSObject, UNUserNotificationCenterDelegate {
         let payload = ResultNotificationPayload(userInfo: response.notification.request.content.userInfo)
         await MainActor.run {
             Self.handle(action: identifier, payload: payload)
+        }
+    }
+}
+
+@MainActor
+enum MaintenanceNotifications {
+    static func post(title: String, body: String, category: String?, fallbackSymbol: String) async {
+        guard !RuntimeEnvironment.isRunningTests else { return }
+        if await ResultNotifier.shared.canPost() {
+            await ResultNotifier.shared.postMessage(title: title, body: body, category: category)
+        } else {
+            ToastController.showMessage(title: title, message: body, symbol: fallbackSymbol, tint: .orange)
         }
     }
 }

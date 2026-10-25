@@ -16,6 +16,12 @@ struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var title: String?
     var originalSize: Int?
     var uploadedSize: Int?
+    var keepForever: Bool?
+    var expiresAt: Date?
+    var expiredAt: Date?
+    var expiryAttempts: Int?
+    var nextExpiryAttemptAt: Date?
+    var expiryError: String?
     var id: Self { self }
 }
 
@@ -93,6 +99,10 @@ extension HistoryItem {
     }
 
     var canDeleteFromServer: Bool {
+        !isExpired && hasServerReference
+    }
+
+    var hasServerReference: Bool {
         !(deletionUrl ?? "").trimmingCharacters(in: .whitespaces).isEmpty || !(s3Key ?? "").isEmpty || !(localIdentifier ?? "").isEmpty
     }
 
@@ -102,6 +112,32 @@ extension HistoryItem {
         }
         let hosts = [remoteURL?.host(), deletionUrl.flatMap(URL.init(string:))?.host()].compactMap { $0?.lowercased() }
         return hosts.contains { $0 == "imgur.com" || $0.hasSuffix(".imgur.com") } ? .imgur : .unknown
+    }
+
+    var isExpired: Bool { expiredAt != nil }
+
+    var isKeptForever: Bool { keepForever == true }
+
+    var hasLiveLink: Bool { remoteURL != nil && !isExpired }
+
+    var storageKey: String {
+        [fileUrl ?? localPath ?? "", s3Key ?? "", deletionUrl ?? "", date.map { String($0.timeIntervalSince1970) } ?? ""].joined(separator: "|")
+    }
+
+    var expiryState: UploadExpiryState {
+        UploadExpiryState(
+            expiresAt: expiresAt, keepForever: isKeptForever, expiredAt: expiredAt, attempts: expiryAttempts ?? 0, nextAttemptAt: nextExpiryAttemptAt,
+            lastError: expiryError
+        )
+    }
+
+    func applying(_ state: UploadExpiryState) -> HistoryItem {
+        var copy = self
+        copy.expiredAt = state.expiredAt
+        copy.expiryAttempts = state.attempts == 0 ? nil : state.attempts
+        copy.nextExpiryAttemptAt = state.nextAttemptAt
+        copy.expiryError = state.lastError
+        return copy
     }
 
     func uploaderName(among uploaders: [CustomUploader]) -> String? {
@@ -177,6 +213,19 @@ func applyHistoryLimits() {
     if pruned != history {
         Defaults[.uploadHistory] = pruned
     }
+}
+
+func updateUploadHistory(_ transform: (HistoryItem) -> HistoryItem?) {
+    let history = Defaults[.uploadHistory]
+    let updated = history.compactMap(transform)
+    if updated != history {
+        Defaults[.uploadHistory] = updated
+    }
+}
+
+func updateUploadHistoryItem(_ item: HistoryItem, _ transform: (HistoryItem) -> HistoryItem) {
+    let key = item.storageKey
+    updateUploadHistory { $0.storageKey == key ? transform($0) : $0 }
 }
 
 @MainActor
