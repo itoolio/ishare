@@ -42,6 +42,11 @@ enum LinkOptionsResolver {
         Defaults[.linkOptionPreferences][id.uuidString] = preferences == .standard ? nil : preferences
     }
 
+    static func storedChoice(for target: UploadTarget) -> LinkChoice {
+        guard case let .custom(uploader) = target else { return .none }
+        return storedChoice(for: uploader)
+    }
+
     static func storedChoice(for uploader: CustomUploader) -> LinkChoice {
         guard let spec = uploader.linkOptions, !spec.isEmpty else { return .none }
         return preferences(for: uploader.id).choice(password: LinkPasswordStore.password(for: uploader.id), spec: spec)

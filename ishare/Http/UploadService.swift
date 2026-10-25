@@ -4,8 +4,8 @@ import ishareCore
 import UniformTypeIdentifiers
 
 struct UploadOutcome: Sendable, Equatable {
-    let url: URL
-    let deletionURL: String?
+    var url: URL
+    var deletionURL: String?
     let uploaderID: UUID?
     let s3Key: String?
     var shortURL: URL? = nil
@@ -15,6 +15,7 @@ struct UploadOutcome: Sendable, Equatable {
     var clipboardText: String? = nil
     var originalBytes: Int? = nil
     var uploadedBytes: Int? = nil
+    var isReused = false
 
     var savedBytes: Int? {
         guard let originalBytes, let uploadedBytes, uploadedBytes < originalBytes else { return nil }

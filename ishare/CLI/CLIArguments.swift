@@ -42,7 +42,9 @@ enum CLIArguments {
         Usage: ishare <command> [options]
 
         Commands:
-          upload <file…> [--uploader NAME]    Upload files and print their links
+          upload <file…> [--uploader NAME] [--reuse|--no-reuse]
+                                              Upload files and print their links; --reuse returns the
+                                              existing link for files that were uploaded before
           capture region|window|screen|scrolling [--upload]
                                               Take a screenshot and print its file or link
           record start|stop|toggle            Start or stop a screen recording
@@ -63,6 +65,7 @@ enum CLIArguments {
         var uploader: String?
         var limit: Int?
         var upload = false
+        var reuse: Bool?
         var index = 0
         var optionsEnded = false
 
@@ -95,6 +98,10 @@ enum CLIArguments {
                 json = true
             case "--upload":
                 upload = true
+            case "--reuse":
+                reuse = true
+            case "--no-reuse":
+                reuse = false
             case "--uploader", "-u":
                 let raw = try optionValue()
                 guard !raw.trimmingCharacters(in: .whitespaces).isEmpty else { throw .invalidValue(option: name, value: raw) }
@@ -121,7 +128,7 @@ enum CLIArguments {
             return .help(usage)
         case "upload":
             guard !rest.isEmpty else { throw .missingArgument("file") }
-            command = .upload(files: rest.map { absolutePath($0, relativeTo: workingDirectory) }, uploader: uploader)
+            command = .upload(files: rest.map { absolutePath($0, relativeTo: workingDirectory) }, uploader: uploader, reuse: reuse)
         case "capture":
             guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen or scrolling)") }
             guard let mode = CLICaptureMode(rawValue: modeName.lowercased()) else { throw .invalidValue(option: "capture", value: modeName) }
@@ -145,6 +152,7 @@ enum CLIArguments {
         }
         if uploader != nil, !command.accepts(.uploader) { throw .unknownOption("--uploader") }
         if upload, !command.accepts(.upload) { throw .unknownOption("--upload") }
+        if let reuse, !command.accepts(.reuse) { throw .unknownOption(reuse ? "--reuse" : "--no-reuse") }
         if limit != nil, !command.accepts(.limit) { throw .unknownOption("--limit") }
         let defaultTimeout: TimeInterval =
             switch command {
@@ -176,12 +184,13 @@ enum CLICommandOption {
     case uploader
     case upload
     case limit
+    case reuse
 }
 
 extension CLICommand {
     func accepts(_ option: CLICommandOption) -> Bool {
         switch (self, option) {
-        case (.upload, .uploader), (.capture, .upload), (.history, .limit): true
+        case (.upload, .uploader), (.upload, .reuse), (.capture, .upload), (.history, .limit): true
         default: false
         }
     }

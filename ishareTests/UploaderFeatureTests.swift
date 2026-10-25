@@ -271,9 +271,9 @@ struct UploadQueueTests {
     func queue(_ box: Box) -> UploadQueue {
         UploadQueue(
             directory: directory,
-            perform: { url, destination in
+            perform: { url, item in
                 if !box.failures.isEmpty { throw box.failures.removeFirst() }
-                box.uploaded.append((url.lastPathComponent, destination))
+                box.uploaded.append((url.lastPathComponent, item.destination))
                 return UploadOutcome(url: URL(string: "https://cdn.example.com/\(url.lastPathComponent)")!, deletionURL: nil, uploaderID: nil, s3Key: nil)
             }, onSuccess: { item, _ in box.succeeded.append(item.id) })
     }

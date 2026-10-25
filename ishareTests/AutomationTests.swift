@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
 
@@ -12,6 +13,7 @@ final class FakeAutomationActions: AutomationActions {
     var uploadLinks: [String: String] = [:]
     var recording = false
     var knownUploaders = ["Imgur", "My Server"]
+    var observedDuplicatePolicies: [DuplicatePolicy?] = []
 
     func capture(_ mode: CLICaptureMode, upload: Bool) async -> Result<CLICaptureResult, AutomationError> {
         calls.append("capture \(mode.rawValue) upload=\(upload)")
@@ -35,6 +37,7 @@ final class FakeAutomationActions: AutomationActions {
 
     func upload(_ files: [URL], uploader: String?) async -> [CLIUploadResult] {
         calls.append("upload \(files.map(\.lastPathComponent).joined(separator: ",")) via \(uploader ?? "default")")
+        observedDuplicatePolicies.append(DuplicateUploads.policyOverride)
         return files.map { file in
             if let link = uploadLinks[file.lastPathComponent] {
                 return CLIUploadResult(file: file.path, link: link)
@@ -262,6 +265,15 @@ struct CLIArgumentTests {
         #expect(try run(["upload", "--", "--weird.png"]).command == .upload(files: ["/Users/me/Desktop/--weird.png"], uploader: nil))
     }
 
+    @Test func parsesTheReuseFlags() throws {
+        #expect(try run(["upload", "--reuse", "x.png"]).command == .upload(files: ["/Users/me/Desktop/x.png"], uploader: nil, reuse: true))
+        #expect(try run(["upload", "x.png", "--no-reuse"]).command == .upload(files: ["/Users/me/Desktop/x.png"], uploader: nil, reuse: false))
+        #expect(try run(["upload", "x.png"]).command == .upload(files: ["/Users/me/Desktop/x.png"], uploader: nil, reuse: nil))
+        #expect(error(["capture", "region", "--reuse"]) == .unknownOption("--reuse"))
+        #expect(error(["history", "--no-reuse"]) == .unknownOption("--no-reuse"))
+        #expect(CLIArguments.usage.contains("--no-reuse"))
+    }
+
     @Test func parsesCaptureRecordUploadersAndHistory() throws {
         #expect(try run(["capture", "region"]).command == .capture(mode: .region, upload: false))
         let capture = try run(["capture", "Window", "--upload", "--timeout", "30"])
@@ -402,6 +414,17 @@ struct CommandLineEndToEndTests {
         #expect(response.payload.uploads?.last?.error == "ishare can't read /private/secret.txt")
         #expect(actions.calls == ["upload a.png via My Server"])
         #expect(CLIOutput.text(for: response, command: .upload(files: [], uploader: nil)) == "https://example.com/a.png")
+    }
+
+    @Test func passesTheReuseFlagToTheUpload() async throws {
+        let (client, server, files) = try makeSystem()
+        let readable = try files.file("a.png")
+        server.fileAccess = URLSchemeFileAccess { $0 == readable.path }
+        actions.uploadLinks = ["a.png": "https://example.com/a.png"]
+        _ = try await client.send(.upload(files: [readable.path], uploader: nil, reuse: true), timeout: 5)
+        _ = try await client.send(.upload(files: [readable.path], uploader: nil, reuse: false), timeout: 5)
+        _ = try await client.send(.upload(files: [readable.path], uploader: nil), timeout: 5)
+        #expect(actions.observedDuplicatePolicies == [.alwaysReuse, .never, nil])
     }
 
     @Test func listsUploadersHistoryAndCaptures() async throws {
