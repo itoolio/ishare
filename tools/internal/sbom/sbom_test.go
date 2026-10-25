@@ -97,6 +97,19 @@ func TestParsesGoModRequirementsIncludingIndirectOnes(t *testing.T) {
 	}
 }
 
+func TestParsesIndirectMarkersAfterRequirements(t *testing.T) {
+	source := "module m\n\nrequire golang.org/x/text v0.21.0 // indirect\n\nrequire (\n\tgolang.org/x/sync v0.10.0 // indirect\n)\n"
+	components, err := ParseGoMod([]byte(source))
+	if err != nil || len(components) != 2 {
+		t.Fatalf("got %v, %v", components, err)
+	}
+	for _, component := range components {
+		if strings.Contains(component.Version, "indirect") || strings.Contains(component.PURL, "indirect") {
+			t.Fatalf("the indirect marker leaked into %+v", component)
+		}
+	}
+}
+
 func TestParsesGoModWithoutRequirements(t *testing.T) {
 	components, err := ParseGoMod([]byte("module example.com/tools\n\ngo 1.24\n"))
 	if err != nil || len(components) != 0 {
