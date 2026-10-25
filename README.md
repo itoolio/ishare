@@ -68,6 +68,17 @@ ishare history --limit 10 --json
 
 Apps and scripts can also open `ishare://capture/region`, `ishare://record/toggle`, `ishare://upload?path=…`, `ishare://uploader/select?name=…` and `ishare://open/history`, with optional `x-success` and `x-error` callbacks. The full reference is on the [website](https://ishare.itoolio.dev/docs/automation/).
 
+## Verifying downloads
+
+Every release carries a signed build provenance attestation for `ishare.dmg`, the dSYM zips and a software bill of materials, `ishare-<version>-sbom.spdx.json`, which lists every Swift package the app was built with, the local `ishareCore` package and the Go modules of the release tooling in SPDX 2.3 format. Verify a download with the [GitHub CLI](https://cli.github.com):
+
+```bash
+gh attestation verify ishare.dmg --repo itoolio/ishare
+gh attestation verify ishare-<version>-sbom.spdx.json --repo itoolio/ishare
+```
+
+The command checks that the file was built by this repository's release workflow from the tagged commit; it fails for files that were modified or built anywhere else.
+
 ## Development
 
 The Xcode project is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen):
@@ -94,12 +105,14 @@ open ishare.xcodeproj
   - `merge-translations <base> <incoming> <output>` keeps only new Crowdin translations in a string catalog;
   - `symbolicate <crash.ips|report.crash> --dsyms <ishare-<version>-dSYMs.zip>` symbolicates a crash report from a user: it reads the binary images and frames of an `.ips` (JSON) or legacy `.crash` report, matches the image UUIDs against the dSYMs from `dwarfdump --uuid`, and resolves every frame of ishare, its widgets and its share extension with `atos`. Download the dSYM zip attached to the matching GitHub release (`ishare-<version>-dSYMs.zip` for the direct download, `ishare-<version>-AppStore-dSYMs.zip` for the App Store build), or pass a folder of `.dSYM` bundles, and add `--output file` to write the result to a file;
   - `package-dsyms <archive.xcarchive> <output.zip>` checks that an archive contains the dSYMs of the app, the widgets and the share extension with UUIDs that match the archived binaries, and zips them for the release;
+  - `sbom --version <version> --package-resolved <Package.resolved> --package-dir Packages/ishareCore --go-mod tools/go.mod --output <file>` writes a deterministic SPDX 2.3 SBOM of the resolved Swift packages, the local package and the Go modules; `SOURCE_DATE_EPOCH` or `--created` sets its timestamp;
   - `docc-symbols <derived-data> <output>` reduces the app's symbol graph to the types the DocC catalog documents (the `Uploader` protocol, its conformances and the upload model), so the published documentation stays small;
   - `coverage [--min Area=percent]... <xccov.json>` turns `xcrun xccov view --report --json` output into a Markdown summary per area (Capture, Recording, Http, ISCU, Editor, Views, Util and so on), writes it to the job summary and fails when an area falls below its minimum. The `app` CI job enforces minimums for the capture, upload and ISCU code, and the Coverage Comment workflow posts the summary as a single, updated comment on pull requests;
   - `screenshots [all | locale[:language]...]` renders the App Store screenshots through the `Screenshots` UI test scheme into `fastlane/screenshots` as 2880×1800 JPEGs. Run it on a Mac with a Retina display (the scenes are 1440×900 points) and commit the result, or pass `--ci` to create a 1680×1050 point HiDPI virtual display first (a CI-only helper in `tools/virtualdisplay`); the App Store workflow's "regenerate screenshots" option does that on a runner and commits the checked screenshots, including the website copies, straight to `dev`, so no extra branches are created. Releases upload the committed screenshots, and the App Store workflow replaces them on a version already in review.
 - Releases are cut automatically from `main` with semantic-release, so use [Conventional Commits](https://www.conventionalcommits.org). Each release:
   - signs and notarizes the DMG;
   - attaches the dSYMs of the direct download and the App Store build to the GitHub release as `ishare-<version>-dSYMs.zip` and `ishare-<version>-AppStore-dSYMs.zip` (the App Store export also uploads its symbols to App Store Connect);
+  - attaches the SBOM `ishare-<version>-sbom.spdx.json` and attests the build provenance of the DMG, both dSYM zips and the SBOM;
   - updates the Sparkle appcast;
   - uploads the App Store build to App Store Connect and runs the release checklist.
 - Submitting for review is decoupled from releases: the App Store Sync workflow runs after every release and every three hours. It always submits the newest processed release with the combined notes of every release since the live version, superseding an unsubmitted, rejected or still queued version (a submission waiting for review is withdrawn first, and kept until the newer build has finished processing); reviews that have started and approved versions awaiting release are never interrupted, and the job summary notes the pending release instead. It opens an "App Store rejected <version>" issue when a rejection has no newer release yet; the issue closes itself once that version is approved or superseded.
