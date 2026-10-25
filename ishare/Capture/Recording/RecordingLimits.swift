@@ -5,7 +5,7 @@ import ishareCore
 
 extension RecordingLimits {
     static var current: RecordingLimits {
-        make(maxMinutes: Defaults[.recordingMaxMinutes], maxMegabytes: Defaults[.recordingMaxMegabytes], lowDiskMegabytes: Defaults[.recordingLowDiskWarningMB])
+        make(maxMinutes: RecordingDefaults[.recordingMaxMinutes], maxMegabytes: RecordingDefaults[.recordingMaxMegabytes], lowDiskMegabytes: Defaults[.recordingLowDiskWarningMB])
     }
 }
 

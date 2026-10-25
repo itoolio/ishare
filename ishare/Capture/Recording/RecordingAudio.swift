@@ -23,7 +23,7 @@ enum RecordingAudioSource: String, CaseIterable, Identifiable, Defaults.Serializ
     }
 
     static var current: RecordingAudioSource {
-        resolved(recordAudio: Defaults[.recordAudio], source: Defaults[.recordingAudioSource])
+        resolved(recordAudio: RecordingDefaults[.recordAudio], source: RecordingDefaults[.recordingAudioSource])
     }
 
     static func store(_ source: RecordingAudioSource) {
@@ -71,7 +71,7 @@ enum RecordingAudioPlan: Equatable, Sendable {
     }
 
     static var current: (RecordingContentStyle) -> RecordingAudioPlan {
-        { style in make(source: .current, selectedBundleIDs: Defaults[.recordingAudioBundleIDs], style: style) }
+        { style in make(source: .current, selectedBundleIDs: RecordingDefaults[.recordingAudioBundleIDs], style: style) }
     }
 }
 

@@ -22,7 +22,7 @@ final class PointerActivityRecorder {
     private(set) var isActive = false
 
     static var isRequested: Bool {
-        Defaults[.autoZoomEnabled] || PointerEffectSettings.current.isActive
+        RecordingDefaults[.autoZoomEnabled] || PointerEffectSettings.current.isActive
     }
 
     func start(source: OverlaySource) {
@@ -30,7 +30,7 @@ final class PointerActivityRecorder {
         log = PointerActivityLog()
         shapeSampler = PointerShapeSampler()
         pointerSettings = .current
-        autoZoom = Defaults[.autoZoomEnabled] ? .current : nil
+        autoZoom = RecordingDefaults[.autoZoomEnabled] ? .current : nil
         guard pointerSettings.isActive || autoZoom != nil else { return }
         self.source = source
         isActive = true

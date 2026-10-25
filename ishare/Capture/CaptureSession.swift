@@ -8,6 +8,7 @@ struct CaptureOptions: Sendable {
     var openEditor = false
     var destinations: [UploadTarget]?
     var preset: UploadPreset?
+    var recordingPreset: RecordingPreset?
     var delay: Int?
     var resultHandler: (@MainActor @Sendable (URL) -> Void)?
 
@@ -65,16 +66,17 @@ enum CaptureSession {
         }
         pendingRecording = (gif, options)
         Task { @MainActor in
-            await startRecording(region: region)
+            await startRecording(region: region, preset: options.recordingPreset)
         }
     }
 
-    private static func startRecording(region: Bool) async {
+    private static func startRecording(region: Bool, preset: RecordingPreset?) async {
         let recorder = AppModel.shared.recorder
         guard await recorder.canRecord else {
             BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
             return
         }
+        RecordingDefaults.begin(preset)
         let fileURL = RecordingFlow.recordingURL()
         guard region else {
             await recorder.start(fileURL, target: .picker)
@@ -88,6 +90,7 @@ enum CaptureSession {
             await recorder.start(fileURL, target: .region(screen, CGRect(origin: .zero, size: screen.frame.size)))
         case .switchToWindow, .cancelled:
             pendingRecording = nil
+            RecordingDefaults.end()
         }
     }
 
@@ -106,6 +109,9 @@ enum CaptureSession {
                 await finishRecording(url, gif: pending.gif, options: options, sidecar: AppModel.shared.recorder.takeSidecar())
             case let .failure(error):
                 Log.capture.error("Stopping the recording failed: \(error.localizedDescription, privacy: .public)")
+            }
+            if !isRecording {
+                RecordingDefaults.end()
             }
         }
     }

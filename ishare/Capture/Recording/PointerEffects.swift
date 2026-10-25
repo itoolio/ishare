@@ -38,12 +38,12 @@ struct PointerEffectSettings: Hashable, Sendable {
 
     static var current: PointerEffectSettings {
         PointerEffectSettings(
-            recordsPointer: Defaults[.recordPointer],
-            smoothing: Defaults[.pointerSmoothing],
-            scale: Defaults[.pointerScale],
-            ripples: Defaults[.clickRipples],
+            recordsPointer: RecordingDefaults[.recordPointer],
+            smoothing: RecordingDefaults[.pointerSmoothing],
+            scale: RecordingDefaults[.pointerScale],
+            ripples: RecordingDefaults[.clickRipples],
             rippleColor: CaptureColor(hex: Defaults[.clickRippleColor]) ?? .defaultRipple,
-            hidesWhenIdle: Defaults[.hidesIdlePointer],
+            hidesWhenIdle: RecordingDefaults[.hidesIdlePointer],
             idleDelay: Defaults[.pointerIdleSeconds]
         )
     }

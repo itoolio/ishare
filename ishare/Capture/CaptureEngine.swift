@@ -87,8 +87,8 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
         configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL, showsNativeClicks: Bool, showsCursor: Bool, audioPlan: RecordingAudioPlan
     ) -> AsyncThrowingStream<CapturedFrame, any Error> {
         let recordMP4 = Defaults[.recordMP4]
-        let useHEVC = Defaults[.useHEVC]
-        let recordMic = Defaults[.recordMic]
+        let useHEVC = RecordingDefaults[.useHEVC]
+        let recordMic = RecordingDefaults[.recordMic]
         let microphoneID = recordMic ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
         resetFinishState()
         startClock.reset()

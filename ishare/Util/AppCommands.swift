@@ -167,7 +167,7 @@ extension AppCommand {
                 },
             ] + recordingExtraCommands()
         }
-        return recordingExtraCommands() + [
+        return recordingExtraCommands() + recordingPresetCommands() + [
             AppCommand(
                 id: "record.screen", title: "Record Screen", keywords: ["video", "movie", "screencast"], symbol: "record.circle",
                 perform: afterDismissing { CaptureSession.toggleRecording() }),
@@ -181,6 +181,15 @@ extension AppCommand {
                 id: "record.regionGif", title: "Record Region as GIF", keywords: ["animation", "area"], symbol: "photo.stack",
                 perform: afterDismissing { CaptureSession.toggleRecording(gif: true, region: true) }),
         ]
+    }
+
+    @MainActor private static func recordingPresetCommands() -> [AppCommand] {
+        RecordingPresets.all.map { preset in
+            AppCommand(
+                id: "recordingPreset.\(preset.id.uuidString)", title: String(format: "Record with %@".localized(), preset.name),
+                keywords: ["preset", "record", "video", preset.name], symbol: "record.circle",
+                perform: afterDismissing { RecordingPresets.record(preset) })
+        }
     }
 
     @MainActor private static func recordingExtraCommands() -> [AppCommand] {

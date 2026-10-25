@@ -19,7 +19,7 @@ enum RecordingTarget {
 final class RecordingHUDModel: ObservableObject {
     @Published var startDate = Date()
     @Published var showsSystemAudio = RecordingAudioSource.current != .none
-    @Published var showsMicrophone = Defaults[.recordMic]
+    @Published var showsMicrophone = RecordingDefaults[.recordMic]
     @Published var markerCount = 0
     @Published var showsNotes = RecordingNotesController.shared.isVisible
     @Published var remainingTime: Double?
@@ -166,7 +166,7 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private var showsClicks: Bool {
-        Defaults[.recordClicks] && !Defaults[.clickRipples]
+        RecordingDefaults[.recordClicks] && !RecordingDefaults[.clickRipples]
     }
 
     private var showsNativeClicks: Bool {
@@ -174,7 +174,7 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private var showsSystemCursor: Bool {
-        Defaults[.recordPointer] && !PointerEffectSettings.current.rendersPointer
+        RecordingDefaults[.recordPointer] && !PointerEffectSettings.current.rendersPointer
     }
 
     init() {
@@ -240,6 +240,7 @@ final class ScreenRecorder: ObservableObject {
     private func resetPickerState() {
         isRunning = false
         startDate = nil
+        RecordingDefaults.end()
     }
 
     private func startRegion(_ fileURL: URL, screen: NSScreen, rect: CGRect) async {
@@ -264,6 +265,7 @@ final class ScreenRecorder: ObservableObject {
             removeOverlay()
             hideCaptureOverlays()
             isRunning = false
+            RecordingDefaults.end()
         }
     }
 
@@ -279,12 +281,12 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private func makeConfiguration(pixelSize: CGSize) -> SCStreamConfiguration {
-        let configuration = Defaults[.useHDR] ? SCStreamConfiguration(preset: .captureHDRStreamCanonicalDisplay) : SCStreamConfiguration()
-        let output = Defaults[.recordingResolution].outputSize(for: pixelSize)
+        let configuration = RecordingDefaults[.useHDR] ? SCStreamConfiguration(preset: .captureHDRStreamCanonicalDisplay) : SCStreamConfiguration()
+        let output = RecordingDefaults[.recordingResolution].outputSize(for: pixelSize)
         configuration.width = Int(output.width)
         configuration.height = Int(output.height)
         configuration.scalesToFit = true
-        configuration.minimumFrameInterval = Defaults[.recordingFrameRate].minimumFrameInterval
+        configuration.minimumFrameInterval = RecordingDefaults[.recordingFrameRate].minimumFrameInterval
         configuration.queueDepth = 6
         return configuration
     }
@@ -331,12 +333,12 @@ final class ScreenRecorder: ObservableObject {
         inputOverlay.start(
             areas: areas,
             showsClicks: showsClicks,
-            showsKeystrokes: Defaults[.showKeystrokes],
-            shortcutsOnly: Defaults[.keystrokesShortcutsOnly]
+            showsKeystrokes: RecordingDefaults[.showKeystrokes],
+            shortcutsOnly: RecordingDefaults[.keystrokesShortcutsOnly]
         )
         drawing.prepare(screens: Self.uniqueScreens(areas.map(\.screen)))
         hudModel.canDraw = drawing.isPrepared
-        if Defaults[.showWebcam], let bubbleArea {
+        if RecordingDefaults[.showWebcam], let bubbleArea {
             await webcamBubble.show(in: bubbleArea)
         }
     }
@@ -504,8 +506,8 @@ final class ScreenRecorder: ObservableObject {
         guard startDate == nil else {
             let filter = await capturableFilter(pickedFilter)
             RecordingAudioFilter.apply(audioPlan, to: configuration)
-            configuration.captureMicrophone = Defaults[.recordMic]
-            configuration.microphoneCaptureDeviceID = Defaults[.recordMic] ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
+            configuration.captureMicrophone = RecordingDefaults[.recordMic]
+            configuration.microphoneCaptureDeviceID = RecordingDefaults[.recordMic] ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
             configuration.showsCursor = showsSystemCursor
             configuration.showMouseClicks = showsNativeClicks
             if overlayRecorder.isActive {
@@ -530,9 +532,9 @@ final class ScreenRecorder: ObservableObject {
             await overlayRecorder.start(
                 source: source,
                 showsClicks: showsClicks,
-                showsKeystrokes: Defaults[.showKeystrokes],
-                shortcutsOnly: Defaults[.keystrokesShortcutsOnly],
-                recordsWebcam: Defaults[.showWebcam]
+                showsKeystrokes: RecordingDefaults[.showKeystrokes],
+                shortcutsOnly: RecordingDefaults[.keystrokesShortcutsOnly],
+                recordsWebcam: RecordingDefaults[.showWebcam]
             )
             showWebcamPreview(for: source)
             showPickerHUD()

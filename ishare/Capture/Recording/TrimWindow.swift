@@ -75,7 +75,7 @@ final class TrimModel: ObservableObject {
 
     private func bakeZoomIfNeeded(progress: @escaping @Sendable (Double) -> Void) async throws {
         guard let camera = pendingZoom else { return }
-        let hevc = Defaults[.useHEVC]
+        let hevc = RecordingDefaults[.useHEVC]
         try await OverlayCompositor.applyCamera(camera, to: url, hevc: hevc, progress: progress)
         zoomIsBaked = true
     }

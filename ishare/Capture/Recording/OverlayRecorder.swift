@@ -100,8 +100,8 @@ final class OverlayEventRecorder {
             log: log,
             webcam: clip,
             contentSize: source.contentSize,
-            webcamDiameter: Defaults[.webcamSize].diameter,
-            webcamCorner: Defaults[.webcamCorner]
+            webcamDiameter: RecordingDefaults[.webcamSize].diameter,
+            webcamCorner: RecordingDefaults[.webcamCorner]
         )
         log = OverlayEventLog()
         return capture.isEmpty ? nil : capture

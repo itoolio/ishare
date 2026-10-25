@@ -92,7 +92,7 @@ enum RecordingPostProcessor {
             if let webcam = capture?.webcam { try? FileManager.default.removeItem(at: webcam.url) }
         }
         guard capture != nil || effects != nil, let start = sidecar.recordingStart, videoExtensions.contains(url.pathExtension.lowercased()) else { return nil }
-        let hevc = Defaults[.useHEVC]
+        let hevc = RecordingDefaults[.useHEVC]
         let defersZoom = Defaults[.trimBeforeSaving]
         let pauses = sidecar.pauses
         do {
@@ -121,7 +121,7 @@ enum RecordingPostProcessor {
         }
         let output = Defaults[.captionOutput]
         let burns = output == .burnIn && videoExtensions.contains(ext)
-        let hevc = Defaults[.useHEVC]
+        let hevc = RecordingDefaults[.useHEVC]
         do {
             try await ProcessingHUDPresenter.run("Generating captions…".localized()) { progress in
                 let cues = try await SpeechCaptioner.cues(for: url)

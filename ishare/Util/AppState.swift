@@ -14,6 +14,7 @@ final class AppState: ObservableObject {
         if !ScreenshotMode.isActive {
             setupKeyboardShortcuts()
             UploadPresetShortcuts.start()
+            RecordingPresetShortcuts.start()
             UploadBackgroundServices.start()
             InstantReplay.shared.activate()
         }

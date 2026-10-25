@@ -23,15 +23,15 @@ final class FakeAutomationActions: AutomationActions {
         return afterCaptureLink
     }
 
-    func record(_ action: CLIRecordAction, gif: Bool, region: Bool) async -> Bool {
-        calls.append("record \(action.rawValue) gif=\(gif) region=\(region)")
+    func record(_ action: CLIRecordAction, gif: Bool, region: Bool, preset: String?) async -> Result<Bool, AutomationError> {
+        calls.append("record \(action.rawValue) gif=\(gif) region=\(region)" + (preset.map { " preset=\($0)" } ?? ""))
         switch action {
         case .start: recording = true
         case .stop: recording = false
         case .toggle: recording.toggle()
         case .pause, .resume: break
         }
-        return recording
+        return .success(recording)
     }
 
     func upload(_ files: [URL], uploader: String?) async -> [CLIUploadResult] {
@@ -107,7 +107,7 @@ struct URLSchemeParserTests {
         #expect(command("ishare://record/stop") == .record(.stop, gif: false, region: false))
         #expect(command("ishare://record/toggle?gif=1&region=true") == .record(.toggle, gif: true, region: true))
         #expect(command("ishare://record?gif=0") == .record(.toggle, gif: false, region: false))
-        #expect(parse("ishare://record/pause") == .failure(.invalidValue(parameter: "record", value: "pause")))
+        #expect(parse("ishare://record/rewind") == .failure(.invalidValue(parameter: "record", value: "rewind")))
     }
 
     @Test func parsesUploadsOfReadablePaths() throws {
@@ -284,7 +284,7 @@ struct CLIArgumentTests {
         #expect(error(["capture"]) == .missingArgument("capture mode (region, window, screen or scrolling)"))
         #expect(error(["capture", "everything"]) == .invalidValue(option: "capture", value: "everything"))
         #expect(error(["capture", "region", "extra"]) == .unexpectedArgument("extra"))
-        #expect(error(["record", "pause"]) == .invalidValue(option: "record", value: "pause"))
+        #expect(error(["record", "rewind"]) == .invalidValue(option: "record", value: "rewind"))
         #expect(error(["uploaders"]) == .missingArgument("uploaders subcommand (list)"))
         #expect(error(["history", "--limit", "0"]) == .invalidValue(option: "--limit", value: "0"))
         #expect(error(["history", "--limit"]) == .missingValue("--limit"))

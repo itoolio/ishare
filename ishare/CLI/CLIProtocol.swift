@@ -19,7 +19,7 @@ enum CLIRecordAction: String, Codable, CaseIterable, Sendable {
 enum CLICommand: Codable, Equatable, Sendable {
     case upload(files: [String], uploader: String?)
     case capture(mode: CLICaptureMode, upload: Bool)
-    case record(CLIRecordAction)
+    case record(CLIRecordAction, preset: String? = nil)
     case listUploaders
     case history(limit: Int)
 }

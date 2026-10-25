@@ -53,6 +53,7 @@ struct MenuRecordSection: View {
                 .favoriteContextMenu(MenuFavoriteCommandID.record(1, gif: recordsGIF))
                 .menuFocusRing(.record(1))
             }
+            MenuRecordPresetsRow(recordsGIF: recordsGIF)
         }
     }
 
