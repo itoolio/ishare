@@ -40,7 +40,11 @@ enum ScreenshotMode {
     static let canvasSize = CGSize(width: 1440, height: 900)
 
     nonisolated static var isActive: Bool {
-        isCapturingScreenshots || isUITesting
+        isCapturingScreenshots || isUITesting || isAutomationTesting
+    }
+
+    nonisolated static var isAutomationTesting: Bool {
+        AutomationTestMode.isActive
     }
 
     nonisolated static var isCapturingScreenshots: Bool {
@@ -66,7 +70,7 @@ enum ScreenshotMode {
     }
 
     nonisolated static var usesFixtureCapture: Bool {
-        isUITesting && argument(after: "-ishareUITestCaptureSource") == "fixture"
+        (isUITesting && argument(after: "-ishareUITestCaptureSource") == "fixture") || isAutomationTesting
     }
 
     nonisolated static var uploadStubURL: String? {
@@ -78,9 +82,9 @@ enum ScreenshotMode {
 
     @MainActor static func fixtureCapture() -> CapturedImage? {
         guard usesFixtureCapture,
-            let image = sampleImage(size: fixtureCaptureSize, hue: 0.45, title: "UI test capture")
+            let image = sampleImage(size: fixtureCaptureSize, hue: 0.45, title: isAutomationTesting ? "Automation test capture" : "UI test capture")
         else { return nil }
-        return CapturedImage(image: image, suffix: "fixture", pointScale: 1, source: CaptureSource(appName: "ishare UI tests"))
+        return CapturedImage(image: image, suffix: "fixture", pointScale: 1, source: CaptureSource(appName: isAutomationTesting ? "ishare automation tests" : "ishare UI tests"))
     }
 
     @MainActor static var initialSettingsPane: SettingsPane? {
@@ -113,6 +117,10 @@ enum ScreenshotMode {
     @MainActor static func prepareIfNeeded() {
         guard isActive else { return }
         UserDefaults.ishare.removePersistentDomain(forName: SettingsStorage.screenshotSuiteName)
+        if isAutomationTesting {
+            AutomationTestMode.prepare()
+            return
+        }
         seedSettings()
         guard let scene else { return }
         if isUITesting {

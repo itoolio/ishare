@@ -119,7 +119,12 @@ enum CLIAppGroup {
     }
 
     static var mailboxDirectory: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: signedIdentifier)?
+        #if AUTOMATION_TESTS
+            if let override = ProcessInfo.processInfo.environment["ISHARE_AUTOMATION_MAILBOX"], override.hasPrefix("/") {
+                return URL(fileURLWithPath: override, isDirectory: true)
+            }
+        #endif
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: signedIdentifier)?
             .appending(path: "CommandLine", directoryHint: .isDirectory)
     }
 
