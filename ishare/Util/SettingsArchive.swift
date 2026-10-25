@@ -157,6 +157,7 @@ enum SettingsTransfer {
         .cutSilenceEnabled, .cutSilenceSpeed, .cutSilenceAudioThreshold, .cutSilenceMotionThreshold, .cutSilenceMinimumDuration, .cutSilencePadding,
         .recordingConvertTo, .recordingUploadFormat, .voiceOverMode, .voiceOverDuckAmount, .blurRegionStyle, .blurDetectionInterval,
         .keepsExpiredUploadsInHistory, .duplicateUploadPolicy, .uploaderHealthCheckFrequency,
+        .selectionConstraint, .customSelectionSize, .freezeScreenWhileSelecting, .multiRegionResult, .menuCaptureIncludesParentWindow,
     ]
 
     static var preferenceNames: Set<String> {

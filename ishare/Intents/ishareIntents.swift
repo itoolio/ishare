@@ -162,6 +162,27 @@ struct CaptureIntent: AppIntent {
     }
 }
 
+struct CaptureMenuIntent: AppIntent {
+    static var title: LocalizedStringResource { "Capture Menu with ishare" }
+    static var description: IntentDescription {
+        IntentDescription("Counts down for three seconds so you can open a menu, popover or tooltip, then captures it with its shadow and returns the image.")
+    }
+
+    @Parameter(title: "Upload", default: false)
+    var upload: Bool
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
+        guard let captured = await ImageCaptureFlow.capture(type: .MENU) else { throw IntentError.cancelled }
+        let fileURL = try ImageCaptureFlow.save(captured)
+        let result = IntentFile(fileURL: fileURL, filename: fileURL.lastPathComponent, type: ImageEncoder.contentType(for: Defaults[.captureFileType]))
+        Task { @MainActor in
+            await CaptureSession.finish(fileURL: fileURL, kind: .image, options: CaptureOptions(forceUpload: upload))
+        }
+        return .result(value: result)
+    }
+}
+
 struct CaptureTextIntent: AppIntent {
     static var title: LocalizedStringResource { "Capture Text with ishare" }
     static var description: IntentDescription { IntentDescription("Recognizes the text in an area you select and returns it.") }

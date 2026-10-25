@@ -5,17 +5,21 @@ import ScreenCaptureKit
 @MainActor
 final class WindowPicker {
     enum Outcome: @unchecked Sendable {
-        case window(SCWindow)
+        case window(PickableWindow)
         case switchToRegion
         case cancelled
     }
 
     struct Candidate {
-        let window: SCWindow
+        let pickable: PickableWindow
         let frame: CGRect
         let appName: String
         let title: String?
         let icon: NSImage?
+
+        var window: SCWindow {
+            pickable.window
+        }
     }
 
     private static var active: WindowPicker?
@@ -25,14 +29,15 @@ final class WindowPicker {
     private(set) var candidates: [Candidate] = []
     private(set) var hovered: Candidate?
 
-    static func pick(from windows: [SCWindow]) async -> Outcome {
+    static func pick(from windows: [PickableWindow]) async -> Outcome {
         active?.finish(.cancelled)
         let picker = WindowPicker()
-        picker.candidates = windows.map { window in
+        picker.candidates = windows.map { pickable in
+            let window = pickable.window
             let app = window.owningApplication
             let runningApp = app.flatMap { NSRunningApplication(processIdentifier: $0.processID) }
             return Candidate(
-                window: window,
+                pickable: pickable,
                 frame: window.frame,
                 appName: app?.applicationName ?? "",
                 title: window.title,
@@ -67,7 +72,7 @@ final class WindowPicker {
 
     func updateHover(at cocoaLocation: CGPoint) {
         let quartzPoint = ScreenGeometry.cocoaPointToQuartz(cocoaLocation, primaryScreenHeight: NSScreen.primaryHeight)
-        let index = ScreenGeometry.topmostWindowIndex(at: quartzPoint, frames: candidates.map(\.frame))
+        let index = WindowClassifier.preferredIndex(at: quartzPoint, in: candidates.map(\.pickable.classified))
         let candidate = index.map { candidates[$0] }
         guard candidate?.window.windowID != hovered?.window.windowID else { return }
         hovered = candidate
@@ -76,7 +81,7 @@ final class WindowPicker {
 
     func confirm() {
         if let hovered {
-            finish(.window(hovered.window))
+            finish(.window(hovered.pickable))
         }
     }
 

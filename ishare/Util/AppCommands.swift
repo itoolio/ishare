@@ -108,6 +108,9 @@ extension AppCommand {
                 id: "capture.lastRegion", title: "Capture Last Region", keywords: ["screenshot", "repeat", "again"], symbol: "arrow.counterclockwise",
                 perform: afterDismissing { await CaptureSession.captureImage(.LAST_REGION) }),
             AppCommand(
+                id: "capture.menu", title: "Capture Menu…", keywords: ["menu", "popover", "tooltip", "context menu", "shadow", "timer"], symbol: "filemenu.and.cursorarrow",
+                perform: afterDismissing { await CaptureSession.captureImage(.MENU) }),
+            AppCommand(
                 id: "capture.text", title: "Capture Text", keywords: ["ocr", "recognize", "copy text"], symbol: "text.viewfinder",
                 perform: afterDismissing { await CaptureSession.captureImage(.TEXT) }),
             AppCommand(
