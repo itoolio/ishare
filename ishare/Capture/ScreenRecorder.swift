@@ -1,3 +1,4 @@
+@preconcurrency import AVFoundation
 import BezelNotification
 import Combine
 import Defaults
@@ -13,6 +14,7 @@ final class AudioLevelsProvider: ObservableObject {
 enum RecordingTarget {
     case picker
     case region(NSScreen, CGRect)
+    case device(ExternalScreenDevice)
 }
 
 @MainActor
@@ -157,6 +159,7 @@ final class ScreenRecorder: ObservableObject {
     private var sidecar = RecordingSidecar.empty
     private var audioPlan = RecordingAudioPlan.contentAudio
     private var appAudioRecorder: AppAudioRecorder?
+    private var deviceRecorder: ExternalScreenRecorder?
 
     private var captureOverlayWindowIDs: Set<CGWindowID> {
         RecordingCaptureExclusion.capturedOverlayIDs(
@@ -206,7 +209,45 @@ final class ScreenRecorder: ObservableObject {
             startWithPicker(fileURL)
         case let .region(screen, rect):
             await startRegion(fileURL, screen: screen, rect: rect)
+        case let .device(device):
+            await startDevice(fileURL, device: device)
         }
+    }
+
+    private func startDevice(_ fileURL: URL, device: ExternalScreenDevice) async {
+        guard let captureDevice = AVCaptureDevice(uniqueID: device.id) else {
+            BezelNotification.show(messageText: ExternalScreenCaptureError.deviceUnavailable.localizedDescription, icon: ToastIcon)
+            RecordingDefaults.end()
+            return
+        }
+        guard await ExternalScreenCaptureSupport.requestAccess() else {
+            BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
+            RecordingDefaults.end()
+            return
+        }
+        let recorder = ExternalScreenRecorder()
+        do {
+            try recorder.start(device: captureDevice, fileURL: fileURL, hevc: RecordingDefaults[.useHEVC])
+        } catch {
+            Log.capture.error("Recording \(device.name, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: error.localizedDescription, icon: ToastIcon)
+            RecordingDefaults.end()
+            return
+        }
+        deviceRecorder = recorder
+        isRunning = true
+        hudModel.showsSystemAudio = false
+        hudModel.showsMicrophone = false
+        showPickerHUD()
+        RecordingNotesController.shared.recordingDidStart()
+        hudModel.showsNotes = RecordingNotesController.shared.isVisible
+        let startDate = Date()
+        clockStart = RecordingClock.now
+        hudModel.clockStart = clockStart
+        self.startDate = startDate
+        updateStatusToolTip()
+        startLimitMonitor(fileURL: fileURL, startDate: startDate)
+        Log.capture.info("Recording the screen of \(device.name, privacy: .public)")
     }
 
     private func startWithPicker(_ fileURL: URL) {
@@ -410,7 +451,11 @@ final class ScreenRecorder: ObservableObject {
         let now = RecordingClock.now
         Task { @MainActor in
             defer { isChangingPause = false }
-            guard await captureEngine.pauseRecording() else { return }
+            if let deviceRecorder {
+                deviceRecorder.pause()
+            } else {
+                guard await captureEngine.pauseRecording() else { return }
+            }
             guard isRunning else { return }
             pauses.pause(at: now)
             setPaused(true)
@@ -420,7 +465,11 @@ final class ScreenRecorder: ObservableObject {
 
     func resume() {
         guard canPause, isPaused else { return }
-        guard captureEngine.resumeRecording() else { return }
+        if let deviceRecorder {
+            deviceRecorder.resume()
+        } else {
+            guard captureEngine.resumeRecording() else { return }
+        }
         pauses.resume(at: RecordingClock.now)
         setPaused(false)
         Log.capture.info("Resumed the recording")
@@ -448,7 +497,25 @@ final class ScreenRecorder: ObservableObject {
         return sidecar
     }
 
+    private func stopDevice(_ recorder: ExternalScreenRecorder) async -> Result<URL, any Error> {
+        removeOverlay()
+        limitMonitor.stop()
+        let result = await recorder.stop()
+        deviceRecorder = nil
+        RecordingNotesController.shared.recordingDidStop()
+        sidecar = RecordingSidecar(markers: markerLog.markers)
+        markerLog = RecordingMarkerLog()
+        isRunning = false
+        startDate = nil
+        resetPauses()
+        remainingTime = nil
+        return result
+    }
+
     func stop() async -> Result<URL, any Error> {
+        if let deviceRecorder {
+            return await stopDevice(deviceRecorder)
+        }
         removeOverlay()
         limitMonitor.stop()
         drawing.endDrawing()
@@ -473,7 +540,8 @@ final class ScreenRecorder: ObservableObject {
 
     private func startLimitMonitor(fileURL: URL, startDate: Date) {
         let engine = captureEngine
-        limitMonitor.bytesWritten = { engine.recordedFileSize }
+        let device = deviceRecorder
+        limitMonitor.bytesWritten = { device?.recordedFileSize ?? engine.recordedFileSize }
         limitMonitor.recordedTime = { [weak self] in self?.recordedTime ?? 0 }
         limitMonitor.onRemainingTime = { [weak self] remaining in
             self?.remainingTime = remaining

@@ -54,6 +54,7 @@ struct MenuRecordSection: View {
                 .menuFocusRing(.record(1))
             }
             MenuRecordPresetsRow(recordsGIF: recordsGIF)
+            MenuExternalDevicesRows()
         }
     }
 

@@ -37,3 +37,21 @@ struct MenuRecordPresetsRow: View {
         }
     }
 }
+
+struct MenuExternalDevicesRows: View {
+    @ObservedObject private var devices = ExternalScreenDevices.shared
+    @EnvironmentObject private var app: AppModel
+
+    var body: some View {
+        ForEach(devices.devices) { device in
+            HStack(spacing: 8) {
+                WideActionButton(symbol: device.symbol, title: device.recordTitle, help: device.name, identifier: "menu.record.device") {
+                    app.menuActions.run { CaptureSession.recordDevice(device) }
+                }
+                WideActionButton(symbol: "camera.viewfinder", title: device.screenshotTitle, help: device.name, identifier: "menu.capture.device") {
+                    app.menuActions.run { await CaptureSession.captureDeviceScreenshot(device) }
+                }
+            }
+        }
+    }
+}

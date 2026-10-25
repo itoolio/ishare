@@ -68,6 +68,7 @@ enum WebcamBubbleLayout {
 enum CaptureDevices {
     static func cameras() -> [AVCaptureDevice] {
         AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .continuityCamera, .external], mediaType: .video, position: .unspecified).devices
+            .filter { ExternalScreenDevices.screenDevice(for: $0) == nil }
     }
 
     static func microphones() -> [AVCaptureDevice] {

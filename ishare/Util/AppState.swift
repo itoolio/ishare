@@ -15,6 +15,7 @@ final class AppState: ObservableObject {
             setupKeyboardShortcuts()
             UploadPresetShortcuts.start()
             RecordingPresetShortcuts.start()
+            ExternalScreenDevices.shared.start()
             UploadBackgroundServices.start()
             InstantReplay.shared.activate()
         }

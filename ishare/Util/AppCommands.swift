@@ -167,7 +167,7 @@ extension AppCommand {
                 },
             ] + recordingExtraCommands()
         }
-        return recordingExtraCommands() + recordingPresetCommands() + [
+        return recordingExtraCommands() + recordingPresetCommands() + externalDeviceCommands() + [
             AppCommand(
                 id: "record.screen", title: "Record Screen", keywords: ["video", "movie", "screencast"], symbol: "record.circle",
                 perform: afterDismissing { CaptureSession.toggleRecording() }),
@@ -181,6 +181,20 @@ extension AppCommand {
                 id: "record.regionGif", title: "Record Region as GIF", keywords: ["animation", "area"], symbol: "photo.stack",
                 perform: afterDismissing { CaptureSession.toggleRecording(gif: true, region: true) }),
         ]
+    }
+
+    @MainActor private static func externalDeviceCommands() -> [AppCommand] {
+        ExternalScreenDevices.shared.devices.flatMap { device in
+            [
+                AppCommand(
+                    id: "device.record.\(device.id)", title: device.recordTitle, keywords: ["iphone", "ipad", "ios", "usb", "quicktime", device.name], symbol: device.symbol,
+                    perform: afterDismissing { CaptureSession.recordDevice(device) }),
+                AppCommand(
+                    id: "device.capture.\(device.id)", title: device.screenshotTitle, keywords: ["iphone", "ipad", "ios", "usb", "screenshot", device.name],
+                    symbol: "camera.viewfinder",
+                    perform: afterDismissing { await CaptureSession.captureDeviceScreenshot(device) }),
+            ]
+        }
     }
 
     @MainActor private static func recordingPresetCommands() -> [AppCommand] {

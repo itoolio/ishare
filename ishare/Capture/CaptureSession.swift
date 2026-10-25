@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import BezelNotification
 import Defaults
 import Foundation
@@ -91,6 +92,49 @@ enum CaptureSession {
         case .switchToWindow, .cancelled:
             pendingRecording = nil
             RecordingDefaults.end()
+        }
+    }
+
+    static func recordDevice(_ device: ExternalScreenDevice, options: CaptureOptions = .standard) {
+        guard !isRecording else {
+            stopRecording()
+            return
+        }
+        pendingRecording = (false, options)
+        RecordingDefaults.begin(options.recordingPreset)
+        let fileURL = ExternalScreenCaptureSupport.fileURL(for: device, ext: Defaults[.recordMP4] ? "mp4" : "mov", kind: .recordings)
+        Task { @MainActor in
+            await AppModel.shared.recorder.start(fileURL, target: .device(device))
+            if !isRecording {
+                pendingRecording = nil
+            }
+        }
+    }
+
+    static func captureDeviceScreenshot(_ device: ExternalScreenDevice, options: CaptureOptions = .standard) async {
+        guard !isCapturingImage else { return }
+        guard let captureDevice = AVCaptureDevice(uniqueID: device.id) else {
+            BezelNotification.show(messageText: ExternalScreenCaptureError.deviceUnavailable.localizedDescription, icon: ToastIcon)
+            return
+        }
+        guard await ExternalScreenCaptureSupport.requestAccess() else {
+            BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
+            return
+        }
+        isCapturingImage = true
+        defer { isCapturingImage = false }
+        Log.capture.info("Capturing the screen of \(device.name, privacy: .public)")
+        do {
+            let image = try await ExternalScreenFrameGrabber().grab(from: captureDevice)
+            let fileURL = try ImageCaptureFlow.save(CapturedImage(image: image, suffix: device.fileSuffix))
+            if let resultHandler = options.resultHandler {
+                resultHandler(fileURL)
+                return
+            }
+            await finish(fileURL: fileURL, kind: .image, options: options)
+        } catch {
+            Log.capture.error("Capturing \(device.name, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
         }
     }
 
