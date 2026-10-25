@@ -211,6 +211,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
     var dimAmount = Annotation.defaultDimAmount
     var locked = false
     var hidden = false
+    var rotation: CGFloat = 0
 
     var isEffect: Bool {
         switch shape {
@@ -230,6 +231,14 @@ struct Annotation: Identifiable, Hashable, Sendable {
     }
 
     var bounds: CGRect {
+        guard let frame = rotatedFrame else { return unrotatedBounds }
+        if case let .callout(tail, _, _) = shape {
+            return frame.boundingBox.union(CGRect(origin: tail, size: .zero))
+        }
+        return frame.boundingBox
+    }
+
+    var unrotatedBounds: CGRect {
         switch shape {
         case let .arrow(start, end), let .line(start, end):
             ScreenGeometry.rect(from: start, to: end).insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
@@ -266,7 +275,11 @@ struct Annotation: Identifiable, Hashable, Sendable {
         case let .pen(points), let .marker(points):
             Annotation.distance(from: point, toPolyline: points) <= max(tolerance, lineWidth)
         default:
-            bounds.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
+            if let frame = rotatedFrame {
+                rotatedHitTest(point, in: frame, tolerance: tolerance)
+            } else {
+                bounds.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
+            }
         }
     }
 

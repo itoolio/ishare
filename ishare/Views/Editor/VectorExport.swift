@@ -176,6 +176,14 @@ enum SVGExporter {
     }
 
     static func elements(for annotation: Annotation, source: CGImage) -> [String] {
+        let content = shapeElements(for: annotation, source: source)
+        guard let frame = annotation.rotatedFrame, !content.isEmpty else { return content }
+        let degrees = frame.angle * 180 / .pi
+        let group = #"<g transform="rotate(\#(number(degrees)) \#(number(frame.center.x)) \#(number(frame.center.y)))">"#
+        return [([group] + content + ["</g>"]).joined()]
+    }
+
+    private static func shapeElements(for annotation: Annotation, source: CGImage) -> [String] {
         switch annotation.shape {
         case let .arrow(start, end):
             return arrowElements(start: start, control: nil, end: end, annotation: annotation)
@@ -216,7 +224,7 @@ enum SVGExporter {
         case let .text(origin, string):
             return textElements(string, origin: origin, annotation: annotation)
         case let .callout(tail, rect, string):
-            return calloutElements(tail: tail, rect: rect, text: string, annotation: annotation)
+            return calloutElements(tail: annotation.localPoint(tail), rect: rect, text: string, annotation: annotation)
         case let .step(center, number):
             return stepElements(center: center, number: number, annotation: annotation)
         case let .magnify(rect):

@@ -213,9 +213,14 @@ struct EditorCanvas: View {
     }
 
     private func drawSelection(of annotation: Annotation, showsHandles: Bool, in context: inout GraphicsContext, transform: CanvasTransform) {
-        let outline = transform.toView(annotation.bounds).insetBy(dx: -6, dy: -6)
+        let margin = transform.toImage(6)
+        let frame = annotation.outline
+        let inflated = RotatedRect(rect: frame.rect.insetBy(dx: -margin, dy: -margin), angle: frame.angle)
+        var outline = Path()
+        outline.addLines(inflated.corners.map { transform.toView($0) })
+        outline.closeSubpath()
         let outlineColor: Color = annotation.locked ? .secondary : .accentColor
-        context.stroke(Path(outline), with: .color(outlineColor), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+        context.stroke(outline, with: .color(outlineColor), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
         guard showsHandles else { return }
         if let (start, control, end) = annotation.curveControlPoints {
             var guide = Path()

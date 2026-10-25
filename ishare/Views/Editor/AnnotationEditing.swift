@@ -34,7 +34,8 @@ extension Annotation {
         default:
             guard let rect = editableRect else { return [] }
             let handles = keepsSquareProportions ? ResizeHandle.allCases.filter(\.isCorner) : ResizeHandle.allCases
-            return handles.map { (.resize($0), $0.point(in: rect)) }
+            let frame = rotatedFrame
+            return handles.map { (.resize($0), frame?.toWorld($0.point(in: rect)) ?? $0.point(in: rect)) }
         }
     }
 
@@ -67,8 +68,10 @@ extension Annotation {
         case let (_, .resize(resizeHandle)):
             guard let rect = editableRect else { return self }
             let unbounded = CGRect(x: -1e7, y: -1e7, width: 2e7, height: 2e7)
-            let newRect = CropGeometry.resize(rect, handle: resizeHandle, to: point, ratio: keepsSquareProportions ? 1 : nil, bounds: unbounded)
-            copy = resized(to: newRect)
+            let frame = rotatedFrame
+            let local = frame?.toLocal(point) ?? point
+            let newRect = CropGeometry.resize(rect, handle: resizeHandle, to: local, ratio: keepsSquareProportions ? 1 : nil, bounds: unbounded)
+            copy = resized(to: frame?.replacingLocalRect(newRect).rect ?? newRect)
         default:
             break
         }

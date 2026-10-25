@@ -68,6 +68,14 @@ struct CanvasMapping {
         return rect.standardized.applying(transform).standardized
     }
 
+    var rotationAngle: CGFloat {
+        atan2(transform.b, transform.a)
+    }
+
+    var isReflection: Bool {
+        transform.a * transform.d - transform.b * transform.c < 0
+    }
+
     func mapKeepingSize(_ rect: CGRect) -> CGRect {
         let center = map(CGPoint(x: rect.midX, y: rect.midY))
         return CGRect(x: center.x - rect.width / 2, y: center.y - rect.height / 2, width: rect.width, height: rect.height)
@@ -109,7 +117,7 @@ extension Annotation {
             case let .highlight(rect): .highlight(mapping.map(rect))
             case let .pen(points): .pen(points.map(point))
             case let .marker(points): .marker(points.map(point))
-            case let .text(_, string): .text(mapping.mapKeepingSize(bounds).origin, string)
+            case let .text(_, string): .text(mapping.mapKeepingSize(rotationFrame ?? bounds).origin, string)
             case let .callout(tail, rect, string): .callout(point(tail), mapping.mapKeepingSize(rect), string)
             case let .step(center, number): .step(point(center), number)
             case let .magnify(rect): .magnify(mapping.map(rect))
@@ -119,6 +127,12 @@ extension Annotation {
             case let .eraser(rect): .eraser(mapping.map(rect))
             case .cursor: .cursor(mapping.mapKeepingSize(bounds).origin)
             }
+        if supportsRotation {
+            copy.rotation = mapping.isReflection ? -rotation : rotation
+            if mapping.preservesExtents {
+                copy = copy.rotated(by: mapping.rotationAngle)
+            }
+        }
         return copy
     }
 }
