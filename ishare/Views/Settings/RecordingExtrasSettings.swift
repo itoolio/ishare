@@ -10,6 +10,7 @@ struct RecordingExtrasSettings: View {
             WebcamSettingsSection()
             MicrophoneSettingsSection()
             AfterRecordingSettingsSection()
+            RecordingPostProcessingSettings()
             CaptionsSettingsSection()
             NotesSettingsSection()
             InstantReplaySettingsSection()

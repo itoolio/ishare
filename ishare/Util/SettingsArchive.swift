@@ -154,6 +154,8 @@ enum SettingsTransfer {
         .showQRCodeAfterUpload, .localShareExpiry, .localShareMaxDownloads, .historySyncEnabled,
         .optimizeImagesBeforeUpload, .imageOptimizationFormat, .imageConversionQuality, .stripImageMetadata,
         .stripImportedImageMetadata, .uploadWebhooks,
+        .cutSilenceEnabled, .cutSilenceSpeed, .cutSilenceAudioThreshold, .cutSilenceMotionThreshold, .cutSilenceMinimumDuration, .cutSilencePadding,
+        .recordingConvertTo, .recordingUploadFormat, .voiceOverMode, .voiceOverDuckAmount, .blurRegionStyle, .blurDetectionInterval,
     ]
 
     static var preferenceNames: Set<String> {
