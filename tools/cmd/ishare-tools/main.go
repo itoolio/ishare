@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/itoolio/ishare/tools/internal/appcast"
 	"github.com/itoolio/ishare/tools/internal/appstore"
@@ -19,6 +20,7 @@ import (
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
 	"github.com/itoolio/ishare/tools/internal/repo"
+	"github.com/itoolio/ishare/tools/internal/sbom"
 	"github.com/itoolio/ishare/tools/internal/screenshots"
 	symbolication "github.com/itoolio/ishare/tools/internal/symbolicate"
 	"github.com/itoolio/ishare/tools/internal/version"
@@ -51,6 +53,7 @@ var commands = map[string]command{
 	"docc-symbols":       {"docc-symbols [--module ishare] [--keep Type]... <derived-data-or-symbol-graph-dir> <output-dir>", doccSymbols},
 	"package-dsyms":      {"package-dsyms <archive.xcarchive> <output.zip>", packageDSYMs},
 	"symbolicate":        {"symbolicate <crash.ips|crash> --dsyms <dSYMs.zip|dir> [--output file]", symbolicate},
+	"sbom":               {"sbom --version <version> --output file.spdx.json [--package-resolved Package.resolved]... [--package-dir dir]... [--go-mod go.mod]... [--created RFC3339]", writeSBOM},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
 
@@ -454,5 +457,36 @@ func doccSymbols(env environment, arguments []string) error {
 		return err
 	}
 	fmt.Fprintf(env.stdout, "kept %d symbols and %d relationships of %d types\n", result.Symbols, result.Relationships, len(result.Types))
+	return nil
+}
+
+func writeSBOM(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("sbom", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	version := flags.String("version", "", "")
+	output := flags.String("output", "", "")
+	created := flags.String("created", "", "")
+	var resolved, packageDirs, goModules fragments
+	flags.Var(&resolved, "package-resolved", "")
+	flags.Var(&packageDirs, "package-dir", "")
+	flags.Var(&goModules, "go-mod", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 || *version == "" || *output == "" {
+		return errUsage
+	}
+	timestamp, err := sbom.CreatedTime(*created, os.Getenv("SOURCE_DATE_EPOCH"), time.Now())
+	if err != nil {
+		return err
+	}
+	document, err := sbom.Write(sbom.Options{
+		Version:         *version,
+		PackageResolved: resolved,
+		PackageDirs:     packageDirs,
+		GoModules:       goModules,
+		Created:         timestamp,
+	}, *output)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(env.stdout, "wrote %s with %d packages\n", *output, len(document.Packages))
 	return nil
 }
