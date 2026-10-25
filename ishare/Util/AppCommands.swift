@@ -205,7 +205,20 @@ extension AppCommand {
                 MenuController.shared.dismiss()
                 openHistoryWindow(uploadHistory: Defaults[.uploadHistory])
             },
-        ] + latestUploadCommands()
+        ] + shelfCommands() + latestUploadCommands()
+    }
+
+    @MainActor private static func shelfCommands() -> [AppCommand] {
+        guard Defaults[.captureShelfMode] != .off else { return [] }
+        return [
+            AppCommand(
+                id: "shelf.toggle", title: CaptureShelf.shared.isVisible ? "Hide Capture Shelf" : "Show Capture Shelf",
+                keywords: ["shelf", "tray", "recent", "drag"], symbol: "tray.full"
+            ) {
+                MenuController.shared.dismiss()
+                CaptureShelf.shared.toggle()
+            }
+        ]
     }
 
     @MainActor private static func latestUploadCommands() -> [AppCommand] {

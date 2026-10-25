@@ -153,7 +153,7 @@ enum SettingsTransfer {
         .beautifyFrame, .beautifyFrameAppearance, .beautifyFrameFit, .beautifyFrameTitle, .editorSmartShapes,
         .showQRCodeAfterUpload, .localShareExpiry, .localShareMaxDownloads, .historySyncEnabled,
         .optimizeImagesBeforeUpload, .imageOptimizationFormat, .imageConversionQuality, .stripImageMetadata,
-        .stripImportedImageMetadata, .uploadWebhooks,
+        .stripImportedImageMetadata, .uploadWebhooks, .captureShelfMode,
     ]
 
     static var preferenceNames: Set<String> {

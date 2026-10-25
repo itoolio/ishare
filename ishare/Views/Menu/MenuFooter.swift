@@ -1,7 +1,9 @@
+import Defaults
 import SwiftUI
 
 struct MenuFooter: View {
     @EnvironmentObject private var app: AppModel
+    @Default(.captureShelfMode) private var shelfMode
 
     var body: some View {
         HStack(spacing: 8) {
@@ -17,6 +19,12 @@ struct MenuFooter: View {
             .favoriteContextMenu(MenuFavoriteCommandID.footer(1))
             .menuFocusRing(.footer(1))
             .accessibilityIdentifier("menu.uploadClipboard")
+            if shelfMode != .off {
+                ShelfFooterButton {
+                    app.menuActions.dismiss()
+                    CaptureShelf.shared.toggle()
+                }
+            }
         }
     }
 
@@ -47,5 +55,22 @@ struct FooterButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(ActionTileStyle())
+    }
+}
+
+struct ShelfFooterButton: View {
+    let action: () -> Void
+    @Environment(\.menuMetrics) private var metrics
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "tray.full")
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: metrics.footerHeight, height: metrics.footerHeight)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(ActionTileStyle())
+        .helpAndAccessibilityLabel("Capture Shelf".localized())
+        .accessibilityIdentifier("menu.shelf")
     }
 }

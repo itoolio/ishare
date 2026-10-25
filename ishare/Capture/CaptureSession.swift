@@ -190,6 +190,7 @@ enum CaptureSession {
         if copiedCode == nil, kind == .image {
             await CodeDetection.copyPayloadIfEnabled(fromImageAt: fileURL)
         }
+        await CaptureShelf.shared.collectCapture(fileURL)
 
         if let uploadToast {
             await uploadToast.presentation.value

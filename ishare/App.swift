@@ -81,6 +81,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     MenuController.shared.openCommandPalette()
                 }
             }
+            CaptureShelf.registerShortcut()
+            CaptureShelf.shared.resetStorage()
         }
         BackgroundMaintenance.start()
         WhatsNew.presentIfNeeded()
