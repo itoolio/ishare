@@ -137,7 +137,6 @@ final class RegionSelectionView: NSView {
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
 
-    // Z flips one preference: the magnifier where there's a frozen frame to sample, the position pill everywhere else.
     private var showsPosition: Bool {
         Defaults[.showMagnifier]
     }
@@ -146,7 +145,6 @@ final class RegionSelectionView: NSView {
         options.awaitsBackdrops || !options.backdrops.isEmpty
     }
 
-    // Holds back the coordinates until the frozen frame arrives, so they don't flash before the magnifier replaces them.
     private var magnifierPending: Bool {
         showsPosition && awaitsBackdrop
     }
