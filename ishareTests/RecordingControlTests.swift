@@ -65,3 +65,33 @@ struct RecordingPauseControlTests {
         #expect(segments.map(\.sourceStart) == [0, 4])
     }
 }
+
+struct PointerShapeRenderingTests {
+    private func image() -> CGImage {
+        let context = CGContext(
+            data: nil, width: 4, height: 4, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        return context.makeImage()!
+    }
+
+    @Test func looksUpTheRecordedImageForAShape() {
+        var track = PointerShapeTrack()
+        track.record(PointerShape(fingerprint: 1, hotSpot: .zero, size: CGSize(width: 2, height: 2)), at: 0)
+        track.record(PointerShape(fingerprint: 2, hotSpot: CGPoint(x: 1, y: 1), size: CGSize(width: 2, height: 2)), at: 1)
+        let set = PointerShapeSet(track: track, images: [image(), image()])
+        #expect(set.image(at: 0.5)?.index == 0)
+        #expect(set.image(at: 2)?.shape.fingerprint == 2)
+        #expect(PointerShapeSet(track: track, images: [image()]).image(at: 2) == nil)
+    }
+
+    @Test func keepsShapesOnlyWhenIshareDrawsThePointer() {
+        var track = PointerShapeTrack()
+        track.record(PointerShape(fingerprint: 1, hotSpot: .zero, size: CGSize(width: 2, height: 2)), at: 0)
+        let set = PointerShapeSet(track: track, images: [image()])
+        let activity = PointerActivity(pointer: [PointerSample(time: 0, point: .zero), PointerSample(time: 1, point: CGPoint(x: 5, y: 5))])
+        let size = CGSize(width: 100, height: 100)
+        let drawn = RecordingEffectsPlan.make(activity: activity, pointer: PointerEffectSettings(smoothing: true), autoZoom: nil, videoSize: size, duration: 1, shapes: set)
+        let native = RecordingEffectsPlan.make(activity: activity, pointer: PointerEffectSettings(), autoZoom: nil, videoSize: size, duration: 1, shapes: set)
+        #expect(drawn.pointerShapes == set)
+        #expect(native.pointerShapes == nil)
+    }
+}

@@ -15,6 +15,7 @@ final class PointerActivityRecorder {
     private var timer: Timer?
     private var pointerSettings = PointerEffectSettings()
     private var autoZoom: AutoZoomSettings?
+    private var shapeSampler = PointerShapeSampler()
 
     var isSuspended: () -> Bool = { false }
 
@@ -27,6 +28,7 @@ final class PointerActivityRecorder {
     func start(source: OverlaySource) {
         _ = stop()
         log = PointerActivityLog()
+        shapeSampler = PointerShapeSampler()
         pointerSettings = .current
         autoZoom = Defaults[.autoZoomEnabled] ? .current : nil
         guard pointerSettings.isActive || autoZoom != nil else { return }
@@ -61,13 +63,15 @@ final class PointerActivityRecorder {
         monitor.onKey = nil
         let wasActive = isActive
         isActive = false
+        let shapes = pointerSettings.rendersPointer ? shapeSampler.capturedShapes : nil
         defer {
+            shapeSampler = PointerShapeSampler()
             log = PointerActivityLog()
             source = nil
             cachedRect = nil
         }
         guard wasActive, let source, !log.isEmpty else { return nil }
-        return RecordingEffectsCapture(log: log, contentSize: source.contentSize, pointer: pointerSettings, autoZoom: autoZoom)
+        return RecordingEffectsCapture(log: log, contentSize: source.contentSize, pointer: pointerSettings, autoZoom: autoZoom, shapes: shapes)
     }
 
     private func currentRect(at time: Double) -> CGRect? {
@@ -86,6 +90,9 @@ final class PointerActivityRecorder {
         let time = RecordingClock.now
         guard let rect = currentRect(at: time) else { return }
         log.recordSample(at: globalPoint(fromCocoa: NSEvent.mouseLocation), sourceRect: rect, time: time)
+        if pointerSettings.rendersPointer {
+            shapeSampler.sample(at: time)
+        }
     }
 
     private func recordClick(atCocoaPoint point: CGPoint) {
@@ -98,5 +105,46 @@ final class PointerActivityRecorder {
     private func recordKey(_ event: RawKeyEvent) {
         guard !event.isRepeat, !isSuspended() else { return }
         log.recordKey(time: RecordingClock.now)
+    }
+}
+
+@MainActor
+struct PointerShapeSampler {
+    private static let maximumShapes = 64
+
+    private var track = PointerShapeTrack()
+    private var images: [CGImage] = []
+    private var lastImage: NSImage?
+    private var lastShape: PointerShape?
+
+    var capturedShapes: PointerShapeSet? {
+        track.isEmpty ? nil : PointerShapeSet(track: track, images: images)
+    }
+
+    mutating func sample(at time: Double) {
+        guard let cursor = NSCursor.currentSystem else { return }
+        let image = cursor.image
+        if image === lastImage, let lastShape {
+            track.record(lastShape, at: time)
+            return
+        }
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+        let shape = PointerShape(fingerprint: Self.fingerprint(of: cgImage), hotSpot: cursor.hotSpot, size: image.size)
+        lastImage = image
+        lastShape = shape
+        guard track.index(of: shape) != nil || track.shapes.count < Self.maximumShapes else { return }
+        if track.record(shape, at: time).isNew {
+            images.append(cgImage)
+        }
+    }
+
+    static func fingerprint(of image: CGImage) -> Int {
+        var hasher = Hasher()
+        hasher.combine(image.width)
+        hasher.combine(image.height)
+        if let data = image.dataProvider?.data {
+            hasher.combine(data as Data)
+        }
+        return hasher.finalize()
     }
 }

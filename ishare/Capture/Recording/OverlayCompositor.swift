@@ -67,6 +67,12 @@ final class OverlayImageRenderer: @unchecked Sendable {
     private var badgeCache: [String: CIImage] = [:]
     private var ringCache: [CGFloat: CIImage] = [:]
     private var pointerCache: [CGFloat: CIImage] = [:]
+    private var shapeCache: [ShapeCacheKey: CIImage] = [:]
+
+    private struct ShapeCacheKey: Hashable {
+        var index: Int
+        var scale: CGFloat
+    }
 
     func compose(screen: CIImage, webcam: CIImage?, time: Double, timeline: OverlayTimeline, layout: OverlayCompositionLayout) -> CIImage {
         var image = screen
@@ -101,7 +107,11 @@ final class OverlayImageRenderer: @unchecked Sendable {
             let opacity = track.opacity(at: time)
             if opacity > 0.01 {
                 let tip = OverlayCoordinateMapper.flipped(position, videoHeight: layout.videoSize.height)
-                image = pointerImage(scale: layout.pixelsPerPoint * CGFloat(track.scale), tip: tip, opacity: opacity).composited(over: image)
+                let scale = layout.pixelsPerPoint * CGFloat(track.scale)
+                let pointer =
+                    effects.pointerShapes?.image(at: time).map { shapeImage($0, scale: scale, tip: tip, opacity: opacity) }
+                    ?? pointerImage(scale: scale, tip: tip, opacity: opacity)
+                image = pointer.composited(over: image)
             }
         }
         return image
@@ -130,6 +140,24 @@ final class OverlayImageRenderer: @unchecked Sendable {
                 ])
         let inset = PointerGlyph.padding * cachedPointerKey(scale)
         return faded.transformed(by: CGAffineTransform(translationX: tip.x - inset, y: tip.y - base.extent.height + inset))
+    }
+
+    private func shapeImage(_ entry: (index: Int, shape: PointerShape, image: CGImage), scale: CGFloat, tip: CGPoint, opacity: Double) -> CIImage {
+        let key = ShapeCacheKey(index: entry.index, scale: cachedPointerKey(scale))
+        let base: CIImage
+        if let cached = shapeCache[key] {
+            base = cached
+        } else {
+            let source = CIImage(cgImage: entry.image)
+            let width = max(1, entry.shape.size.width * key.scale)
+            let height = max(1, entry.shape.size.height * key.scale)
+            base = source.transformed(by: CGAffineTransform(scaleX: width / max(1, source.extent.width), y: height / max(1, source.extent.height)))
+            if shapeCache.count > 64 { shapeCache.removeAll() }
+            shapeCache[key] = base
+        }
+        let faded = opacity >= 0.99 ? base : base.applyingFilter("CIColorMatrix", parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(opacity))])
+        let origin = entry.shape.origin(forTip: tip, scale: key.scale)
+        return faded.transformed(by: CGAffineTransform(translationX: origin.x - base.extent.minX, y: origin.y - base.extent.minY))
     }
 
     private func cachedPointerKey(_ scale: CGFloat) -> CGFloat {
@@ -320,7 +348,9 @@ enum OverlayCompositor {
         var deferredCamera: CameraPath?
         if let effects {
             let activity = effects.log.activity(recordingStart: recordingStart, videoSize: videoSize, duration: duration.seconds, pauses: pauses)
-            var plan = RecordingEffectsPlan.make(activity: activity, pointer: effects.pointer, autoZoom: effects.autoZoom, videoSize: videoSize, duration: duration.seconds)
+            let shapes = effects.shapes?.retimed { pauses.recordedDuration(from: recordingStart, to: $0) }
+            var plan = RecordingEffectsPlan.make(
+                activity: activity, pointer: effects.pointer, autoZoom: effects.autoZoom, videoSize: videoSize, duration: duration.seconds, shapes: shapes)
             if defersZoom {
                 deferredCamera = plan.camera
                 plan = plan.withoutCamera()

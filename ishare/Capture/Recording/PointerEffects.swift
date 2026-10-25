@@ -147,6 +147,23 @@ struct RecordingEffectsCapture: Sendable {
     var contentSize: CGSize
     var pointer: PointerEffectSettings
     var autoZoom: AutoZoomSettings?
+    var shapes: PointerShapeSet?
+}
+
+struct PointerShapeSet: Hashable, @unchecked Sendable {
+    var track: PointerShapeTrack
+    var images: [CGImage]
+
+    var isEmpty: Bool { track.isEmpty || images.isEmpty }
+
+    func image(at time: Double) -> (index: Int, shape: PointerShape, image: CGImage)? {
+        guard let index = track.shapeIndex(at: time), images.indices.contains(index) else { return nil }
+        return (index, track.shapes[index], images[index])
+    }
+
+    func retimed(_ transform: (Double) -> Double) -> PointerShapeSet {
+        PointerShapeSet(track: track.retimed(transform), images: images)
+    }
 }
 
 struct RecordingEffectsPlan: Hashable, Sendable {
@@ -154,12 +171,15 @@ struct RecordingEffectsPlan: Hashable, Sendable {
     var ripples: [OverlayClick] = []
     var rippleColor: CaptureColor = .defaultRipple
     var camera: CameraPath?
+    var pointerShapes: PointerShapeSet?
 
     var isEmpty: Bool {
         pointer == nil && ripples.isEmpty && (camera?.isEmpty ?? true)
     }
 
-    static func make(activity: PointerActivity, pointer settings: PointerEffectSettings, autoZoom: AutoZoomSettings?, videoSize: CGSize, duration: Double) -> RecordingEffectsPlan {
+    static func make(
+        activity: PointerActivity, pointer settings: PointerEffectSettings, autoZoom: AutoZoomSettings?, videoSize: CGSize, duration: Double, shapes: PointerShapeSet? = nil
+    ) -> RecordingEffectsPlan {
         let clickTimes = activity.clicks.map(\.time)
         let track =
             settings.rendersPointer && !activity.pointer.isEmpty
@@ -169,7 +189,9 @@ struct RecordingEffectsPlan: Hashable, Sendable {
         let camera = autoZoom.map {
             CameraPlanner.plan(activity: activity.activityEvents, pointer: activity.pointer, duration: duration, frameSize: videoSize, settings: $0)
         }
-        return RecordingEffectsPlan(pointer: track, ripples: ripples, rippleColor: settings.rippleColor, camera: camera?.isEmpty == false ? camera : nil)
+        return RecordingEffectsPlan(
+            pointer: track, ripples: ripples, rippleColor: settings.rippleColor, camera: camera?.isEmpty == false ? camera : nil,
+            pointerShapes: track == nil || shapes?.isEmpty != false ? nil : shapes)
     }
 
     func withoutCamera() -> RecordingEffectsPlan {
