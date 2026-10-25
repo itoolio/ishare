@@ -294,6 +294,20 @@ final class EditorDocument: ObservableObject {
         }
     }
 
+    func withProcessing<Result>(_ work: () async -> Result) async -> Result {
+        isProcessing = true
+        defer { isProcessing = false }
+        return await work()
+    }
+
+    func replaceBase(with image: CGImage, annotations transform: (Annotation) -> Annotation, crop cropTransform: (CGRect) -> CGRect) {
+        commit {
+            base = image
+            annotations = annotations.map(transform)
+            crop = crop.map(cropTransform)
+        }
+    }
+
     func liftSubject() async {
         commitPendingEdits()
         guard !isProcessing else { return }
