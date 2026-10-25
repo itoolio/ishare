@@ -6,6 +6,7 @@ enum CLICaptureMode: String, Codable, CaseIterable, Sendable {
     case window
     case screen
     case scrolling
+    case menu
 }
 
 enum CLIRecordAction: String, Codable, CaseIterable, Sendable {

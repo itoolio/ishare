@@ -43,7 +43,7 @@ enum CLIArguments {
 
         Commands:
           upload <file…> [--uploader NAME]    Upload files and print their links
-          capture region|window|screen|scrolling [--upload]
+          capture region|window|screen|scrolling|menu [--upload]
                                               Take a screenshot and print its file or link
           record start|stop|toggle            Start or stop a screen recording
           uploaders list                      List the configured uploaders
@@ -123,7 +123,7 @@ enum CLIArguments {
             guard !rest.isEmpty else { throw .missingArgument("file") }
             command = .upload(files: rest.map { absolutePath($0, relativeTo: workingDirectory) }, uploader: uploader)
         case "capture":
-            guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen or scrolling)") }
+            guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen, scrolling or menu)") }
             guard let mode = CLICaptureMode(rawValue: modeName.lowercased()) else { throw .invalidValue(option: "capture", value: modeName) }
             try rejectExtra(rest.dropFirst())
             command = .capture(mode: mode, upload: upload)
