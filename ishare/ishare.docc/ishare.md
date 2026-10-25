@@ -19,6 +19,7 @@ This documentation covers two audiences:
 - <doc:HTTPUploaders>
 - <doc:ResponseTemplates>
 - <doc:LinkOptions>
+- <doc:LinkRewritingAndAutoDelete>
 - <doc:S3Uploaders>
 - <doc:LocalDestinations>
 - <doc:Examples>
