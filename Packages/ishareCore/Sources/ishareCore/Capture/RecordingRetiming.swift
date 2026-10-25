@@ -175,7 +175,7 @@ public struct SilenceDetectionSettings: Hashable, Sendable {
     public var padding: Double
     public var speed: SilenceSpeed
 
-    public init(audioThreshold: Double = -45, motionThreshold: Double = 0.01, minimumDuration: Double = 2, padding: Double = 0.3, speed: SilenceSpeed = .remove) {
+    public init(audioThreshold: Double = -45, motionThreshold: Double = 0.005, minimumDuration: Double = 2, padding: Double = 0.3, speed: SilenceSpeed = .remove) {
         self.audioThreshold = audioThreshold.clamped(to: Self.audioThresholdRange)
         self.motionThreshold = motionThreshold.clamped(to: Self.motionThresholdRange)
         self.minimumDuration = minimumDuration.clamped(to: Self.minimumDurationRange)

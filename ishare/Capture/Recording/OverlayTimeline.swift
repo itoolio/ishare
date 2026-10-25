@@ -1,6 +1,7 @@
 import CoreGraphics
 import CoreMedia
 import Foundation
+import ishareCore
 
 enum RecordingClock {
     static var now: Double {
@@ -102,8 +103,9 @@ struct OverlayTimeline: Hashable, Sendable {
     var keystrokes: [OverlayKeystrokeSpan] = []
     var webcam: OverlayWebcamClip?
     var effects = RecordingEffectsPlan()
+    var blurRegions: [BlurRegion] = []
 
-    var isEmpty: Bool { clicks.isEmpty && keystrokes.isEmpty && webcam == nil && effects.isEmpty }
+    var isEmpty: Bool { clicks.isEmpty && keystrokes.isEmpty && webcam == nil && effects.isEmpty && blurRegions.isEmpty }
 
     func ripples(at time: Double) -> [(point: CGPoint, progress: Double)] {
         clicks
