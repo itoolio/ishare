@@ -44,7 +44,7 @@ struct MenuExternalDevicesRows: View {
 
     var body: some View {
         ForEach(devices.devices) { device in
-            HStack(spacing: 8) {
+            VStack(spacing: 8) {
                 WideActionButton(symbol: device.symbol, title: device.recordTitle, help: device.name, identifier: "menu.record.device") {
                     app.menuActions.run { CaptureSession.recordDevice(device) }
                 }

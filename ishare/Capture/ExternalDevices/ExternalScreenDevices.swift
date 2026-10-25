@@ -47,7 +47,7 @@ final class ExternalScreenDevices: ObservableObject {
     private var notificationTokens: [any NSObjectProtocol] = []
 
     func start() {
-        guard discovery == nil else { return }
+        guard discovery == nil, !RuntimeEnvironment.isRunningTests else { return }
         ExternalScreenCaptureSupport.allowScreenCaptureDevices()
         let session = AVCaptureDevice.DiscoverySession(deviceTypes: [.external], mediaType: nil, position: .unspecified)
         discovery = session
