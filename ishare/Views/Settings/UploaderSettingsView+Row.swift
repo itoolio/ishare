@@ -20,6 +20,9 @@ extension UploaderSettingsView {
                             .padding(.vertical, 1)
                             .background(Capsule().fill(Color.accentColor.opacity(0.2)))
                     }
+                    if let record = uploaderHealthRecords[uploader.id.uuidString] {
+                        UploaderHealthBadge(record: record)
+                    }
                 }
                 Text(subtitle(for: uploader))
                     .font(.system(size: 11))

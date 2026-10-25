@@ -8,6 +8,7 @@ struct UploaderSettingsView: View {
     @Default(.savedLocalUploaders) var savedLocalUploaders
     @Default(.uploadType) var uploadType
     @Default(.uploadDestination) var uploadDestination
+    @Default(.uploaderHealthRecords) var uploaderHealthRecords
 
     @State var editor: UploaderEditorTarget?
     @State private var isImportSheetPresented = false
@@ -39,13 +40,13 @@ struct UploaderSettingsView: View {
                         Button("SFTP".localized()) { editor = .new(.sftp) }
                         Button("GitHub".localized()) { editor = .new(.github) }
                         Divider()
-                        ForEach(CloudProvider.allCases.filter(\.hasBuiltInClientID), id: \.self) { provider in
+                        let cloudGroups = CloudProvider.createMenuGroups()
+                        ForEach(cloudGroups.builtIn, id: \.self) { provider in
                             Button(provider.title.localized()) { editor = .new(provider.kind) }
                         }
-                        let ownAppProviders = CloudProvider.allCases.filter { !$0.hasBuiltInClientID }
-                        if !ownAppProviders.isEmpty {
+                        if !cloudGroups.ownApp.isEmpty {
                             Menu("With your own app".localized()) {
-                                ForEach(ownAppProviders, id: \.self) { provider in
+                                ForEach(cloudGroups.ownApp, id: \.self) { provider in
                                     Button(provider.title.localized()) { editor = .new(provider.kind) }
                                 }
                             }
@@ -90,6 +91,7 @@ struct UploaderSettingsView: View {
             UploadPresetsSettings()
             WatchFolderSettings()
             UploadQueueSettings()
+            UploadMaintenanceSettings()
             UploadStatisticsSettings()
 
             Section {
@@ -149,13 +151,14 @@ struct UploaderSettingsView: View {
 extension UploaderSettingsView: SettingsSearchable {
     static let searchEntries: [SettingsSearchEntry] = [
         ImageUploadSettings.optimization, ImageUploadSettings.metadata, WebhookSettings.entry,
+        UploadMaintenanceSettings.duplicates, UploadMaintenanceSettings.autoDelete, UploadMaintenanceSettings.healthCheck,
         SettingsSearchEntry(
             "Upload", pane: .uploaders,
             keywords: [
                 "Uploader", "Destination", "Imgur", "Custom uploader", "Server", "S3", "R2", "ISCU", "Import", "Export",
                 "Assistant", "Apple Intelligence", "Delete", "Deletion URL", "Headers",
                 "WebDAV", "SFTP", "SSH", "Host key", "Fingerprint", "Dropbox", "Google Drive", "OneDrive", "GitHub", "Gist",
-                "Personal access token", "Sign in",
+                "Personal access token", "Sign in", "Link rewriting", "CDN", "Auto-Delete",
             ]),
         SettingsSearchEntry(
             "Also upload to", pane: .uploaders,
