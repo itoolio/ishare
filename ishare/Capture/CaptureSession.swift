@@ -37,11 +37,17 @@ enum CaptureSession {
         let captured = await ImageCaptureFlow.capture(type: type, display: display, delay: delay)
         isCapturingImage = false
         guard let captured else { return }
-        ToastPlacement.capturedDisplayID = captured.geometry?.displayID
         var options = options
         if wantsDestinationChoice, let target = DestinationChooser.choose() {
             options.destinations = [target]
         }
+        for item in [captured] + captured.additionalCaptures {
+            await deliver(item, options: options)
+        }
+    }
+
+    private static func deliver(_ captured: CapturedImage, options: CaptureOptions) async {
+        ToastPlacement.capturedDisplayID = captured.geometry?.displayID
         do {
             let fileURL = try ImageCaptureFlow.save(captured)
             Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
@@ -51,7 +57,6 @@ enum CaptureSession {
                 return
             }
             await finish(fileURL: fileURL, kind: .image, options: options)
-
         } catch {
             Log.capture.error("Saving capture failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)

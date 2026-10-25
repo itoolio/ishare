@@ -2,6 +2,7 @@ import AppKit
 import BezelNotification
 import Defaults
 import Foundation
+import ishareCore
 @preconcurrency import ScreenCaptureKit
 
 enum CaptureType: String, CaseIterable, Sendable {
@@ -11,6 +12,7 @@ enum CaptureType: String, CaseIterable, Sendable {
     case SCROLLING
     case LAST_REGION
     case TEXT
+    case MENU
 }
 
 enum FileType: String, CaseIterable, Identifiable, Defaults.Serializable {
@@ -29,6 +31,7 @@ struct CapturedImage {
     var isWindow = false
     var pointScale: CGFloat?
     var source = CaptureSource()
+    var additionalCaptures: [CapturedImage] = []
 }
 
 struct CaptureSource: Hashable, Sendable {
@@ -43,8 +46,12 @@ enum ImageCaptureFlow {
         if let fixture = ScreenshotMode.fixtureCapture() { return fixture }
         return await withCaptureContent { content in
             switch type {
-            case .REGION, .TEXT:
+            case .REGION:
+                try await captureRegion(content: content, delay: delay, allowsMultipleRegions: true)
+            case .TEXT:
                 try await captureRegion(content: content, delay: delay)
+            case .MENU:
+                try await captureMenu(content: content)
             case .WINDOW:
                 try await captureWindow(content: content, delay: delay)
             case .SCREEN:
@@ -92,50 +99,38 @@ enum ImageCaptureFlow {
         return try await ScreenshotEngine.shareableContent()
     }
 
-    static func captureRegion(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
+    static func captureRegion(content: SCShareableContent, delay: Int = 0, allowsMultipleRegions: Bool = false) async throws -> CapturedImage? {
         let frontmost = frontmostAppName()
         let source = frontmostSource(in: content)
         let blursPrivateApps = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
-        let backdropLoading = Task {
-            let live = await ScreenshotEngine.shareableContent(listing: RegionSelector.panelWindowIDs) ?? content
-            let rawBackdrops = await ScreenshotEngine.backdrops(for: live)
-            let backdrops = blursPrivateApps ? PrivacyFilter.redactBackdrops(rawBackdrops, content: live) : rawBackdrops
-            RegionSelector.provide(backdrops: backdrops)
-            return backdrops
-        }
+        let loader = SelectionBackdropLoader(
+            content: content, blursPrivateApps: blursPrivateApps, mode: SelectionFreezeMode(prefersFrozen: Defaults[.freezeScreenWhileSelecting]))
+        loader.startIfFrozen()
         let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
-        let outcome = await RegionSelector.select(
-            options: .init(hint: "Select the area to capture".localized(), lastRegions: lastRegions, awaitsBackdrops: true))
-        let backdrops = await backdropLoading.value
-        switch outcome {
-        case let .region(screen, rect):
+        let options = RegionSelector.Options(
+            hint: "Select the area to capture".localized(), lastRegions: lastRegions, awaitsBackdrops: loader.mode.loadsBackdrops,
+            allowsMultipleRegions: allowsMultipleRegions, allowsFreezeToggle: true, freezeMode: loader.mode,
+            liveSampler: LiveMagnifierSampler(content: content),
+            onFreezeModeChange: { mode in loader.change(to: mode) }
+        )
+        let selection = await RegionSelector.selectRegions(options: options)
+        let imaging = RegionImaging(
+            content: content, delay: delay, mode: loader.mode, backdrops: await loader.currentBackdrops(), frontmost: frontmost, source: source)
+        switch selection {
+        case let .regions(areas):
+            if let last = areas.last, let displayID = last.screen.displayID {
+                LastRegionStore.remember(last.rect, for: displayID)
+            }
+            return try await imaging.images(for: areas)
+        case let .single(.region(screen, rect)):
             guard let displayID = screen.displayID else { return nil }
             LastRegionStore.remember(rect, for: displayID)
-            if delay > 0 {
-                guard let live = try await contentAfterCountdown(delay, content: content) else { return nil }
-                return try await captureDisplayImage(displayID: displayID, region: rect, content: live, suffix: frontmost, source: source)
-            }
-            if let backdrop = backdrops[displayID] {
-                let geometry = PrivacyFilter.geometry(displayID: displayID, region: rect, scale: CGFloat(backdrop.width) / screen.frame.width)
-                return ScreenshotEngine.crop(backdrop, toPoints: rect, scale: geometry.scale).map {
-                    CapturedImage(image: $0, suffix: frontmost, geometry: geometry, source: source)
-                }
-            }
-            return try await captureDisplayImage(displayID: displayID, region: rect, content: content, suffix: frontmost, source: source)
-        case let .fullScreen(screen):
-            guard let displayID = screen.displayID else { return nil }
-            if delay > 0 {
-                guard let live = try await contentAfterCountdown(delay, content: content) else { return nil }
-                return try await captureScreen(screen: screen, content: live)
-            }
-            if let backdrop = backdrops[displayID] {
-                let geometry = PrivacyFilter.geometry(displayID: displayID, region: nil, scale: CGFloat(backdrop.width) / screen.frame.width)
-                return CapturedImage(image: backdrop, suffix: screen.captureSuffix, geometry: geometry, source: source)
-            }
-            return try await captureScreen(screen: screen, content: content)
-        case .switchToWindow:
+            return try await imaging.image(screen: screen, region: rect)
+        case let .single(.fullScreen(screen)):
+            return try await imaging.image(screen: screen, region: nil)
+        case .single(.switchToWindow):
             return try await captureWindow(content: content, delay: delay)
-        case .cancelled:
+        case .single(.cancelled):
             return nil
         }
     }
@@ -154,16 +149,16 @@ enum ImageCaptureFlow {
     }
 
     static func captureWindow(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
-        let outcome = await WindowPicker.pick(from: ScreenshotEngine.candidateWindows(in: content))
+        let outcome = await WindowPicker.pick(from: ScreenshotEngine.pickableWindows(in: content))
         switch outcome {
-        case let .window(window):
+        case let .window(picked):
             guard await CaptureCountdown.run(seconds: delay) else { return nil }
             try await Task.sleep(for: .milliseconds(60))
-            let source = CaptureSource(
-                bundleIdentifier: window.owningApplication?.bundleIdentifier,
-                appName: window.owningApplication?.applicationName,
-                windowTitle: window.title
-            )
+            if picked.kind == .popup {
+                return try await capturePopup(picked.window, content: content)
+            }
+            let window = picked.window
+            let source = windowSource(window)
             let settings = CaptureSettings.current(for: source.bundleIdentifier)
             let image = try await ScreenshotEngine.captureWindow(window, includesShadow: settings.includesWindowShadow)
             let scale = max(1, (CGFloat(image.width) / max(1, window.frame.width)).rounded())
@@ -179,6 +174,58 @@ enum ImageCaptureFlow {
         case .cancelled:
             return nil
         }
+    }
+
+    static let menuCaptureCountdown = 3
+
+    static func captureMenu(content: SCShareableContent) async throws -> CapturedImage? {
+        guard await CaptureCountdown.run(seconds: menuCaptureCountdown) else { return nil }
+        let live = try await ScreenshotEngine.shareableContent()
+        let pickables = ScreenshotEngine.pickableWindows(in: live)
+        let pointer = ScreenGeometry.cocoaPointToQuartz(NSEvent.mouseLocation, primaryScreenHeight: NSScreen.primaryHeight)
+        guard let index = WindowClassifier.menuTarget(at: pointer, in: pickables.map(\.classified)) else {
+            BezelNotification.show(messageText: "No open menu found".localized(), icon: ToastIcon)
+            return nil
+        }
+        return try await capturePopup(pickables[index].window, content: live)
+    }
+
+    static func capturePopup(_ window: SCWindow, content: SCShareableContent) async throws -> CapturedImage? {
+        let live = (try? await ScreenshotEngine.shareableContent()) ?? content
+        let pickables = ScreenshotEngine.pickableWindows(in: live)
+        let classified = pickables.map(\.classified)
+        let source = windowSource(window)
+        let settings = CaptureSettings.current(for: source.bundleIdentifier)
+        let suffix = window.owningApplication?.applicationName ?? "menu"
+        var windows = [window]
+        if let index = pickables.firstIndex(where: { $0.window.windowID == window.windowID }) {
+            var indices = WindowClassifier.relatedPopups(of: index, in: classified)
+            if Defaults[.menuCaptureIncludesParentWindow], let parent = WindowClassifier.parentWindow(of: index, in: classified) {
+                indices.append(parent)
+            }
+            windows = indices.isEmpty ? [window] : indices.map { pickables[$0].window }
+        }
+        if windows.count > 1, let display = ScreenshotEngine.display(containing: window.frame, in: live),
+            let composite = try await ScreenshotEngine.captureComposite(of: windows, on: display)
+        {
+            let geometry = PrivacyFilter.geometry(displayID: display.displayID, region: composite.region, image: composite.image)
+            let image = settings.blursPrivateApps ? PrivacyFilter.redact(composite.image, geometry: geometry, content: live) : composite.image
+            return CapturedImage(image: image, suffix: suffix, isWindow: true, pointScale: geometry.scale, source: source)
+        }
+        let image = try await ScreenshotEngine.captureWindow(window, includesShadow: true)
+        let scale = max(1, (CGFloat(image.width) / max(1, window.frame.width)).rounded())
+        return CapturedImage(
+            image: settings.blursPrivateApps ? PrivacyFilter.redactWindow(image, window: window, scale: scale) : image,
+            suffix: suffix, isWindow: true, pointScale: scale, source: source
+        )
+    }
+
+    static func windowSource(_ window: SCWindow) -> CaptureSource {
+        CaptureSource(
+            bundleIdentifier: window.owningApplication?.bundleIdentifier,
+            appName: window.owningApplication?.applicationName,
+            windowTitle: window.title
+        )
     }
 
     static func captureScreen(display index: Int, content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
@@ -208,6 +255,7 @@ enum ImageCaptureFlow {
 
     static func finalize(_ captured: CapturedImage) -> CapturedImage {
         var result = captured
+        result.additionalCaptures = result.additionalCaptures.map(finalize)
         result.image = PrivacyFilter.hideMenuBarIfNeeded(result.image, geometry: result.geometry)
         result.image = beautifyIfNeeded(result)
         return result
@@ -249,8 +297,22 @@ enum ImageCaptureFlow {
 
     static func save(_ captured: CapturedImage) throws -> URL {
         let fileType = Defaults[.captureFileType]
-        let url = SaveLocation.fileURL(for: .captures, fileName: fileName(for: captured, ext: fileType.rawValue))
+        let url = availableURL(SaveLocation.fileURL(for: .captures, fileName: fileName(for: captured, ext: fileType.rawValue)))
         try ImageEncoder.write(captured.image, as: fileType, to: url)
+        return url
+    }
+
+    static func availableURL(_ url: URL, exists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL {
+        guard exists(url) else { return url }
+        let base = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        let directory = url.deletingLastPathComponent()
+        for index in 2 ... 999 {
+            let candidate = directory.appending(path: ext.isEmpty ? "\(base)-\(index)" : "\(base)-\(index).\(ext)", directoryHint: .notDirectory)
+            if !exists(candidate) {
+                return candidate
+            }
+        }
         return url
     }
 }

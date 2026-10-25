@@ -154,6 +154,7 @@ enum SettingsTransfer {
         .showQRCodeAfterUpload, .localShareExpiry, .localShareMaxDownloads, .historySyncEnabled,
         .optimizeImagesBeforeUpload, .imageOptimizationFormat, .imageConversionQuality, .stripImageMetadata,
         .stripImportedImageMetadata, .uploadWebhooks,
+        .selectionConstraint, .customSelectionSize, .freezeScreenWhileSelecting, .multiRegionResult, .menuCaptureIncludesParentWindow,
     ]
 
     static var preferenceNames: Set<String> {

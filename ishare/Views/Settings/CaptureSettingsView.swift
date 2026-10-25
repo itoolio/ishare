@@ -38,6 +38,7 @@ struct CaptureSettingsView: View {
                 Toggle("Open editor after capture".localized(), isOn: $openEditorAfterCapture)
                 Toggle("Snap editor shapes to detected elements".localized(), isOn: $editorSmartShapes)
             }
+            CaptureSelectionSettings()
             CaptureExtrasSettings()
             CaptureToolsSettings()
             Section {
@@ -90,7 +91,9 @@ extension CaptureSettingsView: SettingsSearchable {
                 "Pointer", "Cursor", "Include window shadow", "Shadow", "Show magnifier while selecting", "Magnifier",
                 "Show crosshair guides while selecting", "Crosshair", "Guides", "Outline the last region while selecting",
                 "Open editor after capture", "Editor", "Snap editor shapes to detected elements", "Smart shapes", "Snapping", "Scrolling Capture", "Scroll automatically",
-                "Permissions", "Screen recording",
+                "Permissions", "Screen recording", "Selection", "Selection shape", "Aspect ratio", "Fixed size", "Custom size", "16:9", "4:3", "1:1",
+                "Social card", "Freeze the screen while selecting", "Frozen", "Live", "Multiple regions", "Combine into one image",
+                "Save as separate captures", "Include the parent window when capturing menus", "Capture Menu", "Menu", "Popover", "Tooltip",
             ]),
         SettingsSearchEntry(
             "Privacy", pane: .capture,

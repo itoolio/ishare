@@ -43,5 +43,15 @@ extension Defaults.Keys {
     static let captureProfiles = Key<[CaptureProfile]>("captureProfiles", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let translationTargetLanguage = Key<String>("translationTargetLanguage", default: "", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let generateAltText = Key<Bool>("generateAltText", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let selectionConstraint = Key<SelectionConstraint>("selectionConstraint", default: .free, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let customSelectionSize = Key<FixedSelectionSize?>("customSelectionSize", default: nil, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let freezeScreenWhileSelecting = Key<Bool>("freezeScreenWhileSelecting", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let multiRegionResult = Key<MultiRegionResult>("multiRegionResult", default: .combined, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let menuCaptureIncludesParentWindow = Key<Bool>(
+        "menuCaptureIncludesParentWindow", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let nameFilesAfterWindowTitle = Key<Bool>("nameFilesAfterWindowTitle", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
+
+extension SelectionConstraint: @retroactive Defaults.Serializable {}
+extension FixedSelectionSize: @retroactive Defaults.Serializable {}
+extension MultiRegionResult: @retroactive Defaults.Serializable {}
