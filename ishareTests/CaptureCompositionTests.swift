@@ -73,38 +73,50 @@ struct DeviceFrameRenderingTests {
     }
 }
 
+@MainActor
 struct ImageCombinerTests {
-    let sizes = [CGSize(width: 100, height: 50), CGSize(width: 60, height: 80), CGSize(width: 40, height: 40)]
-
-    @Test func horizontalLayoutPlacesImagesSideBySide() {
-        let layout = ImageCombiner.layout(for: sizes, style: CombineStyle(layout: .horizontal, alignment: .center, spacing: 10, padding: 5))
-        #expect(layout.canvasSize == CGSize(width: 5 + 100 + 10 + 60 + 10 + 40 + 5, height: 90))
-        #expect(layout.frames[0] == CGRect(x: 5, y: 20, width: 100, height: 50))
-        #expect(layout.frames[1] == CGRect(x: 115, y: 5, width: 60, height: 80))
-        #expect(layout.frames[2] == CGRect(x: 185, y: 25, width: 40, height: 40))
+    @Test func mapsFillsBetweenThePackageAndTheApp() {
+        let fills: [BeautifyStyle.Fill] = [.gradient([red, blue]), .solid(white), .transparent]
+        for fill in fills {
+            #expect(CombineFill(fill).beautifyFill == fill)
+        }
     }
 
-    @Test(arguments: [(CombineAlignment.leading, CGFloat(0)), (.center, 20), (.trailing, 40)])
-    func verticalLayoutAlignsHorizontally(alignment: CombineAlignment, offset: CGFloat) {
-        let layout = ImageCombiner.layout(for: sizes, style: CombineStyle(layout: .vertical, alignment: alignment, spacing: 0, padding: 0))
-        #expect(layout.canvasSize == CGSize(width: 100, height: 170))
-        #expect(layout.frames[1].minX == offset)
-        #expect(layout.frames[2].minY == 130)
+    @Test func remembersItsSettings() {
+        defer { CombineSettings().save() }
+        var settings = CombineSettings()
+        settings.layout = .grid
+        settings.alignment = .trailing
+        settings.columns = 3
+        settings.spacing = 8
+        settings.padding = 12
+        settings.cornerRadius = 4
+        settings.shadow = true
+        settings.background = .solid
+        settings.solidColor = CaptureColor(hex: "#336699")!
+        settings.save()
+        #expect(CombineSettings.load() == settings)
+        let model = CombineModel(images: [TestImages.solid(width: 10, height: 10, color: red), TestImages.solid(width: 10, height: 10, color: blue)])
+        #expect(model.layout == .grid)
+        #expect(model.columns == 2)
+        #expect(model.style(scale: 1).fill == .solid(CombineColor(CaptureColor(hex: "#336699")!)))
+        model.spacing = 40
+        #expect(CombineSettings.load().spacing == 40)
     }
 
-    @Test func gridUsesSquareishColumns() {
-        #expect(ImageCombiner.gridColumns(for: 4, preferred: nil) == 2)
-        #expect(ImageCombiner.gridColumns(for: 5, preferred: nil) == 3)
-        #expect(ImageCombiner.gridColumns(for: 3, preferred: 8) == 3)
-        let layout = ImageCombiner.layout(for: sizes, style: CombineStyle(layout: .grid, alignment: .leading, spacing: 4, padding: 0, columns: 2))
-        #expect(layout.canvasSize == CGSize(width: 164, height: 124))
-        #expect(layout.frames[2] == CGRect(x: 0, y: 84, width: 40, height: 40))
+    @Test func modelsThatDoNotPersistLeaveThePreferencesAlone() {
+        defer { CombineSettings().save() }
+        CombineSettings().save()
+        let model = CombineModel(images: [TestImages.solid(width: 10, height: 10, color: red)], settings: CombineSettings(), persists: false)
+        model.padding = 99
+        #expect(CombineSettings.load().padding == 32)
     }
 
     @Test func combineDrawsEveryImageOverTheBackground() throws {
         let images = [TestImages.solid(width: 40, height: 40, color: red), TestImages.solid(width: 40, height: 20, color: blue)]
         let combined = try #require(
-            ImageCombiner.combine(images, style: CombineStyle(layout: .horizontal, alignment: .leading, spacing: 10, padding: 10, cornerRadius: 0, fill: .solid(white))))
+            ImageCombiner.combine(
+                images, style: CombineStyle(layout: .horizontal, alignment: .leading, spacing: 10, padding: 10, cornerRadius: 0, fill: .solid(CombineColor(white)))))
         #expect(combined.width == 110)
         #expect(combined.height == 60)
         #expect(isClose(TestImages.color(combined, 20, 20), red))

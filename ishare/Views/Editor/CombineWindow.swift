@@ -1,7 +1,53 @@
 import AppKit
 import BezelNotification
 import Combine
+import Defaults
 import SwiftUI
+import ishareCore
+
+struct CombineSettings: Equatable {
+    static let defaultSolidColor = CaptureColor(red: 0.12, green: 0.12, blue: 0.18)
+
+    var layout: CombineLayout = .horizontal
+    var alignment: CombineAlignment = .center
+    var columns = 0
+    var spacing: Double = 24
+    var padding: Double = 32
+    var cornerRadius: Double = 12
+    var shadow = false
+    var background: BeautifyBackground = .transparent
+    var solidColor = CombineSettings.defaultSolidColor
+
+    static func load() -> CombineSettings {
+        CombineSettings(
+            layout: Defaults[.combineLayout],
+            alignment: Defaults[.combineAlignment],
+            columns: Defaults[.combineColumns],
+            spacing: Defaults[.combineSpacing],
+            padding: Defaults[.combinePadding],
+            cornerRadius: Defaults[.combineCornerRadius],
+            shadow: Defaults[.combineShadow],
+            background: Defaults[.combineBackground],
+            solidColor: CaptureColor(hex: Defaults[.combineSolidColor]) ?? defaultSolidColor
+        )
+    }
+
+    func save() {
+        Defaults[.combineLayout] = layout
+        Defaults[.combineAlignment] = alignment
+        Defaults[.combineColumns] = columns
+        Defaults[.combineSpacing] = spacing
+        Defaults[.combinePadding] = padding
+        Defaults[.combineCornerRadius] = cornerRadius
+        Defaults[.combineShadow] = shadow
+        Defaults[.combineBackground] = background
+        Defaults[.combineSolidColor] = solidColor.hex
+    }
+
+    func resolvedColumns(for count: Int) -> Int {
+        ImageCombiner.gridColumns(for: count, preferred: columns > 0 ? columns : nil)
+    }
+}
 
 @MainActor
 final class CombineModel: ObservableObject {
@@ -9,23 +55,39 @@ final class CombineModel: ObservableObject {
 
     let images: [CGImage]
     private let previewImages: [CGImage]
+    private let persists: Bool
 
-    @Published var layout: CombineLayout = .horizontal { didSet { refresh() } }
-    @Published var alignment: CombineAlignment = .center { didSet { refresh() } }
-    @Published var columns = 2 { didSet { refresh() } }
-    @Published var spacing: Double = 24 { didSet { refresh() } }
-    @Published var padding: Double = 32 { didSet { refresh() } }
-    @Published var cornerRadius: Double = 12 { didSet { refresh() } }
-    @Published var shadow = false { didSet { refresh() } }
-    @Published var background: BeautifyBackground = .transparent { didSet { refresh() } }
-    @Published var solidColor = CaptureColor(red: 0.12, green: 0.12, blue: 0.18) { didSet { refresh() } }
+    @Published var layout: CombineLayout { didSet { changed() } }
+    @Published var alignment: CombineAlignment { didSet { changed() } }
+    @Published var columns: Int { didSet { changed() } }
+    @Published var spacing: Double { didSet { changed() } }
+    @Published var padding: Double { didSet { changed() } }
+    @Published var cornerRadius: Double { didSet { changed() } }
+    @Published var shadow: Bool { didSet { changed() } }
+    @Published var background: BeautifyBackground { didSet { changed() } }
+    @Published var solidColor: CaptureColor { didSet { changed() } }
     @Published private(set) var preview: CGImage?
 
-    init(images: [CGImage]) {
+    init(images: [CGImage], settings: CombineSettings = .load(), persists: Bool = true) {
         self.images = images
+        self.persists = persists
         previewImages = images.map { ImageProcessing.resized($0, maxPixelSize: Self.previewPixelSize) }
-        columns = ImageCombiner.gridColumns(for: images.count, preferred: nil)
+        layout = settings.layout
+        alignment = settings.alignment
+        columns = settings.resolvedColumns(for: images.count)
+        spacing = settings.spacing
+        padding = settings.padding
+        cornerRadius = settings.cornerRadius
+        shadow = settings.shadow
+        background = settings.background
+        solidColor = settings.solidColor
         refresh()
+    }
+
+    var settings: CombineSettings {
+        CombineSettings(
+            layout: layout, alignment: alignment, columns: columns, spacing: spacing, padding: padding, cornerRadius: cornerRadius, shadow: shadow,
+            background: background, solidColor: solidColor)
     }
 
     var previewScale: CGFloat {
@@ -41,14 +103,21 @@ final class CombineModel: ObservableObject {
             spacing: spacing * scale,
             padding: padding * scale,
             cornerRadius: cornerRadius * scale,
-            shadowRadius: shadow ? max(4, min(28, padding * 0.5)) * scale : 0,
-            fill: fill,
+            shadowRadius: CombineLayoutEngine.shadowRadius(enabled: shadow, padding: padding, scale: scale),
+            fill: CombineFill(fill),
             columns: layout == .grid ? columns : nil
         )
     }
 
     func render() -> CGImage? {
         ImageCombiner.combine(images, style: style(scale: 1))
+    }
+
+    private func changed() {
+        if persists {
+            settings.save()
+        }
+        refresh()
     }
 
     private func refresh() {

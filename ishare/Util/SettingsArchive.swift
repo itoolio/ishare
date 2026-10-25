@@ -154,6 +154,8 @@ enum SettingsTransfer {
         .showQRCodeAfterUpload, .localShareExpiry, .localShareMaxDownloads, .historySyncEnabled,
         .optimizeImagesBeforeUpload, .imageOptimizationFormat, .imageConversionQuality, .stripImageMetadata,
         .stripImportedImageMetadata, .uploadWebhooks,
+        .combineLayout, .combineAlignment, .combineColumns, .combineSpacing, .combinePadding, .combineCornerRadius, .combineShadow,
+        .combineBackground, .combineSolidColor,
     ]
 
     static var preferenceNames: Set<String> {
