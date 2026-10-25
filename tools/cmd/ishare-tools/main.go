@@ -46,6 +46,7 @@ var commands = map[string]command{
 	"release-notes":      {"release-notes [output-file] < release.md", releaseNotes},
 	"register-bundle-id": {"register-bundle-id [identifier...]", registerBundleID},
 	"merge-translations": {"merge-translations <base.xcstrings> <incoming.xcstrings> <output.xcstrings>", mergeTranslations},
+	"guide-clips":        {"guide-clips [--ci] [all | scene...]", captureGuideClips},
 	"screenshots":        {"screenshots [--ci] [all | locale[:language]...]", captureScreenshots},
 	"metadata":           {"metadata [--check] [--metadata dir] [--catalog Metadata.xcstrings] [--release-notes en-US/release_notes.txt]", renderMetadata},
 	"app-store-plan":     {"app-store-plan --report status.json --releases releases.json", appStorePlan},
@@ -181,6 +182,20 @@ func captureScreenshots(env environment, arguments []string) error {
 		return err
 	}
 	return screenshots.Run(screenshots.Options{Root: repo.Root(), Targets: targets, Output: env.stdout, CI: *ci})
+}
+
+func captureGuideClips(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("guide-clips", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	ci := flags.Bool("ci", false, "")
+	if err := flags.Parse(arguments); err != nil {
+		return errUsage
+	}
+	scenes, err := screenshots.ParseGuideScenes(flags.Args())
+	if err != nil {
+		return err
+	}
+	return screenshots.RunGuide(screenshots.GuideOptions{Root: repo.Root(), Scenes: scenes, Output: env.stdout, CI: *ci})
 }
 
 func releaseCheck(env environment, arguments []string) error {

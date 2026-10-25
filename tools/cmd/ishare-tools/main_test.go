@@ -172,3 +172,17 @@ func TestSBOMRequiresAVersionAndOutput(t *testing.T) {
 		}
 	}
 }
+
+func TestAutomationRequiresTheApp(t *testing.T) {
+	for _, arguments := range [][]string{{"automation"}, {"automation", "--app", "x.app", "extra"}, {"automation", "--app", "x.app", "--ready-timeout", "0"}} {
+		if code, _, stderr := execute(t, "", arguments...); code != 2 || !strings.HasPrefix(stderr, "usage: ishare-tools automation") {
+			t.Errorf("%v: exit code %d, stderr %q", arguments, code, stderr)
+		}
+	}
+}
+
+func TestGuideClipsRejectsUnknownScenes(t *testing.T) {
+	if code, _, stderr := execute(t, "", "guide-clips", "teleport"); code != 1 || !strings.Contains(stderr, "not a guide scene") {
+		t.Fatalf("exit code %d, stderr %q", code, stderr)
+	}
+}
