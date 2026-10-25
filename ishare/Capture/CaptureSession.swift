@@ -119,33 +119,30 @@ enum CaptureSession {
         let deferredZoom = await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
         var fileURL = url
         var markers = sidecar.markers
-        var isGIF = false
+        var isAnimation = false
         if Defaults[.trimBeforeSaving] {
             switch await RecordingTrimWindow.present(url, markers: markers, autoZoom: deferredZoom) {
             case .keepOriginal:
                 break
-            case let .trimmed(trimmedURL, range):
+            case let .trimmed(trimmedURL, timing):
                 fileURL = trimmedURL
-                markers = RecordingChapters.rebased(markers, to: range)
-            case let .exportedGIF(gifURL):
-                fileURL = gifURL
-                isGIF = true
-            case let .exported(exportedURL, range):
+                markers = RecordingChapters.retimed(markers, through: timing)
+            case let .exportedAnimation(animationURL):
+                fileURL = animationURL
+                isAnimation = true
+            case let .exported(exportedURL, timing):
                 fileURL = exportedURL
-                markers = range.map { RecordingChapters.rebased(markers, to: $0) } ?? markers
+                markers = timing.map { RecordingChapters.retimed(markers, through: $0) } ?? markers
             }
+        } else {
+            markers = await RecordingPostProcessor.cutSilenceIfEnabled(fileURL, markers: markers)
         }
-        if gif, !isGIF {
-            do {
-                fileURL = try await RecordingConversions.convertToGIF(fileURL, range: nil, preset: .current, deletingSource: true)
-                isGIF = true
-            } catch {
-                Log.capture.error("GIF export failed: \(error.localizedDescription, privacy: .public)")
-                BezelNotification.show(messageText: "GIF export failed".localized(), icon: ToastIcon)
-            }
+        if !isAnimation, let converted = await RecordingPostProcessor.convertIfRequested(fileURL, recordsGIF: gif) {
+            fileURL = converted
+            isAnimation = true
         }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
-        if !isGIF {
+        if !isAnimation {
             await RecordingPostProcessor.finalize(fileURL, markers: markers)
         }
         await finish(fileURL: fileURL, kind: .video, options: options)
@@ -216,7 +213,7 @@ enum CaptureSession {
                 return
             }
         }
-        let uploadURL = kind == .video ? await PostCapture.compressedIfNeeded(fileURL) : redactedURL ?? fileURL
+        let uploadURL = kind == .video ? await RecordingPostProcessor.uploadCopy(of: fileURL) : redactedURL ?? fileURL
         let localFileURL = keepsLocalFile ? fileURL : nil
         let altText = kind == .image && AltText.isEnabled ? Task { await AltText.generate(for: uploadURL) } : nil
         var results: [Result<UploadOutcome, any Error>] = []
