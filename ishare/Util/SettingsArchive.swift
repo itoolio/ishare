@@ -158,6 +158,7 @@ enum SettingsTransfer {
         .recordingConvertTo, .recordingUploadFormat, .voiceOverMode, .voiceOverDuckAmount, .blurRegionStyle, .blurDetectionInterval,
         .keepsExpiredUploadsInHistory, .duplicateUploadPolicy, .uploaderHealthCheckFrequency,
         .selectionConstraint, .customSelectionSize, .freezeScreenWhileSelecting, .multiRegionResult, .menuCaptureIncludesParentWindow,
+        .recordingPresets,
     ]
 
     static var preferenceNames: Set<String> {

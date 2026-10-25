@@ -59,10 +59,14 @@ final class CommandLineServer {
             case let .success(result): response.payload.capture = result
             case let .failure(error): return .failure(request.id, error.message)
             }
-        case let .record(action):
-            let recording = await actions.record(action, gif: false, region: false)
-            response.payload.recording = recording
-            response.payload.message = recording ? "Recording" : "Not recording"
+        case let .record(action, preset):
+            switch await actions.record(action, gif: false, region: false, preset: preset) {
+            case let .success(recording):
+                response.payload.recording = recording
+                response.payload.message = recording ? "Recording" : "Not recording"
+            case let .failure(error):
+                return .failure(request.id, error.message)
+            }
         case .listUploaders:
             response.payload.uploaders = actions.uploaders()
         case let .history(limit):

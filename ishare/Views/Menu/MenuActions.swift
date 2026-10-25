@@ -38,6 +38,10 @@ struct MenuActions {
         dismiss()
     }
 
+    func togglePauseRecording() {
+        AppModel.shared.recorder.togglePause()
+    }
+
     func editImage() {
         run { await ImageEditor.chooseAndEdit() }
     }

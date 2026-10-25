@@ -5,7 +5,7 @@ import ishareCore
 
 extension RecordingLimits {
     static var current: RecordingLimits {
-        make(maxMinutes: Defaults[.recordingMaxMinutes], maxMegabytes: Defaults[.recordingMaxMegabytes], lowDiskMegabytes: Defaults[.recordingLowDiskWarningMB])
+        make(maxMinutes: RecordingDefaults[.recordingMaxMinutes], maxMegabytes: RecordingDefaults[.recordingMaxMegabytes], lowDiskMegabytes: Defaults[.recordingLowDiskWarningMB])
     }
 }
 
@@ -24,6 +24,7 @@ final class RecordingLimitMonitor {
     private var didStop = false
 
     var bytesWritten: () -> Int64 = { 0 }
+    var recordedTime: (() -> Double)?
     var onRemainingTime: (Double?) -> Void = { _ in }
     var onStop: (RecordingStopReason) -> Void = { _ in }
 
@@ -60,7 +61,7 @@ final class RecordingLimitMonitor {
                 hasWarned = false
             }
         }
-        let elapsed = now.timeIntervalSince(startDate)
+        let elapsed = recordedTime?() ?? now.timeIntervalSince(startDate)
         let bytes = bytesWritten()
         if limits.hasRecordingLimit {
             onRemainingTime(RecordingLimitPolicy.remainingTime(elapsed: elapsed, bytesWritten: bytes, limits: limits))

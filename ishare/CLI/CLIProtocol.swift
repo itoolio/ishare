@@ -13,12 +13,14 @@ enum CLIRecordAction: String, Codable, CaseIterable, Sendable {
     case start
     case stop
     case toggle
+    case pause
+    case resume
 }
 
 enum CLICommand: Codable, Equatable, Sendable {
     case upload(files: [String], uploader: String?, reuse: Bool? = nil)
     case capture(mode: CLICaptureMode, upload: Bool)
-    case record(CLIRecordAction)
+    case record(CLIRecordAction, preset: String? = nil)
     case listUploaders
     case history(limit: Int)
 }

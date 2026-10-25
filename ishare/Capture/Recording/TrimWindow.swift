@@ -155,7 +155,7 @@ final class TrimModel: ObservableObject {
         let camera = pendingZoom
         let regions = pendingBlurRegions
         guard camera != nil || !regions.isEmpty else { return }
-        let hevc = Defaults[.useHEVC]
+        let hevc = RecordingDefaults[.useHEVC]
         try await OverlayCompositor.applyEdits(camera: camera, blurRegions: regions, to: url, hevc: hevc, progress: progress)
         zoomIsBaked = true
         blurIsBaked = true

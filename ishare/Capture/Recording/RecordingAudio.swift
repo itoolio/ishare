@@ -1,5 +1,6 @@
 import AVFoundation
 import Defaults
+import ishareCore
 import ScreenCaptureKit
 
 enum RecordingAudioSource: String, CaseIterable, Identifiable, Defaults.Serializable, Sendable {
@@ -22,7 +23,7 @@ enum RecordingAudioSource: String, CaseIterable, Identifiable, Defaults.Serializ
     }
 
     static var current: RecordingAudioSource {
-        resolved(recordAudio: Defaults[.recordAudio], source: Defaults[.recordingAudioSource])
+        resolved(recordAudio: RecordingDefaults[.recordAudio], source: RecordingDefaults[.recordingAudioSource])
     }
 
     static func store(_ source: RecordingAudioSource) {
@@ -70,7 +71,7 @@ enum RecordingAudioPlan: Equatable, Sendable {
     }
 
     static var current: (RecordingContentStyle) -> RecordingAudioPlan {
-        { style in make(source: .current, selectedBundleIDs: Defaults[.recordingAudioBundleIDs], style: style) }
+        { style in make(source: .current, selectedBundleIDs: RecordingDefaults[.recordingAudioBundleIDs], style: style) }
     }
 }
 
@@ -216,14 +217,13 @@ final class AppAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unche
 }
 
 enum AppAudioMuxer {
-    static func merge(_ clip: AppAudioClip, into url: URL, recordingStart: Double) async throws {
+    static func merge(_ clip: AppAudioClip, into url: URL, recordingStart: Double, pauses: RecordingPauseTimeline = RecordingPauseTimeline()) async throws {
         let recording = AVURLAsset(url: url)
         let audio = AVURLAsset(url: clip.url)
         let videoDuration = try await recording.load(.duration).seconds
         let audioDuration = try await audio.load(.duration).seconds
-        guard let audioTrack = try await audio.loadTracks(withMediaType: .audio).first,
-            let placement = AppAudioPlacement.make(audioStart: clip.startTime, recordingStart: recordingStart, audioDuration: audioDuration, videoDuration: videoDuration)
-        else { return }
+        let segments = pauses.segments(sourceStart: clip.startTime, sourceDuration: audioDuration, recordingStart: recordingStart, outputDuration: videoDuration)
+        guard let audioTrack = try await audio.loadTracks(withMediaType: .audio).first, !segments.isEmpty else { return }
 
         let composition = AVMutableComposition()
         let fullRange = CMTimeRange(start: .zero, duration: try await recording.load(.duration))
@@ -235,11 +235,13 @@ enum AppAudioMuxer {
             }
         }
         let appTrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
-        try appTrack?.insertTimeRange(
-            CMTimeRange(start: CMTime(seconds: placement.sourceStart, preferredTimescale: 48000), duration: CMTime(seconds: placement.length, preferredTimescale: 48000)),
-            of: audioTrack,
-            at: CMTime(seconds: placement.destinationStart, preferredTimescale: 48000)
-        )
+        for segment in segments {
+            try appTrack?.insertTimeRange(
+                CMTimeRange(start: CMTime(seconds: segment.sourceStart, preferredTimescale: 48000), duration: CMTime(seconds: segment.duration, preferredTimescale: 48000)),
+                of: audioTrack,
+                at: CMTime(seconds: segment.outputStart, preferredTimescale: 48000)
+            )
+        }
 
         guard let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
             throw CocoaError(.fileWriteUnknown)

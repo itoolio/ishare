@@ -151,6 +151,15 @@ extension AppCommand {
                     MenuController.shared.dismiss()
                     CaptureSession.stopRecording()
                 },
+                AppCommand(
+                    id: AppModel.shared.recorder.isPaused ? "record.resume" : "record.pause",
+                    title: AppModel.shared.recorder.isPaused ? "Resume Recording" : "Pause Recording",
+                    keywords: ["pause", "resume", "continue", "hold", "break"],
+                    symbol: AppModel.shared.recorder.isPaused ? "play.fill" : "pause.fill"
+                ) {
+                    MenuController.shared.dismiss()
+                    AppModel.shared.recorder.togglePause()
+                },
                 AppCommand(id: "record.marker", title: "Add Recording Marker", keywords: ["chapter", "bookmark", "marker"], symbol: "flag") {
                     MenuController.shared.dismiss()
                     AppModel.shared.recorder.addMarker()
@@ -161,7 +170,7 @@ extension AppCommand {
                 },
             ] + recordingExtraCommands()
         }
-        return recordingExtraCommands() + [
+        return recordingExtraCommands() + recordingPresetCommands() + externalDeviceCommands() + [
             AppCommand(
                 id: "record.screen", title: "Record Screen", keywords: ["video", "movie", "screencast"], symbol: "record.circle",
                 perform: afterDismissing { CaptureSession.toggleRecording() }),
@@ -175,6 +184,29 @@ extension AppCommand {
                 id: "record.regionGif", title: "Record Region as GIF", keywords: ["animation", "area"], symbol: "photo.stack",
                 perform: afterDismissing { CaptureSession.toggleRecording(gif: true, region: true) }),
         ]
+    }
+
+    @MainActor private static func externalDeviceCommands() -> [AppCommand] {
+        ExternalScreenDevices.shared.devices.flatMap { device in
+            [
+                AppCommand(
+                    id: "device.record.\(device.id)", title: device.recordTitle, keywords: ["iphone", "ipad", "ios", "usb", "quicktime", device.name], symbol: device.symbol,
+                    perform: afterDismissing { CaptureSession.recordDevice(device) }),
+                AppCommand(
+                    id: "device.capture.\(device.id)", title: device.screenshotTitle, keywords: ["iphone", "ipad", "ios", "usb", "screenshot", device.name],
+                    symbol: "camera.viewfinder",
+                    perform: afterDismissing { await CaptureSession.captureDeviceScreenshot(device) }),
+            ]
+        }
+    }
+
+    @MainActor private static func recordingPresetCommands() -> [AppCommand] {
+        RecordingPresets.all.map { preset in
+            AppCommand(
+                id: "recordingPreset.\(preset.id.uuidString)", title: String(format: "Record with %@".localized(), preset.name),
+                keywords: ["preset", "record", "video", preset.name], symbol: "record.circle",
+                perform: afterDismissing { RecordingPresets.record(preset) })
+        }
     }
 
     @MainActor private static func recordingExtraCommands() -> [AppCommand] {

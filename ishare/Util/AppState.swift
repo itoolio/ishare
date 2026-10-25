@@ -14,6 +14,8 @@ final class AppState: ObservableObject {
         if !ScreenshotMode.isActive {
             setupKeyboardShortcuts()
             UploadPresetShortcuts.start()
+            RecordingPresetShortcuts.start()
+            ExternalScreenDevices.shared.start()
             UploadBackgroundServices.start()
             InstantReplay.shared.activate()
         }
@@ -60,6 +62,7 @@ final class AppState: ObservableObject {
         KeyboardShortcuts.onKeyUp(for: .toggleRecordingNotes) { Task { @MainActor in AppModel.shared.recorder.toggleNotes() } }
         KeyboardShortcuts.onKeyUp(for: .saveInstantReplay) { Task { @MainActor in await InstantReplay.shared.save() } }
         KeyboardShortcuts.onKeyUp(for: .toggleRecordingDrawing) { Task { @MainActor in AppModel.shared.recorder.toggleDrawing() } }
+        KeyboardShortcuts.onKeyUp(for: .togglePauseRecording) { Task { @MainActor in AppModel.shared.recorder.togglePause() } }
 
         KeyboardShortcuts.onKeyUp(for: .toggleMainMenu) {
             Task { @MainActor in

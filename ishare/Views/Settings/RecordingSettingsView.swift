@@ -69,6 +69,7 @@ struct RecordingSettingsView: View {
             if !ScreenshotMode.isCapturingScreenshots {
                 RecordingExtrasSettings()
             }
+            RecordingPresetsSettings()
             Section("GIF".localized()) {
                 Picker("GIF frame rate".localized(), selection: $gifFrameRate) {
                     ForEach(GIFFrameRate.allCases) { Text("\($0.rawValue) fps").tag($0) }
@@ -100,7 +101,7 @@ struct RecordingSettingsView: View {
 
 extension RecordingSettingsView: SettingsSearchable {
     static var searchEntries: [SettingsSearchEntry] {
-        baseSearchEntries + RecordingPostProcessingSettings.searchEntries
+        baseSearchEntries + RecordingPostProcessingSettings.searchEntries + RecordingPresetsSettings.searchEntries
     }
 
     static let baseSearchEntries: [SettingsSearchEntry] = [
