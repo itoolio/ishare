@@ -117,6 +117,12 @@ enum AnnotationRenderer {
         case let .line(start, end):
             applyDash(for: annotation, in: context)
             context.strokeLineSegments(between: [start, end])
+        case let .curvedLine(start, control, end):
+            applyDash(for: annotation, in: context)
+            context.beginPath()
+            context.move(to: start)
+            context.addQuadCurve(to: end, control: control)
+            context.strokePath()
         case let .stamp(rect, stamp):
             drawStamp(stamp, in: rect, color: annotation.color, context: context)
         case let .rectangle(rect):
@@ -279,8 +285,7 @@ enum AnnotationRenderer {
     static func drawArrow(from start: CGPoint, control: CGPoint?, to end: CGPoint, annotation: Annotation, in context: CGContext) {
         let length = hypot(end.x - start.x, end.y - start.y)
         let headLength = ArrowGeometry.headLength(for: annotation.lineWidth, length: length)
-        let endTail = control ?? start
-        let startTail = control ?? end
+        let angles = ArrowGeometry.headAngles(start: start, control: control, end: end)
         let retraction = annotation.arrowHead == .line ? 0 : headLength * 0.85
         let startRetraction = annotation.doubleHeaded ? retraction : 0
         context.saveGState()
@@ -296,14 +301,14 @@ enum AnnotationRenderer {
         }
         context.strokePath()
         context.restoreGState()
-        drawArrowHead(tip: end, tail: endTail, length: headLength, annotation: annotation, in: context)
+        drawArrowHead(tip: end, angle: angles.end, length: headLength, annotation: annotation, in: context)
         if annotation.doubleHeaded {
-            drawArrowHead(tip: start, tail: startTail, length: headLength, annotation: annotation, in: context)
+            drawArrowHead(tip: start, angle: angles.start, length: headLength, annotation: annotation, in: context)
         }
     }
 
-    static func drawArrowHead(tip: CGPoint, tail: CGPoint, length: CGFloat, annotation: Annotation, in context: CGContext) {
-        let (left, right) = ArrowGeometry.headPoints(tip: tip, from: tail, headLength: length)
+    static func drawArrowHead(tip: CGPoint, angle: CGFloat, length: CGFloat, annotation: Annotation, in context: CGContext) {
+        let (left, right) = ArrowGeometry.headPoints(tip: tip, angle: angle, headLength: length)
         context.beginPath()
         switch annotation.arrowHead {
         case .filled:

@@ -476,7 +476,7 @@ final class EditorDocument: ObservableObject {
 
     func isSubstantial(_ annotation: Annotation) -> Bool {
         switch annotation.shape {
-        case let .arrow(start, end), let .line(start, end), let .curvedArrow(start, _, end):
+        case let .arrow(start, end), let .line(start, end), let .curvedArrow(start, _, end), let .curvedLine(start, _, end):
             hypot(end.x - start.x, end.y - start.y) > 3
         case let .pen(points), let .marker(points):
             !points.isEmpty

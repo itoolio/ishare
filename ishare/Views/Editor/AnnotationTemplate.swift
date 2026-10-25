@@ -44,6 +44,7 @@ extension Annotation {
             case let .arrow(start, end): .arrow(point(start), point(end))
             case let .line(start, end): .line(point(start), point(end))
             case let .curvedArrow(start, control, end): .curvedArrow(point(start), point(control), point(end))
+            case let .curvedLine(start, control, end): .curvedLine(point(start), point(control), point(end))
             case let .rectangle(bounds): .rectangle(rect(bounds))
             case let .ellipse(bounds): .ellipse(rect(bounds))
             case let .highlight(bounds): .highlight(rect(bounds))

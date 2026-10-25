@@ -14,6 +14,7 @@ struct EditorCanvas: View {
         case movingCrop(CGRect)
         case newCrop
         case panning(CGSize)
+        case idle
     }
 
     static let handleSize: CGFloat = 9
@@ -183,6 +184,11 @@ struct EditorCanvas: View {
         clipped.stroke(Path(kept), with: .color(.white), lineWidth: 1.5)
     }
 
+    private static var isDoubleClick: Bool {
+        guard let event = NSApp.currentEvent, event.type == .leftMouseDown else { return false }
+        return event.clickCount >= 2
+    }
+
     private var snapsShapes: Bool {
         document.smartShapesActive && !NSEvent.modifierFlags.contains(.command)
     }
@@ -211,7 +217,7 @@ struct EditorCanvas: View {
         let outlineColor: Color = annotation.locked ? .secondary : .accentColor
         context.stroke(Path(outline), with: .color(outlineColor), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
         guard showsHandles else { return }
-        if case let .curvedArrow(start, control, end) = annotation.shape {
+        if let (start, control, end) = annotation.curveControlPoints {
             var guide = Path()
             guide.move(to: transform.toView(start))
             guide.addLine(to: transform.toView(ArrowGeometry.midpoint(from: start, control: control, to: end)))
@@ -417,6 +423,11 @@ struct EditorCanvas: View {
         if document.tool != .text, let selected = document.selectedAnnotation, selected.isInteractive,
             let handle = selected.editHandle(at: point, tolerance: tolerance)
         {
+            if handle == .control, selected.isCurved, Self.isDoubleClick {
+                document.replace(selected.straightened())
+                interaction = .idle
+                return
+            }
             interaction = .editingHandle(selected, handle)
             if selected.isEffect {
                 effectPreview.begin(for: selected, background: document.effectedBase(excluding: selected.id), zoom: viewport.effectiveZoom)
@@ -496,7 +507,7 @@ struct EditorCanvas: View {
                     }
                 }
             }
-        case .panning, nil:
+        case .panning, .idle, nil:
             break
         }
     }
@@ -513,7 +524,7 @@ struct EditorCanvas: View {
                 document.replace(liveAnnotation)
             }
             liveAnnotation = nil
-        case .resizingCrop, .movingCrop, .newCrop, .panning, nil:
+        case .resizingCrop, .movingCrop, .newCrop, .panning, .idle, nil:
             break
         case .drawing:
             finishDrawing(from: start, to: end, transform: transform)

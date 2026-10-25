@@ -9,7 +9,7 @@ extension Annotation {
     var tool: EditorTool {
         switch shape {
         case .arrow, .curvedArrow: .arrow
-        case .line: .line
+        case .line, .curvedLine: .line
         case .rectangle: .rectangle
         case .ellipse: .ellipse
         case .highlight: .highlight
