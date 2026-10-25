@@ -108,7 +108,7 @@ enum ScrollingCapture {
     static let maximumFrames = 160
 
     static func run(content: SCShareableContent) async throws -> CapturedImage? {
-        let selection = await RegionSelector.select(options: .init(showsMagnifier: false, allowsWindowMode: false, hint: "Select the area to scroll".localized()))
+        let selection = await RegionSelector.select(options: .init(allowsWindowMode: false, hint: "Select the area to scroll".localized()))
         guard case let .region(screen, rect) = selection,
             let display = ScreenshotEngine.display(for: screen, in: content)
         else { return nil }

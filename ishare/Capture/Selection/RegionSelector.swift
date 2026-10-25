@@ -13,7 +13,6 @@ final class RegionSelector {
 
     struct Options {
         var backdrops: [CGDirectDisplayID: CGImage] = [:]
-        var showsMagnifier = true
         var allowsWindowMode = true
         var hint: String?
         var lastRegions: [CGDirectDisplayID: CGRect] = [:]
@@ -71,7 +70,7 @@ final class RegionSelector {
             if let displayID = view.displayID, let backdrop = backdrops[displayID] {
                 view.backdrop = backdrop
             }
-            view.awaitsMagnifier = false
+            view.awaitsBackdrop = false
         }
     }
 
@@ -93,8 +92,7 @@ final class RegionSelectionView: NSView {
     fileprivate var backdrop: CGImage? {
         didSet { needsDisplay = true }
     }
-    // Holds back the coordinate pill until the frozen frame arrives, so it doesn't flash before the magnifier replaces it.
-    fileprivate var awaitsMagnifier: Bool {
+    fileprivate var awaitsBackdrop: Bool {
         didSet { needsDisplay = true }
     }
     private let options: RegionSelector.Options
@@ -115,7 +113,7 @@ final class RegionSelectionView: NSView {
     init(screen: NSScreen, backdrop: CGImage?, options: RegionSelector.Options, onFinish: @escaping (RegionSelector.Outcome) -> Void) {
         self.screen = screen
         self.backdrop = backdrop
-        awaitsMagnifier = options.showsMagnifier && options.awaitsBackdrops && backdrop == nil
+        awaitsBackdrop = options.awaitsBackdrops && backdrop == nil
         self.options = options
         self.onFinish = onFinish
         super.init(frame: CGRect(origin: .zero, size: screen.frame.size))
@@ -138,6 +136,18 @@ final class RegionSelectionView: NSView {
 
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
+
+    private var showsPosition: Bool {
+        Defaults[.showMagnifier]
+    }
+
+    private var hasMagnifier: Bool {
+        options.awaitsBackdrops || !options.backdrops.isEmpty
+    }
+
+    private var magnifierPending: Bool {
+        showsPosition && awaitsBackdrop
+    }
 
     private var scale: CGFloat {
         guard let backdrop else { return screen.backingScaleFactor }
@@ -280,6 +290,11 @@ final class RegionSelectionView: NSView {
                 needsDisplay = true
                 return
             }
+            if character == "z", !event.isARepeat {
+                Defaults[.showMagnifier].toggle()
+                needsDisplay = true
+                return
+            }
             super.keyDown(with: event)
         }
     }
@@ -365,6 +380,7 @@ final class RegionSelectionView: NSView {
             parts.append("L for last region".localized())
         }
         parts.append("G for guides".localized())
+        parts.append(hasMagnifier ? "Z for zoom and position".localized() : "Z for position".localized())
         parts.append("Return for full screen".localized())
         return parts.joined(separator: "  ·  ")
     }
@@ -401,9 +417,9 @@ final class RegionSelectionView: NSView {
         if isMeasuringGuides || Defaults[.showSelectionGuides] {
             drawGuides(at: location, labelled: isMeasuringGuides)
         }
-        if options.showsMagnifier, let backdrop {
+        if showsPosition, let backdrop {
             drawMagnifier(backdrop: backdrop, at: location, context: context)
-        } else if selection == nil, !isMeasureModifierHeld, !awaitsMagnifier {
+        } else if showsPosition, selection == nil, !isMeasureModifierHeld, !magnifierPending {
             SelectionStyle.drawPill(DisplayCoordinates.label(for: location, in: bounds), near: CGPoint(x: location.x + 14, y: location.y - 34), in: bounds)
         }
     }
@@ -454,7 +470,7 @@ final class RegionSelectionView: NSView {
         guides.setLineDash([4, 4], count: 2, phase: 0)
         SelectionStyle.accentColor.setStroke()
         guides.stroke()
-        if labelled, !options.showsMagnifier || backdrop == nil, !awaitsMagnifier {
+        if labelled, !showsPosition || backdrop == nil, !magnifierPending {
             SelectionStyle.drawPill(DisplayCoordinates.label(for: location, in: bounds), near: CGPoint(x: location.x + 8, y: location.y + 4), in: bounds)
         }
     }

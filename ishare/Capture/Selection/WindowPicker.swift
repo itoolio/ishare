@@ -24,12 +24,10 @@ final class WindowPicker {
     private var continuation: CheckedContinuation<Outcome, Never>?
     private(set) var candidates: [Candidate] = []
     private(set) var hovered: Candidate?
-    private var allowsRegionMode = true
 
-    static func pick(from windows: [SCWindow], allowsRegionMode: Bool = true) async -> Outcome {
+    static func pick(from windows: [SCWindow]) async -> Outcome {
         active?.finish(.cancelled)
         let picker = WindowPicker()
-        picker.allowsRegionMode = allowsRegionMode
         picker.candidates = windows.map { window in
             let app = window.owningApplication
             let runningApp = app.flatMap { NSRunningApplication(processIdentifier: $0.processID) }
@@ -87,7 +85,6 @@ final class WindowPicker {
     }
 
     func switchToRegion() {
-        guard allowsRegionMode else { return }
         finish(.switchToRegion)
     }
 

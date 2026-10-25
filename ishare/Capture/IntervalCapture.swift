@@ -189,10 +189,7 @@ enum IntervalCapture {
     static func start(plan: IntervalPlan = .current, makesGIF: Bool = Defaults[.intervalCaptureMakesGIF]) async -> IntervalCaptureResult? {
         guard !isRunning, ScreenshotEngine.ensurePermission() else { return nil }
         let outcome = await RegionSelector.select(
-            options: .init(
-                showsMagnifier: Defaults[.showMagnifier], allowsWindowMode: false,
-                hint: "Select an area, or press Return for the whole screen".localized()
-            ))
+            options: .init(allowsWindowMode: false, hint: "Select an area, or press Return for the whole screen".localized()))
         let target: (screen: NSScreen, region: CGRect?)
         switch outcome {
         case let .region(screen, rect): target = (screen, rect)
