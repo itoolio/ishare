@@ -91,6 +91,11 @@ final class CaptureShelf: ObservableObject {
         }
     }
 
+    func preview(items: [CaptureShelfItem]) {
+        state = CaptureShelfState(items: items)
+        selection.retain(state.items)
+    }
+
     func dragItems(startingAt id: UUID) -> [CaptureShelfItem] {
         state.dragItems(startingAt: id, selection: selection.ids)
     }

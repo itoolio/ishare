@@ -122,6 +122,10 @@ enum ScreenshotMode {
             return
         }
         seedSettings()
+        if let guide = GuideMode.scene {
+            GuideMode.present(guide)
+            return
+        }
         guard let scene else { return }
         if isUITesting {
             presentForTesting(scene)
