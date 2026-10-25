@@ -53,6 +53,15 @@ struct LocalizationTests {
         ]
         keys.formUnion(issues.map(\.messageKey))
         keys.formUnion(["response URL", "deletion URL", "key", "public URL", "bucket", "region", "access key ID", "secret access key"])
+        let maintenanceIssues: [UploaderIssue] = [
+            .emptyLinkRewrite, .invalidLinkRewriteScheme, .invalidLinkRewriteHost, .invalidLinkRewriteTemplate, .invalidAutoDeleteDays,
+            .autoDeleteNeedsDeletion,
+        ]
+        keys.formUnion(maintenanceIssues.map(\.messageKey))
+        keys.insert("link template")
+        keys.formUnion(AutoDeletePreset.allCases.map(\.titleKey))
+        keys.formUnion(DuplicatePolicy.allCases.map(\.titleKey))
+        keys.formUnion(HealthCheckFrequency.allCases.map(\.titleKey))
         keys.formUnion(OnboardingStep.allCases.flatMap { [$0.title, $0.subtitle] })
         keys.formUnion(HistoryKindFilter.allCases.map(\.title))
         keys.formUnion([

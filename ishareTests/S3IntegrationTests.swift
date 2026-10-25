@@ -140,6 +140,22 @@ extension NetworkSuite {
             #expect(status == 404)
         }
 
+        @Test func deletesExpiredUploadsThroughTheExpiryRunner() async throws {
+            let configuration = configuration()
+            try await ensureBucket(configuration, publicRead: true)
+            var uploader = CustomUploader.s3(name: "integration-expiry", configuration: configuration)
+            uploader.autoDeleteAfterDays = 1
+            let file = try Fixtures.temporaryFile(named: "expire.png", contents: payload())
+            let outcome = try await UploadService.upload(fileURL: file, to: .custom(uploader))
+            let key = try #require(outcome.s3Key)
+            let objectURL = try #require(configuration.objectURL(for: key))
+            let (uploaded, _) = try await fetch(signedRequest("GET", objectURL, configuration: configuration))
+            #expect(uploaded == 200)
+            _ = try await ExpiryIntegration.expireAndDelete(outcome, uploader: uploader)
+            let (deleted, _) = try await fetch(signedRequest("GET", objectURL, configuration: configuration))
+            #expect(deleted == 404)
+        }
+
         @Test func uploadsWithPathStyleURLs() async throws {
             let configuration = configuration(pathStyle: true)
             try await ensureBucket(configuration, publicRead: true)
