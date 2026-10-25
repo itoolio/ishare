@@ -214,6 +214,11 @@ enum SVGExporter {
                 : stroke(annotation.color, width: annotation.lineWidth, cap: annotation.dashed ? "butt" : "round", dash: dash(for: annotation))
             return [#"<ellipse cx="\#(number(rect.midX))" cy="\#(number(rect.midY))" rx="\#(number(rect.width / 2))" ry="\#(number(rect.height / 2))" \#(paint)/>"#]
         case let .highlight(rect):
+            if let line = annotation.highlightStyle.lineRect(in: rect) {
+                return [
+                    #"<rect x="\#(number(line.minX))" y="\#(number(line.minY))" width="\#(number(line.width))" height="\#(number(line.height))" \#(fill(annotation.color))/>"#
+                ]
+            }
             return [
                 #"<rect x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" \#(fill(annotation.color, opacity: 0.35)) style="mix-blend-mode:multiply"/>"#
             ]

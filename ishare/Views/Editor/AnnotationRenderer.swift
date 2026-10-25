@@ -159,6 +159,10 @@ enum AnnotationRenderer {
                 context.strokeEllipse(in: rect)
             }
         case let .highlight(rect):
+            if let line = annotation.highlightStyle.lineRect(in: rect) {
+                context.fill(line)
+                break
+            }
             context.setFillColor(annotation.color.cgColor.copy(alpha: 0.35) ?? annotation.color.cgColor)
             context.setBlendMode(.multiply)
             context.fill(rect)

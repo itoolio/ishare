@@ -212,6 +212,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
     var locked = false
     var hidden = false
     var rotation: CGFloat = 0
+    var highlightStyle: HighlightStyle = .marker
 
     var isEffect: Bool {
         switch shape {

@@ -28,6 +28,7 @@ struct EditorCanvas: View {
     @State private var pinchStartZoom: CGFloat?
     @State private var hoverSnapTarget: CGRect?
     @State private var drawingSnapTarget: CGRect?
+    @State private var textHighlightDrafts: [Annotation] = []
     @StateObject private var effectPreview = LiveEffectPreview()
     @FocusState private var textFocused: Bool
 
@@ -189,6 +190,11 @@ struct EditorCanvas: View {
         return event.clickCount >= 2
     }
 
+    private func textHighlights(from start: CGPoint, to end: CGPoint) -> [Annotation] {
+        guard document.textHighlightActive, !NSEvent.modifierFlags.contains(.command) else { return [] }
+        return document.textHighlights(from: start, to: end, tolerance: viewport.transform.toImage(6))
+    }
+
     private var snapsShapes: Bool {
         document.smartShapesActive && !NSEvent.modifierFlags.contains(.command)
     }
@@ -305,6 +311,7 @@ struct EditorCanvas: View {
         if let draft = document.draft {
             list.append(draft)
         }
+        list.append(contentsOf: textHighlightDrafts)
         return list
     }
 
@@ -324,6 +331,9 @@ struct EditorCanvas: View {
         }
         if let selected = selectedAnnotation, selected.editHandle(at: point, tolerance: tolerance) != nil {
             return .pointingHand
+        }
+        if document.textHighlightActive, document.textLines.contains(where: { $0.frame.contains(point) }) {
+            return .iBeam
         }
         switch document.tool {
         case .select: return .arrow
@@ -501,6 +511,11 @@ struct EditorCanvas: View {
             case .select, .text, .step, .cursor, .crop:
                 break
             default:
+                textHighlightDrafts = textHighlights(from: start, to: current)
+                guard textHighlightDrafts.isEmpty else {
+                    document.draft = nil
+                    return
+                }
                 let corners = snapped(from: start, to: current)
                 let draft = document.makeAnnotation(tool: document.tool, from: corners.start, to: corners.end, points: dragPoints)
                 document.draft = draft
@@ -563,6 +578,13 @@ struct EditorCanvas: View {
             }
             document.draft = nil
         default:
+            let highlights = textHighlights(from: start, to: end)
+            textHighlightDrafts = []
+            guard highlights.isEmpty else {
+                document.add(contentsOf: highlights)
+                document.draft = nil
+                return
+            }
             let corners = snapped(from: start, to: end)
             drawingSnapTarget = nil
             if let draft = document.makeAnnotation(tool: document.tool, from: corners.start, to: corners.end, points: dragPoints), document.isSubstantial(draft) {
