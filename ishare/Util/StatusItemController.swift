@@ -44,6 +44,10 @@ final class StatusItemController: NSObject {
         render(UploadManager.shared.activity)
     }
 
+    func setRecordingToolTip(_ text: String?) {
+        statusItem?.button?.toolTip = text
+    }
+
     func setDropTargeted(_ targeted: Bool) {
         isDropTargeted = targeted
         statusItem?.button?.highlight(targeted || MenuController.shared.isPresented)

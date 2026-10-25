@@ -80,6 +80,12 @@ final class LiveAutomationActions: AutomationActions {
         case .stop where isRecording, .toggle where isRecording:
             CaptureSession.stopRecording()
             return false
+        case .pause where isRecording:
+            AppModel.shared.recorder.pause()
+            return true
+        case .resume where isRecording:
+            AppModel.shared.recorder.resume()
+            return true
         default:
             return isRecording
         }

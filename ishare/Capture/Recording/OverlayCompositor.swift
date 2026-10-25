@@ -304,18 +304,22 @@ enum PointerGlyph {
 enum OverlayCompositor {
     @discardableResult
     static func composite(
-        _ url: URL, capture: OverlayCapture?, effects: RecordingEffectsCapture?, recordingStart: Double, hevc: Bool, defersZoom: Bool = false,
+        _ url: URL, capture: OverlayCapture?, effects: RecordingEffectsCapture?, recordingStart: Double, pauses: RecordingPauseTimeline = RecordingPauseTimeline(), hevc: Bool,
+        defersZoom: Bool = false,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> CameraPath? {
         let asset = AVURLAsset(url: url)
         guard let screenTrack = try await asset.loadTracks(withMediaType: .video).first else { throw RecordingExportError.noVideoTrack }
         let duration = try await asset.load(.duration)
         let videoSize = try await screenTrack.load(.naturalSize)
-        let webcamClip = capture?.webcam.map { OverlayWebcamClip(url: $0.url, offset: $0.startTime - recordingStart) }
-        var timeline = capture?.log.timeline(recordingStart: recordingStart, videoSize: videoSize, webcam: webcamClip, duration: duration.seconds) ?? OverlayTimeline()
+        let webcamClip = capture?.webcam.map {
+            OverlayWebcamClip(url: $0.url, offset: $0.startTime - recordingStart, startTime: $0.startTime, recordingStart: recordingStart, pauses: pauses)
+        }
+        var timeline =
+            capture?.log.timeline(recordingStart: recordingStart, videoSize: videoSize, webcam: webcamClip, duration: duration.seconds, pauses: pauses) ?? OverlayTimeline()
         var deferredCamera: CameraPath?
         if let effects {
-            let activity = effects.log.activity(recordingStart: recordingStart, videoSize: videoSize, duration: duration.seconds)
+            let activity = effects.log.activity(recordingStart: recordingStart, videoSize: videoSize, duration: duration.seconds, pauses: pauses)
             var plan = RecordingEffectsPlan.make(activity: activity, pointer: effects.pointer, autoZoom: effects.autoZoom, videoSize: videoSize, duration: duration.seconds)
             if defersZoom {
                 deferredCamera = plan.camera
@@ -411,15 +415,15 @@ enum OverlayCompositor {
             let track = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
         else { return nil }
         let webcamDuration = try await webcamAsset.load(.duration).seconds
-        let sourceStart = max(0, -clip.offset)
-        let destinationStart = max(0, clip.offset)
-        let length = min(webcamDuration - sourceStart, duration.seconds - destinationStart)
-        guard length > 0 else {
+        let segments = clip.segments(clipDuration: webcamDuration, outputDuration: duration.seconds)
+        guard !segments.isEmpty else {
             composition.removeTrack(track)
             return nil
         }
-        let range = CMTimeRange(start: CMTime(seconds: sourceStart, preferredTimescale: 600), duration: CMTime(seconds: length, preferredTimescale: 600))
-        try track.insertTimeRange(range, of: webcamTrack, at: CMTime(seconds: destinationStart, preferredTimescale: 600))
+        for segment in segments {
+            let range = CMTimeRange(start: CMTime(seconds: segment.sourceStart, preferredTimescale: 600), duration: CMTime(seconds: segment.duration, preferredTimescale: 600))
+            try track.insertTimeRange(range, of: webcamTrack, at: CMTime(seconds: segment.outputStart, preferredTimescale: 600))
+        }
         return track.trackID
     }
 }

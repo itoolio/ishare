@@ -29,6 +29,7 @@ final class FakeAutomationActions: AutomationActions {
         case .start: recording = true
         case .stop: recording = false
         case .toggle: recording.toggle()
+        case .pause, .resume: break
         }
         return recording
     }

@@ -148,6 +148,15 @@ extension AppCommand {
                     MenuController.shared.dismiss()
                     CaptureSession.stopRecording()
                 },
+                AppCommand(
+                    id: AppModel.shared.recorder.isPaused ? "record.resume" : "record.pause",
+                    title: AppModel.shared.recorder.isPaused ? "Resume Recording" : "Pause Recording",
+                    keywords: ["pause", "resume", "continue", "hold", "break"],
+                    symbol: AppModel.shared.recorder.isPaused ? "play.fill" : "pause.fill"
+                ) {
+                    MenuController.shared.dismiss()
+                    AppModel.shared.recorder.togglePause()
+                },
                 AppCommand(id: "record.marker", title: "Add Recording Marker", keywords: ["chapter", "bookmark", "marker"], symbol: "flag") {
                     MenuController.shared.dismiss()
                     AppModel.shared.recorder.addMarker()

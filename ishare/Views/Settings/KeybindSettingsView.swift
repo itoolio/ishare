@@ -33,6 +33,7 @@ struct KeybindSettingsView: View {
                 ("Show or Hide Notes:", .toggleRecordingNotes),
                 ("Save Instant Replay:", .saveInstantReplay),
                 ("Draw on Screen:", .toggleRecordingDrawing),
+                ("Pause or Resume Recording:", .togglePauseRecording),
             ]
         ),
         (

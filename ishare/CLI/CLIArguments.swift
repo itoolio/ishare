@@ -45,7 +45,8 @@ enum CLIArguments {
           upload <file…> [--uploader NAME]    Upload files and print their links
           capture region|window|screen|scrolling [--upload]
                                               Take a screenshot and print its file or link
-          record start|stop|toggle            Start or stop a screen recording
+          record start|stop|toggle|pause|resume [--preset NAME]
+                                              Start, stop, pause or resume a screen recording
           uploaders list                      List the configured uploaders
           history [--limit N]                 Print recent uploads
 
@@ -128,7 +129,7 @@ enum CLIArguments {
             try rejectExtra(rest.dropFirst())
             command = .capture(mode: mode, upload: upload)
         case "record":
-            guard let actionName = rest.first else { throw .missingArgument("record action (start, stop or toggle)") }
+            guard let actionName = rest.first else { throw .missingArgument("record action (start, stop, toggle, pause or resume)") }
             guard let action = CLIRecordAction(rawValue: actionName.lowercased()) else { throw .invalidValue(option: "record", value: actionName) }
             try rejectExtra(rest.dropFirst())
             command = .record(action)

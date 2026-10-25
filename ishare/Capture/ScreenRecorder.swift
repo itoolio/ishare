@@ -25,6 +25,14 @@ final class RecordingHUDModel: ObservableObject {
     @Published var remainingTime: Double?
     @Published var canDraw = false
     @Published var isDrawing = false
+    @Published var pauses = RecordingPauseTimeline()
+    var clockStart = RecordingClock.now
+
+    var isPaused: Bool { pauses.isPaused }
+
+    func recordedTime() -> Double {
+        pauses.recordedDuration(from: clockStart, to: RecordingClock.now)
+    }
 }
 
 struct RecordingHUD: View {
@@ -33,17 +41,28 @@ struct RecordingHUD: View {
     var onMarker: () -> Void
     var onNotes: () -> Void = {}
     var onDraw: () -> Void = {}
+    var onPause: () -> Void = {}
     var onStop: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
-            Circle()
-                .fill(.red)
-                .frame(width: 9, height: 9)
-            TimelineView(.periodic(from: model.startDate, by: 1)) { context in
-                Text(Duration.seconds(context.date.timeIntervalSince(model.startDate)).formatted(.time(pattern: .minuteSecond)))
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+            if model.isPaused {
+                Image(systemName: "pause.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.orange)
+                    .frame(width: 9, height: 9)
+                    .accessibilityLabel(Text("Paused".localized()))
+            } else {
+                Circle()
+                    .fill(.red)
+                    .frame(width: 9, height: 9)
             }
+            TimelineView(.periodic(from: model.startDate, by: 1)) { _ in
+                Text(Duration.seconds(model.recordedTime()).formatted(.time(pattern: .minuteSecond)))
+                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(model.isPaused ? .secondary : .primary)
+            }
+            .accessibilityIdentifier("recording.elapsed")
             if let remaining = model.remainingTime {
                 Text("−" + Duration.seconds(remaining.rounded(.up)).formatted(.time(pattern: .minuteSecond)))
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
@@ -89,6 +108,14 @@ struct RecordingHUD: View {
                 .accessibilityLabel(Text("Draw on Screen".localized()))
                 .accessibilityIdentifier("recording.draw")
             }
+            Button(action: onPause) {
+                Image(systemName: model.isPaused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .adaptiveGlassButtonStyle(prominent: false)
+            .help(model.isPaused ? "Resume Recording".localized() : "Pause Recording".localized())
+            .accessibilityLabel(Text(model.isPaused ? "Resume Recording".localized() : "Pause Recording".localized()))
+            .accessibilityIdentifier("recording.pause")
             Button(action: onStop) {
                 Label("Stop".localized(), systemImage: "stop.fill")
                     .font(.system(size: 12, weight: .semibold))
@@ -107,6 +134,10 @@ struct RecordingHUD: View {
 final class ScreenRecorder: ObservableObject {
     @Published var isRunning = false
     @Published var startDate: Date?
+    @Published private(set) var isPaused = false
+    @Published private(set) var pauses = RecordingPauseTimeline()
+    private var clockStart = RecordingClock.now
+    private var isChangingPause = false
     @Published private(set) var audioLevelsProvider = AudioLevelsProvider()
 
     private var audioMeterCancellable: AnyCancellable?
@@ -118,7 +149,9 @@ final class ScreenRecorder: ObservableObject {
     private let pointerRecorder = PointerActivityRecorder()
     private let drawing = LiveDrawingController()
     private let limitMonitor = RecordingLimitMonitor()
-    @Published private(set) var remainingTime: Double?
+    @Published private(set) var remainingTime: Double? {
+        didSet { updateStatusToolTip() }
+    }
     private var hudModel = RecordingHUDModel()
     private var markerLog = RecordingMarkerLog()
     private var sidecar = RecordingSidecar.empty
@@ -167,6 +200,7 @@ final class ScreenRecorder: ObservableObject {
         hudModel = RecordingHUDModel()
         markerLog = RecordingMarkerLog()
         sidecar = .empty
+        resetPauses()
         switch target {
         case .picker:
             startWithPicker(fileURL)
@@ -285,6 +319,9 @@ final class ScreenRecorder: ObservableObject {
                 onDraw: { [weak self] in
                     self?.toggleDrawing()
                 },
+                onPause: { [weak self] in
+                    self?.togglePause()
+                },
                 onStop: {
                     CaptureSession.stopRecording()
                 }), near: rect, on: screen)
@@ -332,7 +369,7 @@ final class ScreenRecorder: ObservableObject {
     func addMarker() {
         guard isRunning, let startDate else { return }
         let start = captureEngine.startClock.time
-        let time = start.map { RecordingClock.now - $0 } ?? Date().timeIntervalSince(startDate)
+        let time = start.map { pauses.recordedDuration(from: $0, to: RecordingClock.now) } ?? Date().timeIntervalSince(startDate)
         let marker = markerLog.add(at: time)
         hudModel.markerCount = markerLog.times.count
         Log.capture.info("Added \(marker.title, privacy: .public) at \(marker.time)s")
@@ -352,6 +389,58 @@ final class ScreenRecorder: ObservableObject {
         hudModel.showsNotes = RecordingNotesController.shared.isVisible
     }
 
+    var recordedTime: Double {
+        guard startDate != nil else { return 0 }
+        return pauses.recordedDuration(from: clockStart, to: RecordingClock.now)
+    }
+
+    var canPause: Bool {
+        isRunning && startDate != nil && !isChangingPause
+    }
+
+    func togglePause() {
+        if isPaused { resume() } else { pause() }
+    }
+
+    func pause() {
+        guard canPause, !isPaused else { return }
+        isChangingPause = true
+        let now = RecordingClock.now
+        Task { @MainActor in
+            defer { isChangingPause = false }
+            guard await captureEngine.pauseRecording() else { return }
+            guard isRunning else { return }
+            pauses.pause(at: now)
+            setPaused(true)
+            Log.capture.info("Paused the recording")
+        }
+    }
+
+    func resume() {
+        guard canPause, isPaused else { return }
+        guard captureEngine.resumeRecording() else { return }
+        pauses.resume(at: RecordingClock.now)
+        setPaused(false)
+        Log.capture.info("Resumed the recording")
+    }
+
+    private func setPaused(_ paused: Bool) {
+        isPaused = paused
+        hudModel.pauses = pauses
+        updateStatusToolTip()
+    }
+
+    private func resetPauses() {
+        pauses = RecordingPauseTimeline()
+        isPaused = false
+        isChangingPause = false
+        clockStart = RecordingClock.now
+    }
+
+    private func updateStatusToolTip() {
+        StatusItemController.shared.setRecordingToolTip(RecordingStatusText.toolTip(isRecording: isRunning && startDate != nil, isPaused: isPaused, remaining: remainingTime))
+    }
+
     func takeSidecar() -> RecordingSidecar {
         defer { sidecar = .empty }
         return sidecar
@@ -368,18 +457,22 @@ final class ScreenRecorder: ObservableObject {
         let effects = pointerRecorder.stop()
         let appAudio = await appAudioRecorder?.stop()
         appAudioRecorder = nil
-        remainingTime = nil
-        sidecar = RecordingSidecar(markers: markerLog.markers, overlay: overlay, effects: effects, recordingStart: captureEngine.startClock.time, appAudio: appAudio)
+        let finalPauses = pauses.closed(at: RecordingClock.now)
+        sidecar = RecordingSidecar(
+            markers: markerLog.markers, overlay: overlay, effects: effects, recordingStart: captureEngine.startClock.time, appAudio: appAudio, pauses: finalPauses)
         markerLog = RecordingMarkerLog()
         stopAudioMetering()
         isRunning = false
         startDate = nil
+        resetPauses()
+        remainingTime = nil
         return result
     }
 
     private func startLimitMonitor(fileURL: URL, startDate: Date) {
         let engine = captureEngine
         limitMonitor.bytesWritten = { engine.recordedFileSize }
+        limitMonitor.recordedTime = { [weak self] in self?.recordedTime ?? 0 }
         limitMonitor.onRemainingTime = { [weak self] remaining in
             self?.remainingTime = remaining
             self?.hudModel.remainingTime = remaining
@@ -495,7 +588,10 @@ final class ScreenRecorder: ObservableObject {
         RecordingNotesController.shared.recordingDidStart()
         hudModel.showsNotes = RecordingNotesController.shared.isVisible
         let startDate = Date()
+        clockStart = RecordingClock.now
+        hudModel.clockStart = clockStart
         self.startDate = startDate
+        updateStatusToolTip()
         startAudioMetering()
         startLimitMonitor(fileURL: fileURL, startDate: startDate)
         do {

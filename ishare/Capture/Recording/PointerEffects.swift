@@ -123,18 +123,17 @@ struct PointerActivityLog: Sendable {
         keyTimes.append(time)
     }
 
-    func activity(recordingStart: Double, videoSize: CGSize, duration: Double = .infinity) -> PointerActivity {
+    func activity(recordingStart: Double, videoSize: CGSize, duration: Double = .infinity, pauses: RecordingPauseTimeline = RecordingPauseTimeline()) -> PointerActivity {
         PointerActivity(
-            pointer: Self.mapped(samples, recordingStart: recordingStart, videoSize: videoSize, duration: duration),
-            clicks: Self.mapped(clicks, recordingStart: recordingStart, videoSize: videoSize, duration: duration),
-            keyTimes: keyTimes.map { $0 - recordingStart }.filter { $0 >= 0 && $0 <= duration }
+            pointer: Self.mapped(samples, recordingStart: recordingStart, videoSize: videoSize, duration: duration, pauses: pauses),
+            clicks: Self.mapped(clicks, recordingStart: recordingStart, videoSize: videoSize, duration: duration, pauses: pauses),
+            keyTimes: keyTimes.compactMap { pauses.outputTime(of: $0, recordingStart: recordingStart) }.filter { $0 >= 0 && $0 <= duration }
         )
     }
 
-    private static func mapped(_ entries: [Entry], recordingStart: Double, videoSize: CGSize, duration: Double) -> [PointerSample] {
+    private static func mapped(_ entries: [Entry], recordingStart: Double, videoSize: CGSize, duration: Double, pauses: RecordingPauseTimeline) -> [PointerSample] {
         entries.compactMap { entry in
-            let time = entry.time - recordingStart
-            guard time >= 0, time <= duration,
+            guard let time = pauses.outputTime(of: entry.time, recordingStart: recordingStart), time >= 0, time <= duration,
                 let point = OverlayCoordinateMapper.videoPoint(entry.point, sourceRect: entry.sourceRect, videoSize: videoSize)
             else { return nil }
             return PointerSample(time: time, point: point)

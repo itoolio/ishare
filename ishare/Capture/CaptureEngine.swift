@@ -50,13 +50,21 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
     private var stream: SCStream?
     private var fileURL: URL?
     private var recordingOutput: SCRecordingOutput?
+    private var segmentURLs: [URL] = []
+    private var finishedSegmentsSize: Int64 = 0
+    private var outputFileType: AVFileType = .mp4
+    private var videoCodec: AVVideoCodecType = .h264
 
     var recordedFileSize: Int64 {
         if let recordingOutput, recordingOutput.recordedFileSize > 0 {
-            return Int64(recordingOutput.recordedFileSize)
+            return finishedSegmentsSize + Int64(recordingOutput.recordedFileSize)
         }
-        guard let fileURL, let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return 0 }
-        return Int64(size)
+        guard recordingOutput != nil, let url = segmentURLs.last, let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return finishedSegmentsSize }
+        return finishedSegmentsSize + Int64(size)
+    }
+
+    var isPaused: Bool {
+        stream != nil && recordingOutput == nil
     }
     private let videoSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.VideoSampleBufferQueue")
     private let audioSampleBufferQueue = DispatchQueue(label: "dev.adrian.ishare.AudioSampleBufferQueue")
@@ -82,12 +90,12 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
         let useHEVC = Defaults[.useHEVC]
         let recordMic = Defaults[.recordMic]
         let microphoneID = recordMic ? CaptureDevices.connectedMicrophoneID(Defaults[.microphoneDeviceID]) : nil
-        finishLock.withLock {
-            didFinishRecording = false
-            recordingError = nil
-            finishContinuation = nil
-        }
+        resetFinishState()
         startClock.reset()
+        segmentURLs = [fileURL]
+        finishedSegmentsSize = 0
+        outputFileType = recordMP4 ? .mp4 : .mov
+        videoCodec = useHEVC ? .hevc : .h264
 
         return AsyncThrowingStream<CapturedFrame, any Error> { continuation in
             let output = CaptureEngineStreamOutput(continuation: continuation, startClock: startClock)
@@ -111,12 +119,7 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
                 try stream.addStreamOutput(output, type: .audio, sampleHandlerQueue: audioSampleBufferQueue)
                 try stream.addStreamOutput(output, type: .microphone, sampleHandlerQueue: micAudioSampleBufferQueue)
 
-                let recordingConfiguration = SCRecordingOutputConfiguration()
-                recordingConfiguration.outputURL = fileURL
-                recordingConfiguration.outputFileType = recordMP4 ? .mp4 : .mov
-                recordingConfiguration.videoCodecType = useHEVC ? .hevc : .h264
-
-                let recordingOutput = SCRecordingOutput(configuration: recordingConfiguration, delegate: self)
+                let recordingOutput = makeRecordingOutput(to: fileURL)
                 try stream.addRecordingOutput(recordingOutput)
                 self.recordingOutput = recordingOutput
                 stream.startCapture()
@@ -126,21 +129,81 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
         }
     }
 
+    private func makeRecordingOutput(to url: URL) -> SCRecordingOutput {
+        let configuration = SCRecordingOutputConfiguration()
+        configuration.outputURL = url
+        configuration.outputFileType = outputFileType
+        configuration.videoCodecType = videoCodec
+        return SCRecordingOutput(configuration: configuration, delegate: self)
+    }
+
+    private func resetFinishState() {
+        finishLock.withLock {
+            didFinishRecording = false
+            recordingError = nil
+            finishContinuation = nil
+        }
+    }
+
+    func pauseRecording() async -> Bool {
+        guard let stream, let output = recordingOutput else { return false }
+        resetFinishState()
+        do {
+            try stream.removeRecordingOutput(output)
+        } catch {
+            Log.capture.error("Pausing the recording failed: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+        recordingOutput = nil
+        try? await waitForRecordingToFinish(timeout: .seconds(8))
+        finishedSegmentsSize += segmentURLs.last.flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize }.map(Int64.init) ?? 0
+        return true
+    }
+
+    func resumeRecording() -> Bool {
+        guard let stream, recordingOutput == nil, let fileURL else { return false }
+        let url = RecordingSegments.segmentURL(for: fileURL, index: segmentURLs.count)
+        try? FileManager.default.removeItem(at: url)
+        let output = makeRecordingOutput(to: url)
+        resetFinishState()
+        do {
+            try stream.addRecordingOutput(output)
+        } catch {
+            Log.capture.error("Resuming the recording failed: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+        segmentURLs.append(url)
+        recordingOutput = output
+        return true
+    }
+
     func stopCapture() async -> Result<URL, any Error> {
         guard let url = fileURL else { return .failure(RecordingError.notRecording) }
         let activeStream = stream
+        let wasPaused = recordingOutput == nil
+        let segments = segmentURLs
         stream = nil
         fileURL = nil
         recordingOutput = nil
+        segmentURLs = []
+        finishedSegmentsSize = 0
         try? await activeStream?.stopCapture()
+        if !wasPaused {
+            do {
+                try await waitForRecordingToFinish(timeout: .seconds(8))
+            } catch {
+                guard FileManager.default.fileExists(atPath: segments.last?.path ?? url.path) else { return .failure(error) }
+            }
+        }
+        guard segments.count > 1 else {
+            return FileManager.default.fileExists(atPath: url.path) ? .success(url) : .failure(RecordingError.notRecording)
+        }
         do {
-            try await waitForRecordingToFinish(timeout: .seconds(8))
+            try await RecordingSegments.concatenate(segments, into: url, fileType: outputFileType)
             return .success(url)
         } catch {
-            if FileManager.default.fileExists(atPath: url.path) {
-                return .success(url)
-            }
-            return .failure(error)
+            Log.capture.error("Joining the paused recording failed: \(error.localizedDescription, privacy: .public)")
+            return FileManager.default.fileExists(atPath: url.path) ? .success(url) : .failure(error)
         }
     }
 

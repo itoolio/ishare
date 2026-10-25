@@ -12,6 +12,8 @@ enum CLIRecordAction: String, Codable, CaseIterable, Sendable {
     case start
     case stop
     case toggle
+    case pause
+    case resume
 }
 
 enum CLICommand: Codable, Equatable, Sendable {

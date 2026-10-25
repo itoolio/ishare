@@ -13,6 +13,7 @@ struct RecordingSidecar: Sendable {
     var effects: RecordingEffectsCapture?
     var recordingStart: Double?
     var appAudio: AppAudioClip?
+    var pauses = RecordingPauseTimeline()
 }
 
 @MainActor
@@ -77,7 +78,7 @@ enum RecordingPostProcessor {
         defer { try? FileManager.default.removeItem(at: clip.url) }
         guard let start = sidecar.recordingStart, videoExtensions.contains(url.pathExtension.lowercased()) else { return }
         do {
-            try await AppAudioMuxer.merge(clip, into: url, recordingStart: start)
+            try await AppAudioMuxer.merge(clip, into: url, recordingStart: start, pauses: sidecar.pauses)
         } catch {
             Log.capture.error("Adding the selected apps' audio failed: \(error.localizedDescription, privacy: .public)")
         }
@@ -93,9 +94,11 @@ enum RecordingPostProcessor {
         guard capture != nil || effects != nil, let start = sidecar.recordingStart, videoExtensions.contains(url.pathExtension.lowercased()) else { return nil }
         let hevc = Defaults[.useHEVC]
         let defersZoom = Defaults[.trimBeforeSaving]
+        let pauses = sidecar.pauses
         do {
             return try await ProcessingHUDPresenter.run("Processing…".localized()) { progress in
-                try await OverlayCompositor.composite(url, capture: capture, effects: effects, recordingStart: start, hevc: hevc, defersZoom: defersZoom, progress: progress)
+                try await OverlayCompositor.composite(
+                    url, capture: capture, effects: effects, recordingStart: start, pauses: pauses, hevc: hevc, defersZoom: defersZoom, progress: progress)
             }
         } catch {
             Log.capture.error("Compositing overlays failed, keeping the original: \(error.localizedDescription, privacy: .public)")
