@@ -9,9 +9,30 @@ enum RecordingExportFormat: String, CaseIterable, Identifiable, Sendable {
     case mp4HEVC
     case mov
     case gif
+    case apng
+    case webp
     case m4a
 
     var id: Self { self }
+
+    init(animated format: AnimatedImageFormat) {
+        switch format {
+        case .gif: self = .gif
+        case .apng: self = .apng
+        case .webp: self = .webp
+        }
+    }
+
+    var animatedFormat: AnimatedImageFormat? {
+        switch self {
+        case .gif: .gif
+        case .apng: .apng
+        case .webp: .webp
+        case .mp4H264, .mp4HEVC, .mov, .m4a: nil
+        }
+    }
+
+    var isAvailable: Bool { animatedFormat?.isAvailable ?? true }
 
     var title: String {
         switch self {
@@ -19,6 +40,8 @@ enum RecordingExportFormat: String, CaseIterable, Identifiable, Sendable {
         case .mp4HEVC: "MP4 (HEVC)"
         case .mov: "MOV"
         case .gif: "GIF"
+        case .apng: "APNG"
+        case .webp: "WebP"
         case .m4a: "Audio only (M4A)"
         }
     }
@@ -27,7 +50,7 @@ enum RecordingExportFormat: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .mp4H264, .mp4HEVC: "mp4"
         case .mov: "mov"
-        case .gif: "gif"
+        case .gif, .apng, .webp: animatedFormat?.fileExtension ?? "gif"
         case .m4a: "m4a"
         }
     }
@@ -37,7 +60,7 @@ enum RecordingExportFormat: String, CaseIterable, Identifiable, Sendable {
         case .mp4H264, .mp4HEVC: .mp4
         case .mov: .mov
         case .m4a: .m4a
-        case .gif: nil
+        case .gif, .apng, .webp: nil
         }
     }
 
@@ -46,12 +69,12 @@ enum RecordingExportFormat: String, CaseIterable, Identifiable, Sendable {
         case .mp4H264: .h264
         case .mp4HEVC: .hevc
         case .mov: .h264
-        case .gif, .m4a: nil
+        case .gif, .apng, .webp, .m4a: nil
         }
     }
 
-    var hasVideo: Bool { videoCodec != nil || self == .gif }
-    var supportsAudio: Bool { self != .gif }
+    var hasVideo: Bool { videoCodec != nil || animatedFormat != nil }
+    var supportsAudio: Bool { animatedFormat == nil }
     var supportsChapters: Bool { fileType != nil }
 }
 
@@ -309,8 +332,8 @@ extension RecordingConversions {
         deletingSource: Bool,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> URL {
-        if settings.format == .gif {
-            return try await convertToGIF(url, range: range, preset: settings.gifPreset, deletingSource: deletingSource, progress: progress)
+        if let animated = settings.format.animatedFormat {
+            return try await convertToAnimation(url, format: animated, range: range, preset: settings.gifPreset, deletingSource: deletingSource, progress: progress)
         }
         let replacesSource = url.pathExtension.lowercased() == settings.format.fileExtension
         let outputURL = replacesSource ? MediaFiles.siblingTemporaryURL(for: url, tag: "export") : MediaFiles.uniqueURL(for: url, extension: settings.format.fileExtension)

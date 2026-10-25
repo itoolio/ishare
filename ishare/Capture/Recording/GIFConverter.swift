@@ -3,6 +3,7 @@ import CoreGraphics
 import Defaults
 import Foundation
 import ImageIO
+import ishareCore
 import UniformTypeIdentifiers
 
 enum GIFMaxSize: String, CaseIterable, Identifiable, Defaults.Serializable, Sendable {
@@ -91,26 +92,138 @@ enum GIFGeometry {
     }
 }
 
-enum GIFConverter {
-    static func destinationURL(for videoURL: URL, fileExists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL {
-        let directory = videoURL.deletingLastPathComponent()
-        let baseName = videoURL.deletingPathExtension().lastPathComponent
-        var candidate = directory.appending(path: "\(baseName).gif", directoryHint: .notDirectory)
-        var index = 2
-        while fileExists(candidate) {
-            candidate = directory.appending(path: "\(baseName)-\(index).gif", directoryHint: .notDirectory)
-            index += 1
+enum AnimatedImageFormat: String, CaseIterable, Identifiable, Defaults.Serializable, Sendable {
+    case gif
+    case apng
+    case webp
+
+    static let webPTypeIdentifier = "org.webmproject.webp"
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .gif: "GIF"
+        case .apng: "APNG"
+        case .webp: "WebP"
         }
-        return candidate
+    }
+
+    var fileExtension: String {
+        switch self {
+        case .gif: "gif"
+        case .apng: "png"
+        case .webp: "webp"
+        }
+    }
+
+    var typeIdentifier: String {
+        switch self {
+        case .gif: UTType.gif.identifier
+        case .apng: UTType.png.identifier
+        case .webp: Self.webPTypeIdentifier
+        }
+    }
+
+    var isAvailable: Bool {
+        Self.encodableTypeIdentifiers.contains(typeIdentifier)
+    }
+
+    static var encodableTypeIdentifiers: Set<String> {
+        Set((CGImageDestinationCopyTypeIdentifiers() as? [String]) ?? [])
+    }
+
+    static var unavailableMessage: String {
+        "WebP isn't available because this Mac can't encode WebP images.".localized()
+    }
+
+    var containerKey: CFString {
+        switch self {
+        case .gif: kCGImagePropertyGIFDictionary
+        case .apng: kCGImagePropertyPNGDictionary
+        case .webp: kCGImagePropertyWebPDictionary
+        }
+    }
+
+    var fileProperties: [CFString: Any] {
+        switch self {
+        case .gif: [containerKey: [kCGImagePropertyGIFLoopCount: 0]]
+        case .apng: [containerKey: [kCGImagePropertyAPNGLoopCount: 0]]
+        case .webp: [containerKey: [kCGImagePropertyWebPLoopCount: 0]]
+        }
+    }
+
+    func frameProperties(delay: Double) -> [CFString: Any] {
+        switch self {
+        case .gif: [containerKey: [kCGImagePropertyGIFDelayTime: delay, kCGImagePropertyGIFUnclampedDelayTime: delay]]
+        case .apng: [containerKey: [kCGImagePropertyAPNGDelayTime: delay, kCGImagePropertyAPNGUnclampedDelayTime: delay]]
+        case .webp: [containerKey: [kCGImagePropertyWebPDelayTime: delay, kCGImagePropertyWebPUnclampedDelayTime: delay]]
+        }
+    }
+
+    func frameDelays(frameCount: Int, frameRate: Int) -> [Double] {
+        switch self {
+        case .gif: GIFTiming.centisecondDelays(frameCount: frameCount, frameRate: frameRate).map { Double($0) / 100 }
+        case .apng, .webp: Array(repeating: GIFTiming.delay(frameRate: frameRate), count: frameCount)
+        }
+    }
+}
+
+enum AnimatedImageError: LocalizedError {
+    case formatUnavailable(AnimatedImageFormat)
+
+    var errorDescription: String? {
+        switch self {
+        case .formatUnavailable: AnimatedImageFormat.unavailableMessage
+        }
+    }
+}
+
+enum FrameFingerprint {
+    static let side = 32
+    static let duplicateThreshold = 0.002
+
+    static func grayscale(_ image: CGImage, side: Int = side) -> [UInt8] {
+        var pixels = [UInt8](repeating: 0, count: side * side)
+        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard
+                let context = CGContext(
+                    data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side, space: CGColorSpaceCreateDeviceGray(),
+                    bitmapInfo: CGImageAlphaInfo.none.rawValue)
+            else { return false }
+            context.interpolationQuality = .medium
+            context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        return drawn ? pixels : []
+    }
+
+    static func isDuplicate(_ fingerprint: [UInt8], of previous: [UInt8]?) -> Bool {
+        guard let previous, !fingerprint.isEmpty else { return false }
+        return FrameDifference.meanAbsoluteDifference(fingerprint, previous) < duplicateThreshold
+    }
+}
+
+private struct PendingAnimatedFrame {
+    var image: CGImage
+    var fingerprint: [UInt8]
+    var delay: Double
+}
+
+enum AnimatedImageConverter {
+    static func destinationURL(for videoURL: URL, format: AnimatedImageFormat, fileExists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL {
+        MediaFiles.uniqueURL(for: videoURL, extension: format.fileExtension, fileExists: fileExists)
     }
 
     static func convert(
         _ videoURL: URL,
         range: CMTimeRange? = nil,
         preset: GIFPreset,
+        format: AnimatedImageFormat,
         to outputURL: URL,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> URL {
+        guard format.isAvailable else { throw AnimatedImageError.formatUnavailable(format) }
         let asset = AVURLAsset(url: videoURL)
         let duration = try await asset.load(.duration)
         guard let track = try await asset.loadTracks(withMediaType: .video).first else { throw GIFExportError.noVideoTrack }
@@ -133,35 +246,59 @@ enum GIFConverter {
         }
 
         try? FileManager.default.removeItem(at: outputURL)
-        guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, UTType.gif.identifier as CFString, times.count, nil) else {
+        guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, format.typeIdentifier as CFString, times.count, nil) else {
             throw GIFExportError.destinationUnavailable
         }
-        CGImageDestinationSetProperties(destination, [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary)
-        let delays = GIFTiming.centisecondDelays(frameCount: times.count, frameRate: frameRate)
+        CGImageDestinationSetProperties(destination, format.fileProperties as CFDictionary)
+        let delays = format.frameDelays(frameCount: times.count, frameRate: frameRate)
 
-        var lastImage: CGImage?
+        var pending: PendingAnimatedFrame?
         var frameIndex = 0
+        var written = 0
+        func write(_ frame: PendingAnimatedFrame) {
+            CGImageDestinationAddImage(destination, frame.image, format.frameProperties(delay: frame.delay) as CFDictionary)
+            written += 1
+        }
         for await result in generator.images(for: times) {
             try Task.checkCancellation()
-            guard let image = (try? result.image) ?? lastImage else { continue }
-            let delay = Double(delays[min(frameIndex, delays.count - 1)]) / 100
-            let frameProperties =
-                [
-                    kCGImagePropertyGIFDictionary: [
-                        kCGImagePropertyGIFDelayTime: delay,
-                        kCGImagePropertyGIFUnclampedDelayTime: delay,
-                    ]
-                ] as CFDictionary
-            CGImageDestinationAddImage(destination, image, frameProperties)
-            lastImage = image
+            let delay = delays[min(frameIndex, delays.count - 1)]
             frameIndex += 1
             progress?(Double(frameIndex) / Double(times.count))
+            guard let image = try? result.image else {
+                pending?.delay += delay
+                continue
+            }
+            let fingerprint = FrameFingerprint.grayscale(image)
+            if var current = pending, FrameFingerprint.isDuplicate(fingerprint, of: current.fingerprint) {
+                current.delay += delay
+                pending = current
+                continue
+            }
+            if let pending { write(pending) }
+            pending = PendingAnimatedFrame(image: image, fingerprint: fingerprint, delay: delay)
         }
-        guard frameIndex > 0, CGImageDestinationFinalize(destination) else {
+        if let pending { write(pending) }
+        guard written > 0, CGImageDestinationFinalize(destination) else {
             try? FileManager.default.removeItem(at: outputURL)
             throw GIFExportError.finalizeFailed
         }
         return outputURL
+    }
+}
+
+enum GIFConverter {
+    static func destinationURL(for videoURL: URL, fileExists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL {
+        AnimatedImageConverter.destinationURL(for: videoURL, format: .gif, fileExists: fileExists)
+    }
+
+    static func convert(
+        _ videoURL: URL,
+        range: CMTimeRange? = nil,
+        preset: GIFPreset,
+        to outputURL: URL,
+        progress: (@Sendable (Double) -> Void)? = nil
+    ) async throws -> URL {
+        try await AnimatedImageConverter.convert(videoURL, range: range, preset: preset, format: .gif, to: outputURL, progress: progress)
     }
 }
 
@@ -172,6 +309,17 @@ enum RecordingConversions {
 
     static func convertToGIF(_ url: URL, range: CMTimeRange?, preset: GIFPreset, deletingSource: Bool, progress: (@Sendable (Double) -> Void)? = nil) async throws -> URL {
         let output = try await GIFConverter.convert(url, range: range, preset: preset, to: GIFConverter.destinationURL(for: url), progress: progress)
+        if deletingSource {
+            try? FileManager.default.removeItem(at: url)
+        }
+        return output
+    }
+
+    static func convertToAnimation(
+        _ url: URL, format: AnimatedImageFormat, range: CMTimeRange?, preset: GIFPreset, deletingSource: Bool, progress: (@Sendable (Double) -> Void)? = nil
+    ) async throws -> URL {
+        let destination = AnimatedImageConverter.destinationURL(for: url, format: format)
+        let output = try await AnimatedImageConverter.convert(url, range: range, preset: preset, format: format, to: destination, progress: progress)
         if deletingSource {
             try? FileManager.default.removeItem(at: url)
         }

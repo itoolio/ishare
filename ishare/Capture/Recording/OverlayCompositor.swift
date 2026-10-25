@@ -69,7 +69,7 @@ final class OverlayImageRenderer: @unchecked Sendable {
     private var pointerCache: [CGFloat: CIImage] = [:]
 
     func compose(screen: CIImage, webcam: CIImage?, time: Double, timeline: OverlayTimeline, layout: OverlayCompositionLayout) -> CIImage {
-        var image = screen
+        var image = BlurRegionRenderer.apply(timeline.blurRegions, to: screen, time: time, videoSize: layout.videoSize)
         for ripple in timeline.ripples(at: time) {
             let point = OverlayCoordinateMapper.flipped(ripple.point, videoHeight: layout.videoSize.height)
             image = rippleImage(progress: ripple.progress, at: point, scale: layout.pixelsPerPoint).composited(over: image)
@@ -335,15 +335,21 @@ enum OverlayCompositor {
     }
 
     static func applyCamera(_ camera: CameraPath, to url: URL, hevc: Bool, progress: (@Sendable (Double) -> Void)?) async throws {
+        try await applyEdits(camera: camera, blurRegions: [], to: url, hevc: hevc, progress: progress)
+    }
+
+    static func applyEdits(camera: CameraPath?, blurRegions: [BlurRegion], to url: URL, hevc: Bool, progress: (@Sendable (Double) -> Void)?) async throws {
+        let timeline = cameraTimeline(camera, blurRegions: blurRegions)
+        guard !timeline.isEmpty else { return }
         let asset = AVURLAsset(url: url)
         guard let screenTrack = try await asset.loadTracks(withMediaType: .video).first else { throw RecordingExportError.noVideoTrack }
         let duration = try await asset.load(.duration)
         let videoSize = try await screenTrack.load(.naturalSize)
         try await composite(
-            asset, screenTrack: screenTrack, duration: duration, timeline: cameraTimeline(camera), layout: cameraLayout(videoSize), replacing: url, hevc: hevc, progress: progress)
+            asset, screenTrack: screenTrack, duration: duration, timeline: timeline, layout: cameraLayout(videoSize), replacing: url, hevc: hevc, progress: progress)
     }
 
-    static func previewComposition(for asset: AVAsset, camera: CameraPath) async throws -> AVVideoComposition {
+    static func previewComposition(for asset: AVAsset, camera: CameraPath?, blurRegions: [BlurRegion]) async throws -> AVVideoComposition {
         guard let screenTrack = try await asset.loadTracks(withMediaType: .video).first else { throw RecordingExportError.noVideoTrack }
         let duration = try await asset.load(.duration)
         let videoSize = try await screenTrack.load(.naturalSize)
@@ -353,13 +359,17 @@ enum OverlayCompositor {
             webcamTrackID: nil,
             range: CMTimeRange(start: .zero, duration: duration),
             frameRate: frameRate,
-            timeline: cameraTimeline(camera),
+            timeline: cameraTimeline(camera, blurRegions: blurRegions),
             layout: cameraLayout(videoSize)
         )
     }
 
-    private static func cameraTimeline(_ camera: CameraPath) -> OverlayTimeline {
-        OverlayTimeline(effects: RecordingEffectsPlan(camera: camera))
+    static func previewComposition(for asset: AVAsset, camera: CameraPath) async throws -> AVVideoComposition {
+        try await previewComposition(for: asset, camera: camera, blurRegions: [])
+    }
+
+    private static func cameraTimeline(_ camera: CameraPath?, blurRegions: [BlurRegion] = []) -> OverlayTimeline {
+        OverlayTimeline(effects: RecordingEffectsPlan(camera: camera), blurRegions: blurRegions)
     }
 
     private static func cameraLayout(_ videoSize: CGSize) -> OverlayCompositionLayout {

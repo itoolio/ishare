@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 
 extension Defaults.Keys {
     static let recordingPath = Key<String>("recordingPath", default: "~/Pictures/", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -58,4 +59,16 @@ extension Defaults.Keys {
     static let recordingMaxMinutes = Key<Int>("recordingMaxMinutes", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let recordingMaxMegabytes = Key<Int>("recordingMaxMegabytes", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let recordingLowDiskWarningMB = Key<Int>("recordingLowDiskWarningMB", default: 2048, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let cutSilenceEnabled = Key<Bool>("cutSilenceEnabled", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let cutSilenceSpeed = Key<SilenceSpeed>("cutSilenceSpeed", default: .remove, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let cutSilenceAudioThreshold = Key<Double>("cutSilenceAudioThreshold", default: -45, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let cutSilenceMotionThreshold = Key<Double>("cutSilenceMotionThreshold", default: 0.005, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let cutSilenceMinimumDuration = Key<Double>("cutSilenceMinimumDuration", default: 2, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let cutSilencePadding = Key<Double>("cutSilencePadding", default: 0.3, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingConvertTo = Key<RecordingConversion>("recordingConvertTo", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingUploadFormat = Key<RecordingConversion>("recordingUploadFormat", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let voiceOverMode = Key<VoiceOverMode>("voiceOverMode", default: .duck, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let voiceOverDuckAmount = Key<Double>("voiceOverDuckAmount", default: 12, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let blurRegionStyle = Key<BlurRegionStyle>("blurRegionStyle", default: .blur, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let blurDetectionInterval = Key<Double>("blurDetectionInterval", default: 1, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }

@@ -99,7 +99,11 @@ struct RecordingSettingsView: View {
 }
 
 extension RecordingSettingsView: SettingsSearchable {
-    static let searchEntries: [SettingsSearchEntry] = [
+    static var searchEntries: [SettingsSearchEntry] {
+        baseSearchEntries + RecordingPostProcessingSettings.searchEntries
+    }
+
+    static let baseSearchEntries: [SettingsSearchEntry] = [
         SettingsSearchEntry(
             "Video", pane: .recording,
             keywords: [
