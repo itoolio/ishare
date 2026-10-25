@@ -1,0 +1,178 @@
+name: Xcode Beta
+
+on:
+    schedule:
+        - cron: "0 6 * * 1"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: xcode-beta
+    cancel-in-progress: true
+
+defaults:
+    run:
+        shell: bash
+
+env:
+    ISSUE_TITLE: Xcode beta build failing
+
+jobs:
+    build:
+        runs-on: macos-26
+        timeout-minutes: 120
+        outputs:
+            xcode: ${{ steps.xcode.outputs.version }}
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest
+            - name: Show the selected Xcode
+              id: xcode
+              run: |
+                  ls -d /Applications/Xcode*.app || true
+                  xcodebuild -version
+                  echo "version=$(xcodebuild -version | paste -sd ' ' -)" >> "$GITHUB_OUTPUT"
+                  sw_vers
+                  mkdir -p "$RUNNER_TEMP/logs"
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - run: xcodegen generate
+            - name: Build the App Store scheme
+              run: |
+                  xcodebuild build \
+                    -project ishare.xcodeproj \
+                    -scheme ishare \
+                    -configuration Release \
+                    -destination "generic/platform=macOS" \
+                    -derivedDataPath build/DerivedData \
+                    CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/logs/ishare-build.log" | xcbeautify
+            - name: Build the GitHub scheme
+              run: |
+                  xcodebuild build \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -configuration Debug \
+                    -destination "platform=macOS,arch=arm64" \
+                    -derivedDataPath build/DerivedData \
+                    CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/logs/github-build.log" | xcbeautify
+            - name: Run the unit tests
+              run: |
+                  xcodebuild test \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -derivedDataPath build/DerivedData \
+                    -only-testing:ishareTests \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= 2>&1 | tee "$RUNNER_TEMP/logs/unit-tests.log" | xcbeautify
+            - name: Run the ishareCore package tests
+              run: swift test --package-path Packages/ishareCore 2>&1 | tee "$RUNNER_TEMP/logs/package-tests.log"
+            - name: Summarize the failure
+              if: failure()
+              env:
+                  XCODE: ${{ steps.xcode.outputs.version }}
+                  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+              run: |
+                  SUMMARY="$RUNNER_TEMP/summary.md"
+                  {
+                      echo "The weekly build with the newest Xcode failed."
+                      echo
+                      echo "- Xcode: ${XCODE:-unknown}"
+                      echo "- Runner: $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
+                      echo "- Commit: $GITHUB_SHA"
+                      echo "- Run: $RUN_URL"
+                      for log in "$RUNNER_TEMP"/logs/*.log; do
+                          [ -f "$log" ] || continue
+                          errors="$(grep -E "error:|Stack dump:|Assertion failed|Segmentation fault|Illegal instruction|PLEASE submit a bug report|Command .* failed with a nonzero exit code" "$log" | sort -u | head -60 || true)"
+                          crash="$(grep -A25 -E "^Stack dump:" "$log" | head -40 || true)"
+                          tests="$(grep -E "Test Case .* failed|✘ Test .* failed|Test .* recorded an issue|error: -\[" "$log" | sort -u | head -40 || true)"
+                          if [ -z "$errors$crash$tests" ]; then
+                              continue
+                          fi
+                          echo
+                          echo "### $(basename "$log" .log)"
+                          if [ -n "$errors" ]; then
+                              echo
+                              echo '```'
+                              echo "$errors"
+                              echo '```'
+                          fi
+                          if [ -n "$crash" ]; then
+                              echo
+                              echo "<details><summary>Compiler crash</summary>"
+                              echo
+                              echo '```'
+                              echo "$crash"
+                              echo '```'
+                              echo "</details>"
+                          fi
+                          if [ -n "$tests" ]; then
+                              echo
+                              echo "Failing tests:"
+                              echo
+                              echo '```'
+                              echo "$tests"
+                              echo '```'
+                          fi
+                      done
+                  } > "$SUMMARY"
+                  head -c 60000 "$SUMMARY" > "$RUNNER_TEMP/issue.md"
+                  cat "$RUNNER_TEMP/issue.md" >> "$GITHUB_STEP_SUMMARY"
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: xcode-beta-failure
+                  path: |
+                      ${{ runner.temp }}/issue.md
+                      ${{ runner.temp }}/logs
+                  retention-days: 14
+
+    report:
+        needs: build
+        if: always() && (needs.build.result == 'success' || needs.build.result == 'failure')
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            issues: write
+        steps:
+            - uses: actions/download-artifact@v8
+              if: needs.build.result == 'failure'
+              with:
+                  name: xcode-beta-failure
+                  path: failure
+            - name: Open or update the issue
+              if: needs.build.result == 'failure'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+              run: |
+                  BODY=failure/issue.md
+                  if [ ! -s "$BODY" ]; then
+                      printf 'The weekly build with the newest Xcode failed before a summary was written.\n\nRun: %s\n' "$RUN_URL" > "$RUNNER_TEMP/fallback.md"
+                      BODY="$RUNNER_TEMP/fallback.md"
+                  fi
+                  NUMBER="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$ISSUE_TITLE\" in:title" --json number,title \
+                    --jq "map(select(.title == \"$ISSUE_TITLE\")) | first | .number // empty")"
+                  if [ -n "$NUMBER" ]; then
+                      gh issue edit "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$BODY"
+                      gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body "Still failing in $RUN_URL"
+                  else
+                      gh issue create --repo "$GITHUB_REPOSITORY" --title "$ISSUE_TITLE" --body-file "$BODY"
+                  fi
+            - name: Close the issue
+              if: needs.build.result == 'success'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  XCODE: ${{ needs.build.outputs.xcode }}
+                  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+              run: |
+                  NUMBER="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$ISSUE_TITLE\" in:title" --json number,title \
+                    --jq "map(select(.title == \"$ISSUE_TITLE\")) | first | .number // empty")"
+                  if [ -n "$NUMBER" ]; then
+                      gh issue close "$NUMBER" --repo "$GITHUB_REPOSITORY" --comment "Builds and tests pass again with $XCODE in $RUN_URL"
+                  else
+                      echo "No open \"$ISSUE_TITLE\" issue."
+                  fi
