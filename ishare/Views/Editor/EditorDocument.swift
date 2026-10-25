@@ -26,6 +26,7 @@ final class EditorDocument: ObservableObject {
     private var snapTargetsSource: CGImage?
     private var snapDetection: Task<Void, Never>?
     let fileURL: URL?
+    let toolStyles: ToolStyleStore
     @Published private(set) var annotations: [Annotation] = []
     @Published private(set) var crop: CGRect?
     @Published private(set) var effectedBase: CGImage
@@ -65,7 +66,8 @@ final class EditorDocument: ObservableObject {
     private var continuousChangeStart: Snapshot?
     private var toolBeforeCrop: EditorTool = .select
 
-    init(image: CGImage, fileURL: URL?) {
+    init(image: CGImage, fileURL: URL?, toolStyles: ToolStyleStore = .standard) {
+        self.toolStyles = toolStyles
         base = image
         originalBase = image
         adjustedBase = image
@@ -74,6 +76,7 @@ final class EditorDocument: ObservableObject {
         let longest = CGFloat(max(image.width, image.height))
         lineWidth = max(4, (longest / 220).rounded())
         fontSize = max(18, (longest / 50).rounded())
+        adoptDefaultStyle(for: tool)
     }
 
     var imageSize: CGSize { CGSize(width: base.width, height: base.height) }
@@ -198,6 +201,7 @@ final class EditorDocument: ObservableObject {
             selectedID = nil
         }
         tool = newTool
+        adoptDefaultStyle(for: newTool)
     }
 
     func applyPendingCrop() {

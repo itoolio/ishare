@@ -4,17 +4,20 @@ import SwiftUI
 struct CanvasEventMonitor: NSViewRepresentable {
     var onScroll: (CGVector, CGPoint, NSEvent.ModifierFlags) -> Void
     var onSpace: (Bool) -> Bool
+    var onContextMenu: (CGPoint) -> NSMenu? = { _ in nil }
 
     func makeNSView(context _: Context) -> MonitorView {
         let view = MonitorView()
         view.onScroll = onScroll
         view.onSpace = onSpace
+        view.onContextMenu = onContextMenu
         return view
     }
 
     func updateNSView(_ view: MonitorView, context _: Context) {
         view.onScroll = onScroll
         view.onSpace = onSpace
+        view.onContextMenu = onContextMenu
     }
 
     static func dismantleNSView(_ view: MonitorView, coordinator _: ()) {
@@ -26,6 +29,7 @@ struct CanvasEventMonitor: NSViewRepresentable {
 
         var onScroll: ((CGVector, CGPoint, NSEvent.ModifierFlags) -> Void)?
         var onSpace: ((Bool) -> Bool)?
+        var onContextMenu: ((CGPoint) -> NSMenu?)?
         private var monitors: [Any] = []
 
         override var isFlipped: Bool { true }
@@ -52,6 +56,14 @@ struct CanvasEventMonitor: NSViewRepresentable {
             {
                 monitors.append(keys)
             }
+            if let rightClicks = NSEvent.addLocalMonitorForEvents(
+                matching: .rightMouseDown,
+                handler: { [weak self] event in
+                    self?.handleRightClick(event) ?? event
+                })
+            {
+                monitors.append(rightClicks)
+            }
         }
 
         func removeMonitors() {
@@ -65,6 +77,14 @@ struct CanvasEventMonitor: NSViewRepresentable {
             guard bounds.contains(location) else { return event }
             let multiplier: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 10
             onScroll?(CGVector(dx: event.scrollingDeltaX * multiplier, dy: event.scrollingDeltaY * multiplier), location, event.modifierFlags)
+            return nil
+        }
+
+        private func handleRightClick(_ event: NSEvent) -> NSEvent? {
+            guard event.window === window else { return event }
+            let location = convert(event.locationInWindow, from: nil)
+            guard bounds.contains(location), let menu = onContextMenu?(location) else { return event }
+            NSMenu.popUpContextMenu(menu, with: event, for: self)
             return nil
         }
 

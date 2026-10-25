@@ -202,6 +202,21 @@ struct EditorView: View {
                 .layoutPriority(1)
         }
         .controlSize(.regular)
+        .background { styleShortcuts }
+    }
+
+    private var styleShortcuts: some View {
+        HStack(spacing: 0) {
+            Button("Copy Style".localized()) { document.copyStyle() }
+                .keyboardShortcut("c", modifiers: [.command, .option])
+                .disabled(document.editingText != nil || !document.canCopyStyle)
+            Button("Paste Style".localized()) { document.pasteStyle() }
+                .keyboardShortcut("v", modifiers: [.command, .option])
+                .disabled(document.editingText != nil || document.selectedIDs.isEmpty)
+        }
+        .frame(width: 0, height: 0)
+        .opacity(0)
+        .accessibilityHidden(true)
     }
 
     private func styleControls(compactColors: Bool) -> some View {

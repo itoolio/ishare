@@ -39,7 +39,7 @@ struct EditorCanvas: View {
                 Canvas { context, _ in
                     draw(in: &context, transform: transform)
                 }
-                .background(CanvasEventMonitor(onScroll: handleScroll, onSpace: handleSpace))
+                .background(CanvasEventMonitor(onScroll: handleScroll, onSpace: handleSpace, onContextMenu: { contextMenu(at: $0) }))
                 .contentShape(Rectangle())
                 .gesture(canvasGesture(transform: transform))
                 .simultaneousGesture(pinchGesture)
@@ -188,6 +188,17 @@ struct EditorCanvas: View {
     private static var isDoubleClick: Bool {
         guard let event = NSApp.currentEvent, event.type == .leftMouseDown else { return false }
         return event.clickCount >= 2
+    }
+
+    private func contextMenu(at location: CGPoint) -> NSMenu? {
+        guard !document.isCropping, document.editingText == nil, interaction == nil else { return nil }
+        let transform = viewport.transform
+        let point = transform.toImage(location)
+        if let hit = document.annotation(at: point, tolerance: max(transform.toImage(8), document.lineWidth)), !document.selectedIDs.contains(hit.id) {
+            document.selectedID = hit.id
+        }
+        guard !document.selectedIDs.isEmpty else { return nil }
+        return AnnotationContextMenu.make(for: document)
     }
 
     private func textHighlights(from start: CGPoint, to end: CGPoint) -> [Annotation] {

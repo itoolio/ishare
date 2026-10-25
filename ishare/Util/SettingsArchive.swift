@@ -155,7 +155,7 @@ enum SettingsTransfer {
         .optimizeImagesBeforeUpload, .imageOptimizationFormat, .imageConversionQuality, .stripImageMetadata,
         .stripImportedImageMetadata, .uploadWebhooks,
         .combineLayout, .combineAlignment, .combineColumns, .combineSpacing, .combinePadding, .combineCornerRadius, .combineShadow,
-        .combineBackground, .combineSolidColor,
+        .combineBackground, .combineSolidColor, .editorToolStyles,
     ]
 
     static var preferenceNames: Set<String> {

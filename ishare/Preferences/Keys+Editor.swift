@@ -11,5 +11,6 @@ extension Defaults.Keys {
     static let combineCornerRadius = Key<Double>("combineCornerRadius", default: 12, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let combineShadow = Key<Bool>("combineShadow", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let combineBackground = Key<BeautifyBackground>("combineBackground", default: .transparent, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let editorToolStyles = Key<[String: AnnotationStyle]>("editorToolStyles", default: [:], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let combineSolidColor = Key<String>("combineSolidColor", default: "#1F1F2E", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
