@@ -90,6 +90,7 @@ enum AutomationTestMode {
         Defaults[.duplicateUploadPolicy] = .never
         Defaults[.uploaderHealthCheckFrequency] = .off
         Defaults[.captureShelfMode] = .off
+        Defaults[.copyLinksFromCodes] = false
         AutomationTestActions.shared.reset()
         let ready = AutomationReady(pid: ProcessInfo.processInfo.processIdentifier, version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
         write(ready, to: directory.appending(path: "ready.json"))

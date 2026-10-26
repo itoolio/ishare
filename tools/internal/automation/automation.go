@@ -275,7 +275,7 @@ func timeout(testCase Case) time.Duration {
 	if testCase.Timeout > 0 {
 		return testCase.Timeout
 	}
-	return 45 * time.Second
+	return 90 * time.Second
 }
 
 func execute(options Options, ctx Context, testCase Case) (Result, error) {

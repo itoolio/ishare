@@ -92,7 +92,14 @@ jobs:
                     -destination "generic/platform=macOS" \
                     CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/app-store-build.log" | xcbeautify
             - name: Run unit tests
+              timeout-minutes: 25
               run: |
+                  (
+                      sleep 720
+                      for pid in $(pgrep -f "ishare.app/Contents/MacOS/ishare|xctest"); do
+                          sample "$pid" 3 -file "$RUNNER_TEMP/hang-$pid.txt" > /dev/null 2>&1 || true
+                      done
+                  ) &
                   xcodebuild test \
                     -project ishare.xcodeproj \
                     -scheme GitHub \
@@ -100,6 +107,14 @@ jobs:
                     -enableCodeCoverage YES \
                     -resultBundlePath build/UnitTests.xcresult \
                     CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | tee "$RUNNER_TEMP/unit-tests.log" | xcbeautify
+            - name: Show where the unit tests hung
+              if: failure()
+              run: |
+                  for file in "$RUNNER_TEMP"/hang-*.txt; do
+                      [ -f "$file" ] || continue
+                      echo "== $file"
+                      sed -n '/Call graph:/,/Total number in stack/p' "$file" | head -300
+                  done
             - name: Fail on build warnings
               run: |
                   go run ./tools/cmd/ishare-tools build-warnings \
