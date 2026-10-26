@@ -116,6 +116,7 @@ final class ToastController {
         model.$uploadState
             .removeDuplicates()
             .dropFirst()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 guard let self, state != .none, !isAwaitingUpload(state) else { return }
                 scheduleDismiss()
@@ -125,12 +126,14 @@ final class ToastController {
             .map { $0 != nil }
             .removeDuplicates()
             .dropFirst()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.scheduleDismiss() }
             .store(in: &cancellables)
         model.$replacedItem
             .map { $0 != nil }
             .removeDuplicates()
             .dropFirst()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.scheduleDismiss() }
             .store(in: &cancellables)
         model.$undoDeadline
