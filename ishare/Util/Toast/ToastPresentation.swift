@@ -39,6 +39,7 @@ private func presentToast(_ model: ToastModel) async {
             thumbnail = await ThumbnailCache.shared.image(for: key)
         }
         model.thumbnail = thumbnail ?? NSWorkspace.shared.icon(forFile: fileURL.path)
+        Log.app.info("Presenting the result for \(fileURL.lastPathComponent, privacy: .public)")
     }
     await ResultPresenter.present(model)
 }

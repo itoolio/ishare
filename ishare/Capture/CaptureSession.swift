@@ -249,11 +249,13 @@ enum CaptureSession {
         }
         await CaptureShelf.shared.collectCapture(fileURL)
 
+        Log.capture.info("After-capture steps finished for \(fileURL.lastPathComponent, privacy: .public), waiting for the result")
         if let uploadToast {
             await uploadToast.presentation.value
         } else {
             await showToast(fileURL: fileURL)
         }
+        Log.capture.info("Result presentation finished for \(fileURL.lastPathComponent, privacy: .public)")
         ToastPlacement.capturedDisplayID = nil
         SoundPlayer.play(.capture)
         if !saveToDisk {

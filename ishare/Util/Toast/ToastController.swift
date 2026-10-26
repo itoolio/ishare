@@ -172,7 +172,10 @@ final class ToastController {
 
     private func scheduleDismiss() {
         dismissTask?.cancel()
-        guard !model.holdsOpen else { return }
+        guard !model.holdsOpen else {
+            Log.app.info("The result toast stays open: hovering \(self.model.isHovering), uploading \(self.model.isAwaitingUpload), annotating \(self.model.isAnnotating)")
+            return
+        }
         let undoRemaining = model.undoDeadline.map { max($0.timeIntervalSinceNow, 0) } ?? 0
         let timeout = max(Defaults[.toastTimeout], minimumTimeout, undoRemaining)
         dismissTask = Task { @MainActor [weak self] in
