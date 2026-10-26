@@ -2,6 +2,7 @@ import AppKit
 import BezelNotification
 import Defaults
 import SwiftUI
+import ishareCore
 
 @MainActor
 enum HistoryActions {
@@ -236,6 +237,15 @@ struct HistoryItemMenuItems: View {
             Button("Open in Editor".localized()) { HistoryActions.edit(item) }
             if showsImageActions {
                 Button("Lift Subject".localized()) { HistoryActions.liftSubject(item) }
+                Menu("Upscale".localized()) {
+                    ForEach(UpscaleFactor.allCases) { factor in
+                        Button {
+                            HistoryActions.upscale(item, by: factor)
+                        } label: {
+                            Text(verbatim: "\(factor.rawValue)×")
+                        }
+                    }
+                }
             }
         }
         if showsFinder, item.existingLocalFileURL != nil {

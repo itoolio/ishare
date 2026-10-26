@@ -13,6 +13,19 @@ enum AnnotationRenderer {
     }
 
     static func applyingEffect(_ annotation: Annotation, to image: CGImage, parameterScale: CGFloat = 1, region: CGRect? = nil) -> CGImage {
+        guard let frame = annotation.rotatedFrame else {
+            return applyingAxisAlignedEffect(annotation, to: image, parameterScale: parameterScale, region: region)
+        }
+        let bounds = frame.boundingBox
+        let target = region ?? bounds
+        let effected = applyingAxisAlignedEffect(annotation, to: image, parameterScale: parameterScale, region: target)
+        let scaleX = target.width / max(bounds.width, .leastNonzeroMagnitude)
+        let scaleY = target.height / max(bounds.height, .leastNonzeroMagnitude)
+        let polygon = frame.corners.map { CGPoint(x: target.minX + ($0.x - bounds.minX) * scaleX, y: target.minY + ($0.y - bounds.minY) * scaleY) }
+        return ImageProcessing.composite(effected, over: image, inside: polygon)
+    }
+
+    static func applyingAxisAlignedEffect(_ annotation: Annotation, to image: CGImage, parameterScale: CGFloat, region: CGRect?) -> CGImage {
         switch annotation.shape {
         case let .blur(rect):
             ImageProcessing.blur(image, region: region ?? rect, radius: max(1, blurRadius(for: rect) * parameterScale))
@@ -75,12 +88,13 @@ enum AnnotationRenderer {
 
     static func spotlightPath(_ spotlight: Annotation) -> CGPath? {
         guard case let .spotlight(rect) = spotlight.shape else { return nil }
+        var transform = spotlight.rotatedFrame?.transform ?? .identity
         switch spotlight.spotlightShape {
         case .ellipse:
-            return CGPath(ellipseIn: rect, transform: nil)
+            return CGPath(ellipseIn: rect, transform: &transform)
         case .rectangle:
             let radius = min(8, rect.width / 2, rect.height / 2)
-            return CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
+            return CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: &transform)
         }
     }
 
@@ -108,6 +122,9 @@ enum AnnotationRenderer {
         context.setStrokeColor(annotation.color.cgColor)
         context.setFillColor(annotation.color.cgColor)
         context.setLineWidth(annotation.lineWidth)
+        if let frame = annotation.rotatedFrame {
+            context.concatenate(frame.transform)
+        }
 
         switch annotation.shape {
         case let .arrow(start, end):
@@ -117,6 +134,12 @@ enum AnnotationRenderer {
         case let .line(start, end):
             applyDash(for: annotation, in: context)
             context.strokeLineSegments(between: [start, end])
+        case let .curvedLine(start, control, end):
+            applyDash(for: annotation, in: context)
+            context.beginPath()
+            context.move(to: start)
+            context.addQuadCurve(to: end, control: control)
+            context.strokePath()
         case let .stamp(rect, stamp):
             drawStamp(stamp, in: rect, color: annotation.color, context: context)
         case let .rectangle(rect):
@@ -136,6 +159,10 @@ enum AnnotationRenderer {
                 context.strokeEllipse(in: rect)
             }
         case let .highlight(rect):
+            if let line = annotation.highlightStyle.lineRect(in: rect) {
+                context.fill(line)
+                break
+            }
             context.setFillColor(annotation.color.cgColor.copy(alpha: 0.35) ?? annotation.color.cgColor)
             context.setBlendMode(.multiply)
             context.fill(rect)
@@ -160,7 +187,7 @@ enum AnnotationRenderer {
                 drawText(string, at: origin, fontSize: annotation.fontSize, color: annotation.color, in: context)
             }
         case let .callout(tail, rect, string):
-            drawCallout(tail: tail, rect: rect, text: string, annotation: annotation, in: context)
+            drawCallout(tail: annotation.localPoint(tail), rect: rect, text: string, annotation: annotation, in: context)
         case let .step(center, number):
             let radius = annotation.stepRadius
             context.fillEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
@@ -279,8 +306,7 @@ enum AnnotationRenderer {
     static func drawArrow(from start: CGPoint, control: CGPoint?, to end: CGPoint, annotation: Annotation, in context: CGContext) {
         let length = hypot(end.x - start.x, end.y - start.y)
         let headLength = ArrowGeometry.headLength(for: annotation.lineWidth, length: length)
-        let endTail = control ?? start
-        let startTail = control ?? end
+        let angles = ArrowGeometry.headAngles(start: start, control: control, end: end)
         let retraction = annotation.arrowHead == .line ? 0 : headLength * 0.85
         let startRetraction = annotation.doubleHeaded ? retraction : 0
         context.saveGState()
@@ -296,14 +322,14 @@ enum AnnotationRenderer {
         }
         context.strokePath()
         context.restoreGState()
-        drawArrowHead(tip: end, tail: endTail, length: headLength, annotation: annotation, in: context)
+        drawArrowHead(tip: end, angle: angles.end, length: headLength, annotation: annotation, in: context)
         if annotation.doubleHeaded {
-            drawArrowHead(tip: start, tail: startTail, length: headLength, annotation: annotation, in: context)
+            drawArrowHead(tip: start, angle: angles.start, length: headLength, annotation: annotation, in: context)
         }
     }
 
-    static func drawArrowHead(tip: CGPoint, tail: CGPoint, length: CGFloat, annotation: Annotation, in context: CGContext) {
-        let (left, right) = ArrowGeometry.headPoints(tip: tip, from: tail, headLength: length)
+    static func drawArrowHead(tip: CGPoint, angle: CGFloat, length: CGFloat, annotation: Annotation, in context: CGContext) {
+        let (left, right) = ArrowGeometry.headPoints(tip: tip, angle: angle, headLength: length)
         context.beginPath()
         switch annotation.arrowHead {
         case .filled:

@@ -176,11 +176,23 @@ enum SVGExporter {
     }
 
     static func elements(for annotation: Annotation, source: CGImage) -> [String] {
+        let content = shapeElements(for: annotation, source: source)
+        guard let frame = annotation.rotatedFrame, !content.isEmpty else { return content }
+        let degrees = frame.angle * 180 / .pi
+        let group = #"<g transform="rotate(\#(number(degrees)) \#(number(frame.center.x)) \#(number(frame.center.y)))">"#
+        return [([group] + content + ["</g>"]).joined()]
+    }
+
+    private static func shapeElements(for annotation: Annotation, source: CGImage) -> [String] {
         switch annotation.shape {
         case let .arrow(start, end):
             return arrowElements(start: start, control: nil, end: end, annotation: annotation)
         case let .curvedArrow(start, control, end):
             return arrowElements(start: start, control: control, end: end, annotation: annotation)
+        case let .curvedLine(start, control, end):
+            let cap = annotation.dashed ? "butt" : "round"
+            let path = "M\(number(start.x)) \(number(start.y)) Q\(number(control.x)) \(number(control.y)) \(number(end.x)) \(number(end.y))"
+            return [#"<path d="\#(path)" \#(stroke(annotation.color, width: annotation.lineWidth, cap: cap, dash: dash(for: annotation)))/>"#]
         case let .line(start, end):
             let cap = annotation.dashed ? "butt" : "round"
             return [
@@ -202,6 +214,11 @@ enum SVGExporter {
                 : stroke(annotation.color, width: annotation.lineWidth, cap: annotation.dashed ? "butt" : "round", dash: dash(for: annotation))
             return [#"<ellipse cx="\#(number(rect.midX))" cy="\#(number(rect.midY))" rx="\#(number(rect.width / 2))" ry="\#(number(rect.height / 2))" \#(paint)/>"#]
         case let .highlight(rect):
+            if let line = annotation.highlightStyle.lineRect(in: rect) {
+                return [
+                    #"<rect x="\#(number(line.minX))" y="\#(number(line.minY))" width="\#(number(line.width))" height="\#(number(line.height))" \#(fill(annotation.color))/>"#
+                ]
+            }
             return [
                 #"<rect x="\#(number(rect.minX))" y="\#(number(rect.minY))" width="\#(number(rect.width))" height="\#(number(rect.height))" \#(fill(annotation.color, opacity: 0.35)) style="mix-blend-mode:multiply"/>"#
             ]
@@ -212,7 +229,7 @@ enum SVGExporter {
         case let .text(origin, string):
             return textElements(string, origin: origin, annotation: annotation)
         case let .callout(tail, rect, string):
-            return calloutElements(tail: tail, rect: rect, text: string, annotation: annotation)
+            return calloutElements(tail: annotation.localPoint(tail), rect: rect, text: string, annotation: annotation)
         case let .step(center, number):
             return stepElements(center: center, number: number, annotation: annotation)
         case let .magnify(rect):
@@ -251,15 +268,16 @@ enum SVGExporter {
             shaft = "M\(number(from.x)) \(number(from.y)) L\(number(to.x)) \(number(to.y))"
         }
         var result = [#"<path d="\#(shaft)" \#(stroke(annotation.color, width: annotation.lineWidth, cap: annotation.dashed ? "butt" : "round", dash: dash(for: annotation)))/>"#]
-        result.append(arrowHead(tip: end, tail: control ?? start, length: headLength, annotation: annotation))
+        let angles = ArrowGeometry.headAngles(start: start, control: control, end: end)
+        result.append(arrowHead(tip: end, angle: angles.end, length: headLength, annotation: annotation))
         if annotation.doubleHeaded {
-            result.append(arrowHead(tip: start, tail: control ?? end, length: headLength, annotation: annotation))
+            result.append(arrowHead(tip: start, angle: angles.start, length: headLength, annotation: annotation))
         }
         return result
     }
 
-    private static func arrowHead(tip: CGPoint, tail: CGPoint, length: CGFloat, annotation: Annotation) -> String {
-        let (left, right) = ArrowGeometry.headPoints(tip: tip, from: tail, headLength: length)
+    private static func arrowHead(tip: CGPoint, angle: CGFloat, length: CGFloat, annotation: Annotation) -> String {
+        let (left, right) = ArrowGeometry.headPoints(tip: tip, angle: angle, headLength: length)
         switch annotation.arrowHead {
         case .filled:
             return #"<path d="M\#(number(tip.x)) \#(number(tip.y)) L\#(number(left.x)) \#(number(left.y)) L\#(number(right.x)) \#(number(right.y)) Z" \#(fill(annotation.color))/>"#

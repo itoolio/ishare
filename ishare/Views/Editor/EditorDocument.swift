@@ -26,6 +26,7 @@ final class EditorDocument: ObservableObject {
     private var snapTargetsSource: CGImage?
     private var snapDetection: Task<Void, Never>?
     let fileURL: URL?
+    let toolStyles: ToolStyleStore
     @Published private(set) var annotations: [Annotation] = []
     @Published private(set) var crop: CGRect?
     @Published private(set) var effectedBase: CGImage
@@ -47,6 +48,12 @@ final class EditorDocument: ObservableObject {
     @Published var dimAmount = Annotation.defaultDimAmount
     @Published var stamp: Stamp = .default
     @Published private(set) var cropAspect: CropAspect = .free
+    @Published var highlightTarget: HighlightTarget = .area
+    @Published var highlightStyle: HighlightStyle = .marker
+    @Published private(set) var textLines: [TextHighlightLine] = []
+    @Published private(set) var isRecognizingText = false
+    private var textLinesSource: CGImage?
+    private var textRecognition: Task<Void, Never>?
 
     struct TextEdit: Equatable {
         var origin: CGPoint
@@ -59,7 +66,8 @@ final class EditorDocument: ObservableObject {
     private var continuousChangeStart: Snapshot?
     private var toolBeforeCrop: EditorTool = .select
 
-    init(image: CGImage, fileURL: URL?) {
+    init(image: CGImage, fileURL: URL?, toolStyles: ToolStyleStore = .standard) {
+        self.toolStyles = toolStyles
         base = image
         originalBase = image
         adjustedBase = image
@@ -68,6 +76,7 @@ final class EditorDocument: ObservableObject {
         let longest = CGFloat(max(image.width, image.height))
         lineWidth = max(4, (longest / 220).rounded())
         fontSize = max(18, (longest / 50).rounded())
+        adoptDefaultStyle(for: tool)
     }
 
     var imageSize: CGSize { CGSize(width: base.width, height: base.height) }
@@ -179,7 +188,10 @@ final class EditorDocument: ObservableObject {
     func select(tool newTool: EditorTool) {
         commitText()
         guard newTool != tool else { return }
-        defer { prepareSnapTargetsIfNeeded() }
+        defer {
+            prepareSnapTargetsIfNeeded()
+            prepareTextLinesIfNeeded()
+        }
         if isCropping {
             applyPendingCrop()
         }
@@ -189,6 +201,7 @@ final class EditorDocument: ObservableObject {
             selectedID = nil
         }
         tool = newTool
+        adoptDefaultStyle(for: newTool)
     }
 
     func applyPendingCrop() {
@@ -281,6 +294,20 @@ final class EditorDocument: ObservableObject {
         }
     }
 
+    func withProcessing<Result>(_ work: () async -> Result) async -> Result {
+        isProcessing = true
+        defer { isProcessing = false }
+        return await work()
+    }
+
+    func replaceBase(with image: CGImage, annotations transform: (Annotation) -> Annotation, crop cropTransform: (CGRect) -> CGRect) {
+        commit {
+            base = image
+            annotations = annotations.map(transform)
+            crop = crop.map(cropTransform)
+        }
+    }
+
     func liftSubject() async {
         commitPendingEdits()
         guard !isProcessing else { return }
@@ -294,7 +321,34 @@ final class EditorDocument: ObservableObject {
     }
 
     var smartShapesActive: Bool {
-        SmartShapes.supports(tool) && Defaults[.editorSmartShapes]
+        SmartShapes.supports(tool) && !textHighlightActive && Defaults[.editorSmartShapes]
+    }
+
+    func prepareTextLinesIfNeeded() {
+        guard textHighlightActive, textLinesSource !== base else { return }
+        textLinesSource = base
+        textLines = []
+        textRecognition?.cancel()
+        textRecognition = Task { [weak self] in
+            await self?.recognizeText()
+        }
+    }
+
+    func recognizeText() async {
+        let image = base
+        textLinesSource = image
+        isRecognizingText = true
+        let lines = await TextHighlighting.recognizeLines(in: image)
+        guard !Task.isCancelled, textLinesSource === image else { return }
+        textLines = lines
+        isRecognizingText = false
+    }
+
+    func useRecognizedText(_ lines: [TextHighlightLine]) {
+        textRecognition?.cancel()
+        textLinesSource = base
+        textLines = lines
+        isRecognizingText = false
     }
 
     func prepareSnapTargetsIfNeeded() {
@@ -317,6 +371,12 @@ final class EditorDocument: ObservableObject {
                 snapTargets = []
                 snapTargetsSource = nil
                 prepareSnapTargetsIfNeeded()
+            }
+            if textLinesSource !== base {
+                textLines = []
+                textLinesSource = nil
+                isRecognizingText = false
+                prepareTextLinesIfNeeded()
             }
         }
         if baseChanged || effectsChanged {
@@ -350,6 +410,11 @@ final class EditorDocument: ObservableObject {
 
     func add(_ annotation: Annotation) {
         commit { annotations.append(annotation) }
+    }
+
+    func add(contentsOf list: [Annotation]) {
+        guard !list.isEmpty else { return }
+        commit { annotations.append(contentsOf: list) }
     }
 
     func replace(_ annotation: Annotation) {
@@ -462,6 +527,7 @@ final class EditorDocument: ObservableObject {
             annotation.dashed = dashed && annotation.supportsDash
             annotation.spotlightShape = spotlightShape
             annotation.dimAmount = dimAmount
+            annotation.highlightStyle = highlightStyle
             return annotation
         }
     }
@@ -476,7 +542,7 @@ final class EditorDocument: ObservableObject {
 
     func isSubstantial(_ annotation: Annotation) -> Bool {
         switch annotation.shape {
-        case let .arrow(start, end), let .line(start, end), let .curvedArrow(start, _, end):
+        case let .arrow(start, end), let .line(start, end), let .curvedArrow(start, _, end), let .curvedLine(start, _, end):
             hypot(end.x - start.x, end.y - start.y) > 3
         case let .pen(points), let .marker(points):
             !points.isEmpty

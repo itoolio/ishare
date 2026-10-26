@@ -179,6 +179,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
         case arrow(CGPoint, CGPoint)
         case curvedArrow(CGPoint, CGPoint, CGPoint)
         case line(CGPoint, CGPoint)
+        case curvedLine(CGPoint, CGPoint, CGPoint)
         case rectangle(CGRect)
         case ellipse(CGRect)
         case highlight(CGRect)
@@ -210,6 +211,8 @@ struct Annotation: Identifiable, Hashable, Sendable {
     var dimAmount = Annotation.defaultDimAmount
     var locked = false
     var hidden = false
+    var rotation: CGFloat = 0
+    var highlightStyle: HighlightStyle = .marker
 
     var isEffect: Bool {
         switch shape {
@@ -229,11 +232,19 @@ struct Annotation: Identifiable, Hashable, Sendable {
     }
 
     var bounds: CGRect {
+        guard let frame = rotatedFrame else { return unrotatedBounds }
+        if case let .callout(tail, _, _) = shape {
+            return frame.boundingBox.union(CGRect(origin: tail, size: .zero))
+        }
+        return frame.boundingBox
+    }
+
+    var unrotatedBounds: CGRect {
         switch shape {
         case let .arrow(start, end), let .line(start, end):
             ScreenGeometry.rect(from: start, to: end).insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
-        case let .curvedArrow(start, control, end):
-            Annotation.boundingRect(of: ArrowGeometry.samples(from: start, control: control, to: end)).insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
+        case let .curvedArrow(start, control, end), let .curvedLine(start, control, end):
+            QuadraticCurve(start: start, control: control, end: end).boundingBox.insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
         case let .stamp(rect, _):
             rect
         case let .rectangle(rect), let .ellipse(rect), let .highlight(rect), let .blur(rect), let .pixelate(rect),
@@ -260,12 +271,16 @@ struct Annotation: Identifiable, Hashable, Sendable {
         switch shape {
         case let .arrow(start, end), let .line(start, end):
             Annotation.distance(from: point, toSegment: start, end) <= max(tolerance, lineWidth)
-        case let .curvedArrow(start, control, end):
-            Annotation.distance(from: point, toPolyline: ArrowGeometry.samples(from: start, control: control, to: end)) <= max(tolerance, lineWidth)
+        case let .curvedArrow(start, control, end), let .curvedLine(start, control, end):
+            QuadraticCurve(start: start, control: control, end: end).distance(to: point) <= max(tolerance, lineWidth)
         case let .pen(points), let .marker(points):
             Annotation.distance(from: point, toPolyline: points) <= max(tolerance, lineWidth)
         default:
-            bounds.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
+            if let frame = rotatedFrame {
+                rotatedHitTest(point, in: frame, tolerance: tolerance)
+            } else {
+                bounds.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
+            }
         }
     }
 
@@ -278,6 +293,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
             case let .arrow(start, end): .arrow(move(start), move(end))
             case let .line(start, end): .line(move(start), move(end))
             case let .curvedArrow(start, control, end): .curvedArrow(move(start), move(control), move(end))
+            case let .curvedLine(start, control, end): .curvedLine(move(start), move(control), move(end))
             case let .stamp(rect, stamp): .stamp(move(rect), stamp)
             case let .rectangle(rect): .rectangle(move(rect))
             case let .ellipse(rect): .ellipse(move(rect))

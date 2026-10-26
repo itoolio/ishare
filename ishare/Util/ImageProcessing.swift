@@ -116,6 +116,26 @@ enum ImageProcessing {
         return render(fill.composited(over: input), extent: input.extent, colorSpace: image.colorSpace) ?? image
     }
 
+    static func composite(_ top: CGImage, over base: CGImage, inside polygon: [CGPoint]) -> CGImage {
+        guard polygon.count >= 3, top.width == base.width, top.height == base.height,
+            let colorSpace = base.colorSpace?.model == .rgb ? base.colorSpace : CGColorSpace(name: CGColorSpace.sRGB),
+            let context = CGContext(
+                data: nil, width: base.width, height: base.height, bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return top }
+        let canvas = CGRect(x: 0, y: 0, width: base.width, height: base.height)
+        context.setBlendMode(.copy)
+        context.draw(base, in: canvas)
+        let flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: canvas.height)
+        let path = CGMutablePath()
+        path.addLines(between: polygon, transform: flip)
+        path.closeSubpath()
+        context.addPath(path)
+        context.clip()
+        context.draw(top, in: canvas)
+        return context.makeImage() ?? top
+    }
+
     static func rotated(_ image: CGImage, clockwise: Bool) -> CGImage {
         let input = CIImage(cgImage: image)
         let output = input.oriented(clockwise ? .right : .left)

@@ -1,5 +1,7 @@
+import BezelNotification
 import Defaults
 import SwiftUI
+import ishareCore
 
 struct EditorView: View {
     @ObservedObject var document: EditorDocument
@@ -202,6 +204,21 @@ struct EditorView: View {
                 .layoutPriority(1)
         }
         .controlSize(.regular)
+        .background { styleShortcuts }
+    }
+
+    private var styleShortcuts: some View {
+        HStack(spacing: 0) {
+            Button("Copy Style".localized()) { document.copyStyle() }
+                .keyboardShortcut("c", modifiers: [.command, .option])
+                .disabled(document.editingText != nil || !document.canCopyStyle)
+            Button("Paste Style".localized()) { document.pasteStyle() }
+                .keyboardShortcut("v", modifiers: [.command, .option])
+                .disabled(document.editingText != nil || document.selectedIDs.isEmpty)
+        }
+        .frame(width: 0, height: 0)
+        .opacity(0)
+        .accessibilityHidden(true)
     }
 
     private func styleControls(compactColors: Bool) -> some View {
@@ -355,6 +372,18 @@ struct EditorView: View {
                 Task { await document.liftSubject() }
             }
             .disabled(document.isProcessing)
+            Menu("Upscale".localized()) {
+                ForEach(UpscaleFactor.allCases) { factor in
+                    Button {
+                        upscale(by: factor)
+                    } label: {
+                        Text(verbatim: UpscaleFlow.title(for: factor, size: document.imageSize))
+                    }
+                    .disabled(!document.canUpscale(by: factor))
+                }
+            }
+            .disabled(document.isProcessing)
+            .accessibilityIdentifier("editor.upscale")
             Button("Combine with…".localized()) { combineWithFiles() }
         } label: {
             Image(systemName: "wand.and.stars")
@@ -375,6 +404,14 @@ struct EditorView: View {
         }
         .fixedSize()
         .accessibilityIdentifier("editor.export")
+    }
+
+    private func upscale(by factor: UpscaleFactor) {
+        Task {
+            if !(await document.upscale(by: factor)) {
+                BezelNotification.show(messageText: "Couldn't upscale the image".localized(), icon: ToastIcon)
+            }
+        }
     }
 
     private func combineWithFiles() {

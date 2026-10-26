@@ -44,6 +44,7 @@ extension Annotation {
             case let .arrow(start, end): .arrow(point(start), point(end))
             case let .line(start, end): .line(point(start), point(end))
             case let .curvedArrow(start, control, end): .curvedArrow(point(start), point(control), point(end))
+            case let .curvedLine(start, control, end): .curvedLine(point(start), point(control), point(end))
             case let .rectangle(bounds): .rectangle(rect(bounds))
             case let .ellipse(bounds): .ellipse(rect(bounds))
             case let .highlight(bounds): .highlight(rect(bounds))
@@ -68,7 +69,7 @@ extension Annotation {
 
 extension Annotation: Codable {
     private enum CodingKeys: String, CodingKey {
-        case shape, color, lineWidth, fontSize, filled, textBackground, arrowHead, doubleHeaded, dashed, spotlightShape, dimAmount
+        case shape, color, lineWidth, fontSize, filled, textBackground, arrowHead, doubleHeaded, dashed, spotlightShape, dimAmount, rotation, highlightStyle
     }
 
     init(from decoder: Decoder) throws {
@@ -86,6 +87,8 @@ extension Annotation: Codable {
         dashed = try container.decodeIfPresent(Bool.self, forKey: .dashed) ?? dashed
         spotlightShape = try container.decodeIfPresent(SpotlightShape.self, forKey: .spotlightShape) ?? spotlightShape
         dimAmount = try container.decodeIfPresent(Double.self, forKey: .dimAmount) ?? dimAmount
+        rotation = try container.decodeIfPresent(CGFloat.self, forKey: .rotation) ?? 0
+        highlightStyle = try container.decodeIfPresent(HighlightStyle.self, forKey: .highlightStyle) ?? .marker
     }
 
     func encode(to encoder: Encoder) throws {
@@ -101,6 +104,12 @@ extension Annotation: Codable {
         try container.encode(dashed, forKey: .dashed)
         try container.encode(spotlightShape, forKey: .spotlightShape)
         try container.encode(dimAmount, forKey: .dimAmount)
+        if rotation != 0 {
+            try container.encode(rotation, forKey: .rotation)
+        }
+        if highlightStyle != .marker {
+            try container.encode(highlightStyle, forKey: .highlightStyle)
+        }
     }
 }
 
