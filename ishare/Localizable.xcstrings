@@ -7310,6 +7310,70 @@
         }
       }
     },
+    "Always reuse the existing link" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إعادة استخدام الرابط الموجود دائمًا"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorhandenen Link immer wiederverwenden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reutilizar siempre el enlace existente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toujours réutiliser le lien existant"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हमेशा मौजूदा लिंक का फिर से उपयोग करें"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に既存のリンクを再利用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "항상 기존 링크 재사용"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Her zaman mevcut bağlantıyı yeniden kullan"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завжди використовувати наявне посилання"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "始终重用现有链接"
+          }
+        }
+      }
+    },
     "Angle" : {
       "localizations" : {
         "ar" : {
@@ -9746,6 +9810,134 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "允许自动删除"
+          }
+        }
+      }
+    },
+    "Auto-delete must be between 1 and 3650 days" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجب أن يكون الحذف التلقائي بين 1 و3650 يومًا"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das automatische Löschen muss zwischen 1 und 3650 Tagen liegen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La eliminación automática debe estar entre 1 y 3650 días"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La suppression automatique doit être comprise entre 1 et 3650 jours"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्वतः हटाना 1 से 3650 दिनों के बीच होना चाहिए"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動削除は1〜3650日の範囲で指定してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동 삭제는 1~3650일 사이여야 합니다"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatik silme 1 ile 3650 gün arasında olmalıdır"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автовидалення має бути від 1 до 3650 днів"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动删除必须介于 1 到 3650 天之间"
+          }
+        }
+      }
+    },
+    "Auto-delete needs an uploader that can delete files, such as one with a deletion URL" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يحتاج الحذف التلقائي إلى أداة رفع يمكنها حذف الملفات، مثل أداة لها رابط حذف"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das automatische Löschen braucht einen Uploader, der Dateien löschen kann, zum Beispiel mit einer Lösch-URL"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La eliminación automática necesita un servicio de subida que pueda eliminar archivos, como uno con URL de eliminación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La suppression automatique nécessite un service d’envoi capable de supprimer des fichiers, par exemple avec une URL de suppression"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्वतः हटाने के लिए ऐसा अपलोडर चाहिए जो फ़ाइलें हटा सके, जैसे हटाने के URL वाला अपलोडर"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動削除には、削除URLがあるものなど、ファイルを削除できるアップローダが必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동 삭제에는 삭제 URL이 있는 업로더처럼 파일을 삭제할 수 있는 업로더가 필요합니다"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatik silme, silme URL'si olan gibi dosyaları silebilen bir yükleyici gerektirir"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для автовидалення потрібен завантажувач, що може видаляти файли, наприклад з URL-адресою видалення"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动删除需要能删除文件的上传器，例如带有删除 URL 的上传器"
           }
         }
       }
@@ -27585,6 +27777,70 @@
         }
       }
     },
+    "Enter the rewritten host like cdn.example.com, without a scheme or path" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أدخل المضيف الجديد مثل cdn.example.com، دون مخطط أو مسار"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib den neuen Host wie cdn.example.com ein, ohne Schema oder Pfad"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduce el host reescrito, como cdn.example.com, sin esquema ni ruta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez l’hôte réécrit, comme cdn.example.com, sans schéma ni chemin"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बदला गया होस्ट cdn.example.com जैसा दर्ज करें, स्कीम या पाथ के बिना"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書き換え後のホストを cdn.example.com のように、スキームやパスなしで入力してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 쓴 호스트를 cdn.example.com처럼 스킴이나 경로 없이 입력하세요"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeniden yazılan ana bilgisayarı şema veya yol olmadan cdn.example.com gibi girin"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Введіть новий хост, наприклад cdn.example.com, без схеми та шляху"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入改写后的主机，例如 cdn.example.com，不含协议或路径"
+          }
+        }
+      }
+    },
     "Enter this code on GitHub" : {
       "localizations" : {
         "ar" : {
@@ -40477,6 +40733,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "链接选项需要密码或过期时间字段"
+          }
+        }
+      }
+    },
+    "Link rewriting needs a host, scheme, path prefix, query option or template" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحتاج إعادة كتابة الروابط إلى مضيف أو مخطط أو بادئة مسار أو خيار استعلام أو قالب"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Umschreiben von Links braucht einen Host, ein Schema, ein Pfadpräfix, eine Abfrageoption oder eine Vorlage"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La reescritura de enlaces necesita un host, un esquema, un prefijo de ruta, una opción de consulta o una plantilla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La réécriture des liens nécessite un hôte, un schéma, un préfixe de chemin, une option de requête ou un modèle"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लिंक बदलने के लिए होस्ट, स्कीम, पाथ प्रीफ़िक्स, क्वेरी विकल्प या टेम्पलेट चाहिए"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リンクの書き換えには、ホスト、スキーム、パスのプレフィックス、クエリのオプション、またはテンプレートが必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "링크 다시 쓰기에는 호스트, 스킴, 경로 접두사, 쿼리 옵션 또는 템플릿이 필요합니다"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağlantı yeniden yazma için bir ana bilgisayar, şema, yol öneki, sorgu seçeneği veya şablon gerekir"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для перезапису посилань потрібен хост, схема, префікс шляху, параметр запиту або шаблон"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接改写需要主机、协议、路径前缀、查询选项或模板"
           }
         }
       }
@@ -75271,6 +75591,70 @@
         }
       }
     },
+    "The link template must produce an http or https URL and only use known placeholders" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجب أن ينتج قالب الرابط عنوان URL بـ http أو https وأن يستخدم العناصر النائبة المعروفة فقط"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Linkvorlage muss eine http- oder https-URL ergeben und darf nur bekannte Platzhalter verwenden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La plantilla de enlace debe generar una URL http o https y usar solo marcadores conocidos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le modèle de lien doit produire une URL http ou https et n’utiliser que des espaces réservés connus"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लिंक टेम्पलेट से http या https URL बनना चाहिए और केवल ज्ञात प्लेसहोल्डर उपयोग होने चाहिए"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リンクテンプレートは http または https の URL を生成し、既知のプレースホルダだけを使う必要があります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "링크 템플릿은 http 또는 https URL을 만들어야 하며 알려진 플레이스홀더만 사용해야 합니다"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağlantı şablonu bir http veya https URL'si üretmeli ve yalnızca bilinen yer tutucuları kullanmalıdır"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шаблон посилання має давати URL-адресу http або https і використовувати лише відомі заповнювачі"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接模板必须生成 http 或 https URL，并且只能使用已知占位符"
+          }
+        }
+      }
+    },
     "The local network server couldn't start: %@" : {
       "localizations" : {
         "ar" : {
@@ -76037,6 +76421,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "必须填写响应 URL 模板"
+          }
+        }
+      }
+    },
+    "The rewritten link's scheme must be http or https" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجب أن يكون مخطط الرابط الجديد http أو https"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Schema des umgeschriebenen Links muss http oder https sein"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El esquema del enlace reescrito debe ser http o https"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le schéma du lien réécrit doit être http ou https"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बदले गए लिंक की स्कीम http या https होनी चाहिए"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書き換え後のリンクのスキームは http または https である必要があります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 쓴 링크의 스킴은 http 또는 https여야 합니다"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeniden yazılan bağlantının şeması http veya https olmalıdır"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Схема переписаного посилання має бути http або https"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改写后链接的协议必须是 http 或 https"
           }
         }
       }
@@ -90791,6 +91239,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "键"
+          }
+        }
+      }
+    },
+    "link template" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قالب الرابط"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linkvorlage"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "plantilla de enlace"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "modèle de lien"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लिंक टेम्पलेट"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リンクテンプレート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "링크 템플릿"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bağlantı şablonu"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "шаблон посилання"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接模板"
           }
         }
       }
