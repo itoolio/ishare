@@ -30,4 +30,5 @@ extension KeyboardShortcuts.Name {
     static let togglePauseRecording = Self("togglePauseRecording")
     static let captureTranslate = Self("captureTranslate")
     static let captureAsk = Self("captureAsk")
+    static let toggleCaptureShelf = Self("toggleCaptureShelf")
 }

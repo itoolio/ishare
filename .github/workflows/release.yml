@@ -75,6 +75,10 @@ jobs:
         if: needs.version.outputs.version != ''
         runs-on: macos-26
         timeout-minutes: 90
+        permissions:
+            contents: read
+            id-token: write
+            attestations: write
         steps:
             - uses: actions/checkout@v7
               with:
@@ -162,6 +166,32 @@ jobs:
                   path: build/dsyms/*.zip
                   if-no-files-found: error
 
+            - name: Generate the SBOM
+              env:
+                  VERSION: ${{ needs.version.outputs.version }}
+              run: |
+                  RESOLVED=ishare.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+                  if [ ! -f "$RESOLVED" ]; then
+                      RESOLVED="$(find build "$HOME/Library/Developer/Xcode/DerivedData" -name Package.resolved -path "*swiftpm*" -print -quit 2>/dev/null || true)"
+                  fi
+                  if [ -z "$RESOLVED" ] || [ ! -f "$RESOLVED" ]; then
+                      echo "::error::The archive did not leave a Package.resolved behind"
+                      exit 1
+                  fi
+                  echo "Using $RESOLVED"
+                  SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" go run ./tools/cmd/ishare-tools sbom \
+                    --version "$VERSION" \
+                    --package-resolved "$RESOLVED" \
+                    --package-dir Packages/ishareCore \
+                    --go-mod tools/go.mod \
+                    --output "build/sbom/ishare-$VERSION-sbom.spdx.json"
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: sbom
+                  path: build/sbom/*.spdx.json
+                  if-no-files-found: error
+
             - name: Notarize and staple app
               env:
                   PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
@@ -203,6 +233,15 @@ jobs:
                   name: dmg
                   path: dist/ishare.dmg
 
+            - name: Attest the build provenance of the DMG, the dSYMs and the SBOM
+              if: env.DRY_RUN != 'true'
+              uses: actions/attest-build-provenance@v3
+              with:
+                  subject-path: |
+                      dist/ishare.dmg
+                      build/dsyms/*.zip
+                      build/sbom/*.spdx.json
+
             - name: Remove Signing Assets
               if: always()
               run: security delete-keychain "$RUNNER_TEMP/ishare-signing.keychain-db" || true
@@ -212,6 +251,10 @@ jobs:
         if: needs.version.outputs.version != ''
         runs-on: macos-26
         timeout-minutes: 90
+        permissions:
+            contents: read
+            id-token: write
+            attestations: write
         steps:
             - uses: actions/checkout@v7
               with:
@@ -290,6 +333,12 @@ jobs:
                   path: build/dsyms/*.zip
                   if-no-files-found: error
 
+            - name: Attest the build provenance of the App Store dSYMs
+              if: env.DRY_RUN != 'true'
+              uses: actions/attest-build-provenance@v3
+              with:
+                  subject-path: build/dsyms/*.zip
+
     publish:
         needs: [checks, version, developer-id, app-store]
         if: github.event_name == 'push'
@@ -322,6 +371,10 @@ jobs:
             - uses: actions/download-artifact@v8
               with:
                   name: app-store-dsyms
+                  path: dist
+            - uses: actions/download-artifact@v8
+              with:
+                  name: sbom
                   path: dist
             - name: List the release assets
               run: ls -l dist

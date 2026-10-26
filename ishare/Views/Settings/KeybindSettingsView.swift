@@ -55,6 +55,7 @@ struct KeybindSettingsView: View {
                 ("Open Editor:", .openEditor),
                 ("Open most recent item:", .openMostRecentItem),
                 ("Upload from Pasteboard:", .uploadPasteBoardItem),
+                ("Show or Hide Capture Shelf:", .toggleCaptureShelf),
             ]
         ),
     ]

@@ -154,6 +154,66 @@ jobs:
                   path: build/snapshot-failures
                   if-no-files-found: ignore
 
+    automation:
+        runs-on: macos-26
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - run: xcodegen generate
+            - name: Build the GitHub app with the automation test hooks
+              run: |
+                  xcodebuild build \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -configuration Debug \
+                    -destination "platform=macOS,arch=arm64" \
+                    -derivedDataPath build/DerivedData \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
+                    "OTHER_SWIFT_FLAGS=\$(inherited) -DAUTOMATION_TESTS" | tee "$RUNNER_TEMP/automation-build.log" | xcbeautify
+            - name: Fail on build warnings
+              run: go run ./tools/cmd/ishare-tools build-warnings "$RUNNER_TEMP/automation-build.log"
+            - name: Let the bundled command-line tool use the test mailbox outside its sandbox
+              run: |
+                  APP=build/DerivedData/Build/Products/Debug/ishare.app
+                  test -x "$APP/Contents/Helpers/ishare"
+                  codesign --force --sign - "$APP/Contents/Helpers/ishare"
+                  codesign --force --sign - --preserve-metadata=entitlements,flags "$APP"
+                  codesign --verify --verbose=2 "$APP"
+            - name: Run every ishare:// action and CLI command against the app
+              run: |
+                  go run ./tools/cmd/ishare-tools automation \
+                    --app build/DerivedData/Build/Products/Debug/ishare.app \
+                    --work "$RUNNER_TEMP/automation" | tee "$RUNNER_TEMP/automation.log"
+            - name: Summarize the automation checks
+              if: always()
+              run: |
+                  if [ -f "$RUNNER_TEMP/automation.log" ]; then
+                      {
+                          echo '### Automation checks'
+                          echo '```'
+                          cat "$RUNNER_TEMP/automation.log"
+                          echo '```'
+                      } >> "$GITHUB_STEP_SUMMARY"
+                  fi
+            - name: Show the app log
+              if: failure()
+              run: log show --last 20m --style compact --predicate 'subsystem == "dev.adrian.ishare"' | tail -400 || true
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: automation-work
+                  path: ${{ runner.temp }}/automation
+                  if-no-files-found: ignore
+
     app-store-tests:
         runs-on: macos-26
         timeout-minutes: 60

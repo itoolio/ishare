@@ -217,11 +217,17 @@ enum URLSchemeOutcome: Equatable, Sendable {
 
 @MainActor
 final class URLSchemeRouter {
-    static let shared = URLSchemeRouter(actions: LiveAutomationActions.shared, commandLine: CommandLineServer.shared)
+    static let shared: URLSchemeRouter = {
+        guard AutomationTestMode.isActive else { return URLSchemeRouter(actions: LiveAutomationActions.shared, commandLine: CommandLineServer.shared) }
+        let router = URLSchemeRouter(actions: AutomationTestActions.shared, commandLine: CommandLineServer.shared)
+        router.onOutcome = { url, outcome in AutomationTestMode.record(url, outcome: outcome) }
+        return router
+    }()
 
     let actions: any AutomationActions
     let commandLine: CommandLineServer
     var fileAccess: URLSchemeFileAccess = .live
+    var onOutcome: (@MainActor (URL, URLSchemeOutcome) -> Void)?
 
     init(actions: any AutomationActions, commandLine: CommandLineServer) {
         self.actions = actions
@@ -230,6 +236,12 @@ final class URLSchemeRouter {
 
     @discardableResult
     func handle(_ url: URL) async -> URLSchemeOutcome {
+        let outcome = await route(url)
+        onOutcome?(url, outcome)
+        return outcome
+    }
+
+    private func route(_ url: URL) async -> URLSchemeOutcome {
         Log.app.info("Handling URL action \(Self.redacted(url), privacy: .public)")
         switch URLSchemeParser.parse(url, fileAccess: fileAccess) {
         case let .failure(error):

@@ -3,7 +3,12 @@ import ishareCore
 
 @MainActor
 final class CommandLineServer {
-    static let shared = CommandLineServer(mailbox: CLIAppGroup.mailboxDirectory.map(CLIMailbox.init(directory:)), actions: LiveAutomationActions.shared)
+    static let shared: CommandLineServer =
+        if AutomationTestMode.isActive {
+            CommandLineServer(mailbox: AutomationTestMode.mailboxDirectory.map(CLIMailbox.init(directory:)), actions: AutomationTestActions.shared)
+        } else {
+            CommandLineServer(mailbox: CLIAppGroup.mailboxDirectory.map(CLIMailbox.init(directory:)), actions: LiveAutomationActions.shared)
+        }
 
     let mailbox: CLIMailbox?
     weak var actions: (any AutomationActions)?

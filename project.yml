@@ -330,6 +330,7 @@ schemes:
         - name: ishareUITests
           selectedTests:
             - ScreenshotTests
+            - GuideClipTests
   UITests:
     build:
       targets:
@@ -341,3 +342,4 @@ schemes:
         - name: ishareUITests
           skippedTests:
             - ScreenshotTests
+            - GuideClipTests

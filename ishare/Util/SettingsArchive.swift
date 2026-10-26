@@ -160,6 +160,7 @@ enum SettingsTransfer {
         .selectionConstraint, .customSelectionSize, .freezeScreenWhileSelecting, .multiRegionResult, .menuCaptureIncludesParentWindow,
         .recordingPresets,
         .combineLayout, .combineAlignment, .combineColumns, .combineSpacing, .combinePadding, .combineCornerRadius, .combineShadow, .combineBackground, .combineSolidColor, .editorToolStyles,
+        .captureShelfMode,
     ]
 
     static var preferenceNames: Set<String> {

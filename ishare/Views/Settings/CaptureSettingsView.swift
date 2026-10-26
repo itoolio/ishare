@@ -39,6 +39,7 @@ struct CaptureSettingsView: View {
                 Toggle("Snap editor shapes to detected elements".localized(), isOn: $editorSmartShapes)
             }
             CaptureSelectionSettings()
+            CaptureShelfSettingsSection()
             CaptureExtrasSettings()
             CaptureToolsSettings()
             Section {
@@ -83,7 +84,11 @@ struct CaptureSettingsView: View {
 }
 
 extension CaptureSettingsView: SettingsSearchable {
-    static let searchEntries: [SettingsSearchEntry] = [
+    static var searchEntries: [SettingsSearchEntry] {
+        baseSearchEntries + CaptureShelfSettingsSection.searchEntries
+    }
+
+    static let baseSearchEntries: [SettingsSearchEntry] = [
         SettingsSearchEntry(
             "Screenshot", pane: .capture,
             keywords: [
