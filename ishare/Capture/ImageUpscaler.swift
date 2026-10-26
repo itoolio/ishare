@@ -46,13 +46,19 @@ enum ImageUpscaler {
         return ImageProcessing.render(sharpened, extent: extent, colorSpace: image.colorSpace)
     }
 
+    static let metalFXTimeout: TimeInterval = 10
+
     static var supportsMetalFX: Bool {
         guard let device = MTLCreateSystemDefaultDevice() else { return false }
-        return MTLFXSpatialScalerDescriptor.supportsDevice(device)
+        return supportsMetalFX(on: device)
+    }
+
+    static func supportsMetalFX(on device: MTLDevice) -> Bool {
+        !device.name.localizedCaseInsensitiveContains("paravirtual") && MTLFXSpatialScalerDescriptor.supportsDevice(device)
     }
 
     static func metalFX(_ image: CGImage, factor: UpscaleFactor) -> CGImage? {
-        guard let device = MTLCreateSystemDefaultDevice(), MTLFXSpatialScalerDescriptor.supportsDevice(device),
+        guard let device = MTLCreateSystemDefaultDevice(), supportsMetalFX(on: device),
             let queue = device.makeCommandQueue(), var pixels = PixelBuffer(image: image), pixels.isOpaque
         else { return nil }
         for _ in 0 ..< factor.passes {
@@ -97,9 +103,10 @@ enum ImageUpscaler {
         guard let blit = commandBuffer.makeBlitCommandEncoder() else { return nil }
         blit.copy(from: output, to: readback)
         blit.endEncoding()
+        let finished = DispatchSemaphore(value: 0)
+        commandBuffer.addCompletedHandler { _ in finished.signal() }
         commandBuffer.commit()
-        commandBuffer.waitUntilCompleted()
-        guard commandBuffer.status == .completed else { return nil }
+        guard finished.wait(timeout: .now() + metalFXTimeout) == .success, commandBuffer.status == .completed else { return nil }
         var result = PixelBuffer(width: outputWidth, height: outputHeight)
         let rowBytes = result.bytesPerRow
         result.bytes.withUnsafeMutableBytes { buffer in
