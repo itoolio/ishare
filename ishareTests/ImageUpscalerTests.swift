@@ -33,8 +33,12 @@ private enum Synthetic {
 
     static func gray(_ image: CGImage) -> [Double] {
         guard let pixels = ImageUpscaler.PixelBuffer(image: image) else { return [] }
-        return stride(from: 0, to: pixels.bytes.count, by: 4).map { index in
-            (Double(pixels.bytes[index]) + Double(pixels.bytes[index + 1]) + Double(pixels.bytes[index + 2])) / (3 * 255)
+        let bytes = pixels.bytes
+        return stride(from: 0, to: bytes.count, by: 4).map { (index: Int) -> Double in
+            let red = Double(bytes[index])
+            let green = Double(bytes[index + 1])
+            let blue = Double(bytes[index + 2])
+            return (red + green + blue) / 765
         }
     }
 

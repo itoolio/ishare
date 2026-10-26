@@ -17,7 +17,11 @@ enum AutomationTestMode {
     }
 
     nonisolated static var isActive: Bool {
-        isEnabled(arguments: ProcessInfo.processInfo.arguments)
+        #if AUTOMATION_TESTS
+            isEnabled(arguments: ProcessInfo.processInfo.arguments)
+        #else
+            false
+        #endif
     }
 
     nonisolated static func directory(arguments: [String], temporaryDirectory: URL = FileManager.default.temporaryDirectory) -> URL {
@@ -83,6 +87,9 @@ enum AutomationTestMode {
         Defaults[.resultPresentation] = .toast
         Defaults[.toastTimeout] = 1
         Defaults[.uploadHistory] = []
+        Defaults[.duplicateUploadPolicy] = .never
+        Defaults[.uploaderHealthCheckFrequency] = .off
+        Defaults[.captureShelfMode] = .off
         AutomationTestActions.shared.reset()
         let ready = AutomationReady(pid: ProcessInfo.processInfo.processIdentifier, version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
         write(ready, to: directory.appending(path: "ready.json"))

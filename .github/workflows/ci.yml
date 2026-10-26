@@ -188,6 +188,8 @@ jobs:
                   codesign --force --sign - "$APP/Contents/Helpers/ishare"
                   codesign --force --sign - --preserve-metadata=entitlements,flags "$APP"
                   codesign --verify --verbose=2 "$APP"
+            - name: Keep the app's info log
+              run: sudo log config --subsystem dev.adrian.ishare --mode "level:info,persist:info"
             - name: Run every ishare:// action and CLI command against the app
               run: |
                   go run ./tools/cmd/ishare-tools automation \
@@ -206,7 +208,12 @@ jobs:
                   fi
             - name: Show the app log
               if: failure()
-              run: log show --last 20m --style compact --predicate 'subsystem == "dev.adrian.ishare"' | tail -400 || true
+              run: |
+                  log show --last 40m --info --style compact --predicate 'subsystem == "dev.adrian.ishare"' | tail -400 || true
+                  for pid in $(pgrep -f "ishare.app/Contents/MacOS/ishare"); do
+                      sample "$pid" 2 -file "$RUNNER_TEMP/automation/sample-$pid.txt" > /dev/null 2>&1 || true
+                      sed -n '/Call graph:/,/Total number in stack/p' "$RUNNER_TEMP/automation/sample-$pid.txt" | head -120 || true
+                  done
             - uses: actions/upload-artifact@v7
               if: failure()
               with:
