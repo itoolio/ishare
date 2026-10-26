@@ -174,13 +174,17 @@ final class AutomationTestActions: AutomationActions {
         await live.captureWithAfterCaptureSteps(mode)
     }
 
-    func record(_ action: CLIRecordAction, gif _: Bool, region _: Bool) async -> Bool {
+    func record(_ action: CLIRecordAction, gif _: Bool, region _: Bool, preset: String?) async -> Result<Bool, AutomationError> {
+        if let preset, RecordingPresets.preset(named: preset) == nil {
+            return .failure(.failed(String(format: "No recording preset named “%@”".localized(), preset)))
+        }
         switch action {
         case .start: isRecording = true
         case .stop: isRecording = false
         case .toggle: isRecording.toggle()
+        case .pause, .resume: break
         }
-        return isRecording
+        return .success(isRecording)
     }
 
     func upload(_ files: [URL], uploader: String?) async -> [CLIUploadResult] {
