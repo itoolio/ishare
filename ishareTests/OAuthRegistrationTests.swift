@@ -66,7 +66,8 @@ struct OAuthRegistrationTests {
         }
     }
 
-    @Test func everyInfoPlistAndConfigurationReadsTheClientIDsFromConfig() throws {
+    @Test(.disabled(if: Fixtures.isSandboxed, "The sandboxed test bundle only carries the app sources and examples"))
+    func everyInfoPlistAndConfigurationReadsTheClientIDsFromConfig() throws {
         let config = try String(contentsOf: Fixtures.url("Config.xcconfig"), encoding: .utf8)
         let variables = ["DROPBOX_CLIENT_ID": "ISHAREDropboxClientID", "GOOGLE_CLIENT_ID": "ISHAREGoogleClientID", "ONEDRIVE_CLIENT_ID": "ISHAREOneDriveClientID"]
         for plist in ["ishare/Info.plist", "ishare/Info-GitHub.plist"] {
