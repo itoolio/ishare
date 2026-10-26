@@ -159,7 +159,8 @@ enum SettingsTransfer {
         .keepsExpiredUploadsInHistory, .duplicateUploadPolicy, .uploaderHealthCheckFrequency,
         .selectionConstraint, .customSelectionSize, .freezeScreenWhileSelecting, .multiRegionResult, .menuCaptureIncludesParentWindow,
         .recordingPresets,
-        .combineLayout, .combineAlignment, .combineColumns, .combineSpacing, .combinePadding, .combineCornerRadius, .combineShadow, .combineBackground, .combineSolidColor, .editorToolStyles,
+        .combineLayout, .combineAlignment, .combineColumns, .combineSpacing, .combinePadding, .combineCornerRadius, .combineShadow,
+        .combineBackground, .combineSolidColor, .editorToolStyles,
         .captureShelfMode,
     ]
 

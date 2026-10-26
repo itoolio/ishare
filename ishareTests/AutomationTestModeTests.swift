@@ -43,11 +43,11 @@ struct AutomationTestModeTests {
 
     @MainActor @Test func testActionsStubRecordingOpeningAndCallbacks() async throws {
         let actions = AutomationTestActions(live: LiveAutomationActions.shared)
-        #expect(await actions.record(.start, gif: false, region: false))
-        #expect(await actions.record(.start, gif: true, region: true))
-        #expect(!(await actions.record(.toggle, gif: false, region: false)))
-        #expect(await actions.record(.toggle, gif: false, region: false))
-        #expect(!(await actions.record(.stop, gif: false, region: false)))
+        #expect((try? await actions.record(.start, gif: false, region: false, preset: nil).get()) == true)
+        #expect((try? await actions.record(.start, gif: true, region: true, preset: nil).get()) == true)
+        #expect(!((try? await actions.record(.toggle, gif: false, region: false, preset: nil).get()) == true))
+        #expect((try? await actions.record(.toggle, gif: false, region: false, preset: nil).get()) == true)
+        #expect(!((try? await actions.record(.stop, gif: false, region: false, preset: nil).get()) == true))
         actions.open(.editor)
         #expect(actions.opened == ["editor"])
         let callback = try #require(URL(string: "shortcuts://done"))
