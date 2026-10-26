@@ -170,7 +170,7 @@ extension EditorDocument {
         guard !isProcessing, canUpscale(by: factor) else { return false }
         let image = base
         let upscaled = await withProcessing {
-            await Task.detached(priority: .userInitiated) { ImageUpscaler.upscale(image, by: factor, method: method) }.value
+            await BlockingWork.run { ImageUpscaler.upscale(image, by: factor, method: method) }
         }
         guard let upscaled, image === base else { return false }
         let target = CGRect(x: 0, y: 0, width: upscaled.width, height: upscaled.height)
@@ -195,7 +195,7 @@ enum UpscaleFlow {
             BezelNotification.show(messageText: "The image is too large to upscale".localized(), icon: ToastIcon)
             return
         }
-        guard let upscaled = await Task.detached(priority: .userInitiated, operation: { ImageUpscaler.upscale(image, by: factor) }).value else {
+        guard let upscaled = await BlockingWork.run({ ImageUpscaler.upscale(image, by: factor) }) else {
             BezelNotification.show(messageText: "Couldn't upscale the image".localized(), icon: ToastIcon)
             return
         }

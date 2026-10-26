@@ -6,7 +6,7 @@ import Vision
 
 enum CodeDetection {
     static func payloads(in image: CGImage) async throws -> [String] {
-        try await Task.detached(priority: .userInitiated) {
+        try await BlockingWork.runThrowing {
             let request = VNDetectBarcodesRequest()
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             try handler.perform([request])
@@ -17,7 +17,7 @@ enum CodeDetection {
                 return first.boundingBox.minX < second.boundingBox.minX
             }
             return uniquePayloads(observations.compactMap(\.payloadStringValue))
-        }.value
+        }
     }
 
     static func uniquePayloads(_ payloads: [String]) -> [String] {

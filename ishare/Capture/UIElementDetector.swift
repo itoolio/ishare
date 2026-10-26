@@ -7,9 +7,9 @@ enum UIElementDetector {
     static let duplicateTolerance: CGFloat = 3
 
     static func detect(in image: CGImage) async -> [CGRect] {
-        let result = try? await Task.detached(priority: .utility) {
+        let result = try? await BlockingWork.runThrowing {
             try performDetection(on: image)
-        }.value
+        }
         return result ?? []
     }
 
