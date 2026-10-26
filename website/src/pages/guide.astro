@@ -1,0 +1,129 @@
+---
+import fs from "node:fs";
+import path from "node:path";
+import Base from "../layouts/Base.astro";
+
+const clipDirectory = path.join(process.cwd(), "public", "guide");
+const hasClip = (name) => fs.existsSync(path.join(clipDirectory, `${name}.mp4`)) && fs.existsSync(path.join(clipDirectory, `${name}.jpg`));
+
+const features = [
+  {
+    id: "capture",
+    title: "Capture anything",
+    text: "Open the menu, pick a region, window, screen or scrolling capture, and ishare saves, uploads and copies the link in one go. The toast that follows lets you copy, edit, share or undo the upload.",
+    points: ["Screenshots, recordings and GIFs from one menu", "Keyboard shortcuts for every capture", "After-capture steps you choose: save, copy, upload, open the editor"],
+  },
+  {
+    id: "region",
+    title: "Select exactly what you need",
+    text: "The region selector shows crosshair guides, a magnifier for pixel-perfect edges and the exact size of your selection while you drag.",
+    points: ["Guides and magnifier can be turned off in Settings › Capture", "Repeat the last region with one shortcut", "Arrow keys nudge the selection, Shift moves it by ten points"],
+  },
+  {
+    id: "editor",
+    title: "Annotate in seconds",
+    text: "Draw arrows, rectangles, numbered steps, highlights and blur right after capturing. Everything stays editable until you are done.",
+    points: ["Arrows, shapes, text, stamps and callouts", "Spotlight, blur and pixelate sensitive details", "Undo, layers and reusable templates"],
+  },
+  {
+    id: "shelf",
+    title: "Keep captures at hand",
+    text: "Turn on the capture shelf in Settings › Capture to collect recent captures and recordings at the edge of the screen. Drag one or several into any app, drop files onto the shelf to collect them, and copy, upload, edit or reveal them from the context menu.",
+    points: ["Shows after each capture or only from its shortcut and the menu", "Remembers its position on every display", "Never appears in your captures or recordings"],
+  },
+].map((feature) => ({ ...feature, hasClip: hasClip(feature.id) }));
+---
+<Base title="Feature guide" description="Short clips of ishare's capture menu, region selector, editor and capture shelf.">
+  <section class="intro prose">
+    <h1>Feature guide</h1>
+    <p>A quick look at what ishare can do. Every clip is recorded from the app itself.</p>
+    <nav class="toc" aria-label="Features">
+      {features.map((feature) => <a href={`#${feature.id}`}>{feature.title}</a>)}
+    </nav>
+  </section>
+  {features.map((feature, index) => (
+    <section id={feature.id} class={`feature ${index % 2 === 1 ? "reverse" : ""}`}>
+      <div class="copy">
+        <h2>{feature.title}</h2>
+        <p>{feature.text}</p>
+        <ul>
+          {feature.points.map((point) => <li>{point}</li>)}
+        </ul>
+      </div>
+      <div class="media glass">
+        {feature.hasClip ? (
+          <video
+            class="clip"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="none"
+            width="1280"
+            height="800"
+            poster={`/guide/${feature.id}.jpg`}
+            data-src={`/guide/${feature.id}.mp4`}
+            aria-label={feature.title}
+          ></video>
+        ) : (
+          <div class="placeholder" aria-hidden="true">{feature.title}</div>
+        )}
+      </div>
+    </section>
+  ))}
+</Base>
+
+<script is:inline>
+  (function () {
+    var videos = Array.prototype.slice.call(document.querySelectorAll("video.clip[data-src]"));
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function load(video) {
+      if (!video.getAttribute("src")) {
+        video.setAttribute("src", video.getAttribute("data-src"));
+      }
+    }
+    if (reduceMotion) {
+      videos.forEach(function (video) {
+        video.removeAttribute("autoplay");
+        video.controls = true;
+        video.preload = "none";
+        load(video);
+      });
+      return;
+    }
+    if (!("IntersectionObserver" in window)) {
+      videos.forEach(load);
+      return;
+    }
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var video = entry.target;
+        if (entry.isIntersecting) {
+          load(video);
+          var playing = video.play();
+          if (playing && playing.catch) { playing.catch(function () {}); }
+        } else if (!video.paused) {
+          video.pause();
+        }
+      });
+    }, { rootMargin: "200px 0px", threshold: 0.25 });
+    videos.forEach(function (video) { observer.observe(video); });
+  })();
+</script>
+
+<style>
+  .intro { padding-top: 50px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 12px; }
+  .feature { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 36px; align-items: center; padding: 48px 0; border-top: 1px solid var(--border); scroll-margin-top: 80px; }
+  .feature.reverse .copy { order: 2; }
+  .copy h2 { margin-top: 0; font-size: 30px; }
+  .copy p { color: var(--muted); }
+  .copy ul { padding-left: 20px; color: var(--muted); }
+  .media { overflow: hidden; padding: 0; aspect-ratio: 16 / 10; }
+  .clip { display: block; width: 100%; height: 100%; object-fit: cover; background: #000; }
+  .placeholder { display: flex; height: 100%; align-items: center; justify-content: center; color: var(--muted); font-weight: 600; }
+  @media (max-width: 820px) {
+    .feature { grid-template-columns: 1fr; gap: 20px; }
+    .feature.reverse .copy { order: 0; }
+  }
+</style>

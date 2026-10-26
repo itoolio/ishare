@@ -33,6 +33,7 @@ struct KeybindSettingsView: View {
                 ("Show or Hide Notes:", .toggleRecordingNotes),
                 ("Save Instant Replay:", .saveInstantReplay),
                 ("Draw on Screen:", .toggleRecordingDrawing),
+                ("Pause or Resume Recording:", .togglePauseRecording),
             ]
         ),
         (
@@ -54,6 +55,7 @@ struct KeybindSettingsView: View {
                 ("Open Editor:", .openEditor),
                 ("Open most recent item:", .openMostRecentItem),
                 ("Upload from Pasteboard:", .uploadPasteBoardItem),
+                ("Show or Hide Capture Shelf:", .toggleCaptureShelf),
             ]
         ),
     ]
@@ -68,6 +70,7 @@ struct KeybindSettingsView: View {
                 }
             }
             UploadPresetKeybindSection()
+            RecordingPresetKeybindSection()
             Section {
                 Button(role: .destructive) {
                     KeyboardShortcuts.reset(Self.groups.flatMap { $0.1.map(\.1) })

@@ -54,9 +54,9 @@ enum TextRecognition {
     }
 
     static func lines(in image: CGImage) async throws -> [RecognizedLine] {
-        try await Task.detached(priority: .userInitiated) {
+        try await BlockingWork.runThrowing {
             try performRecognition(on: image)
-        }.value
+        }
     }
 
     private static func performRecognition(on image: CGImage) throws -> [RecognizedLine] {

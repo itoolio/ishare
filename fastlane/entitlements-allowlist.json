@@ -11,7 +11,7 @@
       "com.apple.security.application-groups": "Shares the upload history snapshot with the Recent Uploads widget and files with the Share menu extension.",
       "com.apple.security.assets.pictures.read-write": "Saves screenshots and recordings to the Pictures folder, the default save location.",
       "com.apple.security.device.audio-input": "Records the microphone into screen recordings when the user turns it on.",
-      "com.apple.security.device.camera": "Shows the optional webcam bubble over screen recordings.",
+      "com.apple.security.device.camera": "Shows the optional webcam bubble over screen recordings and records or captures the screen of an iPhone or iPad the user connects over USB.",
       "com.apple.security.files.bookmarks.app-scope": "Remembers save and watch folders the user picked outside Pictures.",
       "com.apple.security.files.user-selected.read-write": "Opens, uploads and saves files the user picks.",
       "com.apple.security.network.client": "Uploads captures to Imgur, the user's server or S3-compatible storage.",

@@ -116,6 +116,7 @@ final class ToastController {
         model.$uploadState
             .removeDuplicates()
             .dropFirst()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 guard let self, state != .none, !isAwaitingUpload(state) else { return }
                 scheduleDismiss()
@@ -125,12 +126,14 @@ final class ToastController {
             .map { $0 != nil }
             .removeDuplicates()
             .dropFirst()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.scheduleDismiss() }
             .store(in: &cancellables)
         model.$replacedItem
             .map { $0 != nil }
             .removeDuplicates()
             .dropFirst()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.scheduleDismiss() }
             .store(in: &cancellables)
         model.$undoDeadline
@@ -172,7 +175,10 @@ final class ToastController {
 
     private func scheduleDismiss() {
         dismissTask?.cancel()
-        guard !model.holdsOpen else { return }
+        guard !model.holdsOpen else {
+            Log.app.info("The result toast stays open: hovering \(self.model.isHovering), uploading \(self.model.isAwaitingUpload), annotating \(self.model.isAnnotating)")
+            return
+        }
         let undoRemaining = model.undoDeadline.map { max($0.timeIntervalSinceNow, 0) } ?? 0
         let timeout = max(Defaults[.toastTimeout], minimumTimeout, undoRemaining)
         dismissTask = Task { @MainActor [weak self] in

@@ -89,7 +89,7 @@ enum SceneAnalyzer {
     }
 
     private static func detached<Value: Sendable>(_ work: @escaping @Sendable () throws -> Value) async -> Value? {
-        try? await Task.detached(priority: .userInitiated) { try work() }.value
+        try? await BlockingWork.runThrowing(work)
     }
 
     private static func performVision(on image: CGImage) throws -> (labels: [SceneLabel], objects: SceneObjects) {

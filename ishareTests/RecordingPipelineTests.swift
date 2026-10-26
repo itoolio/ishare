@@ -146,7 +146,7 @@ struct RecordingExportSettingsTests {
         #expect(RecordingExportFormat.m4a.fileType == .m4a)
         #expect(RecordingExportFormat.m4a.videoCodec == nil)
         #expect(RecordingExportFormat.gif.fileType == nil)
-        #expect(RecordingExportFormat.allCases.map(\.fileExtension) == ["mp4", "mp4", "mov", "gif", "m4a"])
+        #expect(RecordingExportFormat.allCases.map(\.fileExtension) == ["mp4", "mp4", "mov", "gif", "png", "webp", "m4a"])
     }
 
     @Test(arguments: [

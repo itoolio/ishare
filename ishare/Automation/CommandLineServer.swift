@@ -1,8 +1,14 @@
 import Foundation
+import ishareCore
 
 @MainActor
 final class CommandLineServer {
-    static let shared = CommandLineServer(mailbox: CLIAppGroup.mailboxDirectory.map(CLIMailbox.init(directory:)), actions: LiveAutomationActions.shared)
+    static let shared: CommandLineServer =
+        if AutomationTestMode.isActive {
+            CommandLineServer(mailbox: AutomationTestMode.mailboxDirectory.map(CLIMailbox.init(directory:)), actions: AutomationTestActions.shared)
+        } else {
+            CommandLineServer(mailbox: CLIAppGroup.mailboxDirectory.map(CLIMailbox.init(directory:)), actions: LiveAutomationActions.shared)
+        }
 
     let mailbox: CLIMailbox?
     weak var actions: (any AutomationActions)?
@@ -39,7 +45,7 @@ final class CommandLineServer {
         guard let actions else { return .failure(request.id, "ishare isn't ready") }
         var response = CLIResponse(id: request.id, success: true)
         switch request.command {
-        case let .upload(files, uploader):
+        case let .upload(files, uploader, reuse):
             var accepted: [URL] = []
             var rejected: [CLIUploadResult] = []
             for path in files.prefix(URLSchemeParser.maximumFiles) {
@@ -48,17 +54,24 @@ final class CommandLineServer {
                 case let .failure(error): rejected.append(CLIUploadResult(file: path, error: error.message))
                 }
             }
-            let uploaded = accepted.isEmpty ? [] : await actions.upload(accepted, uploader: uploader)
+            let policy: DuplicatePolicy? = reuse.map { $0 ? .alwaysReuse : .never }
+            let uploaded =
+                accepted.isEmpty
+                ? [] : await DuplicateUploads.$policyOverride.withValue(policy) { await actions.upload(accepted, uploader: uploader) }
             response.payload.uploads = uploaded + rejected
         case let .capture(mode, upload):
             switch await actions.capture(mode, upload: upload) {
             case let .success(result): response.payload.capture = result
             case let .failure(error): return .failure(request.id, error.message)
             }
-        case let .record(action):
-            let recording = await actions.record(action, gif: false, region: false)
-            response.payload.recording = recording
-            response.payload.message = recording ? "Recording" : "Not recording"
+        case let .record(action, preset):
+            switch await actions.record(action, gif: false, region: false, preset: preset) {
+            case let .success(recording):
+                response.payload.recording = recording
+                response.payload.message = recording ? "Recording" : "Not recording"
+            case let .failure(error):
+                return .failure(request.id, error.message)
+            }
         case .listUploaders:
             response.payload.uploaders = actions.uploaders()
         case let .history(limit):

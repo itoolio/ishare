@@ -40,6 +40,15 @@ extension NSScreen {
     }
 }
 
+struct PickableWindow: @unchecked Sendable {
+    let window: SCWindow
+    let classified: ClassifiedWindow
+
+    var kind: WindowKind {
+        classified.kind
+    }
+}
+
 @MainActor
 enum ScreenshotEngine {
     static var hasPermission: Bool {
@@ -56,6 +65,17 @@ enum ScreenshotEngine {
 
     static func shareableContent() async throws -> SCShareableContent {
         try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+    }
+
+    static func shareableContent(listing windowIDs: Set<CGWindowID>, timeout: Duration = .milliseconds(500)) async -> SCShareableContent? {
+        let deadline = ContinuousClock.now + timeout
+        while true {
+            guard let content = try? await shareableContent() else { return nil }
+            if windowIDs.isSubset(of: Set(content.windows.map(\.windowID))) || ContinuousClock.now >= deadline {
+                return content
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
     }
 
     static func excludedApplications(in content: SCShareableContent) -> [SCRunningApplication] {
@@ -131,17 +151,56 @@ enum ScreenshotEngine {
     }
 
     static func candidateWindows(in content: SCShareableContent) -> [SCWindow] {
-        let ignored = Set(Defaults[.ignoredBundleIdentifiers])
-        let ownBundleID = Bundle.main.bundleIdentifier
+        pickableWindows(in: content).map(\.window)
+    }
+
+    static func pickableWindows(in content: SCShareableContent) -> [PickableWindow] {
+        let classifier = windowClassifier(for: content)
         let zOrder = windowZOrder()
         return content.windows
-            .filter { window in
-                guard window.isOnScreen, window.windowLayer == 0, window.frame.width >= 40, window.frame.height >= 40,
-                    let app = window.owningApplication
-                else { return false }
-                return app.bundleIdentifier != ownBundleID && !ignored.contains(app.bundleIdentifier)
+            .compactMap { window -> PickableWindow? in
+                let descriptor = windowDescriptor(window)
+                return classifier.kind(of: descriptor).map { PickableWindow(window: window, classified: ClassifiedWindow(descriptor: descriptor, kind: $0)) }
             }
-            .sorted { (zOrder[$0.windowID] ?? .max) < (zOrder[$1.windowID] ?? .max) }
+            .sorted { (zOrder[$0.window.windowID] ?? .max) < (zOrder[$1.window.windowID] ?? .max) }
+    }
+
+    static func windowDescriptor(_ window: SCWindow) -> WindowDescriptor {
+        WindowDescriptor(
+            id: window.windowID, layer: window.windowLayer, frame: window.frame, isOnScreen: window.isOnScreen,
+            ownerPID: window.owningApplication?.processID, ownerBundleID: window.owningApplication?.bundleIdentifier, title: window.title
+        )
+    }
+
+    static func windowClassifier(for content: SCShareableContent) -> WindowClassifier {
+        let strips = NSScreen.screens.map { screen in
+            let quartzFrame = ScreenGeometry.quartzToCocoa(screen.frame, primaryScreenHeight: NSScreen.primaryHeight)
+            let height = max(screen.frame.maxY - screen.visibleFrame.maxY, screen.safeAreaInsets.top, NSStatusBar.system.thickness)
+            return WindowClassifier.menuBarStrip(forDisplay: quartzFrame, height: height)
+        }
+        return WindowClassifier(
+            ownBundleID: Bundle.main.bundleIdentifier, ignoredBundleIDs: Set(Defaults[.ignoredBundleIdentifiers]),
+            displayFrames: content.displays.map(\.frame), menuBarStrips: strips
+        )
+    }
+
+    static func display(containing frame: CGRect, in content: SCShareableContent) -> SCDisplay? {
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        return content.displays.first { $0.frame.contains(center) }
+            ?? content.displays.first { $0.frame.intersects(frame) }
+    }
+
+    static let compositeShadowMargin: CGFloat = 28
+
+    static func captureComposite(of windows: [SCWindow], on display: SCDisplay) async throws -> (image: CGImage, region: CGRect)? {
+        guard let bounds = WindowClassifier.captureBounds(of: windows.map(\.frame), shadowMargin: compositeShadowMargin, within: display.frame) else { return nil }
+        let region = bounds.offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
+        let filter = SCContentFilter(display: display, including: windows)
+        let scale = CGFloat(filter.pointPixelScale)
+        let configuration = baseConfiguration(pixelSize: CGSize(width: region.width * scale, height: region.height * scale), showsCursor: false)
+        configuration.sourceRect = region
+        let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
+        return (image, region)
     }
 
     static func windowZOrder() -> [CGWindowID: Int] {

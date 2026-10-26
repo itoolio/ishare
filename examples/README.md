@@ -16,6 +16,7 @@ ishare is confirmed to be compatible with the following uploader services:
 - `zipline-protected.iscu` sends a password and an expiry date with each upload through `linkOptions` headers.
 - `folder.iscu` copies captures into a folder with a dated subfolder and a public URL.
 - `photos.iscu` adds captures to an "ishare" album in Photos.
+- `zipline-cdn.iscu` rewrites every returned link to a CDN host with `linkRewrite` and deletes uploads from the server after 30 days with `autoDeleteAfterDays`.
 
 ## ☁️ Servers and cloud storage
 

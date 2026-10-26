@@ -8,9 +8,9 @@ import SwiftUI
 
 enum TrimOutcome: Equatable {
     case keepOriginal
-    case trimmed(URL, range: ClosedRange<Double>)
-    case exportedGIF(URL)
-    case exported(URL, range: ClosedRange<Double>?)
+    case trimmed(URL, timing: RetimingPlan)
+    case exportedAnimation(URL)
+    case exported(URL, timing: RetimingPlan?)
 }
 
 @MainActor
@@ -19,6 +19,7 @@ final class TrimModel: ObservableObject {
     let player: AVPlayer
     let markers: [RecordingMarker]
     let autoZoom: CameraPath?
+    let voiceRecorder = VoiceOverRecorder()
     @Published private(set) var appliesAutoZoom: Bool
     @Published var selection = TrimSelection(duration: 0)
     @Published private(set) var playhead: Double = 0
@@ -26,13 +27,46 @@ final class TrimModel: ObservableObject {
     @Published private(set) var isWorking = false
     @Published private(set) var progress: Double?
     @Published private(set) var thumbnails: [CGImage] = []
+    @Published private(set) var videoSize: CGSize = .zero
     @Published var exportSettings = RecordingExportSettings.current
     @Published var errorMessage: String?
+
+    @Published private(set) var cutsSilence = Defaults[.cutSilenceEnabled]
+    @Published var silenceSettings = SilenceDetectionSettings.current {
+        didSet { refreshSilencePlan() }
+    }
+    @Published private(set) var silencePlan: RetimingPlan?
+    @Published private(set) var isAnalyzingSilence = false
+
+    @Published private(set) var voicePhase: VoiceOverPhase = .inactive
+    @Published private(set) var voiceClips: [VoiceOverClip] = []
+    @Published var voiceMode = Defaults[.voiceOverMode] {
+        didSet { voiceSettingsChanged() }
+    }
+    @Published var duckAmount = Defaults[.voiceOverDuckAmount] {
+        didSet { voiceSettingsChanged() }
+    }
+
+    @Published var blurRegions: [BlurRegion] = [] {
+        didSet { refreshVideoPreview() }
+    }
+    @Published var selectedRegionID: UUID?
+    @Published var isEditingBlur = false
+    @Published private(set) var blurActivity: String?
 
     var onFinish: ((TrimOutcome) -> Void)?
     private var timeObserver: Any?
     private var zoomIsBaked = false
+    private var blurIsBaked = false
     private var previewTask: Task<Void, Never>?
+    private var itemTask: Task<Void, Never>?
+    fileprivate var analysisTask: Task<Void, Never>?
+    fileprivate var countdownTask: Task<Void, Never>?
+    fileprivate var blurTask: Task<Void, Never>?
+    fileprivate var silenceAnalysis: SilenceAnalysis?
+    fileprivate var voiceLevels: LevelSeries?
+    fileprivate var takeStart: Double = 0
+    private var skipTarget: Double?
 
     init(url: URL, markers: [RecordingMarker] = [], autoZoom: CameraPath? = nil) {
         self.url = url
@@ -51,45 +85,99 @@ final class TrimModel: ObservableObject {
         appliesAutoZoom && !zoomIsBaked ? autoZoom : nil
     }
 
-    func setAutoZoom(_ enabled: Bool) {
-        appliesAutoZoom = enabled
-        refreshZoomPreview()
+    private var pendingBlurRegions: [BlurRegion] {
+        blurIsBaked ? [] : blurRegions
     }
 
-    private func refreshZoomPreview() {
+    var activePlan: RetimingPlan? {
+        cutsSilence ? silencePlan : nil
+    }
+
+    var voiceMix: VoiceOverMix? {
+        guard !voiceClips.isEmpty else { return nil }
+        return VoiceOverMix(clips: voiceClips, mode: voiceMode, ducking: DuckingSettings(reduction: duckAmount), voiceLevels: voiceLevels)
+    }
+
+    var outputDuration: Double {
+        guard let plan = activePlan else { return selection.length }
+        return selection.isFullLength ? plan.outputDuration : plan.restricted(to: selection.start ... selection.end).outputDuration
+    }
+
+    func setAutoZoom(_ enabled: Bool) {
+        appliesAutoZoom = enabled
+        refreshVideoPreview()
+    }
+
+    fileprivate func refreshVideoPreview() {
         previewTask?.cancel()
         guard let item = player.currentItem else { return }
-        guard let camera = pendingZoom else {
+        let camera = pendingZoom
+        let regions = pendingBlurRegions
+        guard camera != nil || !regions.isEmpty else {
             item.videoComposition = nil
-            seek(to: playhead)
+            if !isPlaying { seek(to: playhead) }
             return
         }
         previewTask = Task { @MainActor [weak self] in
-            guard let composition = try? await OverlayCompositor.previewComposition(for: item.asset, camera: camera),
-                !Task.isCancelled, let self, player.currentItem === item, pendingZoom != nil
+            guard let composition = try? await OverlayCompositor.previewComposition(for: item.asset, camera: camera, blurRegions: regions),
+                !Task.isCancelled, let self, player.currentItem === item
             else { return }
             item.videoComposition = composition
-            seek(to: playhead)
+            if !isPlaying { seek(to: playhead) }
         }
     }
 
-    private func bakeZoomIfNeeded(progress: @escaping @Sendable (Double) -> Void) async throws {
-        guard let camera = pendingZoom else { return }
-        let hevc = Defaults[.useHEVC]
-        try await OverlayCompositor.applyCamera(camera, to: url, hevc: hevc, progress: progress)
+    fileprivate func refreshPlayerItem() {
+        itemTask?.cancel()
+        let mix = voiceMix
+        let duration = selection.duration
+        let source = url
+        itemTask = Task { @MainActor [weak self] in
+            let item: AVPlayerItem
+            if let mix {
+                guard
+                    let edited = try? await RecordingEditor.composition(
+                        for: AVURLAsset(url: source), edit: RecordingEdit(plan: .identity(duration: duration), voiceOver: mix)),
+                    !Task.isCancelled
+                else { return }
+                item = AVPlayerItem(asset: edited.composition)
+                item.audioMix = edited.audioMix
+            } else {
+                item = AVPlayerItem(url: source)
+            }
+            guard let self, !Task.isCancelled else { return }
+            player.replaceCurrentItem(with: item)
+            refreshVideoPreview()
+        }
+    }
+
+    private func bakeVideoEffectsIfNeeded(progress: @escaping @Sendable (Double) -> Void) async throws {
+        let camera = pendingZoom
+        let regions = pendingBlurRegions
+        guard camera != nil || !regions.isEmpty else { return }
+        let hevc = RecordingDefaults[.useHEVC]
+        try await OverlayCompositor.applyEdits(camera: camera, blurRegions: regions, to: url, hevc: hevc, progress: progress)
         zoomIsBaked = true
+        blurIsBaked = true
     }
 
     func load() async {
         let asset = AVURLAsset(url: url)
         guard let duration = try? await asset.load(.duration).seconds, duration.isFinite, duration > 0 else { return }
         selection = TrimSelection(duration: duration)
+        if let track = try? await asset.loadTracks(withMediaType: .video).first,
+            let naturalSize = try? await track.load(.naturalSize), let transform = try? await track.load(.preferredTransform)
+        {
+            videoSize = GIFGeometry.displaySize(naturalSize: naturalSize, transform: transform)
+        }
         observePlayback()
-        refreshZoomPreview()
+        refreshVideoPreview()
+        if cutsSilence { analyzeSilenceIfNeeded() }
         thumbnails = await Self.thumbnails(for: asset, duration: duration, count: 12)
     }
 
     func togglePlayback() {
+        guard voicePhase == .inactive else { return }
         if isPlaying {
             player.pause()
             isPlaying = false
@@ -100,6 +188,7 @@ final class TrimModel: ObservableObject {
         }
         player.play()
         isPlaying = true
+        applyRetimingPreview(at: playhead)
     }
 
     func seek(to time: Double) {
@@ -111,35 +200,66 @@ final class TrimModel: ObservableObject {
         finish(.keepOriginal)
     }
 
+    private var hasVideoEffects: Bool {
+        pendingZoom != nil || !pendingBlurRegions.isEmpty
+    }
+
     func save() {
-        guard !selection.isFullLength || pendingZoom != nil else {
+        guard !selection.isFullLength || hasVideoEffects || cutsSilence || voiceMix != nil else {
             finish(.keepOriginal)
             return
         }
-        let isFullLength = selection.isFullLength
-        let range = selection.timeRange
-        let bounds = selection.start ... selection.end
-        perform { [url] progress in
-            try await self.bakeZoomIfNeeded(progress: progress)
-            guard !isFullLength else { return .trimmed(url, range: bounds) }
-            return .trimmed(try await VideoTrimmer.trimInPlace(url, range: range), range: bounds)
+        let source = url
+        perform { progress in
+            try await self.bakeVideoEffectsIfNeeded(progress: progress)
+            let edit = await self.pendingEdit()
+            guard !edit.isNoOp else { return .trimmed(source, timing: edit.plan) }
+            let hevc = Defaults[.useHEVC]
+            return .trimmed(try await RecordingEditor.renderInPlace(source, edit: edit, hevc: hevc, progress: progress), timing: edit.plan)
         }
     }
 
     func export() {
-        let range = selection.isFullLength ? nil : selection.timeRange
-        let bounds = selection.isFullLength ? nil : selection.start ... selection.end
         let settings = exportSettings
-        perform { [url] progress in
-            try await self.bakeZoomIfNeeded(progress: progress)
-            let output = try await RecordingConversions.export(url, settings: settings, range: range, deletingSource: true, progress: progress)
-            return settings.format == .gif ? .exportedGIF(output) : .exported(output, range: bounds)
+        let isFullLength = selection.isFullLength
+        let range = selection.timeRange
+        let source = url
+        perform { progress in
+            try await self.bakeVideoEffectsIfNeeded(progress: progress)
+            let edit = await self.pendingEdit()
+            let output: URL
+            if edit.plan.isIdentity, edit.voiceOver == nil {
+                output = try await RecordingConversions.export(source, settings: settings, range: isFullLength ? nil : range, deletingSource: true, progress: progress)
+            } else {
+                let hevc = Defaults[.useHEVC]
+                _ = try await RecordingEditor.renderInPlace(source, edit: edit, hevc: hevc, progress: progress)
+                output = try await RecordingConversions.export(source, settings: settings, range: nil, deletingSource: true, progress: progress)
+            }
+            if settings.format.animatedFormat != nil { return .exportedAnimation(output) }
+            return .exported(output, timing: edit.plan)
         }
+    }
+
+    private func pendingEdit() async -> RecordingEdit {
+        if cutsSilence, silencePlan == nil {
+            analyzeSilenceIfNeeded()
+            await analysisTask?.value
+        }
+        let base = activePlan ?? .identity(duration: selection.duration)
+        let plan = selection.isFullLength ? base : base.restricted(to: selection.start ... selection.end)
+        return RecordingEdit(plan: plan, voiceOver: voiceMix)
     }
 
     func tearDown() {
         previewTask?.cancel()
         previewTask = nil
+        itemTask?.cancel()
+        countdownTask?.cancel()
+        blurTask?.cancel()
+        if voicePhase != .inactive {
+            voiceRecorder.endClip()
+            voicePhase = .inactive
+        }
         if let timeObserver {
             player.removeTimeObserver(timeObserver)
         }
@@ -150,6 +270,7 @@ final class TrimModel: ObservableObject {
 
     private func perform(_ work: @escaping @MainActor (@escaping @Sendable (Double) -> Void) async throws -> TrimOutcome) {
         guard !isWorking else { return }
+        if voicePhase != .inactive { finishVoiceOver() }
         isWorking = true
         errorMessage = nil
         progress = nil
@@ -165,15 +286,15 @@ final class TrimModel: ObservableObject {
                 Log.capture.error("Trimming failed: \(error.localizedDescription, privacy: .public)")
                 errorMessage = error.localizedDescription
                 isWorking = false
-                player.replaceCurrentItem(with: AVPlayerItem(url: url))
                 observePlayback()
-                refreshZoomPreview()
+                refreshPlayerItem()
             }
         }
     }
 
     private func finish(_ outcome: TrimOutcome) {
         tearDown()
+        voiceRecorder.tearDown()
         let handler = onFinish
         onFinish = nil
         handler?(outcome)
@@ -189,13 +310,48 @@ final class TrimModel: ObservableObject {
     }
 
     private func playerDidAdvance(to time: Double) {
+        if voicePhase == .recording {
+            playhead = min(time, selection.end)
+            if time >= selection.end - 0.02 || (player.rate == 0 && time >= selection.end - 0.1) {
+                finishVoiceOver()
+            }
+            return
+        }
         guard isPlaying else { return }
+        if let target = skipTarget {
+            guard time >= target - 0.05 else { return }
+            skipTarget = nil
+        }
         if time >= selection.end || player.rate == 0 {
             seek(to: selection.start)
             if player.rate == 0 { player.play() }
+            applyRetimingPreview(at: selection.start)
         } else {
             playhead = time
+            applyRetimingPreview(at: time)
         }
+    }
+
+    fileprivate func applyRetimingPreview(at time: Double) {
+        guard isPlaying, voicePhase == .inactive else { return }
+        let segment = activePlan?.segments.first { time >= $0.start && time < $0.end }
+        switch segment?.action {
+        case .remove:
+            guard let segment else { return }
+            let target = min(segment.end, selection.end)
+            skipTarget = target
+            playhead = target
+            player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        case let .speed(factor):
+            setPreviewRate(Float(factor))
+        case .keep, nil:
+            setPreviewRate(1)
+        }
+    }
+
+    fileprivate func setPreviewRate(_ rate: Float) {
+        player.isMuted = rate > 1
+        if player.rate != rate { player.rate = rate }
     }
 
     private static func thumbnails(for asset: AVURLAsset, duration: Double, count: Int) async -> [CGImage] {
@@ -210,6 +366,282 @@ final class TrimModel: ObservableObject {
             }
         }
         return images
+    }
+}
+
+extension TrimModel {
+    func setCutsSilence(_ enabled: Bool) {
+        cutsSilence = enabled
+        if enabled {
+            analyzeSilenceIfNeeded()
+        } else if isPlaying {
+            setPreviewRate(1)
+        }
+    }
+
+    fileprivate func analyzeSilenceIfNeeded() {
+        guard silenceAnalysis == nil, analysisTask == nil else { return }
+        isAnalyzingSilence = true
+        let source = url
+        analysisTask = Task { @MainActor [weak self] in
+            let analysis = try? await SilenceCutter.analyze(source)
+            guard let self else { return }
+            silenceAnalysis = analysis
+            isAnalyzingSilence = false
+            analysisTask = nil
+            if analysis == nil { errorMessage = "The recording couldn't be analyzed for silence.".localized() }
+            refreshSilencePlan()
+        }
+    }
+
+    fileprivate func refreshSilencePlan() {
+        silencePlan = silenceAnalysis.map { $0.plan(settings: silenceSettings, extraAudio: voiceLevels) }
+    }
+
+    var silenceSummary: String? {
+        guard cutsSilence else { return nil }
+        if isAnalyzingSilence { return "Finding silent parts…".localized() }
+        guard let plan = silencePlan else { return nil }
+        let changed = plan.changedSegments.count
+        guard changed > 0 else { return "No silent parts found".localized() }
+        return String(format: "%d silent parts, saves %@".localized(), changed, TrimView.format(plan.sourceDuration - plan.outputDuration))
+    }
+}
+
+extension TrimModel {
+    func startVoiceOver() {
+        guard voicePhase == .inactive, !isWorking else { return }
+        Task { @MainActor in
+            guard await VoiceOverRecorder.requestAccess() else {
+                errorMessage = VoiceOverError.microphoneDenied.localizedDescription
+                return
+            }
+            player.pause()
+            isPlaying = false
+            voiceRecorder.discardAll()
+            if !voiceClips.isEmpty {
+                voiceClips = []
+                voiceLevels = nil
+                refreshSilencePlan()
+                refreshPlayerItem()
+            }
+            takeStart = playhead >= selection.end - 0.2 ? selection.start : selection.clampedPlayhead(playhead)
+            seek(to: takeStart)
+            runCountdown()
+        }
+    }
+
+    func pauseVoiceOver() {
+        guard voicePhase == .recording else { return }
+        player.pause()
+        isPlaying = false
+        voiceRecorder.endClip()
+        voicePhase = .paused
+    }
+
+    func resumeVoiceOver() {
+        guard voicePhase == .paused else { return }
+        runCountdown()
+    }
+
+    func redoVoiceOver() {
+        guard voicePhase != .inactive else { return }
+        countdownTask?.cancel()
+        player.pause()
+        isPlaying = false
+        voiceRecorder.discardAll()
+        seek(to: takeStart)
+        runCountdown()
+    }
+
+    func finishVoiceOver() {
+        guard voicePhase != .inactive else { return }
+        countdownTask?.cancel()
+        player.pause()
+        player.volume = 1
+        isPlaying = false
+        voiceRecorder.endClip()
+        voicePhase = .inactive
+        let clips = voiceRecorder.clips
+        voiceClips = clips
+        Task { @MainActor [weak self] in
+            let levels = await VoiceOverRecorder.levels(for: clips)
+            guard let self, voiceClips == clips else { return }
+            voiceLevels = levels
+            refreshSilencePlan()
+            refreshPlayerItem()
+        }
+    }
+
+    func cancelVoiceOver() {
+        countdownTask?.cancel()
+        player.pause()
+        player.volume = 1
+        isPlaying = false
+        voicePhase = .inactive
+        removeVoiceOver()
+    }
+
+    func removeVoiceOver() {
+        voiceRecorder.discardAll()
+        voiceClips = []
+        voiceLevels = nil
+        refreshSilencePlan()
+        refreshPlayerItem()
+    }
+
+    fileprivate func voiceSettingsChanged() {
+        Defaults[.voiceOverMode] = voiceMode
+        Defaults[.voiceOverDuckAmount] = duckAmount
+        if !voiceClips.isEmpty { refreshPlayerItem() }
+    }
+
+    private func runCountdown() {
+        countdownTask?.cancel()
+        countdownTask = Task { @MainActor [weak self] in
+            for count in [3, 2, 1] {
+                self?.voicePhase = .countdown(count)
+                try? await Task.sleep(for: .seconds(1))
+                if Task.isCancelled { return }
+            }
+            self?.beginVoiceClip()
+        }
+    }
+
+    private func beginVoiceClip() {
+        do {
+            try voiceRecorder.beginClip(at: playhead)
+        } catch {
+            errorMessage = error.localizedDescription
+            voicePhase = .inactive
+            return
+        }
+        player.volume = voiceMode == .replace ? 0 : 0.35
+        player.isMuted = false
+        voicePhase = .recording
+        isPlaying = true
+        player.rate = 1
+    }
+}
+
+extension TrimModel {
+    var selectedRegion: BlurRegion? {
+        blurRegions.first { $0.id == selectedRegionID }
+    }
+
+    func addBlurRegion(_ rect: CGRect) {
+        let start = playhead >= selection.end - 0.2 ? selection.start : playhead
+        let region = BlurRegion(
+            style: Defaults[.blurRegionStyle], start: start, end: selection.end,
+            track: RegionTrack(keyframes: [RegionKeyframe(time: playhead, rect: RegionGeometry.clampedToUnit(rect), isManual: true)]))
+        blurRegions.append(region)
+        selectedRegionID = region.id
+    }
+
+    func moveRegion(_ id: UUID, to rect: CGRect) {
+        let time = playhead
+        updateRegion(id) { region in
+            region.track.setKeyframe(rect, at: time)
+            if time < region.start { region.setStart(time) }
+            if time > region.end { region.setEnd(time) }
+        }
+    }
+
+    func setRegionStart(_ id: UUID) {
+        let time = playhead
+        updateRegion(id) { $0.setStart(time) }
+    }
+
+    func setRegionEnd(_ id: UUID) {
+        let time = playhead
+        updateRegion(id) { $0.setEnd(time) }
+    }
+
+    func setRegionStyle(_ id: UUID, style: BlurRegionStyle) {
+        Defaults[.blurRegionStyle] = style
+        updateRegion(id) { $0.style = style }
+    }
+
+    func removeKeyframe(_ id: UUID) {
+        let time = playhead
+        updateRegion(id) { region in
+            guard region.track.keyframes.count > 1 else { return }
+            region.track.removeKeyframe(near: time, tolerance: 0.1)
+        }
+    }
+
+    func removeRegion(_ id: UUID) {
+        blurRegions.removeAll { $0.id == id }
+        if selectedRegionID == id { selectedRegionID = blurRegions.last?.id }
+    }
+
+    func visibleRegions() -> [VisibleBlurRegion] {
+        blurRegions.compactMap { region in region.rect(at: playhead).map { VisibleBlurRegion(region: region, rect: $0) } }
+    }
+
+    func trackRegion(_ id: UUID) {
+        guard blurActivity == nil, let region = blurRegions.first(where: { $0.id == id }) else { return }
+        let time = min(max(playhead, region.start), region.end)
+        guard let rect = region.track.rect(at: time) else { return }
+        let range = region.start ... region.end
+        let source = url
+        runBlurActivity("Tracking…".localized()) { progress in
+            let frames = try await RegionTracker.track(source, rect: rect, at: time, within: range, progress: progress)
+            self.updateRegion(id) { $0.track.replaceTracked(with: frames) }
+        }
+    }
+
+    func detectSensitiveRegions() {
+        guard blurActivity == nil else { return }
+        let interval = max(0.25, Defaults[.blurDetectionInterval])
+        let categories = Defaults[.redactionCategories]
+        let style = Defaults[.blurRegionStyle]
+        let range = selection.start ... selection.end
+        let source = url
+        runBlurActivity("Looking for sensitive text…".localized()) { progress in
+            let found = try await SensitiveRegionDetector.detect(in: source, interval: interval, categories: categories, style: style, range: range, progress: progress)
+            self.blurRegions += found
+            if found.isEmpty {
+                self.errorMessage = "No sensitive text found.".localized()
+            } else {
+                self.selectedRegionID = found.first?.id
+            }
+        }
+    }
+
+    func cancelBlurActivity() {
+        blurTask?.cancel()
+    }
+
+    private func updateRegion(_ id: UUID, _ change: (inout BlurRegion) -> Void) {
+        guard let index = blurRegions.firstIndex(where: { $0.id == id }) else { return }
+        var region = blurRegions[index]
+        change(&region)
+        blurRegions[index] = region
+    }
+
+    private func runBlurActivity(_ title: String, _ work: @escaping @MainActor (@escaping @Sendable (Double) -> Void) async throws -> Void) {
+        blurActivity = title
+        progress = 0
+        errorMessage = nil
+        let report: @Sendable (Double) -> Void = { [weak self] value in
+            Task { @MainActor [weak self] in
+                guard let self, blurActivity != nil else { return }
+                progress = value
+            }
+        }
+        blurTask = Task { @MainActor in
+            do {
+                try await work(report)
+            } catch is CancellationError {
+                errorMessage = nil
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            blurActivity = nil
+            progress = nil
+            blurTask = nil
+        }
     }
 }
 
@@ -230,8 +662,8 @@ final class RecordingTrimWindow: NSObject, NSWindowDelegate {
         open.append(controller)
         let outcome = await controller.run()
         open.removeAll { $0 === controller }
-        if case let .exportedGIF(gifURL) = outcome {
-            Log.capture.info("Exported trimmed GIF to \(gifURL.path, privacy: .public)")
+        if case let .exportedAnimation(animationURL) = outcome {
+            Log.capture.info("Exported trimmed animation to \(animationURL.path, privacy: .public)")
         }
         return outcome
     }
@@ -242,14 +674,14 @@ final class RecordingTrimWindow: NSObject, NSWindowDelegate {
             model.onFinish = { [weak self] outcome in self?.complete(outcome) }
 
             let window = NSWindow(
-                contentRect: CGRect(x: 0, y: 0, width: 860, height: 600),
+                contentRect: CGRect(x: 0, y: 0, width: 920, height: 680),
                 styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
             window.title = "Trim Recording".localized() + " — " + model.url.lastPathComponent
             window.titlebarAppearsTransparent = true
-            window.contentMinSize = CGSize(width: 620, height: 440)
+            window.contentMinSize = CGSize(width: 720, height: 520)
             window.isReleasedWhenClosed = false
             window.delegate = self
             window.contentView = NSHostingView(rootView: TrimView(model: model))
@@ -288,10 +720,18 @@ struct TrimView: View {
     @State private var showsExportOptions = false
 
     var body: some View {
-        VStack(spacing: 14) {
-            PlayerSurface(player: model.player)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack(spacing: 12) {
+            ZStack {
+                PlayerSurface(player: model.player)
+                if model.isEditingBlur {
+                    BlurEditingOverlay(model: model)
+                }
+                if case let .countdown(count) = model.voicePhase {
+                    VoiceOverCountdown(count: count)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             HStack(spacing: 12) {
                 Button(action: model.togglePlayback) {
@@ -300,27 +740,40 @@ struct TrimView: View {
                 }
                 .keyboardShortcut(.space, modifiers: [])
                 .help(model.isPlaying ? "Pause".localized() : "Play".localized())
-                .disabled(model.isWorking)
+                .disabled(model.isWorking || model.voicePhase != .inactive)
 
-                TrimRangeSlider(selection: $model.selection, playhead: model.playhead, thumbnails: model.thumbnails, markers: model.markers, onScrub: model.seek)
-                    .disabled(model.isWorking)
+                TrimRangeSlider(
+                    selection: $model.selection, playhead: model.playhead, thumbnails: model.thumbnails, markers: model.markers,
+                    annotations: TrimTimelineAnnotations(model: model), onScrub: { model.seek(to: $0) }
+                )
+                .disabled(model.isWorking || model.voicePhase == .recording)
             }
 
             HStack {
                 Text(Self.format(model.selection.start))
                 Spacer()
-                Text(String(format: "Duration: %@".localized(), Self.format(model.selection.length)))
+                Text(String(format: "Duration: %@".localized(), Self.format(model.outputDuration)))
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text(Self.format(model.selection.end))
             }
             .font(.system(size: 12).monospacedDigit())
 
+            if model.voicePhase != .inactive {
+                VoiceOverBar(model: model, recorder: model.voiceRecorder)
+            }
+            if model.isEditingBlur {
+                BlurRegionBar(model: model)
+            }
+
             if let errorMessage = model.errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            TrimToolbar(model: model)
+                .disabled(model.isWorking)
 
             HStack {
                 Button("Keep Original".localized(), action: model.cancel)
@@ -333,7 +786,12 @@ struct TrimView: View {
                         .accessibilityIdentifier("trim.autoZoom")
                 }
                 Spacer()
-                if model.isWorking {
+                if model.isWorking || model.blurActivity != nil {
+                    if let activity = model.blurActivity {
+                        Text(activity)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     if let progress = model.progress {
                         ProgressView(value: progress).frame(width: 120)
                     } else {
@@ -351,12 +809,12 @@ struct TrimView: View {
                     .keyboardShortcut(.defaultAction)
                     .adaptiveGlassButtonStyle(prominent: true)
             }
-            .disabled(model.isWorking)
+            .disabled(model.isWorking || model.blurActivity != nil)
         }
         .padding(.horizontal, 16)
         .padding(.top, 34)
         .padding(.bottom, 16)
-        .frame(minWidth: 620, minHeight: 440)
+        .frame(minWidth: 720, minHeight: 520)
     }
 
     static func format(_ seconds: Double) -> String {
@@ -372,14 +830,18 @@ struct RecordingExportOptionsView: View {
         VStack(alignment: .trailing, spacing: 12) {
             Form {
                 Picker("Format".localized(), selection: $settings.format) {
-                    ForEach(RecordingExportFormat.allCases) { Text($0.title.localized()).tag($0) }
+                    ForEach(RecordingExportFormat.allCases) { format in
+                        Text(format.isAvailable ? format.title.localized() : String(format: "%@ (not available)".localized(), format.title))
+                            .tag(format)
+                            .selectionDisabled(!format.isAvailable)
+                    }
                 }
                 if settings.format.hasVideo {
                     Picker("Size".localized(), selection: $settings.size) {
                         ForEach(RecordingExportSize.allCases) { Text($0.title.localized()).tag($0) }
                     }
                 }
-                if settings.format == .gif {
+                if settings.format.animatedFormat != nil {
                     Picker("Frame rate".localized(), selection: $settings.gifFrameRate) {
                         ForEach(GIFFrameRate.allCases) { Text("\($0.rawValue) fps").tag($0) }
                     }
@@ -392,11 +854,19 @@ struct RecordingExportOptionsView: View {
                     Toggle("Remove audio".localized(), isOn: $settings.removesAudio)
                 }
             }
+            if !AnimatedImageFormat.webp.isAvailable {
+                Text(AnimatedImageFormat.unavailableMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             Button("Export".localized(), action: onExport)
                 .keyboardShortcut(.defaultAction)
+                .disabled(!settings.format.isAvailable)
         }
         .padding(16)
-        .frame(width: 300)
+        .frame(width: 320)
         .accessibilityIdentifier("trim.export.options")
     }
 }
@@ -424,6 +894,7 @@ struct TrimRangeSlider: View {
     let playhead: Double
     let thumbnails: [CGImage]
     var markers: [RecordingMarker] = []
+    var annotations = TrimTimelineAnnotations()
     var onScrub: (Double) -> Void
 
     private let handleWidth: CGFloat = 12
@@ -440,6 +911,8 @@ struct TrimRangeSlider: View {
                 filmstrip
                     .frame(width: width, height: height)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                TrimTimelineAnnotationsView(annotations: annotations, duration: selection.duration, width: width, height: height)
+                    .allowsHitTesting(false)
                 Rectangle()
                     .fill(.black.opacity(0.55))
                     .frame(width: max(0, startX), height: height)

@@ -19,7 +19,7 @@ enum AutomationError: Error, Equatable, Sendable {
 protocol AutomationActions: AnyObject {
     func capture(_ mode: CLICaptureMode, upload: Bool) async -> Result<CLICaptureResult, AutomationError>
     func captureWithAfterCaptureSteps(_ mode: CLICaptureMode) async -> String?
-    func record(_ action: CLIRecordAction, gif: Bool, region: Bool) async -> Bool
+    func record(_ action: CLIRecordAction, gif: Bool, region: Bool, preset: String?) async -> Result<Bool, AutomationError>
     func upload(_ files: [URL], uploader: String?) async -> [CLIUploadResult]
     func selectUploader(named name: String) -> Bool
     func uploaders() -> [CLIUploaderInfo]
@@ -35,6 +35,7 @@ extension CLICaptureMode {
         case .window: .WINDOW
         case .screen: .SCREEN
         case .scrolling: .SCROLLING
+        case .menu: .MENU
         }
     }
 }
@@ -71,17 +72,30 @@ final class LiveAutomationActions: AutomationActions {
         return latest.preferredURL?.absoluteString
     }
 
-    func record(_ action: CLIRecordAction, gif: Bool, region: Bool) async -> Bool {
+    func record(_ action: CLIRecordAction, gif: Bool, region: Bool, preset name: String?) async -> Result<Bool, AutomationError> {
         let isRecording = CaptureSession.isRecording
+        var preset: RecordingPreset?
+        if let name {
+            guard let resolved = RecordingPresets.preset(named: name) else {
+                return .failure(.failed(String(format: "No recording preset named “%@”".localized(), name)))
+            }
+            preset = resolved
+        }
         switch action {
         case .start where !isRecording, .toggle where !isRecording:
-            CaptureSession.toggleRecording(gif: gif, region: region)
-            return true
+            CaptureSession.toggleRecording(gif: gif, region: region || preset?.region == true, options: CaptureOptions(recordingPreset: preset))
+            return .success(true)
         case .stop where isRecording, .toggle where isRecording:
             CaptureSession.stopRecording()
-            return false
+            return .success(false)
+        case .pause where isRecording:
+            AppModel.shared.recorder.pause()
+            return .success(true)
+        case .resume where isRecording:
+            AppModel.shared.recorder.resume()
+            return .success(true)
         default:
-            return isRecording
+            return .success(isRecording)
         }
     }
 
@@ -203,11 +217,17 @@ enum URLSchemeOutcome: Equatable, Sendable {
 
 @MainActor
 final class URLSchemeRouter {
-    static let shared = URLSchemeRouter(actions: LiveAutomationActions.shared, commandLine: CommandLineServer.shared)
+    static let shared: URLSchemeRouter = {
+        guard AutomationTestMode.isActive else { return URLSchemeRouter(actions: LiveAutomationActions.shared, commandLine: CommandLineServer.shared) }
+        let router = URLSchemeRouter(actions: AutomationTestActions.shared, commandLine: CommandLineServer.shared)
+        router.onOutcome = { url, outcome in AutomationTestMode.record(url, outcome: outcome) }
+        return router
+    }()
 
     let actions: any AutomationActions
     let commandLine: CommandLineServer
     var fileAccess: URLSchemeFileAccess = .live
+    var onOutcome: (@MainActor (URL, URLSchemeOutcome) -> Void)?
 
     init(actions: any AutomationActions, commandLine: CommandLineServer) {
         self.actions = actions
@@ -216,6 +236,12 @@ final class URLSchemeRouter {
 
     @discardableResult
     func handle(_ url: URL) async -> URLSchemeOutcome {
+        let outcome = await route(url)
+        onOutcome?(url, outcome)
+        return outcome
+    }
+
+    private func route(_ url: URL) async -> URLSchemeOutcome {
         Log.app.info("Handling URL action \(Self.redacted(url), privacy: .public)")
         switch URLSchemeParser.parse(url, fileAccess: fileAccess) {
         case let .failure(error):
@@ -250,9 +276,8 @@ final class URLSchemeRouter {
         switch command {
         case let .capture(mode):
             return .success(await actions.captureWithAfterCaptureSteps(mode))
-        case let .record(action, gif, region):
-            _ = await actions.record(action, gif: gif, region: region)
-            return .success(nil)
+        case let .record(action, gif, region, preset):
+            return await actions.record(action, gif: gif, region: region, preset: preset).map { _ in nil }
         case let .upload(files):
             let results = await actions.upload(files, uploader: nil)
             if let failure = results.first(where: { $0.error != nil }), results.allSatisfy({ $0.link == nil }) {

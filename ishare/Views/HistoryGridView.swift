@@ -48,6 +48,7 @@ struct HistoryGridView: View {
     @State private var filter = HistoryFilter()
     @State private var selection = HistorySelection()
     @State private var shareAnchor = ViewAnchor()
+    @State private var exportRequest: HistoryExportRequest?
 
     private var uploaders: [CustomUploader] {
         Array((savedCustomUploaders ?? []).union(savedLocalUploaders))
@@ -74,6 +75,17 @@ struct HistoryGridView: View {
         .onChange(of: filteredHistory) { _, visible in
             selection.retain(visible)
         }
+        .sheet(item: $exportRequest) { request in
+            HistoryExportSheet(request: request) { exportRequest = nil }
+        }
+    }
+
+    private func beginExport() {
+        let uploaders = uploaders
+        exportRequest = HistoryExportRequest(
+            all: uploadHistory, filtered: filteredHistory, selected: selectedItems, filterIsActive: filter.isActive,
+            uploaderName: { $0.uploaderName(among: uploaders) }
+        )
     }
 
     @ViewBuilder
@@ -247,6 +259,13 @@ struct HistoryGridView: View {
                 .controlSize(.small)
                 .disabled(filteredHistory.isEmpty)
                 .accessibilityIdentifier("history.selectAll")
+
+            Button(action: beginExport) {
+                Image(systemName: "square.and.arrow.down.on.square")
+            }
+            .controlSize(.small)
+            .helpAndAccessibilityLabel("Export History…".localized())
+            .accessibilityIdentifier("history.export")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

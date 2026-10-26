@@ -2,6 +2,7 @@ import AppKit
 import BezelNotification
 import Defaults
 import SwiftUI
+import ishareCore
 
 @MainActor
 enum HistoryActions {
@@ -183,6 +184,15 @@ enum HistoryActions {
         }
     }
 
+    static func setKeepForever(_ item: HistoryItem, _ keeps: Bool) {
+        updateUploadHistoryItem(item) { current in
+            var updated = current
+            updated.keepForever = keeps ? true : nil
+            return updated
+        }
+        BezelNotification.show(messageText: keeps ? "Kept Forever".localized() : "Auto-Delete Allowed".localized(), icon: ToastIcon)
+    }
+
     static func confirmClearHistory() -> Bool {
         let alert = NSAlert()
         alert.alertStyle = .warning
@@ -205,8 +215,11 @@ struct HistoryItemMenuItems: View {
     var showsImageActions = false
 
     var body: some View {
+        if item.isExpired {
+            Text("Expired — deleted from server".localized())
+        }
         Button("Copy URL".localized()) { HistoryActions.copyURL(item) }
-            .disabled(item.fileUrl == nil)
+            .disabled(item.fileUrl == nil || item.isExpired)
         if let altText = item.altText, !altText.isEmpty {
             Button("Copy Alt Text".localized()) { HistoryActions.copy(altText, announcing: "Copied Alt Text") }
         }
@@ -214,7 +227,7 @@ struct HistoryItemMenuItems: View {
             Button("Copy Markdown".localized()) { HistoryActions.copy(markdown, announcing: "Copied Markdown") }
         }
         Button("Open in Browser".localized()) { HistoryActions.open(item) }
-            .disabled(item.remoteURL == nil)
+            .disabled(item.remoteURL == nil || item.isExpired)
         Button("Show QR Code".localized()) { HistoryActions.showQRCode(item) }
             .disabled(item.preferredURL == nil)
         if HistoryActions.canShareOnLocalNetwork(item) {
@@ -224,6 +237,15 @@ struct HistoryItemMenuItems: View {
             Button("Open in Editor".localized()) { HistoryActions.edit(item) }
             if showsImageActions {
                 Button("Lift Subject".localized()) { HistoryActions.liftSubject(item) }
+                Menu("Upscale".localized()) {
+                    ForEach(UpscaleFactor.allCases) { factor in
+                        Button {
+                            HistoryActions.upscale(item, by: factor)
+                        } label: {
+                            Text(verbatim: "\(factor.rawValue)×")
+                        }
+                    }
+                }
             }
         }
         if showsFinder, item.existingLocalFileURL != nil {
@@ -235,7 +257,16 @@ struct HistoryItemMenuItems: View {
         if let savings = item.savingsDescription {
             Text(savings)
         }
+        if let expiresAt = item.expiresAt, !item.isExpired, !item.isKeptForever {
+            Text(String(format: "Deleted from the server on %@".localized(), expiresAt.formatted(date: .abbreviated, time: .omitted)))
+        }
         Divider()
+        if item.canDeleteFromServer {
+            Toggle(
+                "Keep Forever".localized(),
+                isOn: Binding(get: { item.isKeptForever }, set: { HistoryActions.setKeepForever(item, $0) })
+            )
+        }
         if item.canDeleteFromServer {
             Button("Delete from Server…".localized(), role: .destructive) { HistoryActions.confirmDeleteFromServer(item) }
         }

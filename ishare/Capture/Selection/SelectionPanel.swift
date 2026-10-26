@@ -34,6 +34,9 @@ enum KeyCode {
     static let right: UInt16 = 124
     static let down: UInt16 = 125
     static let up: UInt16 = 126
+    static let tab: UInt16 = 48
+    static let delete: UInt16 = 51
+    static let forwardDelete: UInt16 = 117
 }
 
 @MainActor

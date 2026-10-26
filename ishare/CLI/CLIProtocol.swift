@@ -6,18 +6,21 @@ enum CLICaptureMode: String, Codable, CaseIterable, Sendable {
     case window
     case screen
     case scrolling
+    case menu
 }
 
 enum CLIRecordAction: String, Codable, CaseIterable, Sendable {
     case start
     case stop
     case toggle
+    case pause
+    case resume
 }
 
 enum CLICommand: Codable, Equatable, Sendable {
-    case upload(files: [String], uploader: String?)
+    case upload(files: [String], uploader: String?, reuse: Bool? = nil)
     case capture(mode: CLICaptureMode, upload: Bool)
-    case record(CLIRecordAction)
+    case record(CLIRecordAction, preset: String? = nil)
     case listUploaders
     case history(limit: Int)
 }
@@ -119,7 +122,12 @@ enum CLIAppGroup {
     }
 
     static var mailboxDirectory: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: signedIdentifier)?
+        #if AUTOMATION_TESTS
+            if let override = ProcessInfo.processInfo.environment["ISHARE_AUTOMATION_MAILBOX"], override.hasPrefix("/") {
+                return URL(fileURLWithPath: override, isDirectory: true)
+            }
+        #endif
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: signedIdentifier)?
             .appending(path: "CommandLine", directoryHint: .isDirectory)
     }
 

@@ -46,6 +46,12 @@ enum OAuthError: LocalizedError, Equatable {
     }
 }
 
+extension CloudProvider {
+    static func createMenuGroups(hasBuiltInClientID: (CloudProvider) -> Bool = \.hasBuiltInClientID) -> (builtIn: [CloudProvider], ownApp: [CloudProvider]) {
+        (allCases.filter(hasBuiltInClientID), allCases.filter { !hasBuiltInClientID($0) })
+    }
+}
+
 enum OAuthRequests {
     static func authorizationURL(provider: CloudProvider, clientID: String, pkce: PKCE, state: String) -> URL {
         var components = URLComponents(url: provider.authorizationEndpoint, resolvingAgainstBaseURL: false)!

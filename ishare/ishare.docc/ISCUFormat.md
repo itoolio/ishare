@@ -34,6 +34,8 @@ When `uploaderType` is missing, ishare infers it from the blocks that are presen
 | `uploaderType` | no | `custom`, `s3`, `folder` or `photos`, as described above. |
 | `id` | no | A UUID that identifies the uploader. ishare creates one when it is missing, and keeps it when you import an updated copy of the same uploader. |
 | `modifiedAt` | no | An ISO 8601 date written by ishare when the uploader syncs through iCloud. Leave it out of hand-written files. |
+| `linkRewrite` | no | Rewrites the returned link, for example to a CDN host. See <doc:LinkRewritingAndAutoDelete>. |
+| `autoDeleteAfterDays` | no | Deletes uploads from the server after this many days, for uploaders that can delete files. See <doc:LinkRewritingAndAutoDelete>. |
 
 ### Validation
 

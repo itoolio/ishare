@@ -1,0 +1,88 @@
+name: Feature guide
+
+on:
+    workflow_dispatch:
+        inputs:
+            scenes:
+                description: Guide scenes to record, all or a list such as capture shelf
+                type: string
+                default: all
+            commit:
+                description: Commit the recorded clips to dev
+                type: boolean
+                default: true
+    workflow_run:
+        workflows: [Release]
+        types: [completed]
+        branches: [main]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: guide-clips
+    cancel-in-progress: false
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    record:
+        if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+        runs-on: macos-26
+        timeout-minutes: 90
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: dev
+                  token: ${{ secrets.REPO_ACCESS_TOKEN }}
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - uses: actions/setup-go@v7
+              with:
+                  go-version-file: tools/go.mod
+                  cache-dependency-path: tools/go.mod
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - name: Record the guide clips on a 1680x1050 point HiDPI virtual display
+              env:
+                  SCENES: ${{ inputs.scenes || 'all' }}
+              run: |
+                  read -ra scenes <<< "$SCENES"
+                  go run ./tools/cmd/ishare-tools guide-clips --ci "${scenes[@]}"
+            - name: List the clips
+              run: ls -l website/public/guide
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: guide-clips
+                  path: website/public/guide
+                  if-no-files-found: ignore
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: guide-xcresult
+                  path: build/guide/Guide.xcresult
+                  if-no-files-found: ignore
+            - name: Commit the clips to dev
+              if: github.event_name == 'workflow_run' || inputs.commit
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  mkdir -p "$RUNNER_TEMP/guide"
+                  cp website/public/guide/*.mp4 website/public/guide/*.jpg "$RUNNER_TEMP/guide/"
+                  git fetch -q origin dev
+                  git checkout -q --force -B dev origin/dev
+                  mkdir -p website/public/guide
+                  cp "$RUNNER_TEMP/guide/"* website/public/guide/
+                  git add website/public/guide
+                  if git diff --cached --quiet; then
+                      echo "The guide clips did not change."
+                      exit 0
+                  fi
+                  git commit -q -m "docs: record the feature guide clips"
+                  git push -q origin HEAD:dev

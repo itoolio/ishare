@@ -18,9 +18,9 @@ enum SubjectLiftError: LocalizedError, Equatable {
 
 enum SubjectLifter {
     static func lift(_ image: CGImage, croppedToSubject: Bool) async throws -> CGImage {
-        try await Task.detached(priority: .userInitiated) {
+        try await BlockingWork.runThrowing {
             try performLift(on: image, croppedToSubject: croppedToSubject)
-        }.value
+        }
     }
 
     private static func performLift(on image: CGImage, croppedToSubject: Bool) throws -> CGImage {

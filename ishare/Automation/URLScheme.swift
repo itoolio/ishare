@@ -8,7 +8,7 @@ enum AutomationOpenTarget: Equatable, Sendable {
 
 enum URLSchemeCommand: Equatable, Sendable {
     case capture(CLICaptureMode)
-    case record(CLIRecordAction, gif: Bool, region: Bool)
+    case record(CLIRecordAction, gif: Bool, region: Bool, preset: String? = nil)
     case upload([URL])
     case selectUploader(String)
     case open(AutomationOpenTarget)
@@ -148,7 +148,8 @@ enum URLSchemeParser {
         case "record":
             let name = argument ?? CLIRecordAction.toggle.rawValue
             guard let recordAction = CLIRecordAction(rawValue: name) else { return .failure(.invalidValue(parameter: "record", value: name)) }
-            return .success(.record(recordAction, gif: flag("gif", in: items), region: flag("region", in: items)))
+            let preset = value("preset", in: items)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return .success(.record(recordAction, gif: flag("gif", in: items), region: flag("region", in: items), preset: preset?.isEmpty == false ? preset : nil))
         case "upload":
             return uploadCommand(items: items, fileAccess: fileAccess)
         case "uploader":

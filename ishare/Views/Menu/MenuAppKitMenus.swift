@@ -11,6 +11,11 @@ enum MenuAppKitMenus {
         }
         captureText.setAccessibilityIdentifier("menu.captureText")
         menu.addItem(captureText)
+        let captureMenu = ClosureMenuItem(title: "Capture Menu…".localized(), symbol: "filemenu.and.cursorarrow") {
+            MenuController.shared.perform(afterDismissing: { await CaptureSession.captureImage(.MENU) })
+        }
+        captureMenu.setAccessibilityIdentifier("menu.captureMenu")
+        menu.addItem(captureMenu)
         let interval = ClosureMenuItem(title: (IntervalCapture.isRunning ? "Stop Interval Capture" : "Interval Capture").localized(), symbol: "stopwatch") {
             MenuController.shared.perform(afterDismissing: { await IntervalCapture.toggle() })
         }

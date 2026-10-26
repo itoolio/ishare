@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import BezelNotification
 import Defaults
 import Foundation
@@ -8,6 +9,7 @@ struct CaptureOptions: Sendable {
     var openEditor = false
     var destinations: [UploadTarget]?
     var preset: UploadPreset?
+    var recordingPreset: RecordingPreset?
     var delay: Int?
     var resultHandler: (@MainActor @Sendable (URL) -> Void)?
 
@@ -37,11 +39,17 @@ enum CaptureSession {
         let captured = await ImageCaptureFlow.capture(type: type, display: display, delay: delay)
         isCapturingImage = false
         guard let captured else { return }
-        ToastPlacement.capturedDisplayID = captured.geometry?.displayID
         var options = options
         if wantsDestinationChoice, let target = DestinationChooser.choose() {
             options.destinations = [target]
         }
+        for item in [captured] + captured.additionalCaptures {
+            await deliver(item, options: options)
+        }
+    }
+
+    private static func deliver(_ captured: CapturedImage, options: CaptureOptions) async {
+        ToastPlacement.capturedDisplayID = captured.geometry?.displayID
         do {
             let fileURL = try ImageCaptureFlow.save(captured)
             Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
@@ -51,7 +59,6 @@ enum CaptureSession {
                 return
             }
             await finish(fileURL: fileURL, kind: .image, options: options)
-
         } catch {
             Log.capture.error("Saving capture failed: \(error.localizedDescription, privacy: .public)")
             BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
@@ -65,29 +72,79 @@ enum CaptureSession {
         }
         pendingRecording = (gif, options)
         Task { @MainActor in
-            await startRecording(region: region)
+            await startRecording(region: region, preset: options.recordingPreset)
         }
     }
 
-    private static func startRecording(region: Bool) async {
+    private static func startRecording(region: Bool, preset: RecordingPreset?) async {
         let recorder = AppModel.shared.recorder
         guard await recorder.canRecord else {
             BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
             return
         }
+        RecordingDefaults.begin(preset)
         let fileURL = RecordingFlow.recordingURL()
         guard region else {
             await recorder.start(fileURL, target: .picker)
             return
         }
-        let outcome = await RegionSelector.select(options: .init(showsMagnifier: false, allowsWindowMode: false, hint: "Select the area to record".localized()))
+        let lastRegions = LastRegionStore.regions(for: NSScreen.screens.compactMap(\.displayID))
+        let outcome = await RegionSelector.select(
+            options: .init(allowsWindowMode: false, hint: "Select the area to record".localized(), lastRegions: lastRegions))
         switch outcome {
         case let .region(screen, rect):
+            if let displayID = screen.displayID {
+                LastRegionStore.remember(rect, for: displayID)
+            }
             await recorder.start(fileURL, target: .region(screen, rect))
         case let .fullScreen(screen):
             await recorder.start(fileURL, target: .region(screen, CGRect(origin: .zero, size: screen.frame.size)))
         case .switchToWindow, .cancelled:
             pendingRecording = nil
+            RecordingDefaults.end()
+        }
+    }
+
+    static func recordDevice(_ device: ExternalScreenDevice, options: CaptureOptions = .standard) {
+        guard !isRecording else {
+            stopRecording()
+            return
+        }
+        pendingRecording = (false, options)
+        RecordingDefaults.begin(options.recordingPreset)
+        let fileURL = ExternalScreenCaptureSupport.fileURL(for: device, ext: Defaults[.recordMP4] ? "mp4" : "mov", kind: .recordings)
+        Task { @MainActor in
+            await AppModel.shared.recorder.start(fileURL, target: .device(device))
+            if !isRecording {
+                pendingRecording = nil
+            }
+        }
+    }
+
+    static func captureDeviceScreenshot(_ device: ExternalScreenDevice, options: CaptureOptions = .standard) async {
+        guard !isCapturingImage else { return }
+        guard let captureDevice = AVCaptureDevice(uniqueID: device.id) else {
+            BezelNotification.show(messageText: ExternalScreenCaptureError.deviceUnavailable.localizedDescription, icon: ToastIcon)
+            return
+        }
+        guard await ExternalScreenCaptureSupport.requestAccess() else {
+            BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
+            return
+        }
+        isCapturingImage = true
+        defer { isCapturingImage = false }
+        Log.capture.info("Capturing the screen of \(device.name, privacy: .public)")
+        do {
+            let image = try await ExternalScreenFrameGrabber().grab(from: captureDevice)
+            let fileURL = try ImageCaptureFlow.save(CapturedImage(image: image, suffix: device.fileSuffix))
+            if let resultHandler = options.resultHandler {
+                resultHandler(fileURL)
+                return
+            }
+            await finish(fileURL: fileURL, kind: .image, options: options)
+        } catch {
+            Log.capture.error("Capturing \(device.name, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
         }
     }
 
@@ -107,6 +164,9 @@ enum CaptureSession {
             case let .failure(error):
                 Log.capture.error("Stopping the recording failed: \(error.localizedDescription, privacy: .public)")
             }
+            if !isRecording {
+                RecordingDefaults.end()
+            }
         }
     }
 
@@ -119,33 +179,30 @@ enum CaptureSession {
         let deferredZoom = await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
         var fileURL = url
         var markers = sidecar.markers
-        var isGIF = false
+        var isAnimation = false
         if Defaults[.trimBeforeSaving] {
             switch await RecordingTrimWindow.present(url, markers: markers, autoZoom: deferredZoom) {
             case .keepOriginal:
                 break
-            case let .trimmed(trimmedURL, range):
+            case let .trimmed(trimmedURL, timing):
                 fileURL = trimmedURL
-                markers = RecordingChapters.rebased(markers, to: range)
-            case let .exportedGIF(gifURL):
-                fileURL = gifURL
-                isGIF = true
-            case let .exported(exportedURL, range):
+                markers = RecordingChapters.retimed(markers, through: timing)
+            case let .exportedAnimation(animationURL):
+                fileURL = animationURL
+                isAnimation = true
+            case let .exported(exportedURL, timing):
                 fileURL = exportedURL
-                markers = range.map { RecordingChapters.rebased(markers, to: $0) } ?? markers
+                markers = timing.map { RecordingChapters.retimed(markers, through: $0) } ?? markers
             }
+        } else {
+            markers = await RecordingPostProcessor.cutSilenceIfEnabled(fileURL, markers: markers)
         }
-        if gif, !isGIF {
-            do {
-                fileURL = try await RecordingConversions.convertToGIF(fileURL, range: nil, preset: .current, deletingSource: true)
-                isGIF = true
-            } catch {
-                Log.capture.error("GIF export failed: \(error.localizedDescription, privacy: .public)")
-                BezelNotification.show(messageText: "GIF export failed".localized(), icon: ToastIcon)
-            }
+        if !isAnimation, let converted = await RecordingPostProcessor.convertIfRequested(fileURL, recordsGIF: gif) {
+            fileURL = converted
+            isAnimation = true
         }
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
-        if !isGIF {
+        if !isAnimation {
             await RecordingPostProcessor.finalize(fileURL, markers: markers)
         }
         await finish(fileURL: fileURL, kind: .video, options: options)
@@ -190,12 +247,15 @@ enum CaptureSession {
         if copiedCode == nil, kind == .image {
             await CodeDetection.copyPayloadIfEnabled(fromImageAt: fileURL)
         }
+        await CaptureShelf.shared.collectCapture(fileURL)
 
+        Log.capture.info("After-capture steps finished for \(fileURL.lastPathComponent, privacy: .public), waiting for the result")
         if let uploadToast {
             await uploadToast.presentation.value
         } else {
             await showToast(fileURL: fileURL)
         }
+        Log.capture.info("Result presentation finished for \(fileURL.lastPathComponent, privacy: .public)")
         ToastPlacement.capturedDisplayID = nil
         SoundPlayer.play(.capture)
         if !saveToDisk {
@@ -216,7 +276,7 @@ enum CaptureSession {
                 return
             }
         }
-        let uploadURL = kind == .video ? await PostCapture.compressedIfNeeded(fileURL) : redactedURL ?? fileURL
+        let uploadURL = kind == .video ? await RecordingPostProcessor.uploadCopy(of: fileURL) : redactedURL ?? fileURL
         let localFileURL = keepsLocalFile ? fileURL : nil
         let altText = kind == .image && AltText.isEnabled ? Task { await AltText.generate(for: uploadURL) } : nil
         var results: [Result<UploadOutcome, any Error>] = []

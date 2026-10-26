@@ -68,6 +68,7 @@ enum WebcamBubbleLayout {
 enum CaptureDevices {
     static func cameras() -> [AVCaptureDevice] {
         AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .continuityCamera, .external], mediaType: .video, position: .unspecified).devices
+            .filter { ExternalScreenDevices.screenDevice(for: $0) == nil }
     }
 
     static func microphones() -> [AVCaptureDevice] {
@@ -134,7 +135,7 @@ final class WebcamBubbleController {
 
     func showPreview(of session: AVCaptureSession, in area: CGRect) {
         hide()
-        let frame = WebcamBubbleLayout.frame(diameter: Defaults[.webcamSize].diameter, corner: Defaults[.webcamCorner], in: area)
+        let frame = WebcamBubbleLayout.frame(diameter: RecordingDefaults[.webcamSize].diameter, corner: RecordingDefaults[.webcamCorner], in: area)
         let panel = makePanel(frame: frame, session: session, movable: false)
         panel.sharingType = .none
         panel.ignoresMouseEvents = true
@@ -166,7 +167,7 @@ final class WebcamBubbleController {
         runner.session.addInput(input)
         runner.session.commitConfiguration()
 
-        let frame = WebcamBubbleLayout.frame(diameter: Defaults[.webcamSize].diameter, corner: Defaults[.webcamCorner], in: area)
+        let frame = WebcamBubbleLayout.frame(diameter: RecordingDefaults[.webcamSize].diameter, corner: RecordingDefaults[.webcamCorner], in: area)
         let panel = makePanel(frame: frame, session: runner.session, movable: true)
         panel.orderFrontRegardless()
         runner.start()

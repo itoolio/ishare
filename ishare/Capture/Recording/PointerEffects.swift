@@ -38,12 +38,12 @@ struct PointerEffectSettings: Hashable, Sendable {
 
     static var current: PointerEffectSettings {
         PointerEffectSettings(
-            recordsPointer: Defaults[.recordPointer],
-            smoothing: Defaults[.pointerSmoothing],
-            scale: Defaults[.pointerScale],
-            ripples: Defaults[.clickRipples],
+            recordsPointer: RecordingDefaults[.recordPointer],
+            smoothing: RecordingDefaults[.pointerSmoothing],
+            scale: RecordingDefaults[.pointerScale],
+            ripples: RecordingDefaults[.clickRipples],
             rippleColor: CaptureColor(hex: Defaults[.clickRippleColor]) ?? .defaultRipple,
-            hidesWhenIdle: Defaults[.hidesIdlePointer],
+            hidesWhenIdle: RecordingDefaults[.hidesIdlePointer],
             idleDelay: Defaults[.pointerIdleSeconds]
         )
     }
@@ -123,18 +123,17 @@ struct PointerActivityLog: Sendable {
         keyTimes.append(time)
     }
 
-    func activity(recordingStart: Double, videoSize: CGSize, duration: Double = .infinity) -> PointerActivity {
+    func activity(recordingStart: Double, videoSize: CGSize, duration: Double = .infinity, pauses: RecordingPauseTimeline = RecordingPauseTimeline()) -> PointerActivity {
         PointerActivity(
-            pointer: Self.mapped(samples, recordingStart: recordingStart, videoSize: videoSize, duration: duration),
-            clicks: Self.mapped(clicks, recordingStart: recordingStart, videoSize: videoSize, duration: duration),
-            keyTimes: keyTimes.map { $0 - recordingStart }.filter { $0 >= 0 && $0 <= duration }
+            pointer: Self.mapped(samples, recordingStart: recordingStart, videoSize: videoSize, duration: duration, pauses: pauses),
+            clicks: Self.mapped(clicks, recordingStart: recordingStart, videoSize: videoSize, duration: duration, pauses: pauses),
+            keyTimes: keyTimes.compactMap { pauses.outputTime(of: $0, recordingStart: recordingStart) }.filter { $0 >= 0 && $0 <= duration }
         )
     }
 
-    private static func mapped(_ entries: [Entry], recordingStart: Double, videoSize: CGSize, duration: Double) -> [PointerSample] {
+    private static func mapped(_ entries: [Entry], recordingStart: Double, videoSize: CGSize, duration: Double, pauses: RecordingPauseTimeline) -> [PointerSample] {
         entries.compactMap { entry in
-            let time = entry.time - recordingStart
-            guard time >= 0, time <= duration,
+            guard let time = pauses.outputTime(of: entry.time, recordingStart: recordingStart), time >= 0, time <= duration,
                 let point = OverlayCoordinateMapper.videoPoint(entry.point, sourceRect: entry.sourceRect, videoSize: videoSize)
             else { return nil }
             return PointerSample(time: time, point: point)
@@ -148,6 +147,23 @@ struct RecordingEffectsCapture: Sendable {
     var contentSize: CGSize
     var pointer: PointerEffectSettings
     var autoZoom: AutoZoomSettings?
+    var shapes: PointerShapeSet?
+}
+
+struct PointerShapeSet: Hashable, @unchecked Sendable {
+    var track: PointerShapeTrack
+    var images: [CGImage]
+
+    var isEmpty: Bool { track.isEmpty || images.isEmpty }
+
+    func image(at time: Double) -> (index: Int, shape: PointerShape, image: CGImage)? {
+        guard let index = track.shapeIndex(at: time), images.indices.contains(index) else { return nil }
+        return (index, track.shapes[index], images[index])
+    }
+
+    func retimed(_ transform: (Double) -> Double) -> PointerShapeSet {
+        PointerShapeSet(track: track.retimed(transform), images: images)
+    }
 }
 
 struct RecordingEffectsPlan: Hashable, Sendable {
@@ -155,12 +171,15 @@ struct RecordingEffectsPlan: Hashable, Sendable {
     var ripples: [OverlayClick] = []
     var rippleColor: CaptureColor = .defaultRipple
     var camera: CameraPath?
+    var pointerShapes: PointerShapeSet?
 
     var isEmpty: Bool {
         pointer == nil && ripples.isEmpty && (camera?.isEmpty ?? true)
     }
 
-    static func make(activity: PointerActivity, pointer settings: PointerEffectSettings, autoZoom: AutoZoomSettings?, videoSize: CGSize, duration: Double) -> RecordingEffectsPlan {
+    static func make(
+        activity: PointerActivity, pointer settings: PointerEffectSettings, autoZoom: AutoZoomSettings?, videoSize: CGSize, duration: Double, shapes: PointerShapeSet? = nil
+    ) -> RecordingEffectsPlan {
         let clickTimes = activity.clicks.map(\.time)
         let track =
             settings.rendersPointer && !activity.pointer.isEmpty
@@ -170,7 +189,9 @@ struct RecordingEffectsPlan: Hashable, Sendable {
         let camera = autoZoom.map {
             CameraPlanner.plan(activity: activity.activityEvents, pointer: activity.pointer, duration: duration, frameSize: videoSize, settings: $0)
         }
-        return RecordingEffectsPlan(pointer: track, ripples: ripples, rippleColor: settings.rippleColor, camera: camera?.isEmpty == false ? camera : nil)
+        return RecordingEffectsPlan(
+            pointer: track, ripples: ripples, rippleColor: settings.rippleColor, camera: camera?.isEmpty == false ? camera : nil,
+            pointerShapes: track == nil || shapes?.isEmpty != false ? nil : shapes)
     }
 
     func withoutCamera() -> RecordingEffectsPlan {

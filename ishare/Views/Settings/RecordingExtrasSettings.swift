@@ -10,6 +10,7 @@ struct RecordingExtrasSettings: View {
             WebcamSettingsSection()
             MicrophoneSettingsSection()
             AfterRecordingSettingsSection()
+            RecordingPostProcessingSettings()
             CaptionsSettingsSection()
             NotesSettingsSection()
             InstantReplaySettingsSection()
@@ -255,7 +256,7 @@ struct AudioAppChoice: Identifiable, Hashable {
     }
 }
 
-private struct AudioAppsPicker: View {
+struct AudioAppsPicker: View {
     @Binding var bundleIDs: [String]
     @Environment(\.dismiss) private var dismiss
     @State private var choices: [AudioAppChoice] = []

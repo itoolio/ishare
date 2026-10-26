@@ -14,6 +14,7 @@ struct EditorCanvas: View {
         case movingCrop(CGRect)
         case newCrop
         case panning(CGSize)
+        case idle
     }
 
     static let handleSize: CGFloat = 9
@@ -27,6 +28,7 @@ struct EditorCanvas: View {
     @State private var pinchStartZoom: CGFloat?
     @State private var hoverSnapTarget: CGRect?
     @State private var drawingSnapTarget: CGRect?
+    @State private var textHighlightDrafts: [Annotation] = []
     @StateObject private var effectPreview = LiveEffectPreview()
     @FocusState private var textFocused: Bool
 
@@ -37,7 +39,7 @@ struct EditorCanvas: View {
                 Canvas { context, _ in
                     draw(in: &context, transform: transform)
                 }
-                .background(CanvasEventMonitor(onScroll: handleScroll, onSpace: handleSpace))
+                .background(CanvasEventMonitor(onScroll: handleScroll, onSpace: handleSpace, onContextMenu: { contextMenu(at: $0) }))
                 .contentShape(Rectangle())
                 .gesture(canvasGesture(transform: transform))
                 .simultaneousGesture(pinchGesture)
@@ -183,6 +185,27 @@ struct EditorCanvas: View {
         clipped.stroke(Path(kept), with: .color(.white), lineWidth: 1.5)
     }
 
+    private static var isDoubleClick: Bool {
+        guard let event = NSApp.currentEvent, event.type == .leftMouseDown else { return false }
+        return event.clickCount >= 2
+    }
+
+    private func contextMenu(at location: CGPoint) -> NSMenu? {
+        guard !document.isCropping, document.editingText == nil, interaction == nil else { return nil }
+        let transform = viewport.transform
+        let point = transform.toImage(location)
+        if let hit = document.annotation(at: point, tolerance: max(transform.toImage(8), document.lineWidth)), !document.selectedIDs.contains(hit.id) {
+            document.selectedID = hit.id
+        }
+        guard !document.selectedIDs.isEmpty else { return nil }
+        return AnnotationContextMenu.make(for: document)
+    }
+
+    private func textHighlights(from start: CGPoint, to end: CGPoint) -> [Annotation] {
+        guard document.textHighlightActive, !NSEvent.modifierFlags.contains(.command) else { return [] }
+        return document.textHighlights(from: start, to: end, tolerance: viewport.transform.toImage(6))
+    }
+
     private var snapsShapes: Bool {
         document.smartShapesActive && !NSEvent.modifierFlags.contains(.command)
     }
@@ -207,11 +230,16 @@ struct EditorCanvas: View {
     }
 
     private func drawSelection(of annotation: Annotation, showsHandles: Bool, in context: inout GraphicsContext, transform: CanvasTransform) {
-        let outline = transform.toView(annotation.bounds).insetBy(dx: -6, dy: -6)
+        let margin = transform.toImage(6)
+        let frame = annotation.outline
+        let inflated = RotatedRect(rect: frame.rect.insetBy(dx: -margin, dy: -margin), angle: frame.angle)
+        var outline = Path()
+        outline.addLines(inflated.corners.map { transform.toView($0) })
+        outline.closeSubpath()
         let outlineColor: Color = annotation.locked ? .secondary : .accentColor
-        context.stroke(Path(outline), with: .color(outlineColor), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+        context.stroke(outline, with: .color(outlineColor), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
         guard showsHandles else { return }
-        if case let .curvedArrow(start, control, end) = annotation.shape {
+        if let (start, control, end) = annotation.curveControlPoints {
             var guide = Path()
             guide.move(to: transform.toView(start))
             guide.addLine(to: transform.toView(ArrowGeometry.midpoint(from: start, control: control, to: end)))
@@ -294,6 +322,7 @@ struct EditorCanvas: View {
         if let draft = document.draft {
             list.append(draft)
         }
+        list.append(contentsOf: textHighlightDrafts)
         return list
     }
 
@@ -313,6 +342,9 @@ struct EditorCanvas: View {
         }
         if let selected = selectedAnnotation, selected.editHandle(at: point, tolerance: tolerance) != nil {
             return .pointingHand
+        }
+        if document.textHighlightActive, document.textLines.contains(where: { $0.frame.contains(point) }) {
+            return .iBeam
         }
         switch document.tool {
         case .select: return .arrow
@@ -417,6 +449,11 @@ struct EditorCanvas: View {
         if document.tool != .text, let selected = document.selectedAnnotation, selected.isInteractive,
             let handle = selected.editHandle(at: point, tolerance: tolerance)
         {
+            if handle == .control, selected.isCurved, Self.isDoubleClick {
+                document.replace(selected.straightened())
+                interaction = .idle
+                return
+            }
             interaction = .editingHandle(selected, handle)
             if selected.isEffect {
                 effectPreview.begin(for: selected, background: document.effectedBase(excluding: selected.id), zoom: viewport.effectiveZoom)
@@ -485,6 +522,11 @@ struct EditorCanvas: View {
             case .select, .text, .step, .cursor, .crop:
                 break
             default:
+                textHighlightDrafts = textHighlights(from: start, to: current)
+                guard textHighlightDrafts.isEmpty else {
+                    document.draft = nil
+                    return
+                }
                 let corners = snapped(from: start, to: current)
                 let draft = document.makeAnnotation(tool: document.tool, from: corners.start, to: corners.end, points: dragPoints)
                 document.draft = draft
@@ -496,7 +538,7 @@ struct EditorCanvas: View {
                     }
                 }
             }
-        case .panning, nil:
+        case .panning, .idle, nil:
             break
         }
     }
@@ -513,7 +555,7 @@ struct EditorCanvas: View {
                 document.replace(liveAnnotation)
             }
             liveAnnotation = nil
-        case .resizingCrop, .movingCrop, .newCrop, .panning, nil:
+        case .resizingCrop, .movingCrop, .newCrop, .panning, .idle, nil:
             break
         case .drawing:
             finishDrawing(from: start, to: end, transform: transform)
@@ -547,6 +589,13 @@ struct EditorCanvas: View {
             }
             document.draft = nil
         default:
+            let highlights = textHighlights(from: start, to: end)
+            textHighlightDrafts = []
+            guard highlights.isEmpty else {
+                document.add(contentsOf: highlights)
+                document.draft = nil
+                return
+            }
             let corners = snapped(from: start, to: end)
             drawingSnapTarget = nil
             if let draft = document.makeAnnotation(tool: document.tool, from: corners.start, to: corners.end, points: dragPoints), document.isSubstantial(draft) {

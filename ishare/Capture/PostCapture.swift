@@ -15,7 +15,7 @@ enum PostCapture {
             VideoCompressor.needsCompression(fileSize: Int64(size), thresholdMB: Defaults[.compressionThresholdMB])
         else { return fileURL }
         do {
-            return try await VideoCompressor.compress(fileURL, preset: Defaults[.compressionPreset], hevc: Defaults[.useHEVC])
+            return try await VideoCompressor.compress(fileURL, preset: Defaults[.compressionPreset], hevc: RecordingDefaults[.useHEVC])
         } catch {
             NSLog("Compression failed: %@", error.localizedDescription)
             return fileURL

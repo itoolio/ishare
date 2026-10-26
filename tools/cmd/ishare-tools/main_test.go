@@ -140,3 +140,49 @@ func TestSymbolicateNeedsACrashReportAndDSYMs(t *testing.T) {
 		}
 	}
 }
+
+func TestSBOMWritesAnSPDXDocumentForTheRepository(t *testing.T) {
+	output := filepath.Join(t.TempDir(), "ishare-5.5.0-sbom.spdx.json")
+	code, stdout, stderr := execute(t, "", "sbom", "--version", "5.5.0", "--created", "2026-10-25T00:00:00Z",
+		"--package-resolved", repo.Path("tools", "internal", "sbom", "testdata", "Package.resolved.v3"),
+		"--package-dir", repo.Path("Packages", "ishareCore"),
+		"--go-mod", repo.Path("tools", "go.mod"),
+		"--output", output)
+	if code != 0 {
+		t.Fatalf("exit code %d, stderr %q", code, stderr)
+	}
+	if !strings.Contains(stdout, "with 6 packages") {
+		t.Errorf("unexpected stdout %q", stdout)
+	}
+	data, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fragment := range []string{`"spdxVersion": "SPDX-2.3"`, `"name": "ishareCore"`, `pkg:golang/github.com/itoolio/ishare/tools@v5.5.0`, `"created": "2026-10-25T00:00:00Z"`} {
+		if !strings.Contains(string(data), fragment) {
+			t.Errorf("the SBOM lacks %s", fragment)
+		}
+	}
+}
+
+func TestSBOMRequiresAVersionAndOutput(t *testing.T) {
+	for _, arguments := range [][]string{{"sbom"}, {"sbom", "--version", "1.0.0"}, {"sbom", "--output", "x.json"}} {
+		if code, _, stderr := execute(t, "", arguments...); code != 2 || !strings.HasPrefix(stderr, "usage: ishare-tools sbom") {
+			t.Errorf("%v: exit code %d, stderr %q", arguments, code, stderr)
+		}
+	}
+}
+
+func TestAutomationRequiresTheApp(t *testing.T) {
+	for _, arguments := range [][]string{{"automation"}, {"automation", "--app", "x.app", "extra"}, {"automation", "--app", "x.app", "--ready-timeout", "0"}} {
+		if code, _, stderr := execute(t, "", arguments...); code != 2 || !strings.HasPrefix(stderr, "usage: ishare-tools automation") {
+			t.Errorf("%v: exit code %d, stderr %q", arguments, code, stderr)
+		}
+	}
+}
+
+func TestGuideClipsRejectsUnknownScenes(t *testing.T) {
+	if code, _, stderr := execute(t, "", "guide-clips", "teleport"); code != 1 || !strings.Contains(stderr, "not a guide scene") {
+		t.Fatalf("exit code %d, stderr %q", code, stderr)
+	}
+}

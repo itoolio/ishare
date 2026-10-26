@@ -23,7 +23,7 @@ struct EditorToolOptions: View {
             case .rectangle:
                 dashToggle
                 smartShapesToggle
-            case .highlight: smartShapesToggle
+            case .highlight: highlightOptions
             case .spotlight:
                 spotlightOptions
                 smartShapesToggle
@@ -144,6 +144,56 @@ struct EditorToolOptions: View {
         .toggleStyle(.button)
         .help("Dashed".localized())
         .accessibilityIdentifier("editor.style.dashed")
+    }
+
+    private var highlightOptions: some View {
+        Group {
+            Picker(
+                "Highlight Target".localized(),
+                selection: Binding(
+                    get: { document.highlightTarget },
+                    set: { document.setHighlightTarget($0) }
+                )
+            ) {
+                ForEach(HighlightTarget.allCases) { target in
+                    Image(systemName: target.symbol)
+                        .help(target.title)
+                        .accessibilityLabel(target.title)
+                        .tag(target)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .help("Snap to recognized text (hold ⌘ to draw freely)".localized())
+            .accessibilityIdentifier("editor.highlight.target")
+            Picker(
+                "Highlight Style".localized(),
+                selection: Binding(
+                    get: { document.highlightStyle },
+                    set: { document.setHighlightStyle($0) }
+                )
+            ) {
+                ForEach(HighlightStyle.allCases) { style in
+                    Image(systemName: style.symbol)
+                        .help(style.title)
+                        .accessibilityLabel(style.title)
+                        .tag(style)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .accessibilityIdentifier("editor.highlight.style")
+            if document.highlightTarget == .area {
+                smartShapesToggle
+            } else if document.isRecognizingText {
+                ProgressView()
+                    .controlSize(.small)
+                    .help("Recognizing text…".localized())
+                    .accessibilityIdentifier("editor.highlight.recognizing")
+            }
+        }
     }
 
     private var smartShapesToggle: some View {

@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/itoolio/ishare/tools/internal/appcast"
 	"github.com/itoolio/ishare/tools/internal/appstore"
 	"github.com/itoolio/ishare/tools/internal/appstoreplan"
+	"github.com/itoolio/ishare/tools/internal/automation"
 	"github.com/itoolio/ishare/tools/internal/buildlog"
 	"github.com/itoolio/ishare/tools/internal/coverage"
 	"github.com/itoolio/ishare/tools/internal/docc"
@@ -19,6 +22,7 @@ import (
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
 	"github.com/itoolio/ishare/tools/internal/repo"
+	"github.com/itoolio/ishare/tools/internal/sbom"
 	"github.com/itoolio/ishare/tools/internal/screenshots"
 	symbolication "github.com/itoolio/ishare/tools/internal/symbolicate"
 	"github.com/itoolio/ishare/tools/internal/version"
@@ -42,6 +46,7 @@ var commands = map[string]command{
 	"release-notes":      {"release-notes [output-file] < release.md", releaseNotes},
 	"register-bundle-id": {"register-bundle-id [identifier...]", registerBundleID},
 	"merge-translations": {"merge-translations <base.xcstrings> <incoming.xcstrings> <output.xcstrings>", mergeTranslations},
+	"guide-clips":        {"guide-clips [--ci] [all | scene...]", captureGuideClips},
 	"screenshots":        {"screenshots [--ci] [all | locale[:language]...]", captureScreenshots},
 	"metadata":           {"metadata [--check] [--metadata dir] [--catalog Metadata.xcstrings] [--release-notes en-US/release_notes.txt]", renderMetadata},
 	"app-store-plan":     {"app-store-plan --report status.json --releases releases.json", appStorePlan},
@@ -51,6 +56,8 @@ var commands = map[string]command{
 	"docc-symbols":       {"docc-symbols [--module ishare] [--keep Type]... <derived-data-or-symbol-graph-dir> <output-dir>", doccSymbols},
 	"package-dsyms":      {"package-dsyms <archive.xcarchive> <output.zip>", packageDSYMs},
 	"symbolicate":        {"symbolicate <crash.ips|crash> --dsyms <dSYMs.zip|dir> [--output file]", symbolicate},
+	"automation":         {"automation --app ishare.app [--work dir] [--no-launch] [--ready-timeout seconds]", runAutomation},
+	"sbom":               {"sbom --version <version> --output file.spdx.json [--package-resolved Package.resolved]... [--package-dir dir]... [--go-mod go.mod]... [--created RFC3339]", writeSBOM},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
 
@@ -175,6 +182,20 @@ func captureScreenshots(env environment, arguments []string) error {
 		return err
 	}
 	return screenshots.Run(screenshots.Options{Root: repo.Root(), Targets: targets, Output: env.stdout, CI: *ci})
+}
+
+func captureGuideClips(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("guide-clips", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	ci := flags.Bool("ci", false, "")
+	if err := flags.Parse(arguments); err != nil {
+		return errUsage
+	}
+	scenes, err := screenshots.ParseGuideScenes(flags.Args())
+	if err != nil {
+		return err
+	}
+	return screenshots.RunGuide(screenshots.GuideOptions{Root: repo.Root(), Scenes: scenes, Output: env.stdout, CI: *ci})
 }
 
 func releaseCheck(env environment, arguments []string) error {
@@ -454,5 +475,71 @@ func doccSymbols(env environment, arguments []string) error {
 		return err
 	}
 	fmt.Fprintf(env.stdout, "kept %d symbols and %d relationships of %d types\n", result.Symbols, result.Relationships, len(result.Types))
+	return nil
+}
+
+func writeSBOM(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("sbom", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	version := flags.String("version", "", "")
+	output := flags.String("output", "", "")
+	created := flags.String("created", "", "")
+	var resolved, packageDirs, goModules fragments
+	flags.Var(&resolved, "package-resolved", "")
+	flags.Var(&packageDirs, "package-dir", "")
+	flags.Var(&goModules, "go-mod", "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 || *version == "" || *output == "" {
+		return errUsage
+	}
+	timestamp, err := sbom.CreatedTime(*created, os.Getenv("SOURCE_DATE_EPOCH"), time.Now())
+	if err != nil {
+		return err
+	}
+	document, err := sbom.Write(sbom.Options{
+		Version:         *version,
+		PackageResolved: resolved,
+		PackageDirs:     packageDirs,
+		GoModules:       goModules,
+		Created:         timestamp,
+	}, *output)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(env.stdout, "wrote %s with %d packages\n", *output, len(document.Packages))
+	return nil
+}
+
+func runAutomation(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("automation", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	app := flags.String("app", "", "")
+	work := flags.String("work", "", "")
+	noLaunch := flags.Bool("no-launch", false, "")
+	readyTimeout := flags.Int("ready-timeout", 90, "")
+	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 || *app == "" || *readyTimeout <= 0 {
+		return errUsage
+	}
+	appPath, err := filepath.Abs(*app)
+	if err != nil {
+		return err
+	}
+	directory := *work
+	if directory == "" {
+		directory = filepath.Join(os.TempDir(), "ishare-automation")
+	}
+	directory, err = filepath.Abs(directory)
+	if err != nil {
+		return err
+	}
+	failures, err := automation.Run(automation.Options{
+		App: appPath, Work: directory, Output: env.stdout, Launch: !*noLaunch,
+		ReadyTimeout: time.Duration(*readyTimeout) * time.Second,
+	})
+	if err != nil {
+		return err
+	}
+	if len(failures) > 0 {
+		return fmt.Errorf("%d automation checks failed", len(failures))
+	}
 	return nil
 }

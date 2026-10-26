@@ -24,6 +24,12 @@ public enum UploaderIssue: Equatable, Sendable {
     case invalidPublicURLTemplate
     case invalidGitHubRepository
     case missingCloudClientID
+    case emptyLinkRewrite
+    case invalidLinkRewriteScheme
+    case invalidLinkRewriteHost
+    case invalidLinkRewriteTemplate
+    case invalidAutoDeleteDays
+    case autoDeleteNeedsDeletion
 
     static let malformedTemplateFormat = "The %@ template has unbalanced {{ }} placeholders"
     static let missingS3FieldFormat = "The S3 %@ is required"
@@ -57,6 +63,12 @@ public enum UploaderIssue: Equatable, Sendable {
         case .invalidPublicURLTemplate: "The public URL must start with http:// or https://"
         case .invalidGitHubRepository: "Enter the repository as owner/name"
         case .missingCloudClientID: "Paste the client ID of your own app to use this provider"
+        case .emptyLinkRewrite: "Link rewriting needs a host, scheme, path prefix, query option or template"
+        case .invalidLinkRewriteScheme: "The rewritten link's scheme must be http or https"
+        case .invalidLinkRewriteHost: "Enter the rewritten host like cdn.example.com, without a scheme or path"
+        case .invalidLinkRewriteTemplate: "The link template must produce an http or https URL and only use known placeholders"
+        case .invalidAutoDeleteDays: "Auto-delete must be between 1 and 3650 days"
+        case .autoDeleteNeedsDeletion: "Auto-delete needs an uploader that can delete files, such as one with a deletion URL"
         }
     }
 
@@ -98,7 +110,16 @@ public enum UploaderValidator {
         case .dropbox, .googleDrive, .oneDrive:
             issues += cloudIssues(for: uploader.cloud, provider: uploader.kind.cloudProvider)
         }
-        return issues
+        if let rewrite = uploader.linkRewrite {
+            issues += rewrite.issues
+        }
+        return issues + autoDeleteIssues(for: uploader)
+    }
+
+    static func autoDeleteIssues(for uploader: CustomUploader) -> [UploaderIssue] {
+        guard let days = uploader.autoDeleteAfterDays else { return [] }
+        guard UploadExpiry.isValid(days: days) else { return [.invalidAutoDeleteDays] }
+        return uploader.supportsAutoDelete ? [] : [.autoDeleteNeedsDeletion]
     }
 
     static func pathTemplateIssues(_ template: String?) -> [UploaderIssue] {

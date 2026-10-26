@@ -1,6 +1,6 @@
 ishare is a menu bar app: click its menu bar icon to open the capture menu. Uploads use the built-in Imgur option or a custom uploader added in Settings > Uploaders.
 
-Camera (com.apple.security.device.camera): only for the optional webcam bubble over screen recordings. To try it, turn on Settings > Recordings > Webcam > Show webcam, then choose Record > Screen or Region; a round camera preview appears over the recording.
+Camera (com.apple.security.device.camera): for the optional webcam bubble over screen recordings and for recording or capturing the screen of an iPhone or iPad connected over USB, like QuickTime Player. To try the bubble, turn on Settings > Recordings > Webcam > Show webcam, then choose Record > Screen or Region. To try a device, connect an unlocked iPhone over USB and choose Record iPhone or Capture iPhone Screenshot in the menu.
 
 Microphone (com.apple.security.device.audio-input): records your voice into screen recordings when Settings > Recordings > Record microphone is on, and drives the level meter there.
 

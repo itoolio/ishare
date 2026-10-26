@@ -154,6 +154,14 @@ enum SettingsTransfer {
         .showQRCodeAfterUpload, .localShareExpiry, .localShareMaxDownloads, .historySyncEnabled,
         .optimizeImagesBeforeUpload, .imageOptimizationFormat, .imageConversionQuality, .stripImageMetadata,
         .stripImportedImageMetadata, .uploadWebhooks,
+        .cutSilenceEnabled, .cutSilenceSpeed, .cutSilenceAudioThreshold, .cutSilenceMotionThreshold, .cutSilenceMinimumDuration, .cutSilencePadding,
+        .recordingConvertTo, .recordingUploadFormat, .voiceOverMode, .voiceOverDuckAmount, .blurRegionStyle, .blurDetectionInterval,
+        .keepsExpiredUploadsInHistory, .duplicateUploadPolicy, .uploaderHealthCheckFrequency,
+        .selectionConstraint, .customSelectionSize, .freezeScreenWhileSelecting, .multiRegionResult, .menuCaptureIncludesParentWindow,
+        .recordingPresets,
+        .combineLayout, .combineAlignment, .combineColumns, .combineSpacing, .combinePadding, .combineCornerRadius, .combineShadow,
+        .combineBackground, .combineSolidColor, .editorToolStyles,
+        .captureShelfMode,
     ]
 
     static var preferenceNames: Set<String> {

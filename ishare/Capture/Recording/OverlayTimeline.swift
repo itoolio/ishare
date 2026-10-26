@@ -1,6 +1,7 @@
 import CoreGraphics
 import CoreMedia
 import Foundation
+import ishareCore
 
 enum RecordingClock {
     static var now: Double {
@@ -53,6 +54,16 @@ struct OverlayKeystrokeSpan: Hashable, Sendable {
 struct OverlayWebcamClip: Hashable, Sendable {
     var url: URL
     var offset: Double
+    var startTime: Double?
+    var recordingStart: Double?
+    var pauses = RecordingPauseTimeline()
+
+    func segments(clipDuration: Double, outputDuration: Double) -> [RecordingMediaSegment] {
+        guard let startTime, let recordingStart else {
+            return RecordingPauseTimeline().segments(sourceStart: offset, sourceDuration: clipDuration, recordingStart: 0, outputDuration: outputDuration)
+        }
+        return pauses.segments(sourceStart: startTime, sourceDuration: clipDuration, recordingStart: recordingStart, outputDuration: outputDuration)
+    }
 }
 
 struct OverlayEventLog: Sendable {
@@ -80,15 +91,17 @@ struct OverlayEventLog: Sendable {
         keys.append(Key(time: time, keystroke: keystroke))
     }
 
-    func timeline(recordingStart: Double, videoSize: CGSize, webcam: OverlayWebcamClip? = nil, duration: Double = .infinity) -> OverlayTimeline {
+    func timeline(
+        recordingStart: Double, videoSize: CGSize, webcam: OverlayWebcamClip? = nil, duration: Double = .infinity, pauses: RecordingPauseTimeline = RecordingPauseTimeline()
+    ) -> OverlayTimeline {
         let mappedClicks = clicks.compactMap { click -> OverlayClick? in
-            let time = click.time - recordingStart
-            guard time >= 0, time <= duration,
+            guard let time = pauses.outputTime(of: click.time, recordingStart: recordingStart), time >= 0, time <= duration,
                 let point = OverlayCoordinateMapper.videoPoint(click.point, sourceRect: click.sourceRect, videoSize: videoSize)
             else { return nil }
             return OverlayClick(time: time, point: point)
         }
-        let spans = OverlayTimeline.keystrokeSpans(for: keys.map { ($0.time - recordingStart, $0.keystroke) }, duration: duration)
+        let mappedKeys = keys.compactMap { key in pauses.outputTime(of: key.time, recordingStart: recordingStart).map { ($0, key.keystroke) } }
+        let spans = OverlayTimeline.keystrokeSpans(for: mappedKeys, duration: duration)
         return OverlayTimeline(clicks: mappedClicks, keystrokes: spans, webcam: webcam)
     }
 }
@@ -102,8 +115,9 @@ struct OverlayTimeline: Hashable, Sendable {
     var keystrokes: [OverlayKeystrokeSpan] = []
     var webcam: OverlayWebcamClip?
     var effects = RecordingEffectsPlan()
+    var blurRegions: [BlurRegion] = []
 
-    var isEmpty: Bool { clicks.isEmpty && keystrokes.isEmpty && webcam == nil && effects.isEmpty }
+    var isEmpty: Bool { clicks.isEmpty && keystrokes.isEmpty && webcam == nil && effects.isEmpty && blurRegions.isEmpty }
 
     func ripples(at time: Double) -> [(point: CGPoint, progress: Double)] {
         clicks

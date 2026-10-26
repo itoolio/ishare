@@ -6,7 +6,7 @@ import ishareCore
 extension AutoZoomSettings {
     static var current: AutoZoomSettings {
         AutoZoomSettings(
-            zoom: Defaults[.autoZoomLevel],
+            zoom: RecordingDefaults[.autoZoomLevel],
             easeDuration: Defaults[.autoZoomEaseDuration],
             holdTime: Defaults[.autoZoomHoldTime],
             followsPointer: Defaults[.autoZoomFollowsPointer]

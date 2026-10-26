@@ -28,13 +28,14 @@ extension Annotation {
     var editHandles: [(EditHandle, CGPoint)] {
         switch shape {
         case let .arrow(start, end), let .line(start, end):
-            return [(.start, start), (.end, end)]
-        case let .curvedArrow(start, control, end):
+            return [(.start, start), (.control, CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)), (.end, end)]
+        case let .curvedArrow(start, control, end), let .curvedLine(start, control, end):
             return [(.start, start), (.control, ArrowGeometry.midpoint(from: start, control: control, to: end)), (.end, end)]
         default:
             guard let rect = editableRect else { return [] }
             let handles = keepsSquareProportions ? ResizeHandle.allCases.filter(\.isCorner) : ResizeHandle.allCases
-            return handles.map { (.resize($0), $0.point(in: rect)) }
+            let frame = rotatedFrame
+            return handles.map { (.resize($0), frame?.toWorld($0.point(in: rect)) ?? $0.point(in: rect)) }
         }
     }
 
@@ -52,21 +53,62 @@ extension Annotation {
         case let (.arrow(start, _), .end): copy.shape = .arrow(start, point)
         case let (.line(_, end), .start): copy.shape = .line(point, end)
         case let (.line(start, _), .end): copy.shape = .line(start, point)
-        case let (.curvedArrow(start, control, end), .start):
-            let midpoint = ArrowGeometry.midpoint(from: start, control: control, to: end)
-            copy.shape = .curvedArrow(point, ArrowGeometry.control(passingThrough: midpoint, from: point, to: end), end)
-        case let (.curvedArrow(start, control, end), .end):
-            let midpoint = ArrowGeometry.midpoint(from: start, control: control, to: end)
-            copy.shape = .curvedArrow(start, ArrowGeometry.control(passingThrough: midpoint, from: start, to: point), point)
-        case let (.curvedArrow(start, _, end), .control):
+        case let (.arrow(start, end), .control):
             copy.shape = .curvedArrow(start, ArrowGeometry.control(passingThrough: point, from: start, to: end), end)
+        case let (.line(start, end), .control):
+            copy.shape = .curvedLine(start, ArrowGeometry.control(passingThrough: point, from: start, to: end), end)
+        case let (.curvedArrow(start, control, end), .start), let (.curvedLine(start, control, end), .start):
+            let midpoint = ArrowGeometry.midpoint(from: start, control: control, to: end)
+            copy.shape = bent(point, ArrowGeometry.control(passingThrough: midpoint, from: point, to: end), end)
+        case let (.curvedArrow(start, control, end), .end), let (.curvedLine(start, control, end), .end):
+            let midpoint = ArrowGeometry.midpoint(from: start, control: control, to: end)
+            copy.shape = bent(start, ArrowGeometry.control(passingThrough: midpoint, from: start, to: point), point)
+        case let (.curvedArrow(start, _, end), .control), let (.curvedLine(start, _, end), .control):
+            copy.shape = bent(start, ArrowGeometry.control(passingThrough: point, from: start, to: end), end)
         case let (_, .resize(resizeHandle)):
             guard let rect = editableRect else { return self }
             let unbounded = CGRect(x: -1e7, y: -1e7, width: 2e7, height: 2e7)
-            let newRect = CropGeometry.resize(rect, handle: resizeHandle, to: point, ratio: keepsSquareProportions ? 1 : nil, bounds: unbounded)
-            copy = resized(to: newRect)
+            let frame = rotatedFrame
+            let local = frame?.toLocal(point) ?? point
+            let newRect = CropGeometry.resize(rect, handle: resizeHandle, to: local, ratio: keepsSquareProportions ? 1 : nil, bounds: unbounded)
+            copy = resized(to: frame?.replacingLocalRect(newRect).rect ?? newRect)
         default:
             break
+        }
+        return copy
+    }
+
+    private func bent(_ start: CGPoint, _ control: CGPoint, _ end: CGPoint) -> Shape {
+        isArrow ? .curvedArrow(start, control, end) : .curvedLine(start, control, end)
+    }
+
+    var curveControlPoints: (CGPoint, CGPoint, CGPoint)? {
+        switch shape {
+        case let .curvedArrow(start, control, end), let .curvedLine(start, control, end): (start, control, end)
+        default: nil
+        }
+    }
+
+    var isCurved: Bool {
+        switch shape {
+        case .curvedArrow, .curvedLine: true
+        default: false
+        }
+    }
+
+    var supportsBending: Bool {
+        switch shape {
+        case .arrow, .line, .curvedArrow, .curvedLine: true
+        default: false
+        }
+    }
+
+    func straightened() -> Annotation {
+        var copy = self
+        switch shape {
+        case let .curvedArrow(start, _, end): copy.shape = .arrow(start, end)
+        case let .curvedLine(start, _, end): copy.shape = .line(start, end)
+        default: break
         }
         return copy
     }
@@ -97,7 +139,7 @@ extension Annotation {
 
     var supportsDash: Bool {
         switch shape {
-        case .arrow, .curvedArrow, .line: true
+        case .arrow, .curvedArrow, .line, .curvedLine: true
         case .rectangle, .ellipse: !filled
         default: false
         }
