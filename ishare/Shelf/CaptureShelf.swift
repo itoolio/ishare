@@ -51,6 +51,9 @@ final class CaptureShelf: ObservableObject {
         let result = state.insert(duplicates + stored)
         discard(result.duplicates.filter { item in stored.contains { $0.id == item.id } } + result.evicted)
         selection.retain(state.items)
+        if isVisible {
+            panel?.resize(itemCount: state.items.count)
+        }
     }
 
     func remove(_ ids: Set<UUID>) {

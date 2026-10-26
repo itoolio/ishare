@@ -62,6 +62,8 @@ struct CaptureShelfView: View {
         .controlSize(.small)
         .padding(.horizontal, 10)
         .frame(height: CaptureShelfGeometry.headerHeight)
+        .contentShape(Rectangle())
+        .gesture(WindowDragGesture())
     }
 
     private var emptyState: some View {
