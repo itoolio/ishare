@@ -59,11 +59,20 @@ enum TextRecognition {
         }.value
     }
 
+    private static let serialRecognition = NSLock()
+
     private static func performRecognition(on image: CGImage) throws -> [RecognizedLine] {
+        serialRecognition.lock()
+        defer { serialRecognition.unlock() }
         do {
             return try performRecognition(on: image, onCPU: false)
         } catch {
-            return try performRecognition(on: image, onCPU: true)
+            do {
+                return try performRecognition(on: image, onCPU: true)
+            } catch {
+                Thread.sleep(forTimeInterval: 0.2)
+                return try performRecognition(on: image, onCPU: true)
+            }
         }
     }
 
