@@ -203,6 +203,14 @@ jobs:
                   codesign --force --sign - "$APP/Contents/Helpers/ishare"
                   codesign --force --sign - --preserve-metadata=entitlements,flags "$APP"
                   codesign --verify --verbose=2 "$APP"
+            - name: Park the pointer away from the result toasts
+              run: |
+                  cat > "$RUNNER_TEMP/park-pointer.swift" <<'SWIFT'
+                  import CoreGraphics
+                  let height = CGFloat(CGDisplayPixelsHigh(CGMainDisplayID()))
+                  CGWarpMouseCursorPosition(CGPoint(x: 10, y: height - 10))
+                  SWIFT
+                  xcrun swift "$RUNNER_TEMP/park-pointer.swift"
             - name: Keep the app's info log
               run: sudo log config --subsystem dev.adrian.ishare --mode "level:info,persist:info"
             - name: Run every ishare:// action and CLI command against the app
