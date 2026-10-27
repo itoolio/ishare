@@ -235,7 +235,7 @@ jobs:
 
             - name: Attest the build provenance of the DMG, the dSYMs and the SBOM
               if: env.DRY_RUN != 'true'
-              uses: actions/attest-build-provenance@v3
+              uses: actions/attest-build-provenance@v4
               with:
                   subject-path: |
                       dist/ishare.dmg
@@ -335,7 +335,7 @@ jobs:
 
             - name: Attest the build provenance of the App Store dSYMs
               if: env.DRY_RUN != 'true'
-              uses: actions/attest-build-provenance@v3
+              uses: actions/attest-build-provenance@v4
               with:
                   subject-path: build/dsyms/*.zip
 
