@@ -47,7 +47,6 @@ final class RegionSelectionView: NSView {
         if bounds.contains(location) {
             mouseLocation = location
         }
-        isMeasureModifierHeld = NSEvent.modifierFlags.contains(.option)
     }
 
     @available(*, unavailable)
