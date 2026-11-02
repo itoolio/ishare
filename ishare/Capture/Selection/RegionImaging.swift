@@ -110,7 +110,7 @@ final class RegionImaging {
             return result
         case .combined:
             let pieces = images.map { PrivacyFilter.hideMenuBarIfNeeded($0.image, geometry: $0.geometry) }
-            guard let combined = ImageCombiner.combine(pieces, style: CombineStyle()) else { return first }
+            guard let combined = ImageCombiner.combine(pieces, style: CombineSettings.load().style(imageCount: pieces.count)) else { return first }
             return CapturedImage(image: combined, suffix: frontmost, pointScale: images.compactMap(\.geometry?.scale).max(), source: source)
         }
     }
