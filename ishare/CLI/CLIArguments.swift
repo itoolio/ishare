@@ -10,6 +10,7 @@ enum CLIAction: Equatable, Sendable {
     case run(CLIInvocation)
     case help(String)
     case version
+    case mcp
 }
 
 enum CLIArgumentError: Error, Equatable, CustomStringConvertible {
@@ -54,6 +55,8 @@ enum CLIArguments {
                                               Start, stop, pause or resume a screen recording
           uploaders list                      List the configured uploaders
           history [--limit N]                 Print recent uploads
+          mcp                                 Run a Model Context Protocol server on stdin and stdout
+                                              so AI assistants can use ishare
 
         Options:
           --json                              Print machine-readable JSON
@@ -138,6 +141,9 @@ enum CLIArguments {
         switch commandName {
         case "help":
             return .help(usage)
+        case "mcp":
+            try rejectExtra(rest[...])
+            return .mcp
         case "upload":
             guard !rest.isEmpty else { throw .missingArgument("file") }
             command = .upload(files: rest.map { absolutePath($0, relativeTo: workingDirectory) }, uploader: uploader, reuse: reuse)

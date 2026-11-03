@@ -61,6 +61,20 @@ The App Store build is sandboxed, so it can only upload files it is allowed to r
 
 The tool and the app exchange small JSON request and response files in ishare's app group container (`~/Library/Group Containers/L988J7YMK5.group.dev.adrian.ishare/CommandLine`), and the tool wakes the app with an `ishare://cli?id=…` URL. Each response carries its request's ID, and stale files are removed after 15 minutes.
 
+## AI assistants (MCP)
+
+`ishare mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on standard input and output, so assistants such as Claude can take captures, capture app windows, upload files, start recordings and read your recent uploads. Add it to your assistant's MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "ishare": { "command": "/usr/local/bin/ishare", "args": ["mcp"] }
+  }
+}
+```
+
+The tools are `capture`, `capture_app`, `upload`, `list_uploaders`, `recent_uploads` and `record`. They answer with the same JSON as `--json`. Region, window, scrolling and menu captures still wait for you to choose what to capture.
+
 ## URL actions
 
 | URL | Action |

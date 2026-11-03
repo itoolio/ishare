@@ -70,6 +70,20 @@ func run() async -> Int32 {
     case .version:
         print(HostApp.version)
         return 0
+    case .mcp:
+        guard let directory = CLIAppGroup.mailboxDirectory else {
+            printError(CLIProtocolError.noMailbox.description)
+            return 1
+        }
+        let client = CLIClient(mailbox: CLIMailbox(directory: directory), launch: { try await HostApp.open($0) })
+        let server = MCPServer(version: HostApp.version) { command, timeout in try await client.send(command, timeout: timeout) }
+        while let line = readLine(strippingNewline: true) {
+            guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+            if let reply = await server.handle(line) {
+                FileHandle.standardOutput.write(Data((reply + "\n").utf8))
+            }
+        }
+        return 0
     case let .run(invocation):
         guard let directory = CLIAppGroup.mailboxDirectory else {
             printError(CLIProtocolError.noMailbox.description)
