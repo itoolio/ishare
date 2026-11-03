@@ -533,6 +533,34 @@ final class EditorDocument: ObservableObject {
         }
     }
 
+    var arrangeableIDs: [UUID] {
+        selectedAnnotations.filter { !$0.locked && !$0.hidden }.map(\.id)
+    }
+
+    func align(_ edge: AlignmentEdge) {
+        let items = selectedAnnotations.filter { !$0.locked && !$0.hidden }
+        guard !items.isEmpty else { return }
+        let offsets = Arrangement.offsets(aligning: items.map(\.bounds), to: edge, within: items.count == 1 ? visibleRect : nil)
+        apply(offsets: Dictionary(uniqueKeysWithValues: zip(items.map(\.id), offsets)))
+    }
+
+    func distribute(_ axis: DistributionAxis) {
+        let items = selectedAnnotations.filter { !$0.locked && !$0.hidden }
+        guard items.count > 2 else { return }
+        let offsets = Arrangement.offsets(distributing: items.map(\.bounds), along: axis)
+        apply(offsets: Dictionary(uniqueKeysWithValues: zip(items.map(\.id), offsets)))
+    }
+
+    private func apply(offsets: [UUID: CGVector]) {
+        commit {
+            for index in annotations.indices {
+                if let offset = offsets[annotations[index].id], offset != .zero {
+                    annotations[index] = annotations[index].offset(by: offset)
+                }
+            }
+        }
+    }
+
     func clearAll() {
         commit {
             annotations.removeAll()
