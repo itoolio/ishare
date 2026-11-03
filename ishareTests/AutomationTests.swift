@@ -172,7 +172,7 @@ struct URLSchemeParserTests {
         let files = try TemporaryFiles()
         let file = try files.file("real.png")
         #expect(URLSchemeParser.validatedFile(file.path, fileAccess: .live) == .success(file))
-        #expect(URLSchemeParser.validatedFile(files.directory.path, fileAccess: .live) == .failure(.unreadablePath(files.directory.path)))
+        #expect(URLSchemeParser.validatedFile(files.directory.path, fileAccess: .live) == .success(files.directory.standardizedFileURL.resolvingSymlinksInPath()))
         #expect(URLSchemeParser.validatedFile(files.directory.appending(path: "missing.png").path, fileAccess: .live) != .success(file))
     }
 
