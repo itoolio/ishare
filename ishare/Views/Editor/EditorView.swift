@@ -416,6 +416,12 @@ struct EditorView: View {
                 Task { await document.liftSubject() }
             }
             .disabled(document.isProcessing)
+            Menu("Blur Background".localized()) {
+                Button("Soft".localized()) { Task { await document.blurBackground(strength: 0.5) } }
+                Button("Medium".localized()) { Task { await document.blurBackground(strength: 1) } }
+                Button("Strong".localized()) { Task { await document.blurBackground(strength: 2) } }
+            }
+            .disabled(document.isProcessing)
             Menu("Redact Faces".localized()) {
                 Button("Blur Faces".localized()) { Task { await document.redactFaces(pixelate: false) } }
                 Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }

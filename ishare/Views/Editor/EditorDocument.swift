@@ -341,6 +341,18 @@ final class EditorDocument: ObservableObject {
         selectedIDs = Set(overlays.map(\.id))
     }
 
+    func blurBackground(strength: Double) async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        guard let blurred = await SubjectLiftFlow.blurBackground(adjustedBase, strength: strength) else { return }
+        commit {
+            base = blurred
+            adjustments = .identity
+        }
+    }
+
     func redactFaces(pixelate: Bool) async {
         commitPendingEdits()
         guard !isProcessing else { return }
