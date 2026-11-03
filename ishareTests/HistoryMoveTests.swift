@@ -318,3 +318,20 @@ struct CaptureRulesTests {
         #expect(CaptureRules.applying(profile, to: .standard).forceUpload == false)
     }
 }
+
+struct PointerResultHUDLayoutTests {
+    let visible = CGRect(x: 0, y: 0, width: 1440, height: 875)
+
+    @Test func appearsBelowAndRightOfThePointer() {
+        let frame = PointerResultHUDLayout.frame(near: CGPoint(x: 500, y: 500), in: visible)
+        #expect(frame.minX == 518)
+        #expect(frame.maxY == 482)
+    }
+
+    @Test func flipsAwayFromScreenEdges() {
+        let corner = PointerResultHUDLayout.frame(near: CGPoint(x: 1430, y: 20), in: visible)
+        #expect(corner.maxX <= visible.maxX)
+        #expect(corner.minY >= visible.minY)
+        #expect(ResultPresentation.pointer.showsToast == false && ResultPresentation.pointer.postsNotification == false)
+    }
+}
