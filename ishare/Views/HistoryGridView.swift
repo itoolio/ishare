@@ -383,6 +383,7 @@ struct HistoryCard: View {
             if HistoryActions.canCombine(bulkItems) {
                 Button("Combine…".localized()) { HistoryActions.combine(bulkItems) }
             }
+            HistoryMoveMenu(items: bulkItems)
             Divider()
             if bulkItems.contains(where: \.canDeleteFromServer) {
                 Button("Delete from Server…".localized(), role: .destructive) { HistoryActions.confirmDeleteFromServer(bulkItems) }
