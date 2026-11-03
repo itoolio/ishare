@@ -609,7 +609,7 @@ func leaksCheck(env environment, arguments []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(env.stdout, "leaks: %d (%d bytes)\nfootprint: %.1f MB -> %.1f MB\n", summary.Leaks, summary.Bytes, float64(before.Bytes)/1048576, float64(after.Bytes)/1048576)
+	fmt.Fprintf(env.stdout, "leaks: %d (%d bytes), of which %d (%d bytes) in system framework connections\nfootprint: %.1f MB -> %.1f MB\n", summary.Leaks, summary.Bytes, summary.SystemLeaks, summary.SystemBytes, float64(before.Bytes)/1048576, float64(after.Bytes)/1048576)
 	problems := leaks.Check(summary, before, after, leaks.Limits{MaxLeaks: *maxLeaks, MaxGrowthBytes: int64(*maxGrowth * 1048576)})
 	if len(problems) > 0 {
 		return fmt.Errorf("%s", strings.Join(problems, "; "))

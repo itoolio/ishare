@@ -7,7 +7,9 @@ database="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
 mkdir -p "$(dirname "$database")"
 
 clients=(/usr/bin/osascript /bin/bash /bin/zsh /bin/sh "$@")
-for provisioner in /usr/local/opt/runner/provisioner/provisioner /opt/runner/provisioner/provisioner; do
+for provisioner in /usr/local/opt/runner/provisioner/provisioner /opt/runner/provisioner/provisioner /opt/hca/hosted-compute-agent \
+    "$HOME/actions-runner/cached/bin/Runner.Worker" "$HOME/actions-runner/cached/bin/Runner.Listener" \
+    "/Library/Application Support/Veertu/Anka/addons/ankarund"; do
     if [ -e "$provisioner" ]; then
         clients+=("$provisioner")
     fi
