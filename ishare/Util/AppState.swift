@@ -18,6 +18,7 @@ final class AppState: ObservableObject {
             ExternalScreenDevices.shared.start()
             UploadBackgroundServices.start()
             InstantReplay.shared.activate()
+            ScreenshotReplay.shared.activate()
         }
     }
 

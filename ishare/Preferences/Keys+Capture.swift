@@ -10,6 +10,8 @@ extension Defaults.Keys {
     static let windowShadow = Key<Bool>("windowShadow", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showMagnifier = Key<Bool>("showMagnifier", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let trimUniformBorders = Key<Bool>("trimUniformBorders", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let screenshotReplayEnabled = Key<Bool>("screenshotReplayEnabled", default: false, suite: .ishare)
+    static let screenshotReplaySeconds = Key<Int>("screenshotReplaySeconds", default: 20, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let appWindowsResult = Key<AppWindowsResult>("appWindowsResult", default: .separate, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let trimBorderPadding = Key<Int>("trimBorderPadding", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showSelectionGuides = Key<Bool>("showSelectionGuides", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

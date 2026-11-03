@@ -9,6 +9,8 @@ struct CaptureSettingsView: View {
     @Default(.captureFileType) var fileType
     @Default(.screenshotShowsCursor) var showsCursor
     @Default(.windowShadow) var windowShadow
+    @Default(.screenshotReplayEnabled) var screenshotReplayEnabled
+    @Default(.screenshotReplaySeconds) var screenshotReplaySeconds
     @Default(.trimUniformBorders) var trimUniformBorders
     @Default(.trimBorderPadding) var trimBorderPadding
     @Default(.showMagnifier) var showMagnifier
@@ -36,6 +38,13 @@ struct CaptureSettingsView: View {
                 Toggle("Show pointer in screenshots".localized(), isOn: $showsCursor)
                 Toggle("Include window shadow".localized(), isOn: $windowShadow)
                 Toggle("Show magnifier while selecting".localized(), isOn: $showMagnifier)
+                Toggle("Keep the last seconds for Screenshot Replay".localized(), isOn: $screenshotReplayEnabled)
+                    .help("Keeps a few frames per second of the main display in memory so you can capture a moment that already passed.".localized())
+                if screenshotReplayEnabled {
+                    Picker("Keep".localized(), selection: $screenshotReplaySeconds) {
+                        ForEach([10, 20, 30], id: \.self) { Text(String(format: "%d seconds".localized(), $0)).tag($0) }
+                    }
+                }
                 Toggle("Trim uniform borders".localized(), isOn: $trimUniformBorders)
                 if trimUniformBorders {
                     Stepper(value: $trimBorderPadding, in: 0 ... 64, step: 2) {
@@ -104,6 +113,7 @@ extension CaptureSettingsView: SettingsSearchable {
             keywords: [
                 "Format", "PNG", "JPG", "HEIC", "WebP", "TIFF", "File prefix", "Image path", "Folder", "Show pointer in screenshots",
                 "Pointer", "Cursor", "Include window shadow", "Shadow", "Show magnifier while selecting", "Magnifier", "Trim uniform borders", "Auto-crop", "Whitespace",
+                "Keep the last seconds for Screenshot Replay", "Replay",
                 "Show crosshair guides while selecting", "Crosshair", "Guides", "Outline the last region while selecting",
                 "Open editor after capture", "Editor", "Open images as tabs in one editor window", "Tabs", "Snap editor shapes to detected elements", "Smart shapes", "Snapping",
                 "Scrolling Capture", "Scroll automatically",

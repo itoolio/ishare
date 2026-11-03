@@ -111,6 +111,9 @@ extension AppCommand {
                 id: "capture.menu", title: "Capture Menu…", keywords: ["menu", "popover", "tooltip", "context menu", "shadow", "timer"], symbol: "filemenu.and.cursorarrow",
                 perform: afterDismissing { await CaptureSession.captureImage(.MENU) }),
             AppCommand(
+                id: "capture.replay", title: "Screenshot Replay…", keywords: ["replay", "rewind", "missed", "past", "moment"], symbol: "clock.arrow.circlepath",
+                perform: afterDismissing { ScreenshotReplay.shared.open() }),
+            AppCommand(
                 id: "capture.appWindows", title: "Capture App Windows…", keywords: ["windows", "app", "contact sheet", "all windows"],
                 symbol: "macwindow.on.rectangle",
                 perform: afterDismissing { await AppWindowsCapture.prompt() }),
