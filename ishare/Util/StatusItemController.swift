@@ -44,6 +44,15 @@ final class StatusItemController: NSObject {
         render(UploadManager.shared.activity)
     }
 
+    var buttonScreenFrame: CGRect? {
+        guard let button = statusItem?.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
+    var buttonScreen: NSScreen? {
+        statusItem?.button?.window?.screen
+    }
+
     func setRecordingToolTip(_ text: String?) {
         statusItem?.button?.toolTip = text
     }

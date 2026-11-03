@@ -19,6 +19,7 @@ final class AppState: ObservableObject {
             UploadBackgroundServices.start()
             InstantReplay.shared.activate()
             ScreenshotReplay.shared.activate()
+            UploadProgressHUD.shared.activate()
         }
     }
 

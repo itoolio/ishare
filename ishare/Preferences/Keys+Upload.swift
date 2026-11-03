@@ -24,6 +24,7 @@ extension Defaults.Keys {
     static let uploadPresets = Key<[UploadPreset]>("uploadPresets", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let linkOptionPreferences = Key<[String: LinkOptionPreferences]>("linkOptionPreferences", default: [:], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let localFolderBookmarks = Key<[String: Data]>("localFolderBookmarks", default: [:], suite: .ishare)
+    static let showsUploadProgressHUD = Key<Bool>("showsUploadProgressHUD", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let optimizeImagesBeforeUpload = Key<Bool>("optimizeImagesBeforeUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let imageOptimizationFormat = Key<ImageOptimizationFormat>("imageOptimizationFormat", default: .lossless, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let imageConversionQuality = Key<Double>("imageConversionQuality", default: 0.85, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

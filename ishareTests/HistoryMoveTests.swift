@@ -32,3 +32,22 @@ struct HistoryMoveTests {
         #expect(HistoryMove.movable([onTarget, noFile, movable], to: .custom(id)) == [movable])
     }
 }
+
+struct UploadProgressHUDLayoutTests {
+    @Test func sitsBelowTheMenuBarIcon() {
+        let frame = UploadProgressHUDLayout.frame(
+            below: CGRect(x: 1000, y: 1050, width: 30, height: 24), on: CGRect(x: 0, y: 0, width: 1440, height: 1080),
+            visible: CGRect(x: 0, y: 0, width: 1440, height: 1050))
+        #expect(frame.midX == 1015)
+        #expect(frame.maxY == 1050 - UploadProgressHUDLayout.gap)
+    }
+
+    @Test func staysOnScreenAndFallsBackToTheTopCenter() {
+        let screen = CGRect(x: 0, y: 0, width: 1440, height: 1080)
+        let edge = UploadProgressHUDLayout.frame(below: CGRect(x: 1430, y: 1050, width: 10, height: 24), on: screen, visible: screen)
+        #expect(edge.maxX <= screen.maxX)
+        let centered = UploadProgressHUDLayout.frame(below: nil, on: screen, visible: CGRect(x: 0, y: 0, width: 1440, height: 1040))
+        #expect(centered.midX == 720)
+        #expect(centered.maxY == 1040 - UploadProgressHUDLayout.gap)
+    }
+}
