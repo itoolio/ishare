@@ -33,6 +33,7 @@ final class RegionSelector {
         var allowsWindowMode = true
         var hint: String?
         var lastRegions: [CGDirectDisplayID: CGRect] = [:]
+        var snapWindowFrames: [CGRect] = []
         var awaitsBackdrops = false
         var allowsMultipleRegions = false
         var allowsFreezeToggle = false

@@ -8,6 +8,8 @@ struct CaptureSelectionSettings: View {
     @Default(.freezeScreenWhileSelecting) var freezeScreen
     @Default(.multiRegionResult) var multiRegionResult
     @Default(.menuCaptureIncludesParentWindow) var includesParentWindow
+    @Default(.snapSelectionToEdges) var snapsToEdges
+    @Default(.snapSelectionToElements) var snapsToElements
 
     var body: some View {
         Section {
@@ -38,6 +40,9 @@ struct CaptureSelectionSettings: View {
                 }
             }
             Toggle("Freeze the screen while selecting".localized(), isOn: $freezeScreen)
+            Toggle("Snap the selection to window edges".localized(), isOn: $snapsToEdges)
+            Toggle("Also snap to buttons, text and panels".localized(), isOn: $snapsToElements)
+                .disabled(!snapsToEdges)
             Picker("Multiple regions".localized(), selection: $multiRegionResult) {
                 Text("Combine into one image".localized()).tag(MultiRegionResult.combined)
                 Text("Save as separate captures".localized()).tag(MultiRegionResult.separate)
@@ -47,7 +52,7 @@ struct CaptureSelectionSettings: View {
             Text("Selection".localized())
         } footer: {
             Text(
-                "While selecting, press A to cycle aspect ratios, F to cycle fixed sizes and S to type a size such as 800x600. Hold ⌘ or press + to keep several regions, then press Return to capture them all. Tab switches between a frozen and a live screen. Capture Menu… counts down three seconds so you can open a menu, popover or tooltip first."
+                "While selecting, press A to cycle aspect ratios, F to cycle fixed sizes and S to type a size such as 800x600. Hold ⌘ or press + to keep several regions, then press Return to capture them all. Tab switches between a frozen and a live screen. Hold ⌃ while dragging to stop snapping to edges. Capture Menu… counts down three seconds so you can open a menu, popover or tooltip first."
                     .localized()
             )
             .font(.footnote)

@@ -14,6 +14,8 @@ extension Defaults.Keys {
     static let screenshotReplaySeconds = Key<Int>("screenshotReplaySeconds", default: 20, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let appWindowsResult = Key<AppWindowsResult>("appWindowsResult", default: .separate, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let trimBorderPadding = Key<Int>("trimBorderPadding", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let snapSelectionToEdges = Key<Bool>("snapSelectionToEdges", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let snapSelectionToElements = Key<Bool>("snapSelectionToElements", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showSelectionGuides = Key<Bool>("showSelectionGuides", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showLastRegionOutline = Key<Bool>("showLastRegionOutline", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let scrollingAutoScroll = Key<Bool>("scrollingAutoScroll", default: ScrollingCapture.autoScrollsByDefault, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

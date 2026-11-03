@@ -116,6 +116,7 @@ enum ImageCaptureFlow {
         let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
         let options = RegionSelector.Options(
             backdrops: backdrops, hint: "Select the area to capture".localized(), lastRegions: lastRegions,
+            snapWindowFrames: ScreenshotEngine.candidateWindows(in: content).map(\.frame),
             allowsMultipleRegions: allowsMultipleRegions, allowsFreezeToggle: true, freezeMode: loader.mode,
             liveSampler: LiveMagnifierSampler(content: content),
             onFreezeModeChange: { mode in loader.change(to: mode) }

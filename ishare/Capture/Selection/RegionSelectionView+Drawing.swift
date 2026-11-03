@@ -63,6 +63,9 @@ extension RegionSelectionView {
         let isOnThisScreen = mouseLocation != nil || NSScreen.underMouse == screen
         if let activeSelection {
             drawSelection(activeSelection)
+            if let activeSnap {
+                drawSnapEdges(activeSnap)
+            }
         } else {
             if let preview {
                 drawSelection(preview, dashed: true)
@@ -194,6 +197,24 @@ extension RegionSelectionView {
             in: bounds,
             above: selection.maxY + 32 < bounds.maxY
         )
+    }
+
+    private func drawSnapEdges(_ snap: SnappedPoint) {
+        SelectionStyle.accentColor.setStroke()
+        if let edge = snap.verticalEdge {
+            let line = NSBezierPath()
+            line.move(to: CGPoint(x: edge.position, y: edge.span.lowerBound))
+            line.line(to: CGPoint(x: edge.position, y: edge.span.upperBound))
+            line.lineWidth = 2
+            line.stroke()
+        }
+        if let edge = snap.horizontalEdge {
+            let line = NSBezierPath()
+            line.move(to: CGPoint(x: edge.span.lowerBound, y: edge.position))
+            line.line(to: CGPoint(x: edge.span.upperBound, y: edge.position))
+            line.lineWidth = 2
+            line.stroke()
+        }
     }
 
     private func drawLastRegionGhost(_ rect: CGRect) {

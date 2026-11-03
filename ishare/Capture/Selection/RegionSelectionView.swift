@@ -6,7 +6,10 @@ final class RegionSelectionView: NSView {
     let screen: NSScreen
     let session: SelectionSession
     var backdrop: CGImage? {
-        didSet { needsDisplay = true }
+        didSet {
+            needsDisplay = true
+            detectElementEdges()
+        }
     }
     var awaitsBackdrop: Bool {
         didSet { needsDisplay = true }
@@ -31,6 +34,11 @@ final class RegionSelectionView: NSView {
     var measurement: SelectionMeasurement?
     private var draggedRegionID: Int?
     var hoveredToolbarItem: SelectionToolbar.Item?
+    private var windowEdges = SnapEdges()
+    private var elementEdges = SnapEdges()
+    private var elementDetection: Task<Void, Never>?
+    private var snapsTemporarilyDisabled = false
+    var activeSnap: SnappedPoint?
 
     init(screen: NSScreen, backdrop: CGImage?, session: SelectionSession, onFinish: @escaping (RegionSelector.Selection) -> Void) {
         self.screen = screen
@@ -48,6 +56,15 @@ final class RegionSelectionView: NSView {
         if bounds.contains(location) {
             mouseLocation = location
         }
+        windowEdges = SnapEdges(
+            rects: SnapEdges.viewRects(fromQuartz: session.options.snapWindowFrames, screenFrame: screen.frame, primaryScreenHeight: NSScreen.primaryHeight),
+            within: bounds
+        )
+        detectElementEdges()
+    }
+
+    deinit {
+        elementDetection?.cancel()
     }
 
     @available(*, unavailable)
@@ -177,9 +194,10 @@ final class RegionSelectionView: NSView {
             }
             return
         }
-        anchor = point
-        current = point
-        selection = CGRect(origin: point, size: .zero)
+        let start = snapped(point)
+        anchor = start
+        current = start
+        selection = CGRect(origin: start, size: .zero)
         needsDisplay = true
     }
 
@@ -206,7 +224,7 @@ final class RegionSelectionView: NSView {
             current = CGPoint(x: current.x + applied.dx, y: current.y + applied.dy)
             selection = moved
         } else {
-            current = point
+            current = snapped(point)
             updateSelection()
         }
         lastDragPoint = point
@@ -214,6 +232,7 @@ final class RegionSelectionView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        activeSnap = nil
         if isMeasuring {
             isMeasuring = false
             needsDisplay = true
@@ -241,6 +260,10 @@ final class RegionSelectionView: NSView {
 
     override func flagsChanged(with event: NSEvent) {
         constrainsToSquare = event.modifierFlags.contains(.shift)
+        snapsTemporarilyDisabled = event.modifierFlags.contains(.control)
+        if snapsTemporarilyDisabled {
+            activeSnap = nil
+        }
         isMeasureModifierHeld = event.modifierFlags.contains(.option)
         if isMeasuring, let end = measurement?.end {
             updateMeasurement(to: mouseLocation ?? end, locksAxis: constrainsToSquare)
@@ -550,5 +573,37 @@ final class RegionSelectionView: NSView {
             rect = ScreenGeometry.rect(from: anchor, to: current)
         }
         selection = ScreenGeometry.clamp(rect, to: bounds)
+    }
+
+    private var snapEdges: SnapEdges {
+        SnapEdges(vertical: windowEdges.vertical + elementEdges.vertical, horizontal: windowEdges.horizontal + elementEdges.horizontal)
+    }
+
+    private var snapsToEdges: Bool {
+        Defaults[.snapSelectionToEdges] && !snapsTemporarilyDisabled && !constrainsToSquare && session.constraint.aspectRatio == nil
+    }
+
+    private func snapped(_ point: CGPoint) -> CGPoint {
+        guard snapsToEdges else {
+            activeSnap = nil
+            return point
+        }
+        let result = snapEdges.snapping(point)
+        activeSnap = result.isSnapped ? result : nil
+        return result.point
+    }
+
+    private func detectElementEdges() {
+        elementDetection?.cancel()
+        elementEdges = SnapEdges()
+        guard Defaults[.snapSelectionToEdges], Defaults[.snapSelectionToElements], let backdrop else { return }
+        let scale = scale
+        let height = bounds.height
+        let bounds = bounds
+        elementDetection = Task { [weak self] in
+            let pixelRects = await UIElementDetector.detect(in: backdrop)
+            guard !Task.isCancelled, let self, self.backdrop === backdrop else { return }
+            elementEdges = SnapEdges(rects: SnapEdges.flippedImageRects(pixelRects, scale: scale, viewHeight: height), within: bounds)
+        }
     }
 }
