@@ -25,6 +25,16 @@ final class FakeAutomationActions: AutomationActions {
         return afterCaptureLink
     }
 
+    func captureApp(_ app: String?, contactSheet: Bool, upload: Bool) async -> Result<CLICaptureResult, AutomationError> {
+        calls.append("app \(app ?? "frontmost") sheet=\(contactSheet) upload=\(upload)")
+        return captureResult
+    }
+
+    func captureAppWithAfterCaptureSteps(_ app: String?, contactSheet: Bool) async -> Result<String?, AutomationError> {
+        calls.append("app flow \(app ?? "frontmost") sheet=\(contactSheet)")
+        return .success(afterCaptureLink)
+    }
+
     func record(_ action: CLIRecordAction, gif: Bool, region: Bool, preset: String?) async -> Result<Bool, AutomationError> {
         calls.append("record \(action.rawValue) gif=\(gif) region=\(region)" + (preset.map { " preset=\($0)" } ?? ""))
         switch action {
@@ -212,6 +222,12 @@ struct URLSchemeRouterTests {
         #expect(actions.openedCallbacks.map(\.absoluteString) == ["app://ok?link=https://example.com/flow.png"])
     }
 
+    @Test func routesAppWindowCaptures() async throws {
+        let outcome = try await router().handle(URL(string: "ishare://capture/app?name=Safari&sheet=1")!)
+        #expect(outcome == .completed(link: "https://example.com/flow.png"))
+        #expect(actions.calls == ["app flow Safari sheet=true"])
+    }
+
     @Test func routesRecordingUploaderAndOpenActions() async throws {
         let router = try router()
         await router.handle(URL(string: "ishare://record/start")!)
@@ -320,7 +336,7 @@ struct CLIArgumentTests {
         #expect(error([]) == .missingCommand)
         #expect(error(["frobnicate"]) == .unknownCommand("frobnicate"))
         #expect(error(["upload"]) == .missingArgument("file"))
-        #expect(error(["capture"]) == .missingArgument("capture mode (region, window, screen, scrolling or menu)"))
+        #expect(error(["capture"]) == .missingArgument("capture mode (region, window, screen, scrolling, menu or app)"))
         #expect(error(["capture", "everything"]) == .invalidValue(option: "capture", value: "everything"))
         #expect(error(["capture", "region", "extra"]) == .unexpectedArgument("extra"))
         #expect(error(["record", "rewind"]) == .invalidValue(option: "record", value: "rewind"))
@@ -466,6 +482,13 @@ struct CommandLineEndToEndTests {
         let record = try await client.send(.record(.start), timeout: 5)
         #expect(record.payload.recording == true)
         #expect(actions.calls == ["capture region upload=true", "record start gif=false region=false"])
+    }
+
+    @Test func capturesAppWindowsFromTheCommandLine() async throws {
+        let (client, _, _) = try makeSystem()
+        let capture = try await client.send(.captureApp(app: "Xcode", contactSheet: false, upload: false), timeout: 5)
+        #expect(capture.payload.capture?.file == "/tmp/shot.png")
+        #expect(actions.calls == ["app Xcode sheet=false upload=false"])
     }
 
     @Test func reportsCancelledCaptures() async throws {

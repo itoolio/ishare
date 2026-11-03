@@ -20,6 +20,7 @@ protocol AutomationActions: AnyObject {
     func capture(_ mode: CLICaptureMode, upload: Bool) async -> Result<CLICaptureResult, AutomationError>
     func captureWithAfterCaptureSteps(_ mode: CLICaptureMode) async -> String?
     func captureApp(_ app: String?, contactSheet: Bool, upload: Bool) async -> Result<CLICaptureResult, AutomationError>
+    func captureAppWithAfterCaptureSteps(_ app: String?, contactSheet: Bool) async -> Result<String?, AutomationError>
     func record(_ action: CLIRecordAction, gif: Bool, region: Bool, preset: String?) async -> Result<Bool, AutomationError>
     func upload(_ files: [URL], uploader: String?) async -> [CLIUploadResult]
     func selectUploader(named name: String) -> Bool
@@ -91,6 +92,16 @@ final class LiveAutomationActions: AutomationActions {
             }
         }
         return .success(CLICaptureResult(file: first.path, link: links.first, files: files, links: links))
+    }
+
+    func captureAppWithAfterCaptureSteps(_ app: String?, contactSheet: Bool) async -> Result<String?, AutomationError> {
+        guard let pid = await AppWindowsCapture.resolveApp(app) else {
+            return .failure(.failed(String(format: "No app named “%@” has open windows".localized(), app ?? "")))
+        }
+        let before = Defaults[.uploadHistory].first
+        await AppWindowsCapture.capture(pid: pid, as: contactSheet ? .contactSheet : .separate)
+        let latest = Defaults[.uploadHistory].first
+        return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
     }
 
     func captureWithAfterCaptureSteps(_ mode: CLICaptureMode) async -> String? {
@@ -313,13 +324,7 @@ final class URLSchemeRouter {
             let latest = Defaults[.uploadHistory].first
             return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
         case let .captureApp(app, contactSheet):
-            guard let pid = await AppWindowsCapture.resolveApp(app) else {
-                return .failure(.failed(String(format: "No app named “%@” has open windows".localized(), app ?? "")))
-            }
-            let before = Defaults[.uploadHistory].first
-            await AppWindowsCapture.capture(pid: pid, as: contactSheet ? .contactSheet : .separate)
-            let latest = Defaults[.uploadHistory].first
-            return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
+            return await actions.captureAppWithAfterCaptureSteps(app, contactSheet: contactSheet)
         case let .record(action, gif, region, preset):
             return await actions.record(action, gif: gif, region: region, preset: preset).map { _ in nil }
         case let .upload(files):
