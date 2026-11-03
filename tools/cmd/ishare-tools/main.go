@@ -21,6 +21,7 @@ import (
 	"github.com/itoolio/ishare/tools/internal/metadata"
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
+	"github.com/itoolio/ishare/tools/internal/releaseretry"
 	"github.com/itoolio/ishare/tools/internal/repo"
 	"github.com/itoolio/ishare/tools/internal/sbom"
 	"github.com/itoolio/ishare/tools/internal/screenshots"
@@ -58,6 +59,7 @@ var commands = map[string]command{
 	"symbolicate":        {"symbolicate <crash.ips|crash> --dsyms <dSYMs.zip|dir> [--output file]", symbolicate},
 	"automation":         {"automation --app ishare.app [--work dir] [--no-launch] [--ready-timeout seconds]", runAutomation},
 	"sbom":               {"sbom --version <version> --output file.spdx.json [--package-resolved Package.resolved]... [--package-dir dir]... [--go-mod go.mod]... [--created RFC3339]", writeSBOM},
+	"release-retry":      {"release-retry --attempt n < jobs.json", releaseRetry},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
 
@@ -541,5 +543,21 @@ func runAutomation(env environment, arguments []string) error {
 	if len(failures) > 0 {
 		return fmt.Errorf("%d automation checks failed", len(failures))
 	}
+	return nil
+}
+
+func releaseRetry(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("release-retry", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	attempt := flags.Int("attempt", 1, "")
+	if err := flags.Parse(arguments); err != nil {
+		return err
+	}
+	jobs, err := releaseretry.Parse(env.stdin)
+	if err != nil {
+		return err
+	}
+	decision := releaseretry.Decide(jobs, *attempt)
+	fmt.Fprintf(env.stdout, "retry=%t\nreason=%s\n", decision.Retry, decision.Reason)
 	return nil
 }
