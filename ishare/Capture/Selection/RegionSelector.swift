@@ -93,6 +93,10 @@ final class RegionSelector {
         }
     }
 
+    static func cancel() {
+        active?.finish(.single(.cancelled))
+    }
+
     static var panelWindowIDs: Set<CGWindowID> {
         Set(active?.panels.map { CGWindowID($0.windowNumber) } ?? [])
     }

@@ -1,0 +1,32 @@
+name: Refresh Screenshots
+
+on:
+    push:
+        branches: [dev]
+        paths:
+            - "ishareTests/Snapshots/macOS26/**"
+    workflow_dispatch:
+
+permissions:
+    actions: write
+    contents: read
+
+concurrency:
+    group: screenshots-refresh
+    cancel-in-progress: true
+
+jobs:
+    dispatch:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - name: Regenerate the App Store and website screenshots on dev
+              env:
+                  GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+              run: |
+                  version=$(git describe --tags --abbrev=0 origin/main 2>/dev/null | sed 's/^v//')
+                  echo "The UI snapshots changed; regenerating the screenshots after ${version:-the last release}"
+                  gh workflow run app-store.yml --repo "$GITHUB_REPOSITORY" --ref dev \
+                    -f version="${version:-next}" -f regenerate_screenshots=true -f submit=false -f locales=all

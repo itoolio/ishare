@@ -358,6 +358,45 @@ jobs:
                   name: app-store-tests-xcresult
                   path: build/AppStoreTests.xcresult
 
+    real-capture:
+        runs-on: macos-26
+        timeout-minutes: 40
+        continue-on-error: true
+        steps:
+            - uses: actions/checkout@v7
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - run: xcodegen generate
+            - name: Build the unit tests
+              run: |
+                  xcodebuild build-for-testing \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -derivedDataPath build/DerivedData \
+                    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= | xcbeautify
+            - name: Allow the test host to record the screen
+              run: scripts/allow-screen-recording.sh dev.adrian.ishare
+            - name: Capture the real screen around the selection overlay
+              env:
+                  TEST_RUNNER_ISHARE_REAL_CAPTURE: "1"
+              run: |
+                  xcodebuild test-without-building \
+                    -project ishare.xcodeproj \
+                    -scheme GitHub \
+                    -destination "platform=macOS,arch=arm64" \
+                    -derivedDataPath build/DerivedData \
+                    -only-testing:ishareTests/RealCaptureTests \
+                    -resultBundlePath build/RealCapture.xcresult | xcbeautify
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: real-capture-xcresult
+                  path: build/RealCapture.xcresult
+
     ui-tests:
         runs-on: macos-26
         timeout-minutes: 60
