@@ -75,6 +75,10 @@ final class RegionSelectionView: NSView {
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
 
+    var crosshairLocation: CGPoint? {
+        KeyboardCrosshair.location(stage: keyboard.stage, pointer: mouseLocation, secondCorner: anchor == nil ? nil : current, bounds: bounds)
+    }
+
     var options: RegionSelector.Options {
         session.options
     }
@@ -548,7 +552,8 @@ final class RegionSelectionView: NSView {
         } else if anchor != nil {
             current = clampToBounds(CGPoint(x: current.x + delta.dx, y: current.y + delta.dy))
             updateSelection()
-        } else if let location = mouseLocation {
+            requestLiveSample(at: current)
+        } else if let location = crosshairLocation {
             let moved = clampToBounds(CGPoint(x: location.x + delta.dx, y: location.y + delta.dy))
             mouseLocation = moved
             let global = CGPoint(x: moved.x + screen.frame.minX, y: moved.y + screen.frame.minY)

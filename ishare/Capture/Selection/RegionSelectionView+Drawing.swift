@@ -91,7 +91,7 @@ extension RegionSelectionView {
             drawMeasurement(measurement)
         }
 
-        guard let location = mouseLocation else { return }
+        guard let location = crosshairLocation else { return }
         let isMeasuringGuides = isMeasureModifierHeld || isMeasuring
         if isMeasuringGuides || Defaults[.showSelectionGuides] {
             drawGuides(at: location, labelled: isMeasuringGuides)

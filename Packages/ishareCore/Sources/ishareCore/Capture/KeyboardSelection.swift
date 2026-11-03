@@ -1,3 +1,4 @@
+import CoreGraphics
 public struct KeyboardSelection: Equatable, Sendable {
     public enum Stage: Equatable, Sendable {
         case inactive
@@ -55,5 +56,18 @@ public struct KeyboardSelection: Equatable, Sendable {
 
     public mutating func pointerUsed() {
         stage = .inactive
+    }
+}
+
+public enum KeyboardCrosshair {
+    public static func location(stage: KeyboardSelection.Stage, pointer: CGPoint?, secondCorner: CGPoint?, bounds: CGRect) -> CGPoint? {
+        switch stage {
+        case .inactive:
+            return pointer
+        case .placingFirstCorner:
+            return pointer ?? CGPoint(x: bounds.midX, y: bounds.midY)
+        case .placingSecondCorner:
+            return secondCorner ?? pointer
+        }
     }
 }
