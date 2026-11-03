@@ -321,6 +321,10 @@ extension AppCommand {
 
     @MainActor private static func appCommands() -> [AppCommand] {
         [
+            AppCommand(id: "app.tour", title: "Feature Tour", keywords: ["whats new", "new features", "tour", "help"], symbol: "sparkles") {
+                MenuController.shared.dismiss()
+                FeatureTour.show()
+            },
             AppCommand(id: "app.about", title: "About ishare", keywords: ["version", "credits"], symbol: "info.circle") {
                 MenuController.shared.showAboutPanel()
             },

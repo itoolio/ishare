@@ -106,3 +106,16 @@ struct ImageOperationsTests {
         #expect(ScriptingCodes.deviceFrame(ScriptingCodes.fourCharCode("dPho")) == .phone)
     }
 }
+
+@MainActor
+struct FeatureTourTests {
+    @Test func everyStopOpensARealCommand() {
+        let ids = Set(AppCommand.all().map(\.id))
+        for stop in FeatureTour.stops {
+            if let command = stop.commandID {
+                #expect(ids.contains(command), "\(stop.id) points at \(command)")
+            }
+        }
+        #expect(ids.contains("app.tour"))
+    }
+}

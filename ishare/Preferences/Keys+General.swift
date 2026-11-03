@@ -24,6 +24,7 @@ extension Defaults.Keys {
     static let onboardingStep = Key<Int>("onboardingStep", default: 0, suite: .ishare)
     static let onboardingTrials = Key<Set<String>>("onboardingTrials", default: [], suite: .ishare)
     static let lastLaunchedVersion = Key<String?>("lastLaunchedVersion", default: nil, suite: .ishare)
+    static let seenFeatureTour = Key<String?>("seenFeatureTour", default: nil, suite: .ishare)
     static let showsWhatsNew = Key<Bool>("showsWhatsNew", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let reviewPromptState = Key<ReviewPromptState>("reviewPromptState", default: ReviewPromptState(), suite: .ishare)
     static let resultPresentation = Key<ResultPresentation>("resultPresentation", default: .toast, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

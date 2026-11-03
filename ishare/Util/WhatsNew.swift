@@ -157,6 +157,9 @@ enum WhatsNew {
         let current = currentVersion
         let lastLaunched = Defaults[.lastLaunchedVersion]
         Defaults[.lastLaunchedVersion] = current
+        if FeatureTour.presentIfNeeded(lastLaunched: lastLaunched) {
+            return
+        }
         guard
             shouldPresent(
                 current: current, lastLaunched: lastLaunched, hasCompletedOnboarding: Defaults[.hasCompletedOnboarding],
