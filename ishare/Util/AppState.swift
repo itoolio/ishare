@@ -43,6 +43,12 @@ final class AppState: ObservableObject {
         KeyboardShortcuts.onKeyDown(for: .captureRegion) {
             Task { @MainActor in SelectionPrefetch.begin() }
         }
+        KeyboardShortcuts.onKeyDown(for: .captureLastRegion) {
+            Task { @MainActor in SelectionPrefetch.begin() }
+        }
+        KeyboardShortcuts.onKeyDown(for: .captureWindow) {
+            Task { @MainActor in SelectionPrefetch.begin(includingBackdrops: false) }
+        }
         onCapture(.captureRegion, .REGION)
         onCapture(.captureWindow, .WINDOW)
         onCapture(.captureScreen, .SCREEN)

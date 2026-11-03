@@ -84,7 +84,8 @@ enum ImageCaptureFlow {
             return nil
         }
         do {
-            let content = try await ScreenshotEngine.shareableContent()
+            let prefetched = await SelectionPrefetch.takeContent()
+            let content = if let prefetched { prefetched } else { try await ScreenshotEngine.shareableContent() }
             let captured = try await body(content)
             return finalizing ? captured.map(finalize) : captured
         } catch {
@@ -163,8 +164,22 @@ enum ImageCaptureFlow {
             return try await captureRegion(content: content, delay: delay)
         }
         LastRegionStore.remember(rect, for: target)
+        if delay == 0, let frozen = await frozenLastRegion(rect, displayID: target, content: content) {
+            return frozen
+        }
         guard let live = try await contentAfterCountdown(delay, content: content) else { return nil }
         return try await captureDisplayImage(displayID: target, region: rect, content: live, suffix: frontmostAppName())
+    }
+
+    private static func frozenLastRegion(_ rect: CGRect, displayID: CGDirectDisplayID, content: SCShareableContent) async -> CapturedImage? {
+        guard let backdrops = await SelectionPrefetch.take(), let frame = backdrops[displayID], let screen = NSScreen.screen(for: displayID) else { return nil }
+        let source = frontmostSource(in: content)
+        let raw = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps ? PrivacyFilter.redactBackdrops([displayID: frame], content: content)[displayID] ?? frame : frame
+        let scale = CGFloat(raw.width) / max(1, screen.frame.width)
+        guard let cropped = ScreenshotEngine.crop(raw, toPoints: rect, scale: scale) else { return nil }
+        let geometry = PrivacyFilter.geometry(displayID: displayID, region: rect, image: cropped)
+        Log.capture.info("Captured the last region from the frame taken when the shortcut was pressed")
+        return CapturedImage(image: cropped, suffix: frontmostAppName(), geometry: geometry, pointScale: scale, source: source)
     }
 
     static func captureWindow(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
