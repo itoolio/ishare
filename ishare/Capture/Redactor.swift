@@ -173,8 +173,8 @@ enum Redactor {
         case failed
     }
 
-    static func prepareUpload(of fileURL: URL) async -> Preparation {
-        guard Defaults[.redactBeforeUpload] else { return .unchanged }
+    static func prepareUpload(of fileURL: URL, enabled override: Bool? = nil) async -> Preparation {
+        guard override ?? Defaults[.redactBeforeUpload] else { return .unchanged }
         do {
             guard let redacted = try await redactedCopy(of: fileURL, categories: Defaults[.redactionCategories]) else { return .unchanged }
             guard Defaults[.redactSavedFile] else { return .redacted(redacted) }

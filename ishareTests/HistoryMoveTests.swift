@@ -293,3 +293,28 @@ struct RecentUploadFactsTests {
         #expect(RecentUploadPreview.facts(for: item, fileSize: { _ in nil }).last == "Kept forever")
     }
 }
+
+struct CaptureRulesTests {
+    @Test func routesAnAppsCapturesToItsUploaderWithRedaction() {
+        let id = UUID()
+        var profile = CaptureProfile(bundleIdentifier: "com.apple.dt.Xcode", appName: "Xcode")
+        profile.uploadDestination = .custom(id)
+        profile.redactsSensitiveText = true
+        profile.opensEditor = true
+        let options = CaptureRules.applying(profile, to: .standard)
+        #expect(options.ruleDestination == .custom(id))
+        #expect(options.forceUpload)
+        #expect(options.openEditor)
+        #expect(options.redactsSensitiveText == true)
+    }
+
+    @Test func leavesExplicitChoicesAndDisabledRulesAlone() {
+        var profile = CaptureProfile(bundleIdentifier: "app", appName: "App")
+        profile.uploadDestination = .builtIn(.IMGUR)
+        var handled = CaptureOptions()
+        handled.resultHandler = { _ in }
+        #expect(CaptureRules.applying(profile, to: handled).ruleDestination == nil)
+        profile.isEnabled = false
+        #expect(CaptureRules.applying(profile, to: .standard).forceUpload == false)
+    }
+}

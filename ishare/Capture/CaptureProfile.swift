@@ -10,6 +10,33 @@ struct CaptureProfile: Codable, Hashable, Identifiable, Sendable, Defaults.Seria
     var blursPrivateApps: Bool?
     var includesWindowShadow: Bool?
     var fileNamePrefix: String?
+    var uploadDestination: UploadDestination?
+    var redactsSensitiveText: Bool?
+    var opensEditor: Bool?
+}
+
+enum CaptureRules {
+    static func applying(_ profile: CaptureProfile?, to options: CaptureOptions) -> CaptureOptions {
+        guard let profile, profile.isEnabled else { return options }
+        var result = options
+        if let destination = profile.uploadDestination, result.destinations == nil, result.preset == nil, result.resultHandler == nil {
+            result.ruleDestination = destination
+            result.forceUpload = true
+        }
+        if profile.opensEditor == true {
+            result.openEditor = true
+        }
+        result.redactsSensitiveText = profile.redactsSensitiveText ?? result.redactsSensitiveText
+        return result
+    }
+
+    @MainActor static func options(_ options: CaptureOptions, for bundleIdentifier: String?) -> CaptureOptions {
+        var result = applying(CaptureProfileMatcher.profile(for: bundleIdentifier, in: Defaults[.captureProfiles]), to: options)
+        if let destination = result.ruleDestination, let target = UploadCoordinator.target(for: destination) {
+            result.destinations = [target]
+        }
+        return result
+    }
 }
 
 struct CaptureSettings: Hashable, Sendable {
