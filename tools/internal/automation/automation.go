@@ -77,6 +77,14 @@ type Result struct {
 type Context struct {
 	Work    string
 	Fixture string
+	App     string
+}
+
+func (c Context) ScriptTarget() string {
+	if c.App == "" {
+		return `application id "dev.adrian.ishare"`
+	}
+	return `application "` + c.App + `"`
 }
 
 func (c Context) Uploads() string { return filepath.Join(c.Work, "uploads") }
@@ -233,6 +241,9 @@ func Run(options Options) ([]Failure, error) {
 	ctx, err := Prepare(options.Work)
 	if err != nil {
 		return nil, err
+	}
+	if app, err := filepath.Abs(options.App); err == nil {
+		ctx.App = app
 	}
 	cases := options.Cases
 	if cases == nil {
