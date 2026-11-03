@@ -48,6 +48,25 @@ enum CaptureSession {
         }
     }
 
+    @discardableResult
+    static func deliverCapture(_ captured: CapturedImage, options: CaptureOptions) async -> URL? {
+        let finalized = ImageCaptureFlow.finalize(captured)
+        do {
+            let fileURL = try ImageCaptureFlow.save(finalized)
+            Log.capture.info("Saved capture to \(fileURL.path, privacy: .public)")
+            if let resultHandler = options.resultHandler {
+                resultHandler(fileURL)
+                return fileURL
+            }
+            await finish(fileURL: fileURL, kind: .image, options: options)
+            return fileURL
+        } catch {
+            Log.capture.error("Saving capture failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: "Capture failed".localized(), icon: ToastIcon)
+            return nil
+        }
+    }
+
     private static func deliver(_ captured: CapturedImage, options: CaptureOptions) async {
         ToastPlacement.capturedDisplayID = captured.geometry?.displayID
         do {

@@ -5,6 +5,7 @@ struct ToastScreenCandidate: Equatable, Sendable {
     let displayID: CGDirectDisplayID?
     let frame: CGRect
     let visibleFrame: CGRect
+    var name: String = ""
 }
 
 enum ToastPlacement {
@@ -25,11 +26,17 @@ enum ToastPlacement {
         }
     }
 
-    static func resolve(_ choice: ToastScreenChoice, screens: [ToastScreenCandidate], main: ToastScreenCandidate?, pointer: CGPoint, capturedDisplayID: CGDirectDisplayID?)
-        -> ToastScreenCandidate?
-    {
+    static func resolve(
+        _ choice: ToastScreenChoice, screens: [ToastScreenCandidate], main: ToastScreenCandidate?, pointer: CGPoint, capturedDisplayID: CGDirectDisplayID?,
+        specificName: String? = nil
+    ) -> ToastScreenCandidate? {
         let pointerScreen = screens.first { $0.frame.contains(pointer) }
         switch choice {
+        case .specific:
+            if let specificName, let named = screens.first(where: { $0.name == specificName }) {
+                return named
+            }
+            return main ?? screens.first
         case .main:
             return main ?? screens.first
         case .pointer:
@@ -45,10 +52,12 @@ enum ToastPlacement {
     @MainActor static func currentScreenFrame(choice: ToastScreenChoice = Defaults[.toastScreen]) -> CGRect {
         let candidates = NSScreen.screens.map(candidate(for:))
         let main = NSScreen.main.map(candidate(for:))
-        return resolve(choice, screens: candidates, main: main, pointer: NSEvent.mouseLocation, capturedDisplayID: capturedDisplayID)?.visibleFrame ?? .zero
+        return resolve(
+            choice, screens: candidates, main: main, pointer: NSEvent.mouseLocation, capturedDisplayID: capturedDisplayID, specificName: Defaults[.toastDisplayName]
+        )?.visibleFrame ?? .zero
     }
 
     @MainActor private static func candidate(for screen: NSScreen) -> ToastScreenCandidate {
-        ToastScreenCandidate(displayID: screen.displayID, frame: screen.frame, visibleFrame: screen.visibleFrame)
+        ToastScreenCandidate(displayID: screen.displayID, frame: screen.frame, visibleFrame: screen.visibleFrame, name: screen.localizedName)
     }
 }

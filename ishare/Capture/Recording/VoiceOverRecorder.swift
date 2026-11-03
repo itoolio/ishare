@@ -11,34 +11,21 @@ enum VoiceOverPhase: Equatable {
 }
 
 @MainActor
-final class VoiceOverRecorder: ObservableObject {
-    @Published private(set) var level: Float = 0
-    @Published private(set) var clips: [VoiceOverClip] = []
+protocol VoiceOverTake: AnyObject {
+    var url: URL { get }
+    var duration: Double { get }
+    var level: Float { get }
+    func stop() async
+}
 
-    private let directory: URL
-    private var recorder: AVAudioRecorder?
-    private var clipStart: Double = 0
-    private var meterTask: Task<Void, Never>?
+@MainActor
+final class SystemMicrophoneTake: VoiceOverTake {
+    let url: URL
+    private let recorder: AVAudioRecorder
 
-    init() {
-        directory = FileManager.default.temporaryDirectory.appending(path: "ishare-voiceover-\(UUID().uuidString)", directoryHint: .isDirectory)
-    }
-
-    var isRecording: Bool { recorder?.isRecording ?? false }
-
-    static func requestAccess() async -> Bool {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
-        case .authorized: true
-        case .notDetermined: await AVCaptureDevice.requestAccess(for: .audio)
-        default: false
-        }
-    }
-
-    func beginClip(at videoTime: Double) throws {
-        endClip()
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appending(path: "take-\(UUID().uuidString).m4a", directoryHint: .notDirectory)
-        let recorder = try AVAudioRecorder(
+    init(url: URL) throws {
+        self.url = url
+        recorder = try AVAudioRecorder(
             url: url,
             settings: [
                 AVFormatIDKey: kAudioFormatMPEG4AAC,
@@ -48,35 +35,168 @@ final class VoiceOverRecorder: ObservableObject {
             ])
         recorder.isMeteringEnabled = true
         guard recorder.record() else { throw VoiceOverError.recordingFailed }
-        self.recorder = recorder
+    }
+
+    var duration: Double { recorder.currentTime }
+
+    var level: Float {
+        recorder.updateMeters()
+        return VoiceOverRecorder.normalized(decibels: recorder.averagePower(forChannel: 0))
+    }
+
+    func stop() async {
+        recorder.stop()
+    }
+}
+
+@MainActor
+final class CaptureDeviceTake: NSObject, VoiceOverTake, AVCaptureFileOutputRecordingDelegate {
+    let url: URL
+    private let session = AVCaptureSession()
+    private let output = AVCaptureAudioFileOutput()
+    private var finished: CheckedContinuation<Void, Never>?
+    private var isFinished = false
+
+    init(url: URL, device: AVCaptureDevice) throws {
+        self.url = url
+        super.init()
+        let input = try AVCaptureDeviceInput(device: device)
+        guard session.canAddInput(input), session.canAddOutput(output) else { throw VoiceOverError.recordingFailed }
+        session.addInput(input)
+        session.addOutput(output)
+        output.audioSettings = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: 48000,
+            AVNumberOfChannelsKey: 1,
+        ]
+        session.startRunning()
+        output.startRecording(to: url, outputFileType: .m4a, recordingDelegate: self)
+    }
+
+    var duration: Double {
+        let seconds = output.recordedDuration.seconds
+        return seconds.isFinite ? seconds : 0
+    }
+
+    var level: Float {
+        let channels = output.connections.flatMap(\.audioChannels)
+        guard let loudest = channels.map(\.averagePowerLevel).max() else { return 0 }
+        return VoiceOverRecorder.normalized(decibels: loudest)
+    }
+
+    func stop() async {
+        if !isFinished {
+            await withCheckedContinuation { continuation in
+                finished = continuation
+                output.stopRecording()
+            }
+        }
+        session.stopRunning()
+    }
+
+    nonisolated func fileOutput(_: AVCaptureFileOutput, didFinishRecordingTo _: URL, from _: [AVCaptureConnection], error _: Error?) {
+        Task { @MainActor in
+            isFinished = true
+            finished?.resume()
+            finished = nil
+        }
+    }
+}
+
+@MainActor
+final class VoiceOverRecorder: ObservableObject {
+    @Published private(set) var level: Float = 0
+    @Published private(set) var clips: [VoiceOverClip] = []
+    @Published private(set) var usesFallbackMicrophone = false
+
+    private let directory: URL
+    private var take: VoiceOverTake?
+    private var clipStart: Double = 0
+    private var meterTask: Task<Void, Never>?
+    private var pendingStops: [Task<Void, Never>] = []
+
+    init() {
+        directory = FileManager.default.temporaryDirectory.appending(path: "ishare-voiceover-\(UUID().uuidString)", directoryHint: .isDirectory)
+    }
+
+    var isRecording: Bool { take != nil }
+
+    static func requestAccess() async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized: true
+        case .notDetermined: await AVCaptureDevice.requestAccess(for: .audio)
+        default: false
+        }
+    }
+
+    static func microphoneSelection() -> MicrophoneSelection {
+        MicrophoneSelection.resolve(
+            configuredID: Defaults[.microphoneDeviceID], connectedIDs: CaptureDevices.microphones().filter(\.isConnected).map(\.uniqueID))
+    }
+
+    func beginClip(at videoTime: Double) throws {
+        endClip()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appending(path: "take-\(UUID().uuidString).m4a", directoryHint: .notDirectory)
+        let selection = Self.microphoneSelection()
+        usesFallbackMicrophone = selection.fellBackToDefault
+        if let id = selection.deviceID, let device = AVCaptureDevice(uniqueID: id) {
+            take = try CaptureDeviceTake(url: url, device: device)
+        } else {
+            take = try SystemMicrophoneTake(url: url)
+        }
         clipStart = videoTime
         startMetering()
     }
 
     func endClip() {
-        guard let recorder else { return }
-        let duration = recorder.currentTime
-        recorder.stop()
-        self.recorder = nil
+        guard let take else { return }
+        self.take = nil
         stopMetering()
-        if duration > 0.05 {
-            clips.append(VoiceOverClip(url: recorder.url, videoTime: clipStart, duration: duration))
-        } else {
-            try? FileManager.default.removeItem(at: recorder.url)
+        let duration = take.duration
+        let start = clipStart
+        let stopping = Task { @MainActor [weak self] in
+            await take.stop()
+            guard let self else { return }
+            if duration > 0.05 {
+                clips.append(VoiceOverClip(url: take.url, videoTime: start, duration: duration))
+            } else {
+                try? FileManager.default.removeItem(at: take.url)
+            }
         }
+        pendingStops.append(stopping)
+    }
+
+    func finishPendingClips() async {
+        let stops = pendingStops
+        pendingStops = []
+        for stop in stops { await stop.value }
     }
 
     func discardAll() {
-        recorder?.stop()
-        recorder = nil
+        let take = take
+        self.take = nil
         stopMetering()
-        for clip in clips { try? FileManager.default.removeItem(at: clip.url) }
+        let stops = pendingStops
+        pendingStops = []
+        let existing = clips
         clips = []
+        Task { @MainActor in
+            await take?.stop()
+            for stop in stops { await stop.value }
+            for url in existing.map(\.url) + [take?.url].compactMap(\.self) {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
     }
 
     func tearDown() {
         discardAll()
-        try? FileManager.default.removeItem(at: directory)
+        let directory = directory
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            try? FileManager.default.removeItem(at: directory)
+        }
     }
 
     static func levels(for clips: [VoiceOverClip]) async -> LevelSeries? {
@@ -93,9 +213,8 @@ final class VoiceOverRecorder: ObservableObject {
         meterTask?.cancel()
         meterTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                guard let self, let recorder else { return }
-                recorder.updateMeters()
-                level = Self.normalized(decibels: recorder.averagePower(forChannel: 0))
+                guard let self, let take else { return }
+                level = take.level
                 try? await Task.sleep(for: .milliseconds(50))
             }
         }

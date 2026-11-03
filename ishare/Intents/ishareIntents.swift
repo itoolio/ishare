@@ -162,6 +162,35 @@ struct CaptureIntent: AppIntent {
     }
 }
 
+struct CaptureWebPageIntent: AppIntent {
+    static var title: LocalizedStringResource { "Capture Web Page with ishare" }
+    static var description: IntentDescription {
+        IntentDescription("Loads a web page out of sight, captures its full length and returns the image.")
+    }
+
+    @Parameter(title: "Address")
+    var address: String
+
+    @Parameter(title: "Phone Width", default: false)
+    var phoneWidth: Bool
+
+    @Parameter(title: "Upload", default: false)
+    var upload: Bool
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
+        let options = CaptureOptions(forceUpload: upload, resultHandler: { _ in })
+        guard let fileURL = await WebPageCaptureFlow.capture(address, width: phoneWidth ? .mobile : .desktop, options: options) else {
+            throw IntentError.cancelled
+        }
+        let result = IntentFile(fileURL: fileURL, filename: fileURL.lastPathComponent, type: ImageEncoder.contentType(for: Defaults[.captureFileType]))
+        Task { @MainActor in
+            await CaptureSession.finish(fileURL: fileURL, kind: .image, options: CaptureOptions(forceUpload: upload))
+        }
+        return .result(value: result)
+    }
+}
+
 struct CaptureMenuIntent: AppIntent {
     static var title: LocalizedStringResource { "Capture Menu with ishare" }
     static var description: IntentDescription {

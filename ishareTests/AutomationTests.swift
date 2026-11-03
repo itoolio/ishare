@@ -105,6 +105,13 @@ struct URLSchemeParserTests {
         #expect(command(url) == .capture(mode))
     }
 
+    @Test func parsesWebPageCaptures() {
+        #expect(command("ishare://capture/web?url=example.com") == .captureWebPage("example.com", .desktop))
+        #expect(command("ishare://capture/web?url=https%3A%2F%2Fexample.com&width=mobile") == .captureWebPage("https://example.com", .mobile))
+        #expect(command("ishare://capture/web") == nil)
+        #expect(command("ishare://capture/web?url=javascript:alert(1)") == nil)
+    }
+
     @Test func parsesRecordActions() {
         #expect(command("ishare://record/start") == .record(.start, gif: false, region: false))
         #expect(command("ishare://record/stop") == .record(.stop, gif: false, region: false))

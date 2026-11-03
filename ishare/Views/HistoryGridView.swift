@@ -1,6 +1,7 @@
 import Defaults
 import Foundation
 import ishareCore
+import QuickLook
 import SwiftUI
 
 struct HistoryThumbnail: View {
@@ -49,6 +50,7 @@ struct HistoryGridView: View {
     @State private var selection = HistorySelection()
     @State private var shareAnchor = ViewAnchor()
     @State private var exportRequest: HistoryExportRequest?
+    @State private var previewURL: URL?
 
     private var uploaders: [CustomUploader] {
         Array((savedCustomUploaders ?? []).union(savedLocalUploaders))
@@ -77,6 +79,20 @@ struct HistoryGridView: View {
         }
         .sheet(item: $exportRequest) { request in
             HistoryExportSheet(request: request) { exportRequest = nil }
+        }
+        .quickLookPreview($previewURL, in: HistoryPreview.urls(for: filteredHistory))
+    }
+
+    private func togglePreview() {
+        if previewURL != nil {
+            previewURL = nil
+            return
+        }
+        let selected = selectedItems
+        let visible = filteredHistory
+        Task { @MainActor in
+            await HistoryPreview.downloadRemoteFiles(for: selected.isEmpty ? Array(visible.prefix(1)) : selected)
+            previewURL = HistoryPreview.startURL(selected: selected, visible: visible)
         }
     }
 
@@ -131,6 +147,12 @@ struct HistoryGridView: View {
             Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture { selection.clear() }
+        }
+        .focusable()
+        .focusEffectDisabled()
+        .onKeyPress(.space) {
+            togglePreview()
+            return .handled
         }
     }
 
@@ -193,6 +215,8 @@ struct HistoryGridView: View {
                 selection.clear()
             }
             .accessibilityIdentifier("history.bulk.remove")
+            Button("Quick Look".localized()) { togglePreview() }
+                .help("Preview the selection (Space)".localized())
             Button("Deselect".localized()) { selection.clear() }
                 .keyboardShortcut(.escape, modifiers: [])
                 .accessibilityIdentifier("history.bulk.deselect")

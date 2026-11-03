@@ -25,6 +25,8 @@ extension Annotation {
         case .pixelate: .pixelate
         case .eraser: .eraser
         case .cursor: .cursor
+        case .measure: .measure
+        case .library: .shapes
         }
     }
 

@@ -89,10 +89,21 @@ final class ImageEditor: NSObject, NSWindowDelegate {
             window.delegate = self
             window.center()
             window.contentMinSize = CGSize(width: 980, height: 560)
+            window.tabbingIdentifier = Self.tabbingIdentifier
+            window.tabbingMode = Defaults[.editorOpensInTabs] ? .preferred : .disallowed
             self.window = window
             NSApp.activate(ignoringOtherApps: true)
+            if Defaults[.editorOpensInTabs], let host = Self.openEditorWindow(excluding: window) {
+                host.addTabbedWindow(window, ordered: .above)
+            }
             window.makeKeyAndOrderFront(nil)
         }
+    }
+
+    static let tabbingIdentifier = "dev.adrian.ishare.editor"
+
+    private static func openEditorWindow(excluding window: NSWindow) -> NSWindow? {
+        NSApp.windows.first { $0 !== window && $0.isVisible && $0.tabbingIdentifier == tabbingIdentifier }
     }
 
     private func initialFrame() -> CGRect {

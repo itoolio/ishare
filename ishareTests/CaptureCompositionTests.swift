@@ -104,6 +104,29 @@ struct ImageCombinerTests {
         #expect(CombineSettings.load().spacing == 40)
     }
 
+    @Test func rememberedSettingsDriveTheCombinedStyle() {
+        var settings = CombineSettings()
+        settings.layout = .vertical
+        settings.alignment = .leading
+        settings.spacing = 6
+        settings.padding = 10
+        settings.cornerRadius = 3
+        settings.background = .solid
+        settings.solidColor = CaptureColor(hex: "#336699")!
+        let style = settings.style(imageCount: 3)
+        #expect(style.layout == .vertical)
+        #expect(style.alignment == .leading)
+        #expect(style.spacing == 6)
+        #expect(style.padding == 10)
+        #expect(style.cornerRadius == 3)
+        #expect(style.columns == nil)
+        #expect(style.fill == .solid(CombineColor(CaptureColor(hex: "#336699")!)))
+        settings.layout = .grid
+        settings.columns = 0
+        #expect(settings.style(imageCount: 4).columns == ImageCombiner.gridColumns(for: 4, preferred: nil))
+        #expect(settings.style(imageCount: 2, scale: 2).spacing == 12)
+    }
+
     @Test func modelsThatDoNotPersistLeaveThePreferencesAlone() {
         defer { CombineSettings().save() }
         CombineSettings().save()

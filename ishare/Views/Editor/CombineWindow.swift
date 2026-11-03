@@ -47,6 +47,20 @@ struct CombineSettings: Equatable {
     func resolvedColumns(for count: Int) -> Int {
         ImageCombiner.gridColumns(for: count, preferred: columns > 0 ? columns : nil)
     }
+
+    func style(imageCount: Int, scale: CGFloat = 1) -> CombineStyle {
+        let fill = BeautifyStyle(background: background, solidColor: solidColor, padding: 0, cornerRadius: 0, shadow: false, scale: 1).fill
+        return CombineStyle(
+            layout: layout,
+            alignment: alignment,
+            spacing: spacing * scale,
+            padding: padding * scale,
+            cornerRadius: cornerRadius * scale,
+            shadowRadius: CombineLayoutEngine.shadowRadius(enabled: shadow, padding: padding, scale: scale),
+            fill: CombineFill(fill),
+            columns: layout == .grid ? resolvedColumns(for: imageCount) : nil
+        )
+    }
 }
 
 @MainActor
@@ -96,17 +110,7 @@ final class CombineModel: ObservableObject {
     }
 
     func style(scale: CGFloat) -> CombineStyle {
-        let fill = BeautifyStyle(background: background, solidColor: solidColor, padding: 0, cornerRadius: 0, shadow: false, scale: 1).fill
-        return CombineStyle(
-            layout: layout,
-            alignment: alignment,
-            spacing: spacing * scale,
-            padding: padding * scale,
-            cornerRadius: cornerRadius * scale,
-            shadowRadius: CombineLayoutEngine.shadowRadius(enabled: shadow, padding: padding, scale: scale),
-            fill: CombineFill(fill),
-            columns: layout == .grid ? columns : nil
-        )
+        settings.style(imageCount: images.count, scale: scale)
     }
 
     func render() -> CGImage? {

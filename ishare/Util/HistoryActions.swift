@@ -62,6 +62,13 @@ enum HistoryActions {
         }
     }
 
+    static func trimBorders(_ item: HistoryItem) {
+        guard let file = item.existingLocalFileURL else { return }
+        MenuController.shared.perform {
+            await BorderTrimmer.trimAsNewCapture(from: file)
+        }
+    }
+
     static func revealInFinder(_ item: HistoryItem) {
         guard let file = item.existingLocalFileURL else { return }
         NSWorkspace.shared.activateFileViewerSelecting([file])
@@ -237,6 +244,7 @@ struct HistoryItemMenuItems: View {
             Button("Open in Editor".localized()) { HistoryActions.edit(item) }
             if showsImageActions {
                 Button("Lift Subject".localized()) { HistoryActions.liftSubject(item) }
+                Button("Trim Borders".localized()) { HistoryActions.trimBorders(item) }
                 Menu("Upscale".localized()) {
                     ForEach(UpscaleFactor.allCases) { factor in
                         Button {

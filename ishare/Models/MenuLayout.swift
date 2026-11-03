@@ -191,6 +191,7 @@ enum ToastScreenChoice: String, CaseIterable, Identifiable, Codable, Sendable, D
     case pointer
     case main
     case capturedContent
+    case specific
 
     var id: Self { self }
 
@@ -199,6 +200,7 @@ enum ToastScreenChoice: String, CaseIterable, Identifiable, Codable, Sendable, D
         case .pointer: "Screen with Pointer"
         case .main: "Main Screen"
         case .capturedContent: "Screen of the Captured Content"
+        case .specific: "A Specific Screen"
         }
     }
 }

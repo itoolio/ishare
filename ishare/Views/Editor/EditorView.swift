@@ -215,6 +215,12 @@ struct EditorView: View {
             Button("Paste Style".localized()) { document.pasteStyle() }
                 .keyboardShortcut("v", modifiers: [.command, .option])
                 .disabled(document.editingText != nil || document.selectedIDs.isEmpty)
+            Button("Copy Annotations".localized()) { document.copyAnnotations() }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .disabled(document.editingText != nil || document.selectedIDs.isEmpty)
+            Button("Paste Annotations".localized()) { document.pasteAnnotations() }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
+                .disabled(document.editingText != nil)
         }
         .frame(width: 0, height: 0)
         .opacity(0)
@@ -370,6 +376,19 @@ struct EditorView: View {
             }
             Button("Lift Subject".localized()) {
                 Task { await document.liftSubject() }
+            }
+            .disabled(document.isProcessing)
+            Menu("Redact Faces".localized()) {
+                Button("Blur Faces".localized()) { Task { await document.redactFaces(pixelate: false) } }
+                Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }
+            }
+            .disabled(document.isProcessing)
+            Button("Measure Selection".localized()) {
+                document.measureSelection()
+            }
+            .disabled(document.selectedIDs.isEmpty)
+            Button("Trim Borders".localized()) {
+                Task { await document.trimBorders() }
             }
             .disabled(document.isProcessing)
             Menu("Upscale".localized()) {

@@ -16,13 +16,17 @@ final class PointerActivityRecorder {
     private var pointerSettings = PointerEffectSettings()
     private var autoZoom: AutoZoomSettings?
     private var shapeSampler = PointerShapeSampler()
+    private var spotlightSamples: [SpotlightSample]?
+    private var spotlightStyle = SpotlightStyle()
+    private let windowSampler = FocusedWindowSampler()
+    private var tick = 0
 
     var isSuspended: () -> Bool = { false }
 
     private(set) var isActive = false
 
     static var isRequested: Bool {
-        RecordingDefaults[.autoZoomEnabled] || PointerEffectSettings.current.isActive
+        RecordingDefaults[.autoZoomEnabled] || PointerEffectSettings.current.isActive || SpotlightCapture.isRequested
     }
 
     func start(source: OverlaySource) {
@@ -31,7 +35,10 @@ final class PointerActivityRecorder {
         shapeSampler = PointerShapeSampler()
         pointerSettings = .current
         autoZoom = RecordingDefaults[.autoZoomEnabled] ? .current : nil
-        guard pointerSettings.isActive || autoZoom != nil else { return }
+        spotlightSamples = SpotlightCapture.isRequested ? [] : nil
+        spotlightStyle = SpotlightCapture.currentStyle
+        tick = 0
+        guard pointerSettings.isActive || autoZoom != nil || spotlightSamples != nil else { return }
         self.source = source
         isActive = true
         monitor.onClick = { [weak self] in self?.recordClick(atCocoaPoint: $0) }
@@ -64,14 +71,18 @@ final class PointerActivityRecorder {
         let wasActive = isActive
         isActive = false
         let shapes = pointerSettings.rendersPointer ? shapeSampler.capturedShapes : nil
+        let spotlight = spotlightSamples.flatMap { samples in
+            source.map { SpotlightCapture(samples: samples, sourceSize: $0.currentRect()?.size ?? $0.contentSize, style: spotlightStyle) }
+        }
         defer {
+            spotlightSamples = nil
             shapeSampler = PointerShapeSampler()
             log = PointerActivityLog()
             source = nil
             cachedRect = nil
         }
         guard wasActive, let source, !log.isEmpty else { return nil }
-        return RecordingEffectsCapture(log: log, contentSize: source.contentSize, pointer: pointerSettings, autoZoom: autoZoom, shapes: shapes)
+        return RecordingEffectsCapture(log: log, contentSize: source.contentSize, pointer: pointerSettings, autoZoom: autoZoom, shapes: shapes, spotlight: spotlight)
     }
 
     private func currentRect(at time: Double) -> CGRect? {
@@ -90,6 +101,10 @@ final class PointerActivityRecorder {
         let time = RecordingClock.now
         guard let rect = currentRect(at: time) else { return }
         log.recordSample(at: globalPoint(fromCocoa: NSEvent.mouseLocation), sourceRect: rect, time: time)
+        if spotlightSamples != nil, !isSuspended(), tick % 3 == 0 {
+            spotlightSamples?.append(windowSampler.sample(at: time, sourceRect: rect))
+        }
+        tick += 1
         if pointerSettings.rendersPointer {
             shapeSampler.sample(at: time)
         }

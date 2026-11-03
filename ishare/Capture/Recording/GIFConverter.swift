@@ -126,7 +126,7 @@ enum AnimatedImageFormat: String, CaseIterable, Identifiable, Defaults.Serializa
     }
 
     var isAvailable: Bool {
-        Self.encodableTypeIdentifiers.contains(typeIdentifier)
+        self == .webp || Self.encodableTypeIdentifiers.contains(typeIdentifier)
     }
 
     static var encodableTypeIdentifiers: Set<String> {
@@ -246,17 +246,27 @@ enum AnimatedImageConverter {
         }
 
         try? FileManager.default.removeItem(at: outputURL)
-        guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, format.typeIdentifier as CFString, times.count, nil) else {
+        let usesWebPEncoder = format == .webp
+        let destination =
+            usesWebPEncoder ? nil : CGImageDestinationCreateWithURL(outputURL as CFURL, format.typeIdentifier as CFString, times.count, nil)
+        guard usesWebPEncoder || destination != nil else {
             throw GIFExportError.destinationUnavailable
         }
-        CGImageDestinationSetProperties(destination, format.fileProperties as CFDictionary)
+        if let destination {
+            CGImageDestinationSetProperties(destination, format.fileProperties as CFDictionary)
+        }
         let delays = format.frameDelays(frameCount: times.count, frameRate: frameRate)
 
         var pending: PendingAnimatedFrame?
         var frameIndex = 0
         var written = 0
+        var webPFrames: [WebPEncoder.Frame] = []
         func write(_ frame: PendingAnimatedFrame) {
-            CGImageDestinationAddImage(destination, frame.image, format.frameProperties(delay: frame.delay) as CFDictionary)
+            if let destination {
+                CGImageDestinationAddImage(destination, frame.image, format.frameProperties(delay: frame.delay) as CFDictionary)
+            } else {
+                webPFrames.append(WebPEncoder.Frame(image: frame.image, duration: frame.delay))
+            }
             written += 1
         }
         for await result in generator.images(for: times) {
@@ -278,7 +288,14 @@ enum AnimatedImageConverter {
             pending = PendingAnimatedFrame(image: image, fingerprint: fingerprint, delay: delay)
         }
         if let pending { write(pending) }
-        guard written > 0, CGImageDestinationFinalize(destination) else {
+        if usesWebPEncoder {
+            guard written > 0, let data = try? WebPEncoder.encodeAnimation(webPFrames), (try? data.write(to: outputURL)) != nil else {
+                try? FileManager.default.removeItem(at: outputURL)
+                throw GIFExportError.finalizeFailed
+            }
+            return outputURL
+        }
+        guard written > 0, let destination, CGImageDestinationFinalize(destination) else {
             try? FileManager.default.removeItem(at: outputURL)
             throw GIFExportError.finalizeFailed
         }

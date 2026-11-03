@@ -27,9 +27,12 @@ struct WatchFolderSettings: View {
         } header: {
             Text("Watch Folder".localized())
         } footer: {
-            Text("Files that appear in this folder are uploaded once they finish writing. Existing files are left alone.".localized())
+            Text("Files that appear in this folder run through the steps below once they finish writing. Existing files are left alone.".localized())
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+        }
+        if watchFolderEnabled {
+            WatchFolderChainSettings()
         }
     }
 

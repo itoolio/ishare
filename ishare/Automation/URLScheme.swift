@@ -1,4 +1,5 @@
 import Foundation
+import ishareCore
 
 enum AutomationOpenTarget: Equatable, Sendable {
     case history
@@ -8,6 +9,7 @@ enum AutomationOpenTarget: Equatable, Sendable {
 
 enum URLSchemeCommand: Equatable, Sendable {
     case capture(CLICaptureMode)
+    case captureWebPage(String, WebPageWidth)
     case record(CLIRecordAction, gif: Bool, region: Bool, preset: String? = nil)
     case upload([URL])
     case selectUploader(String)
@@ -141,6 +143,12 @@ enum URLSchemeParser {
         guard let action = segments.first else { return .failure(.unknownAction("")) }
         let argument = segments.dropFirst().first
         switch action {
+        case "capture" where argument == "web":
+            guard let address = value("url", in: items), WebPageCapturePlan.normalizedURL(from: address) != nil else {
+                return .failure(.missingParameter("url"))
+            }
+            let width = value("width", in: items).flatMap(WebPageWidth.init(rawValue:)) ?? .desktop
+            return .success(.captureWebPage(address, width))
         case "capture":
             let name = argument ?? value("type", in: items)?.lowercased() ?? CLICaptureMode.region.rawValue
             guard let mode = CLICaptureMode(rawValue: name) else { return .failure(.invalidValue(parameter: "capture", value: name)) }

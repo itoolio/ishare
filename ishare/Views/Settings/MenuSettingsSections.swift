@@ -167,6 +167,8 @@ struct MenuMaterialBackground: NSViewRepresentable {
 struct ToastPlacementSettings: View {
     @Default(.toastCorner) private var corner
     @Default(.toastScreen) private var screen
+    @Default(.toastDisplayName) private var displayName
+    @Default(.holdResultsWhilePresenting) private var holdsWhilePresenting
 
     var body: some View {
         Picker(Self.placement.title.localized(), selection: $corner) {
@@ -178,6 +180,13 @@ struct ToastPlacementSettings: View {
             ForEach(ToastScreenChoice.allCases) { Text($0.title.localized()).tag($0) }
         }
         .accessibilityIdentifier("settings.toast.screen")
+        if screen == .specific {
+            Picker("Display".localized(), selection: Binding(get: { displayName ?? NSScreen.main?.localizedName ?? "" }, set: { displayName = $0 })) {
+                ForEach(NSScreen.screens.map(\.localizedName), id: \.self) { Text($0).tag($0) }
+            }
+        }
+        Toggle("Hold results while presenting full screen".localized(), isOn: $holdsWhilePresenting)
+            .help("Results that arrive while another app covers a whole display are shown when the presentation ends.".localized())
     }
 }
 

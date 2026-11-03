@@ -1,4 +1,5 @@
 import Defaults
+import ishareCore
 import SwiftUI
 
 struct EditorToolOptions: View {
@@ -28,6 +29,7 @@ struct EditorToolOptions: View {
                 spotlightOptions
                 smartShapesToggle
             case .stamp: stampOptions
+            case .shapes: shapeLibraryOptions
             default: EmptyView()
             }
         }
@@ -212,6 +214,36 @@ struct EditorToolOptions: View {
         .help("Snap to detected elements (hold ⌘ to draw freely)".localized())
         .accessibilityLabel("Snap to detected elements".localized())
         .accessibilityIdentifier("editor.smartShapes")
+    }
+
+    private var shapeLibraryOptions: some View {
+        Group {
+            Picker(
+                "Shape".localized(),
+                selection: Binding(
+                    get: { document.libraryShape },
+                    set: { document.libraryShape = $0 }
+                )
+            ) {
+                ForEach(LibraryShape.allCases) { shape in
+                    Image(systemName: shape.symbol)
+                        .help(shape.title)
+                        .accessibilityLabel(shape.title)
+                        .tag(shape)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .accessibilityIdentifier("editor.shapes.kind")
+            Toggle(isOn: Binding(get: { document.filled }, set: { document.filled = $0 })) {
+                Image(systemName: "paintbrush.fill")
+            }
+            .toggleStyle(.button)
+            .disabled(!document.libraryShape.isClosed)
+            .help("Fill".localized())
+            .accessibilityLabel("Fill".localized())
+        }
     }
 
     private var spotlightOptions: some View {

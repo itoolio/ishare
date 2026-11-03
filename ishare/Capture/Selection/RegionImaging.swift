@@ -20,7 +20,13 @@ final class SelectionBackdropLoader {
     func captureBeforeSelectionIfFrozen() async -> [CGDirectDisplayID: CGImage] {
         guard mode.loadsBackdrops else { return [:] }
         generation += 1
-        let raw = await ScreenshotEngine.backdrops(for: content)
+        let prefetched = await SelectionPrefetch.take()
+        let raw: [CGDirectDisplayID: CGImage]
+        if let prefetched, !prefetched.isEmpty {
+            raw = prefetched
+        } else {
+            raw = await ScreenshotEngine.backdrops(for: content)
+        }
         let backdrops = blursPrivateApps ? PrivacyFilter.redactBackdrops(raw, content: content) : raw
         task = Task { backdrops }
         return backdrops
@@ -110,7 +116,7 @@ final class RegionImaging {
             return result
         case .combined:
             let pieces = images.map { PrivacyFilter.hideMenuBarIfNeeded($0.image, geometry: $0.geometry) }
-            guard let combined = ImageCombiner.combine(pieces, style: CombineStyle()) else { return first }
+            guard let combined = ImageCombiner.combine(pieces, style: CombineSettings.load().style(imageCount: pieces.count)) else { return first }
             return CapturedImage(image: combined, suffix: frontmost, pointScale: images.compactMap(\.geometry?.scale).max(), source: source)
         }
     }

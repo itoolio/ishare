@@ -18,6 +18,7 @@ final class RegionSelectionView: NSView {
 
     var anchor: CGPoint?
     var current: CGPoint = .zero
+    var keyboard = KeyboardSelection()
     var selection: CGRect?
     var isFixedPlaced = false
     private var isMovingSelection = false
@@ -150,6 +151,7 @@ final class RegionSelectionView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        keyboard.pointerUsed()
         let point = convert(event.locationInWindow, from: nil)
         if showsToolbar, let item = toolbar.item(at: point) {
             activate(item)
@@ -255,6 +257,9 @@ final class RegionSelectionView: NSView {
         }
         switch event.keyCode {
         case KeyCode.escape:
+            if handleKeyboardEscape() {
+                return
+            }
             if measurement != nil, !isMeasuring {
                 measurement = nil
                 needsDisplay = true
@@ -268,7 +273,7 @@ final class RegionSelectionView: NSView {
                 onFinish(.single(.switchToWindow))
             }
         case KeyCode.returnKey, KeyCode.enter:
-            confirm()
+            handleKeyboardReturn()
         case KeyCode.tab:
             if !event.isARepeat {
                 session.toggleFreezeMode()
@@ -278,6 +283,11 @@ final class RegionSelectionView: NSView {
                 session.removeRegion(id: hovered)
             }
         case KeyCode.left, KeyCode.right, KeyCode.up, KeyCode.down:
+            let wasInactive = keyboard.stage == .inactive
+            keyboard.arrowPressed(hasSelection: anchor != nil)
+            if wasInactive, keyboard.stage == .placingFirstCorner {
+                announce("Keyboard selection. Move to a corner and press Return.".localized())
+            }
             nudge(keyCode: event.keyCode, step: event.modifierFlags.contains(.shift) ? 10 : 1)
         default:
             if !event.isARepeat, handleCharacter(event.charactersIgnoringModifiers?.lowercased()) {
@@ -285,6 +295,42 @@ final class RegionSelectionView: NSView {
             }
             super.keyDown(with: event)
         }
+    }
+
+    private func handleKeyboardReturn() {
+        switch keyboard.returnPressed() {
+        case .setFirstCorner:
+            let point = clampToBounds(mouseLocation ?? CGPoint(x: bounds.midX, y: bounds.midY))
+            anchor = point
+            current = point
+            selection = nil
+            needsDisplay = true
+            announce("First corner set. Move to the opposite corner and press Return.".localized())
+        case .confirm, .defaultAction:
+            confirm()
+        }
+    }
+
+    private func handleKeyboardEscape() -> Bool {
+        switch keyboard.escapePressed() {
+        case .clearFirstCorner:
+            anchor = nil
+            selection = nil
+            needsDisplay = true
+            announce("First corner cleared.".localized())
+            return true
+        case .leaveKeyboardMode:
+            announce("Keyboard selection off.".localized())
+            return true
+        case .defaultAction:
+            return false
+        }
+    }
+
+    private func announce(_ message: String) {
+        NSAccessibility.post(
+            element: self, notification: .announcementRequested,
+            userInfo: [.announcement: message, .priority: NSAccessibilityPriorityLevel.high.rawValue])
     }
 
     private func handleCharacter(_ character: String?) -> Bool {

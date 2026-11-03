@@ -1,4 +1,5 @@
 import AppKit
+import BezelNotification
 import Combine
 import Defaults
 import ishareCore
@@ -37,6 +38,7 @@ final class EditorDocument: ObservableObject {
     @Published var filled = false
     @Published var textBackground = false
     @Published var selectedIDs: Set<UUID> = []
+    @Published var libraryShape: LibraryShape = .roundBubble
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
     @Published var editingText: TextEdit?
@@ -320,6 +322,70 @@ final class EditorDocument: ObservableObject {
         }
     }
 
+    func redactFaces(pixelate: Bool) async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        let image = adjustedBase
+        let boxes: [CGRect]
+        do {
+            boxes = try await FaceDetector.faces(in: image)
+        } catch {
+            Log.app.error("Face detection failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: "Faces couldn't be detected".localized(), icon: ToastIcon)
+            return
+        }
+        let rects = FaceRedactionLayout.rects(forNormalized: boxes, imageSize: imageSize)
+        guard !rects.isEmpty else {
+            BezelNotification.show(messageText: "No faces found".localized(), icon: ToastIcon)
+            return
+        }
+        let redactions = rects.map { rect in
+            Annotation(shape: pixelate ? .pixelate(rect) : .blur(rect), color: color, lineWidth: lineWidth, fontSize: fontSize)
+        }
+        add(contentsOf: redactions)
+        selectedIDs = Set(redactions.map(\.id))
+    }
+
+    func copyAnnotations(to clipboard: AnnotationClipboard = .shared) {
+        clipboard.write(annotations.filter { selectedIDs.contains($0.id) })
+    }
+
+    func pasteAnnotations(from clipboard: AnnotationClipboard = .shared) {
+        let pasted = AnnotationClipboard.pasted(clipboard.read(), into: imageBounds)
+        guard !pasted.isEmpty else { return }
+        add(contentsOf: pasted)
+        selectedIDs = Set(pasted.map(\.id))
+    }
+
+    func measureSelection() {
+        let selected = annotations.filter { selectedIDs.contains($0.id) }
+        guard !selected.isEmpty else { return }
+        let offset = max(12, fontSize * 0.6)
+        let measures = selected.flatMap { annotation in
+            DimensionMeasure.selectionDimensions(of: annotation.bounds, offset: offset).map { line in
+                Annotation(shape: .measure(line.0, line.1), color: color, lineWidth: max(1, lineWidth / 2), fontSize: fontSize)
+            }
+        }
+        add(contentsOf: measures)
+        selectedIDs = Set(measures.map(\.id))
+    }
+
+    func trimBorders() async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        let image = adjustedBase
+        let padding = Defaults[.trimBorderPadding]
+        guard let rect = await BlockingWork.run({ BorderTrimmer.contentRect(of: image, padding: padding) }) else {
+            BezelNotification.show(messageText: "No uniform borders found".localized(), icon: ToastIcon)
+            return
+        }
+        applyCrop(rect)
+    }
+
     var smartShapesActive: Bool {
         SmartShapes.supports(tool) && !textHighlightActive && Defaults[.editorSmartShapes]
     }
@@ -488,6 +554,11 @@ final class EditorDocument: ObservableObject {
                 replace(existing)
                 return
             }
+            if case let .library(rect, shape, _) = existing.shape {
+                existing.shape = .library(rect, shape, trimmed)
+                replace(existing)
+                return
+            }
             if trimmed.isEmpty {
                 commit { annotations.removeAll { $0.id == replacing } }
             } else {
@@ -506,6 +577,8 @@ final class EditorDocument: ObservableObject {
             switch tool {
             case .arrow: arrowPath == .curved ? .curvedArrow(start, ArrowGeometry.defaultControl(from: start, to: end), end) : .arrow(start, end)
             case .line: .line(start, end)
+            case .measure: .measure(start, end)
+            case .shapes: .library(rect, libraryShape, libraryShape == .keycap ? "⌘" : "")
             case .rectangle: .rectangle(rect)
             case .ellipse: .ellipse(rect)
             case .highlight: .highlight(rect)

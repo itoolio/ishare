@@ -136,6 +136,9 @@ extension RecordingSettingsView: SettingsSearchable {
                 "Auto zoom", "Zoom level", "Zoom speed", "Stay zoomed for", "Follow the pointer while zoomed", "Zoom in on typing", "Pan",
             ]),
         SettingsSearchEntry(
+            "Window Spotlight", pane: .recording,
+            keywords: ["Spotlight the active window", "Dim the rest by", "Blur the rest", "Focus", "Dim"]),
+        SettingsSearchEntry(
             "Pointer", pane: .recording,
             keywords: [
                 "Smooth pointer movement", "Pointer size", "Cursor", "Hide the pointer when idle", "Hide after", "Click ripples", "Ripple color",
