@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<dictionary xmlns:xi="http://www.w3.org/2003/XInclude" title="ishare Terminology">
+    <xi:include href="file:///System/Library/ScriptingDefinitions/CocoaStandard.sdef" xpointer="xpointer(/dictionary/suite)"/>
+    <suite name="ishare Suite" code="iShr" description="Capture, record and upload with ishare.">
+        <enumeration name="capture mode" code="iCmd">
+            <enumerator name="region" code="cReg" description="Select a region."/>
+            <enumerator name="window" code="cWin" description="Pick a window."/>
+            <enumerator name="screen" code="cScr" description="The whole screen."/>
+            <enumerator name="scrolling" code="cScl" description="A scrolling capture."/>
+            <enumerator name="menu" code="cMnu" description="An open menu, popover or tooltip after a short countdown."/>
+        </enumeration>
+        <enumeration name="recording action" code="iRac">
+            <enumerator name="start" code="rSta"/>
+            <enumerator name="stop" code="rSto"/>
+            <enumerator name="toggle" code="rTog"/>
+            <enumerator name="pause" code="rPau"/>
+            <enumerator name="resume" code="rRes"/>
+        </enumeration>
+        <enumeration name="open target" code="iOtg">
+            <enumerator name="history window" code="oHis"/>
+            <enumerator name="settings window" code="oSet"/>
+            <enumerator name="editor window" code="oEdi"/>
+        </enumeration>
+        <class-extension extends="application" description="ishare's top-level scripting object.">
+            <cocoa class="NSApplication"/>
+            <element type="history item" access="r">
+                <cocoa key="scriptingHistoryItems"/>
+            </element>
+            <element type="uploader" access="r">
+                <cocoa key="scriptingUploaders"/>
+            </element>
+        </class-extension>
+        <class name="history item" code="iHit" description="An upload in the history." plural="history items">
+            <cocoa class="ScriptableHistoryItem"/>
+            <property name="id" code="ID  " type="text" access="r" description="A stable identifier."/>
+            <property name="link" code="iLnk" type="text" access="r" description="The uploaded link."/>
+            <property name="title" code="pnam" type="text" access="r"/>
+            <property name="upload date" code="iDat" type="date" access="r"/>
+            <property name="uploader name" code="iUpn" type="text" access="r"/>
+            <property name="alt text" code="iAlt" type="text" access="r"/>
+            <property name="local file" code="iLoc" type="text" access="r" description="The path of the local copy, if any."/>
+        </class>
+        <class name="uploader" code="iUpl" description="An upload destination." plural="uploaders">
+            <cocoa class="ScriptableUploader"/>
+            <property name="id" code="ID  " type="text" access="r"/>
+            <property name="name" code="pnam" type="text" access="r"/>
+            <property name="kind" code="iKnd" type="text" access="r"/>
+            <property name="default" code="iDef" type="boolean" access="r" description="Whether new captures are uploaded here."/>
+        </class>
+        <command name="capture" code="iShrCapt" description="Take a screenshot and return its link or file path.">
+            <cocoa class="ScriptCaptureCommand"/>
+            <direct-parameter type="capture mode" optional="yes"/>
+            <parameter name="uploading" code="iUpl" type="boolean" optional="yes" description="Upload the capture.">
+                <cocoa key="upload"/>
+            </parameter>
+            <result type="text"/>
+        </command>
+        <command name="upload" code="iShrUpld" description="Upload files and return their links.">
+            <cocoa class="ScriptUploadCommand"/>
+            <direct-parameter description="The files to upload.">
+                <type type="file" list="yes"/>
+            </direct-parameter>
+            <parameter name="with uploader" code="iUpn" type="text" optional="yes">
+                <cocoa key="uploader"/>
+            </parameter>
+            <result>
+                <type type="text" list="yes"/>
+            </result>
+        </command>
+        <command name="record" code="iShrRecd" description="Start, stop, pause or resume a screen recording.">
+            <cocoa class="ScriptRecordCommand"/>
+            <direct-parameter type="recording action" optional="yes"/>
+            <parameter name="with preset" code="iPrs" type="text" optional="yes">
+                <cocoa key="preset"/>
+            </parameter>
+            <result type="boolean" description="Whether a recording is running afterwards."/>
+        </command>
+        <command name="select uploader" code="iShrSelU" description="Make an uploader the default destination.">
+            <cocoa class="ScriptSelectUploaderCommand"/>
+            <direct-parameter type="text" description="The uploader's name."/>
+            <result type="boolean"/>
+        </command>
+        <command name="show" code="iShrShow" description="Open an ishare window.">
+            <cocoa class="ScriptShowCommand"/>
+            <direct-parameter type="open target"/>
+        </command>
+    </suite>
+</dictionary>

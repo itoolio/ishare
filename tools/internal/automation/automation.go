@@ -86,6 +86,7 @@ func (c Context) Replies() string { return filepath.Join(c.Work, "replies") }
 type Case struct {
 	Name    string
 	URL     string
+	Script  string
 	Args    []string
 	Timeout time.Duration
 	Check   func(Context, Result) error
@@ -304,6 +305,14 @@ func execute(options Options, ctx Context, testCase Case) (Result, error) {
 		}
 		result.Reply = &reply
 		return result, nil
+	}
+	if testCase.Script != "" {
+		stdout, stderr, code, err := options.Executor.Run(runContext, nil, "osascript", "-e", testCase.Script)
+		result := Result{Stdout: stdout, Stderr: stderr, ExitCode: code}
+		if runContext.Err() != nil {
+			return result, fmt.Errorf("timed out after %s", limit)
+		}
+		return result, err
 	}
 	cli := filepath.Join(options.App, "Contents", "Helpers", "ishare")
 	stdout, stderr, code, err := options.Executor.Run(runContext, []string{MailboxEnv + "=" + ctx.Mailbox()}, cli, testCase.Args...)
