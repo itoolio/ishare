@@ -24,6 +24,8 @@ extension Defaults.Keys {
     static let showWebcam = Key<Bool>("showWebcam", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamSize = Key<WebcamBubbleSize>("webcamSize", default: .medium, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamCorner = Key<WebcamCorner>("webcamCorner", default: .bottomRight, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingCountdownSeconds = Key<Int>("recordingCountdownSeconds", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingCountdownChime = Key<Bool>("recordingCountdownChime", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamLayout = Key<WebcamLayout>("webcamLayout", default: .bubble, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamBackground = Key<WebcamBackground>("webcamBackground", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamDeviceID = Key<String?>("webcamDeviceID", default: nil, suite: .ishare)

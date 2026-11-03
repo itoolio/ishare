@@ -164,10 +164,23 @@ private struct MicrophoneSettingsSection: View {
 
 private struct AfterRecordingSettingsSection: View {
     @Default(.trimBeforeSaving) private var trimBeforeSaving
+    @Default(.recordingCountdownSeconds) private var countdown
+    @Default(.recordingCountdownChime) private var chime
     @Default(.gifMaxSize) private var gifMaxSize
     @Default(.saveSeparateTracks) private var saveSeparateTracks
 
     var body: some View {
+        Section("Countdown".localized()) {
+            Picker("Count down before recording".localized(), selection: $countdown) {
+                Text("Off".localized()).tag(0)
+                Text("3 s").tag(3)
+                Text("5 s").tag(5)
+                Text("10 s").tag(10)
+            }
+            Toggle("Play a chime when recording starts".localized(), isOn: $chime)
+                .disabled(countdown == 0)
+                .help("The countdown and the chime happen before recording begins, so neither ends up in the video. Press Esc to cancel.".localized())
+        }
         Section("After Recording".localized()) {
             Toggle("Trim recordings before saving".localized(), isOn: $trimBeforeSaving)
             Toggle("Also save separate tracks for editing".localized(), isOn: $saveSeparateTracks)

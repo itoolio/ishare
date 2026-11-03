@@ -702,6 +702,15 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private func run(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL) async {
+        guard await RecordingCountdown.run() else {
+            pointerFollower?.stop()
+            pointerFollower = nil
+            removeOverlay()
+            hideCaptureOverlays()
+            isRunning = false
+            RecordingDefaults.end()
+            return
+        }
         RecordingNotesController.shared.recordingDidStart()
         hudModel.showsNotes = RecordingNotesController.shared.isVisible
         let startDate = Date()
