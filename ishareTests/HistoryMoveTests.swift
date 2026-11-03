@@ -69,3 +69,17 @@ struct ViewCountHistoryTests {
         #expect(item.viewCountUrl == "https://z.example/api/user/files/abc")
     }
 }
+
+struct ScriptHookRunnerTests {
+    @Test func passesTheEventFileAndLinkToTheScript() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "hook-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let output = folder.appending(path: "out.txt")
+        let script = folder.appending(path: "hook.sh")
+        try "echo \"$1 $2 $3 $ISHARE_LINK\" > '\(output.path)'\nexit 3\n".write(to: script, atomically: true, encoding: .utf8)
+        let status = await ScriptHooks.run(script: script.path, event: .upload, file: "/tmp/a.png", link: "https://x/a.png")
+        #expect(status == 3)
+        #expect(try String(contentsOf: output, encoding: .utf8) == "upload /tmp/a.png https://x/a.png https://x/a.png\n")
+    }
+}

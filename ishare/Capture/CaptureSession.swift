@@ -248,6 +248,7 @@ enum CaptureSession {
     }
 
     static func finish(fileURL originalURL: URL, kind: PostCapture.Kind, options: CaptureOptions = .standard) async {
+        ScriptHooks.runIfEnabled(kind == .video ? .recording : .capture, file: originalURL)
         var fileURL = originalURL
         let saveToDisk = options.isEnabled(.saveToDisk)
         var copiedCode: Bool?

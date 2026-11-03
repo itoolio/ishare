@@ -266,6 +266,7 @@ enum UploadCoordinator {
             hash = await DuplicateUploads.hash(of: job.fileURL)
         }
         DuplicateUploads.remember(hash: hash, target: job.target, outcome: outcome)
+        ScriptHooks.runIfEnabled(.upload, file: job.localFileURL ?? job.fileURL, link: outcome.deliveredURL)
         WebhookDispatcher.uploadCompleted(
             outcome, fileURL: prepared.fileURL, uploaderName: job.target.displayName, savedBytes: outcome.savedBytes,
             waitsForAltText: AltText.isEnabled && MimeType.isImageOrVideo(prepared.fileURL)
