@@ -236,3 +236,12 @@ struct ExportPresetRunnerTests {
         #expect(CGImageSourceGetType(source) as String? == "public.jpeg")
     }
 }
+
+struct PointerHighlightTests {
+    @Test func aHighlightRendersThePointerAfterRecording() {
+        #expect(PointerEffectSettings(highlight: .halo).rendersPointer)
+        #expect(!PointerEffectSettings().rendersPointer)
+        #expect(!PointerEffectSettings(recordsPointer: false, highlight: .spotlight).rendersPointer)
+        #expect(PointerHighlight.spotlight.radius > PointerHighlight.halo.radius)
+    }
+}

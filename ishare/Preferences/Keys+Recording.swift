@@ -55,6 +55,7 @@ extension Defaults.Keys {
     static let autoZoomFollowsPointer = Key<Bool>("autoZoomFollowsPointer", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let autoZoomOnTyping = Key<Bool>("autoZoomOnTyping", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let pointerSmoothing = Key<Bool>("pointerSmoothing", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let pointerHighlight = Key<PointerHighlight>("pointerHighlight", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let pointerScale = Key<Double>("pointerScale", default: 1, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let clickRipples = Key<Bool>("clickRipples", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let clickRippleColor = Key<String>("clickRippleColor", default: "#FFCC00", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -81,3 +82,5 @@ extension Defaults.Keys {
 }
 
 extension FollowPointerSize: @retroactive Defaults.Serializable {}
+
+extension PointerHighlight: @retroactive Defaults.Serializable {}

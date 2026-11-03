@@ -109,6 +109,7 @@ final class OverlayImageRenderer: @unchecked Sendable {
             if opacity > 0.01 {
                 let tip = OverlayCoordinateMapper.flipped(position, videoHeight: layout.videoSize.height)
                 let scale = layout.pixelsPerPoint * CGFloat(track.scale)
+                image = highlighted(image, mode: effects.pointerHighlight, at: tip, scale: layout.pixelsPerPoint, opacity: opacity)
                 let pointer =
                     effects.pointerShapes?.image(at: time).map { shapeImage($0, scale: scale, tip: tip, opacity: opacity) }
                     ?? pointerImage(scale: scale, tip: tip, opacity: opacity)
@@ -116,6 +117,48 @@ final class OverlayImageRenderer: @unchecked Sendable {
             }
         }
         return image
+    }
+
+    private func highlighted(_ image: CIImage, mode: PointerHighlight, at tip: CGPoint, scale: CGFloat, opacity: Double) -> CIImage {
+        let radius = mode.radius * scale
+        let extent = image.extent
+        switch mode {
+        case .none:
+            return image
+        case .halo:
+            let halo = CIFilter(name: "CIRadialGradient", parameters: [
+                "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius * 0.55, "inputRadius1": radius,
+                "inputColor0": CIColor(red: 1, green: 0.85, blue: 0.1, alpha: 0.45 * opacity), "inputColor1": CIColor(red: 1, green: 0.85, blue: 0.1, alpha: 0),
+            ])?.outputImage?.cropped(to: CGRect(x: tip.x - radius, y: tip.y - radius, width: radius * 2, height: radius * 2))
+            return halo.map { $0.composited(over: image) } ?? image
+        case .spotlight:
+            let mask = CIFilter(name: "CIRadialGradient", parameters: [
+                "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius * 0.85, "inputRadius1": radius,
+                "inputColor0": CIColor(red: 1, green: 1, blue: 1, alpha: 1), "inputColor1": CIColor(red: 0, green: 0, blue: 0, alpha: 1),
+            ])?.outputImage?.cropped(to: extent)
+            let dimming = PointerHighlight.spotlightDimming * CGFloat(opacity)
+            let dimmed = image.applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: 1 - dimming, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: 1 - dimming, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: 1 - dimming, w: 0),
+            ])
+            guard let mask else { return image }
+            return image.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: dimmed, kCIInputMaskImageKey: mask])
+        case .magnifier:
+            let lens = CGRect(x: tip.x - radius, y: tip.y - radius, width: radius * 2, height: radius * 2)
+            let magnified = image.clampedToExtent()
+                .transformed(by: CGAffineTransform(translationX: -tip.x, y: -tip.y)
+                    .concatenating(CGAffineTransform(scaleX: PointerHighlight.magnification, y: PointerHighlight.magnification))
+                    .concatenating(CGAffineTransform(translationX: tip.x, y: tip.y)))
+                .cropped(to: lens)
+            let circle = CIFilter(name: "CIRadialGradient", parameters: [
+                "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius - 1, "inputRadius1": radius,
+                "inputColor0": CIColor(red: 1, green: 1, blue: 1, alpha: opacity), "inputColor1": CIColor(red: 0, green: 0, blue: 0, alpha: 0),
+            ])?.outputImage?.cropped(to: lens)
+            guard let circle else { return image }
+            let masked = magnified.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: CIImage.empty().cropped(to: lens), kCIInputMaskImageKey: circle])
+            let border = ring(diameter: lens.width, scale: scale).transformed(by: CGAffineTransform(translationX: lens.minX, y: lens.minY))
+            return border.composited(over: masked.composited(over: image))
+        }
     }
 
     private func zoomed(_ image: CIImage, to visibleRect: CGRect, videoSize: CGSize) -> CIImage {

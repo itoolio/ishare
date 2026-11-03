@@ -126,9 +126,18 @@ private struct PointerEffectsSettingsSection: View {
     @Default(.hidesIdlePointer) private var hidesIdle
     @Default(.pointerIdleSeconds) private var idleSeconds
     @Default(.recordPointer) private var recordPointer
+    @Default(.pointerHighlight) private var highlight
 
     var body: some View {
         Section {
+            Picker("Pointer highlight".localized(), selection: $highlight) {
+                Text("None".localized()).tag(PointerHighlight.none)
+                Text("Halo".localized()).tag(PointerHighlight.halo)
+                Text("Spotlight".localized()).tag(PointerHighlight.spotlight)
+                Text("Magnifier".localized()).tag(PointerHighlight.magnifier)
+            }
+            .disabled(!recordPointer)
+            .help("Added after you stop recording, like the other pointer effects.".localized())
             Toggle("Smooth pointer movement".localized(), isOn: $smoothing)
                 .disabled(!recordPointer)
             SliderRow(title: "Pointer size", value: $scale, range: PointerEffectSettings.scaleRange, step: 0.25, format: { String(format: "%.2g×", $0) })
