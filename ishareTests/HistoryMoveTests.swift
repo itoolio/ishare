@@ -379,3 +379,20 @@ struct HistoryBulkEditTests {
         Defaults[.uploadHistory] = []
     }
 }
+
+struct StorageScannerTests {
+    @Test func countsOnlyCapturesIshareNamed() throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "storage-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        try Data(count: 1000).write(to: folder.appending(path: "ishare-1800000000.png"))
+        try Data(count: 3000).write(to: folder.appending(path: "ishare-1800000001.mov"))
+        try Data(count: 500).write(to: folder.appending(path: "holiday.png"))
+        let plan = LocalCaptureCleanupPlan(directories: [folder], prefixes: ["ishare"], cutoff: .distantFuture, protectedPaths: [])
+        let files = StorageScanner.files(in: plan)
+        let summary = StorageSummary(files: files.map(\.file))
+        #expect(summary.imageCount == 1 && summary.videoCount == 1)
+        #expect(summary.localBytes == 4000)
+        #expect(StorageScanner.size(of: folder) == 4500)
+    }
+}

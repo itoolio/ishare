@@ -36,6 +36,7 @@ struct AdvancedSettingsView: View {
                 ScriptHookSection()
             }
             LocalCaptureCleanupSection()
+            StorageOverviewSection()
             DiagnosticsSection()
             SettingsTransferSection()
         }
