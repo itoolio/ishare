@@ -213,9 +213,13 @@ jobs:
                   xcrun swift "$RUNNER_TEMP/park-pointer.swift"
             - name: Keep the app's info log
               run: sudo log config --subsystem dev.adrian.ishare --mode "level:info,persist:info"
+            - name: Let the automation runner script the app
+              run: |
+                  go build -o "$RUNNER_TEMP/ishare-tools" ./tools/cmd/ishare-tools
+                  scripts/allow-apple-events.sh dev.adrian.ishare "$RUNNER_TEMP/ishare-tools"
             - name: Run every ishare:// action and CLI command against the app
               run: |
-                  go run ./tools/cmd/ishare-tools automation \
+                  "$RUNNER_TEMP/ishare-tools" automation \
                     --app build/DerivedData/Build/Products/Debug/ishare.app \
                     --work "$RUNNER_TEMP/automation" | tee "$RUNNER_TEMP/automation.log"
             - name: Summarize the automation checks
@@ -288,10 +292,14 @@ jobs:
                   xcrun swift "$RUNNER_TEMP/park-pointer.swift"
             - name: Keep the app's info log
               run: sudo log config --subsystem dev.adrian.ishare --mode "level:info,persist:info"
+            - name: Let the automation runner script the app
+              run: |
+                  go build -o "$RUNNER_TEMP/ishare-tools" ./tools/cmd/ishare-tools
+                  scripts/allow-apple-events.sh dev.adrian.ishare "$RUNNER_TEMP/ishare-tools"
             - name: Run two identical automation rounds in one session
               run: |
                   mkdir -p "$RUNNER_TEMP/leaks"
-                  go run ./tools/cmd/ishare-tools automation \
+                  "$RUNNER_TEMP/ishare-tools" automation \
                     --app build/DerivedData/Build/Products/Debug/ishare.app \
                     --work "$RUNNER_TEMP/automation" \
                     --rounds 2 --keep-running \
