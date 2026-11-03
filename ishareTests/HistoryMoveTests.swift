@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import ishareCore
 import Testing
@@ -131,5 +132,16 @@ struct MenuSizeTests {
         #expect(!MenuSize.automatic.isCompact(visibleHeight: 1050))
         #expect(MenuSize.compact.isCompact(visibleHeight: 2000))
         #expect(!MenuSize.full.isCompact(visibleHeight: 400))
+    }
+}
+
+@MainActor
+struct BufferingIconTests {
+    @Test func drawsAColoredBadgeOverTheMenuBarIcon() {
+        let base = NSImage(systemSymbolName: "camera", accessibilityDescription: nil)
+        let icon = StatusIconRenderer.buffering(base: base)
+        #expect(icon.size == StatusIconRenderer.size)
+        #expect(!icon.isTemplate)
+        #expect(icon.accessibilityDescription?.isEmpty == false)
     }
 }
