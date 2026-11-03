@@ -39,11 +39,11 @@ class HistoryWindowController: NSWindowController {
     }
 
     override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
-        HistoryQuickLook.shared.begin(panel)
+        MainActor.assumeIsolated { HistoryQuickLook.shared.begin(panel) }
     }
 
     override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
-        HistoryQuickLook.shared.end(panel)
+        MainActor.assumeIsolated { HistoryQuickLook.shared.end(panel) }
     }
 }
 

@@ -91,6 +91,15 @@ jobs:
                     -configuration Release \
                     -destination "generic/platform=macOS" \
                     CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/app-store-build.log" | xcbeautify
+            - name: Rebuild the widget and app incrementally to catch warnings only those builds show
+              run: |
+                  touch ishareWidgets/*.swift ishare/Intents/*.swift
+                  xcodebuild build \
+                    -project ishare.xcodeproj \
+                    -scheme ishare \
+                    -configuration Release \
+                    -destination "generic/platform=macOS" \
+                    CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/app-store-incremental.log" | xcbeautify
             - name: Run unit tests
               timeout-minutes: 25
               run: |
@@ -118,7 +127,7 @@ jobs:
             - name: Fail on build warnings
               run: |
                   go run ./tools/cmd/ishare-tools build-warnings \
-                    "$RUNNER_TEMP/app-store-build.log" "$RUNNER_TEMP/unit-tests.log"
+                    "$RUNNER_TEMP/app-store-build.log" "$RUNNER_TEMP/app-store-incremental.log" "$RUNNER_TEMP/unit-tests.log"
             - name: Check code coverage
               run: |
                   mkdir -p build/coverage
