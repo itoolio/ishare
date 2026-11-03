@@ -383,6 +383,14 @@ final class EditorDocument: ObservableObject {
         clipboard.write(annotations.filter { selectedIDs.contains($0.id) })
     }
 
+    func dropAnnotations(_ dropped: [Annotation], at point: CGPoint) {
+        let placed = AnnotationClipboard.dropped(dropped, centeredAt: point, into: imageBounds)
+        guard !placed.isEmpty else { return }
+        add(contentsOf: placed)
+        selectedIDs = Set(placed.map(\.id))
+        NSApp.activate()
+    }
+
     func pasteAnnotations(from clipboard: AnnotationClipboard = .shared) {
         let pasted = AnnotationClipboard.pasted(clipboard.read(), into: imageBounds)
         guard !pasted.isEmpty else { return }

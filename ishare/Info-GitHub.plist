@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSAppleScriptEnabled</key>
-	<true/>
-	<key>OSAScriptingDefinition</key>
-	<string>ishare.sdef</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -89,6 +85,8 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>NSAppleScriptEnabled</key>
+	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>ishare shows your camera in a bubble during recordings if you turn on the webcam overlay</string>
 	<key>NSLocalNetworkUsageDescription</key>
@@ -128,6 +126,8 @@
 	</array>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>ishare transcribes the audio of your recordings on this Mac to create captions if you turn on Generate captions</string>
+	<key>OSAScriptingDefinition</key>
+	<string>ishare.sdef</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
@@ -181,6 +181,16 @@
 					<string>ishare-settings</string>
 				</array>
 			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>ishare annotations</string>
+			<key>UTTypeIdentifier</key>
+			<string>dev.adrian.ishare.annotations</string>
 		</dict>
 	</array>
 	<key>UTImportedTypeDeclarations</key>

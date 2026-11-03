@@ -2,6 +2,7 @@ import AppKit
 import Defaults
 import ishareCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct EditorCanvas: View {
     @ObservedObject var document: EditorDocument
@@ -36,6 +37,7 @@ struct EditorCanvas: View {
     @Default(.editorGridSpacing) private var gridSpacing
     @Default(.editorShowsRulers) private var showsRulers
     @State private var rulerPointer: CGPoint?
+    @State private var dragOut = AnnotationDragOut()
     @FocusState private var textFocused: Bool
 
     var body: some View {
@@ -48,7 +50,10 @@ struct EditorCanvas: View {
                         drawRulers(in: &context, size: size, transform: transform)
                     }
                 }
-                .background(CanvasEventMonitor(onScroll: handleScroll, onSpace: handleSpace, onContextMenu: { contextMenu(at: $0) }))
+                .background(CanvasEventMonitor(onScroll: handleScroll, onSpace: handleSpace, onContextMenu: { contextMenu(at: $0) }, dragOut: dragOut))
+                .onDrop(of: [.ishareAnnotations], isTargeted: nil) { providers, location in
+                    acceptDrop(providers, at: transform.toImage(location))
+                }
                 .contentShape(Rectangle())
                 .gesture(canvasGesture(transform: transform))
                 .simultaneousGesture(pinchGesture)
@@ -224,6 +229,52 @@ struct EditorCanvas: View {
             context.stroke(markers, with: .color(.accentColor), lineWidth: 1)
         }
         context.fill(Path(CGRect(x: 0, y: 0, width: thickness, height: thickness)), with: .color(background))
+    }
+
+    private func leavesCanvas(_ imagePoint: CGPoint) -> Bool {
+        let point = viewport.transform.toView(imagePoint)
+        return !CGRect(origin: .zero, size: viewport.containerSize).insetBy(dx: -6, dy: -6).contains(point)
+    }
+
+    private func dragOutOfCanvas(_ ids: Set<UUID>) {
+        guard !dragOut.isDragging else { return }
+        let moving = document.annotations.filter { ids.contains($0.id) }
+        guard let data = AnnotationClipboard.encoded(moving), let preview = dragPreview(of: moving) else { return }
+        moveOffset = .zero
+        effectPreview.end()
+        dragOut.begin(data, preview: preview) {
+            interaction = nil
+            dragPoints = []
+        }
+    }
+
+    private func dragPreview(of annotations: [Annotation]) -> NSImage? {
+        guard let bounds = movingBounds(Set(annotations.map(\.id))), bounds.width > 0, bounds.height > 0 else { return nil }
+        let scale = min(1, 240 / max(bounds.width, bounds.height), viewport.transform.scale)
+        let size = CGSize(width: max(8, bounds.width * scale), height: max(8, bounds.height * scale))
+        let canvasSize = document.imageSize
+        return NSImage(size: size, flipped: true) { _ in
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.setAlpha(0.85)
+            context.scaleBy(x: scale, y: scale)
+            context.translateBy(x: -bounds.minX, y: -bounds.minY)
+            AnnotationRenderer.draw(annotations, in: context, source: nil, canvasSize: canvasSize)
+            return true
+        }
+    }
+
+    private func acceptDrop(_ providers: [NSItemProvider], at point: CGPoint) -> Bool {
+        guard !dragOut.isDragging, let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.ishareAnnotations.identifier) }) else {
+            return false
+        }
+        let document = document
+        provider.loadDataRepresentation(forTypeIdentifier: UTType.ishareAnnotations.identifier) { data, _ in
+            guard let data else { return }
+            Task { @MainActor in
+                document.dropAnnotations(AnnotationClipboard.decoded(data), at: point)
+            }
+        }
+        return true
     }
 
     private func movingBounds(_ ids: Set<UUID>) -> CGRect? {
@@ -588,6 +639,10 @@ struct EditorCanvas: View {
     private func changed(from start: CGPoint, to current: CGPoint) {
         switch interaction {
         case let .moving(ids):
+            if leavesCanvas(current) {
+                dragOutOfCanvas(ids)
+                return
+            }
             moveOffset = CGVector(dx: current.x - start.x, dy: current.y - start.y)
             if snapsToGrid, let bounds = movingBounds(ids) {
                 moveOffset = grid.offsetSnapping(bounds, movedBy: moveOffset)
