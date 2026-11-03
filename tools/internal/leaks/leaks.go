@@ -8,8 +8,10 @@ import (
 )
 
 type Summary struct {
-	Leaks int
-	Bytes int
+	Leaks       int
+	Bytes       int
+	SystemLeaks int
+	SystemBytes int
 }
 
 type Footprint struct {
@@ -22,6 +24,8 @@ type Limits struct {
 }
 
 var leakLine = regexp.MustCompile(`(\d+) leaks? for ([\d,]+) total leaked bytes`)
+var rootLine = regexp.MustCompile(`^( *)(\d+) \(([\d.]+)\s*(bytes|K|M)\) ROOT (?:LEAK|CYCLE): (.*)$`)
+var systemServiceRoots = []string{`"com.apple.linkd.`}
 var footprintLine = regexp.MustCompile(`(?i)phys_footprint:\s*([\d.]+)\s*([KMG]?B)`)
 
 func ParseLeaks(output string) (Summary, error) {
@@ -34,7 +38,68 @@ func ParseLeaks(output string) (Summary, error) {
 	}
 	count, _ := strconv.Atoi(match[1])
 	bytes, _ := strconv.Atoi(strings.ReplaceAll(match[2], ",", ""))
-	return Summary{Leaks: count, Bytes: bytes}, nil
+	systemLeaks, systemBytes := systemFrameworkLeaks(output)
+	return Summary{Leaks: count, Bytes: bytes, SystemLeaks: systemLeaks, SystemBytes: systemBytes}, nil
+}
+
+type leakRoot struct {
+	depth       int
+	leaks       int
+	bytes       int
+	description string
+}
+
+func systemFrameworkLeaks(output string) (int, int) {
+	leaks, bytes := 0, 0
+	for _, section := range strings.Split(output, "\nSTACK OF ") {
+		sectionLeaks, sectionBytes := systemFrameworkLeaksInSection(section)
+		leaks += sectionLeaks
+		bytes += sectionBytes
+	}
+	return leaks, bytes
+}
+
+func systemFrameworkLeaksInSection(section string) (int, int) {
+	var roots []leakRoot
+	topDepth := -1
+	for _, line := range strings.Split(section, "\n") {
+		match := rootLine.FindStringSubmatch(line)
+		if match == nil {
+			continue
+		}
+		count, _ := strconv.Atoi(match[2])
+		root := leakRoot{depth: len(match[1]), leaks: count, bytes: sizeInBytes(match[3], match[4]), description: match[5]}
+		roots = append(roots, root)
+		if topDepth < 0 || root.depth < topDepth {
+			topDepth = root.depth
+		}
+	}
+	leaks, bytes := 0, 0
+	for _, root := range roots {
+		if root.depth == topDepth && holdsSystemServiceConnection(root.description) {
+			leaks += root.leaks
+			bytes += root.bytes
+		}
+	}
+	return leaks, bytes
+}
+
+func holdsSystemServiceConnection(description string) bool {
+	for _, service := range systemServiceRoots {
+		if strings.Contains(description, service) {
+			return true
+		}
+	}
+	return false
+}
+
+func sizeInBytes(value, unit string) int {
+	amount, _ := strconv.ParseFloat(value, 64)
+	return int(amount * map[string]float64{"bytes": 1, "K": 1024, "M": 1024 * 1024}[unit])
+}
+
+func (summary Summary) OwnLeaks() int {
+	return summary.Leaks - summary.SystemLeaks
 }
 
 func ParseFootprint(output string) (Footprint, error) {
@@ -52,8 +117,8 @@ func ParseFootprint(output string) (Footprint, error) {
 
 func Check(summary Summary, before, after Footprint, limits Limits) []string {
 	var problems []string
-	if summary.Leaks > limits.MaxLeaks {
-		problems = append(problems, fmt.Sprintf("%d leaks (%d bytes), more than the allowed %d", summary.Leaks, summary.Bytes, limits.MaxLeaks))
+	if summary.OwnLeaks() > limits.MaxLeaks {
+		problems = append(problems, fmt.Sprintf("%d leaks (%d bytes), more than the allowed %d", summary.OwnLeaks(), summary.Bytes-summary.SystemBytes, limits.MaxLeaks))
 	}
 	if growth := after.Bytes - before.Bytes; growth > limits.MaxGrowthBytes {
 		problems = append(problems, fmt.Sprintf("the footprint grew by %.1f MB between identical batches, more than the allowed %.1f MB", float64(growth)/1048576, float64(limits.MaxGrowthBytes)/1048576))
