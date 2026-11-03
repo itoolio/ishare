@@ -39,6 +39,7 @@ final class RegionSelector {
         var freezeMode = SelectionFreezeMode.frozen
         var liveSampler: LiveMagnifierSampler?
         var onFreezeModeChange: (@MainActor (SelectionFreezeMode) -> Void)?
+        var onShown: (@MainActor () -> Void)?
     }
 
     private static var active: RegionSelector?
@@ -82,6 +83,7 @@ final class RegionSelector {
                 panel.orderFrontRegardless()
                 panels.append(panel)
             }
+            options.onShown?()
             let keyPanel = panels.first { $0.screen == NSScreen.underMouse } ?? panels.first
             keyPanel?.makeKey()
             if let view = keyPanel?.contentView {

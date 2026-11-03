@@ -38,6 +38,9 @@ final class AppState: ObservableObject {
     }
 
     func setupKeyboardShortcuts() {
+        KeyboardShortcuts.onKeyDown(for: .captureRegion) {
+            Task { @MainActor in SelectionPrefetch.begin() }
+        }
         onCapture(.captureRegion, .REGION)
         onCapture(.captureWindow, .WINDOW)
         onCapture(.captureScreen, .SCREEN)

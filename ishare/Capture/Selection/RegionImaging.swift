@@ -20,7 +20,13 @@ final class SelectionBackdropLoader {
     func captureBeforeSelectionIfFrozen() async -> [CGDirectDisplayID: CGImage] {
         guard mode.loadsBackdrops else { return [:] }
         generation += 1
-        let raw = await ScreenshotEngine.backdrops(for: content)
+        let prefetched = await SelectionPrefetch.take()
+        let raw: [CGDirectDisplayID: CGImage]
+        if let prefetched, !prefetched.isEmpty {
+            raw = prefetched
+        } else {
+            raw = await ScreenshotEngine.backdrops(for: content)
+        }
         let backdrops = blursPrivateApps ? PrivacyFilter.redactBackdrops(raw, content: content) : raw
         task = Task { backdrops }
         return backdrops
