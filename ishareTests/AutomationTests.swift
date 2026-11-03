@@ -136,6 +136,8 @@ struct URLSchemeParserTests {
         #expect(command("ishare://capture/web") == nil)
         #expect(command("ishare://capture/web?url=javascript:alert(1)") == nil)
         #expect(command("ishare://capture/app") == .captureApp(nil, contactSheet: false))
+        #expect(command("ishare://capture/again") == .captureAgain)
+        #expect(command("ishare://open/replay") == .open(.replay))
         #expect(command("ishare://capture/app?name=Safari&sheet=1") == .captureApp("Safari", contactSheet: true))
     }
 

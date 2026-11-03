@@ -237,6 +237,8 @@ final class AutomationTestActions: AutomationActions {
             live.open(.settings(pane))
         case .editor:
             opened.append("editor")
+        case .replay:
+            opened.append("replay")
         }
     }
 

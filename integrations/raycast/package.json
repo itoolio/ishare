@@ -46,6 +46,64 @@
       "title": "Switch Uploader",
       "description": "Choose the uploader ishare uses",
       "mode": "view"
+    },
+    {
+      "name": "capture-all-displays",
+      "title": "Capture All Displays",
+      "description": "Capture every display in one image and upload it with ishare",
+      "mode": "no-view"
+    },
+    {
+      "name": "capture-again",
+      "title": "Capture Again",
+      "description": "Repeat the last ishare capture with the same settings",
+      "mode": "no-view"
+    },
+    {
+      "name": "capture-web-page",
+      "title": "Capture Web Page",
+      "description": "Capture a whole web page from its address with ishare",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "url",
+          "placeholder": "example.com",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "width",
+          "placeholder": "Width or mobile",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "capture-app-windows",
+      "title": "Capture App Windows",
+      "description": "Capture every window of an app with ishare",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "app",
+          "placeholder": "App name (frontmost if empty)",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "screenshot-replay",
+      "title": "Screenshot Replay",
+      "description": "Pick a frame from the last seconds of your screen",
+      "mode": "no-view"
+    },
+    {
+      "name": "set-up-mcp",
+      "title": "Set Up AI Assistants",
+      "description": "Copy the MCP configuration that lets AI assistants use ishare",
+      "mode": "view"
     }
   ],
   "preferences": [

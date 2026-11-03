@@ -113,6 +113,8 @@ end tell
 | `ishare://open/history` | Open the history window |
 | `ishare://open/settings?pane=uploaders` | Open settings, optionally on `general`, `capture`, `recording`, `uploaders`, `keybinds` or `advanced` |
 | `ishare://open/editor` | Choose an image to annotate |
+| `ishare://open/replay` | Open Screenshot Replay |
+| `ishare://capture/again` | Repeat the last capture with the same settings |
 
 Captures and recordings run your after-capture settings, so they upload and copy the link the way they do from the menu. Paths must be absolute files that ishare can read; anything else is rejected and logged. The older `ishare://capture?type=region`, `ishare://record?gif=1` and `ishare://upload?file=<file URL>` forms keep working.
 

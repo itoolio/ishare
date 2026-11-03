@@ -228,6 +228,8 @@ final class LiveAutomationActions: AutomationActions {
             MenuController.shared.openSettings(pane: pane.flatMap(SettingsPane.init(rawValue:)))
         case .editor:
             Task { @MainActor in await ImageEditor.chooseAndEdit() }
+        case .replay:
+            ScreenshotReplay.shared.open()
         }
     }
 
@@ -360,6 +362,11 @@ final class URLSchemeRouter {
             return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
         case let .captureApp(app, contactSheet):
             return await actions.captureAppWithAfterCaptureSteps(app, contactSheet: contactSheet)
+        case .captureAgain:
+            let before = Defaults[.uploadHistory].first
+            await CaptureAgain.run()
+            let latest = Defaults[.uploadHistory].first
+            return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
         case let .record(action, gif, region, preset):
             return await actions.record(action, gif: gif, region: region, preset: preset).map { _ in nil }
         case let .upload(files):
