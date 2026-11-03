@@ -63,6 +63,7 @@ private struct WebcamSettingsSection: View {
     @Default(.webcamSize) private var webcamSize
     @Default(.webcamCorner) private var webcamCorner
     @Default(.webcamDeviceID) private var webcamDeviceID
+    @Default(.webcamBackground) private var webcamBackground
     @State private var cameras: [AVCaptureDevice] = []
     @State private var authorization = AVCaptureDevice.authorizationStatus(for: .video)
 
@@ -89,6 +90,10 @@ private struct WebcamSettingsSection: View {
                 Picker("Position".localized(), selection: $webcamCorner) {
                     ForEach(WebcamCorner.allCases) { Text($0.title.localized()).tag($0) }
                 }
+                Picker("Background".localized(), selection: $webcamBackground) {
+                    ForEach(WebcamBackground.allCases) { Text($0.title).tag($0) }
+                }
+                .help("Blurs or removes what’s behind you on this Mac, using person segmentation.".localized())
             }
             if authorization == .denied || authorization == .restricted {
                 PermissionRow(title: "Camera", granted: false) {

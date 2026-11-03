@@ -126,6 +126,7 @@ enum WebcamBubblePreviewArea {
 final class WebcamBubbleController {
     private var panel: NSPanel?
     private var runner: CaptureSessionRunner?
+    private var processedFeed: WebcamProcessedFeed?
     private(set) var isCompositedLater = false
 
     var windowID: CGWindowID? {
@@ -169,6 +170,20 @@ final class WebcamBubbleController {
 
         let frame = WebcamBubbleLayout.frame(diameter: RecordingDefaults[.webcamSize].diameter, corner: RecordingDefaults[.webcamCorner], in: area)
         let panel = makePanel(frame: frame, session: runner.session, movable: true)
+        if let processor = WebcamBackgroundProcessor(style: Defaults[.webcamBackground]), let layer = panel.contentView?.layer?.sublayers?.first {
+            let processedLayer = CALayer()
+            processedLayer.frame = layer.frame
+            processedLayer.contentsGravity = .resizeAspectFill
+            processedLayer.setAffineTransform(CGAffineTransform(scaleX: -1, y: 1))
+            panel.contentView?.layer?.replaceSublayer(layer, with: processedLayer)
+            let feed = WebcamProcessedFeed(processor: processor, layer: processedLayer)
+            runner.session.beginConfiguration()
+            if runner.session.canAddOutput(feed.output) {
+                runner.session.addOutput(feed.output)
+                processedFeed = feed
+            }
+            runner.session.commitConfiguration()
+        }
         panel.orderFrontRegardless()
         runner.start()
         self.runner = runner
@@ -178,6 +193,7 @@ final class WebcamBubbleController {
     func hide() {
         runner?.stop()
         runner = nil
+        processedFeed = nil
         panel?.orderOut(nil)
         panel = nil
         isCompositedLater = false
