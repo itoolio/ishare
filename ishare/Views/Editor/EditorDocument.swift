@@ -40,6 +40,7 @@ final class EditorDocument: ObservableObject {
     @Published var textBackground = false
     @Published var selectedIDs: Set<UUID> = []
     let translation = EditorTranslation()
+    var pointScale: CGFloat
     @Published var libraryShape: LibraryShape = .roundBubble
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
@@ -76,6 +77,7 @@ final class EditorDocument: ObservableObject {
         originalBase = image
         adjustedBase = image
         self.fileURL = fileURL
+        pointScale = fileURL.flatMap(ImageEncoder.pointScale(of:)) ?? AnnotationRenderer.measurementPointScale
         effectedBase = image
         let longest = CGFloat(max(image.width, image.height))
         lineWidth = max(4, (longest / 220).rounded())
@@ -404,7 +406,7 @@ final class EditorDocument: ObservableObject {
         let offset = max(12, fontSize * 0.6)
         let measures = selected.flatMap { annotation in
             DimensionMeasure.selectionDimensions(of: annotation.bounds, offset: offset).map { line in
-                Annotation(shape: .measure(line.0, line.1), color: color, lineWidth: max(1, lineWidth / 2), fontSize: fontSize)
+                Annotation(shape: .measure(line.0, line.1), color: color, lineWidth: max(1, lineWidth / 2), fontSize: fontSize, measureScale: pointScale)
             }
         }
         add(contentsOf: measures)
@@ -668,6 +670,9 @@ final class EditorDocument: ObservableObject {
             annotation.spotlightShape = spotlightShape
             annotation.dimAmount = dimAmount
             annotation.highlightStyle = highlightStyle
+            if case .measure = annotation.shape {
+                annotation.measureScale = pointScale
+            }
             return annotation
         }
     }

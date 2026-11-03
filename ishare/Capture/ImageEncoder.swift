@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import ishareCore
 import UniformTypeIdentifiers
 
 enum ImageEncoderError: Error {
@@ -22,7 +23,7 @@ enum ImageEncoder {
         }
     }
 
-    static func data(for image: CGImage, as fileType: FileType) throws -> Data {
+    static func data(for image: CGImage, as fileType: FileType, pointScale: CGFloat? = nil) throws -> Data {
         let output = NSMutableData()
         if fileType == .PDF {
             try writePDF(image, consumer: CGDataConsumer(data: output as CFMutableData))
@@ -34,13 +35,26 @@ enum ImageEncoder {
         guard let destination = CGImageDestinationCreateWithData(output as CFMutableData, contentType(for: fileType).identifier as CFString, 1, nil) else {
             throw ImageEncoderError.destinationUnavailable
         }
-        CGImageDestinationAddImage(destination, prepared(image, for: fileType), properties(for: fileType) as CFDictionary)
+        var options = properties(for: fileType)
+        if let pointScale {
+            let dpi = ImagePointScale.dpi(for: pointScale)
+            options[kCGImagePropertyDPIWidth] = dpi
+            options[kCGImagePropertyDPIHeight] = dpi
+        }
+        CGImageDestinationAddImage(destination, prepared(image, for: fileType), options as CFDictionary)
         guard CGImageDestinationFinalize(destination) else { throw ImageEncoderError.finalizeFailed }
         return output as Data
     }
 
-    static func write(_ image: CGImage, as fileType: FileType, to url: URL) throws {
-        try data(for: image, as: fileType).write(to: url, options: .atomic)
+    static func write(_ image: CGImage, as fileType: FileType, to url: URL, pointScale: CGFloat? = nil) throws {
+        try data(for: image, as: fileType, pointScale: pointScale).write(to: url, options: .atomic)
+    }
+
+    static func pointScale(of url: URL) -> CGFloat? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        else { return nil }
+        return ImagePointScale.scale(dpi: (properties[kCGImagePropertyDPIWidth] as? NSNumber)?.doubleValue)
     }
 
     static func properties(for fileType: FileType) -> [CFString: Any] {

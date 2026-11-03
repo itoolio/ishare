@@ -403,7 +403,7 @@ enum AnnotationRenderer {
         for tick in DimensionMeasure.ticks(from: start, to: end, length: max(10, annotation.lineWidth * 4)) {
             context.strokeLineSegments(between: [tick.0, tick.1])
         }
-        let label = DimensionMeasure.label(from: start, to: end, pointScale: measurementPointScale)
+        let label = DimensionMeasure.label(from: start, to: end, pointScale: annotation.measureScale ?? measurementPointScale)
         let fontSize = max(11, annotation.fontSize * 0.5)
         let size = textSize(label, fontSize: fontSize)
         let padding = fontSize * 0.35

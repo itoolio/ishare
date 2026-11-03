@@ -223,6 +223,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
     var hidden = false
     var rotation: CGFloat = 0
     var highlightStyle: HighlightStyle = .marker
+    var measureScale: CGFloat?
 
     var isEffect: Bool {
         switch shape {
