@@ -297,7 +297,7 @@ final class ScreenRecorder: ObservableObject {
             guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
             let overlayIDs = captureOverlayWindowIDs
             let overlayWindows = content.windows.filter { overlayIDs.contains($0.windowID) }
-            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: overlayWindows)
+            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.recordingExcludedApplications(in: content), exceptingWindows: overlayWindows)
             let scale = CGFloat(filter.pointPixelScale)
             let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
             configuration.sourceRect = rect
@@ -325,7 +325,7 @@ final class ScreenRecorder: ObservableObject {
             guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
             let overlayIDs = captureOverlayWindowIDs
             let capturedOverlays = content.windows.filter { overlayIDs.contains($0.windowID) }
-            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: capturedOverlays)
+            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.recordingExcludedApplications(in: content), exceptingWindows: capturedOverlays)
             let scale = CGFloat(filter.pointPixelScale)
             let rect = follower.rect
             let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
@@ -674,7 +674,7 @@ final class ScreenRecorder: ObservableObject {
         else { return filter }
         let overlayIDs = captureOverlayWindowIDs
         let overlayWindows = content.windows.filter { overlayIDs.contains($0.windowID) }
-        return SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: overlayWindows)
+        return SCContentFilter(display: display, excludingApplications: ScreenshotEngine.recordingExcludedApplications(in: content), exceptingWindows: overlayWindows)
     }
 
     private func prepareAudio(style: RecordingContentStyle, screen: NSScreen?, content knownContent: SCShareableContent?) async {

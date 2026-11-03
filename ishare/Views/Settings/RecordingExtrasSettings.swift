@@ -230,6 +230,7 @@ private enum SystemSettingsLink {
 struct AudioSourceSettingsRows: View {
     @Binding var audioSource: RecordingAudioSource
     @Default(.recordingAudioBundleIDs) private var bundleIDs
+    @Default(.hideNotificationsInRecordings) private var hidesNotifications
     @State private var isAppPickerPresented = false
 
     var body: some View {
@@ -237,6 +238,8 @@ struct AudioSourceSettingsRows: View {
             ForEach(RecordingAudioSource.allCases) { Text($0.title.localized()).tag($0) }
         }
         .accessibilityIdentifier("settings.recording.audioSource")
+        Toggle("Keep notification banners out of recordings".localized(), isOn: $hidesNotifications)
+            .help("Notification banners and alerts from other apps don’t appear in full-screen and region recordings. Choose Selected apps above to also leave out their sounds.".localized())
         if audioSource == .selectedApps {
             LabeledContent("Apps".localized()) {
                 HStack {

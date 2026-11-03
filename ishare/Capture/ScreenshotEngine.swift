@@ -78,6 +78,14 @@ enum ScreenshotEngine {
         }
     }
 
+    static let notificationBundleIdentifiers: Set<String> = ["com.apple.notificationcenterui", "com.apple.UserNotificationCenter"]
+
+    static func recordingExcludedApplications(in content: SCShareableContent) -> [SCRunningApplication] {
+        let excluded = excludedApplications(in: content)
+        guard RecordingDefaults[.hideNotificationsInRecordings] else { return excluded }
+        return excluded + content.applications.filter { notificationBundleIdentifiers.contains($0.bundleIdentifier) }
+    }
+
     static func excludedApplications(in content: SCShareableContent) -> [SCRunningApplication] {
         let ignored = Set(Defaults[.ignoredBundleIdentifiers])
         let ownBundleID = Bundle.main.bundleIdentifier
