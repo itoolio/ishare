@@ -41,6 +41,7 @@ extension Defaults.Keys {
     static let instantReplayDuration = Key<InstantReplayDuration>("instantReplayDuration", default: .seconds30, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let instantReplayResolution = Key<RecordingResolution>("instantReplayResolution", default: .p720, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let instantReplayFrameRate = Key<RecordingFrameRate>("instantReplayFrameRate", default: .fps30, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let followPointerSize = Key<FollowPointerSize>("followPointerSize", default: .hd1080, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let autoZoomEnabled = Key<Bool>("autoZoomEnabled", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let spotlightActiveWindow = Key<Bool>("spotlightActiveWindow", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let spotlightDimming = Key<Double>("spotlightDimming", default: 0.5, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -75,3 +76,5 @@ extension Defaults.Keys {
     static let blurRegionStyle = Key<BlurRegionStyle>("blurRegionStyle", default: .blur, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let blurDetectionInterval = Key<Double>("blurDetectionInterval", default: 1, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
+
+extension FollowPointerSize: @retroactive Defaults.Serializable {}

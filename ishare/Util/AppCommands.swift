@@ -188,6 +188,10 @@ extension AppCommand {
                 id: "record.region", title: "Record Region", keywords: ["video", "area"], symbol: "rectangle.dashed.badge.record",
                 perform: afterDismissing { CaptureSession.toggleRecording(region: true) }),
             AppCommand(
+                id: "record.follow", title: "Record Following the Pointer", keywords: ["video", "pan", "camera", "track", "cursor"],
+                symbol: "cursorarrow.motionlines",
+                perform: afterDismissing { CaptureSession.toggleFollowPointerRecording() }),
+            AppCommand(
                 id: "record.gif", title: "Record GIF", keywords: ["animation", "video"], symbol: "photo.stack",
                 perform: afterDismissing { CaptureSession.toggleRecording(gif: true) }),
             AppCommand(

@@ -22,6 +22,7 @@ extension KeyboardShortcuts.Name {
     static let intervalCapture = Self("intervalCapture")
     static let recordRegion = Self("recordRegion", default: .init(.r, modifiers: [.control, .option]))
     static let recordRegionGif = Self("recordRegionGif", default: .init(.f, modifiers: [.control, .option]))
+    static let recordFollowingPointer = Self("recordFollowingPointer")
     static let addRecordingMarker = Self("addRecordingMarker")
     static let openEditor = Self("openEditor", default: .init(.e, modifiers: [.control, .option]))
     static let toggleRecordingNotes = Self("toggleRecordingNotes")

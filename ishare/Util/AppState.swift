@@ -59,6 +59,9 @@ final class AppState: ObservableObject {
         onRecord(.recordGif, gif: true)
         onRecord(.recordRegion, gif: false, region: true)
         onRecord(.recordRegionGif, gif: true, region: true)
+        KeyboardShortcuts.onKeyUp(for: .recordFollowingPointer) {
+            Task { @MainActor in CaptureSession.toggleFollowPointerRecording() }
+        }
         onRecord(.recordScreenForceUpload, gif: false, forceUpload: true)
         onRecord(.recordGifForceUpload, gif: true, forceUpload: true)
 
