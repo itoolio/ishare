@@ -1,4 +1,5 @@
 import AppKit
+import BezelNotification
 import Combine
 import Defaults
 import ishareCore
@@ -318,6 +319,20 @@ final class EditorDocument: ObservableObject {
             base = lifted
             adjustments = .identity
         }
+    }
+
+    func trimBorders() async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        let image = adjustedBase
+        let padding = Defaults[.trimBorderPadding]
+        guard let rect = await BlockingWork.run({ BorderTrimmer.contentRect(of: image, padding: padding) }) else {
+            BezelNotification.show(messageText: "No uniform borders found".localized(), icon: ToastIcon)
+            return
+        }
+        applyCrop(rect)
     }
 
     var smartShapesActive: Bool {

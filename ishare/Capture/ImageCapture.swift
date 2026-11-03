@@ -257,6 +257,9 @@ enum ImageCaptureFlow {
         var result = captured
         result.additionalCaptures = result.additionalCaptures.map(finalize)
         result.image = PrivacyFilter.hideMenuBarIfNeeded(result.image, geometry: result.geometry)
+        if !result.isWindow {
+            result.image = BorderTrimmer.trimIfEnabled(result.image)
+        }
         result.image = beautifyIfNeeded(result)
         return result
     }

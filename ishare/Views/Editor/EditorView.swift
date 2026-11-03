@@ -372,6 +372,10 @@ struct EditorView: View {
                 Task { await document.liftSubject() }
             }
             .disabled(document.isProcessing)
+            Button("Trim Borders".localized()) {
+                Task { await document.trimBorders() }
+            }
+            .disabled(document.isProcessing)
             Menu("Upscale".localized()) {
                 ForEach(UpscaleFactor.allCases) { factor in
                     Button {

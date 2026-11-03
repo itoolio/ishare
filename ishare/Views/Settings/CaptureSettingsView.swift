@@ -9,6 +9,8 @@ struct CaptureSettingsView: View {
     @Default(.captureFileType) var fileType
     @Default(.screenshotShowsCursor) var showsCursor
     @Default(.windowShadow) var windowShadow
+    @Default(.trimUniformBorders) var trimUniformBorders
+    @Default(.trimBorderPadding) var trimBorderPadding
     @Default(.showMagnifier) var showMagnifier
     @Default(.showSelectionGuides) var showSelectionGuides
     @Default(.showLastRegionOutline) var showLastRegionOutline
@@ -33,6 +35,12 @@ struct CaptureSettingsView: View {
                 Toggle("Show pointer in screenshots".localized(), isOn: $showsCursor)
                 Toggle("Include window shadow".localized(), isOn: $windowShadow)
                 Toggle("Show magnifier while selecting".localized(), isOn: $showMagnifier)
+                Toggle("Trim uniform borders".localized(), isOn: $trimUniformBorders)
+                if trimUniformBorders {
+                    Stepper(value: $trimBorderPadding, in: 0 ... 64, step: 2) {
+                        Text(String(format: "Keep %d px around the content".localized(), trimBorderPadding))
+                    }
+                }
                 Toggle("Show crosshair guides while selecting".localized(), isOn: $showSelectionGuides)
                 Toggle("Outline the last region while selecting".localized(), isOn: $showLastRegionOutline)
                 Toggle("Open editor after capture".localized(), isOn: $openEditorAfterCapture)
@@ -93,7 +101,7 @@ extension CaptureSettingsView: SettingsSearchable {
             "Screenshot", pane: .capture,
             keywords: [
                 "Format", "PNG", "JPG", "HEIC", "WebP", "TIFF", "File prefix", "Image path", "Folder", "Show pointer in screenshots",
-                "Pointer", "Cursor", "Include window shadow", "Shadow", "Show magnifier while selecting", "Magnifier",
+                "Pointer", "Cursor", "Include window shadow", "Shadow", "Show magnifier while selecting", "Magnifier", "Trim uniform borders", "Auto-crop", "Whitespace",
                 "Show crosshair guides while selecting", "Crosshair", "Guides", "Outline the last region while selecting",
                 "Open editor after capture", "Editor", "Snap editor shapes to detected elements", "Smart shapes", "Snapping", "Scrolling Capture", "Scroll automatically",
                 "Permissions", "Screen recording", "Selection", "Selection shape", "Aspect ratio", "Fixed size", "Custom size", "16:9", "4:3", "1:1",
