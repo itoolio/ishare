@@ -110,6 +110,8 @@ struct URLSchemeParserTests {
         #expect(command("ishare://capture/web?url=https%3A%2F%2Fexample.com&width=mobile") == .captureWebPage("https://example.com", .mobile))
         #expect(command("ishare://capture/web") == nil)
         #expect(command("ishare://capture/web?url=javascript:alert(1)") == nil)
+        #expect(command("ishare://capture/app") == .captureApp(nil, contactSheet: false))
+        #expect(command("ishare://capture/app?name=Safari&sheet=1") == .captureApp("Safari", contactSheet: true))
     }
 
     @Test func parsesRecordActions() {
@@ -280,6 +282,24 @@ struct CLIArgumentTests {
         #expect(error(["capture", "region", "--reuse"]) == .unknownOption("--reuse"))
         #expect(error(["history", "--no-reuse"]) == .unknownOption("--no-reuse"))
         #expect(CLIArguments.usage.contains("--no-reuse"))
+    }
+
+    @Test func parsesAppWindowCaptures() throws {
+        #expect(try run(["capture", "app"]).command == .captureApp(app: nil, contactSheet: false, upload: false))
+        let named = try run(["capture", "app", "Safari", "--sheet", "--upload"])
+        #expect(named.command == .captureApp(app: "Safari", contactSheet: true, upload: true))
+        #expect(named.timeout == CLIArguments.interactiveTimeout)
+        #expect(error(["capture", "app", "Safari", "Notes"]) == .unexpectedArgument("Notes"))
+        #expect(error(["capture", "region", "--sheet"]) == .unknownOption("--sheet"))
+        #expect(CLIArguments.usage.contains("capture app"))
+    }
+
+    @Test func printsEveryAppWindowFileOrLink() {
+        var response = CLIResponse(id: UUID(), success: true)
+        response.payload.capture = CLICaptureResult(file: "/a.png", files: ["/a.png", "/b.png"])
+        #expect(CLIOutput.text(for: response, command: .captureApp(app: nil, contactSheet: false, upload: false)) == "/a.png\n/b.png")
+        response.payload.capture = CLICaptureResult(file: "/a.png", link: "https://x/a", files: ["/a.png"], links: ["https://x/a"])
+        #expect(CLIOutput.text(for: response, command: .captureApp(app: nil, contactSheet: false, upload: true)) == "https://x/a")
     }
 
     @Test func parsesCaptureRecordUploadersAndHistory() throws {

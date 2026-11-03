@@ -182,6 +182,10 @@ final class AutomationTestActions: AutomationActions {
         await live.captureWithAfterCaptureSteps(mode)
     }
 
+    func captureApp(_ app: String?, contactSheet: Bool, upload: Bool) async -> Result<CLICaptureResult, AutomationError> {
+        await live.captureApp(app, contactSheet: contactSheet, upload: upload)
+    }
+
     func record(_ action: CLIRecordAction, gif _: Bool, region _: Bool, preset: String?) async -> Result<Bool, AutomationError> {
         if let preset, RecordingPresets.preset(named: preset) == nil {
             return .failure(.failed(String(format: "No recording preset named “%@”".localized(), preset)))

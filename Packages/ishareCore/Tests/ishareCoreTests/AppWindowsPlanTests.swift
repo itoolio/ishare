@@ -34,3 +34,23 @@ struct AppWindowsPlanTests {
         #expect([1, 2, 4, 5, 9, 10].map(AppWindowsPlan.contactSheetColumns(for:)) == [1, 2, 2, 3, 3, 4])
     }
 }
+
+struct AppWindowsMatchTests {
+    let apps = [
+        AppWindowCandidate(ownerPID: 1, appName: "Safari", bundleID: "com.apple.Safari"),
+        AppWindowCandidate(ownerPID: 2, appName: "Safari Technology Preview", bundleID: "com.apple.SafariTechnologyPreview"),
+        AppWindowCandidate(ownerPID: 3, appName: "Xcode", bundleID: "com.apple.dt.Xcode"),
+    ]
+
+    @Test func prefersTheFrontmostAppWithoutAName() {
+        #expect(AppWindowsPlan.match(nil, in: apps, frontmostPID: 3)?.ownerPID == 3)
+        #expect(AppWindowsPlan.match(" ", in: apps, frontmostPID: 99)?.ownerPID == 1)
+    }
+
+    @Test func matchesExactNamesAndBundleIdentifiersBeforePartialNames() {
+        #expect(AppWindowsPlan.match("safari", in: apps, frontmostPID: nil)?.ownerPID == 1)
+        #expect(AppWindowsPlan.match("com.apple.SafariTechnologyPreview", in: apps, frontmostPID: nil)?.ownerPID == 2)
+        #expect(AppWindowsPlan.match("technology", in: apps, frontmostPID: nil)?.ownerPID == 2)
+        #expect(AppWindowsPlan.match("Finder", in: apps, frontmostPID: nil) == nil)
+    }
+}

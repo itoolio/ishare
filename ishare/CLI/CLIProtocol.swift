@@ -20,6 +20,7 @@ enum CLIRecordAction: String, Codable, CaseIterable, Sendable {
 enum CLICommand: Codable, Equatable, Sendable {
     case upload(files: [String], uploader: String?, reuse: Bool? = nil)
     case capture(mode: CLICaptureMode, upload: Bool)
+    case captureApp(app: String?, contactSheet: Bool, upload: Bool)
     case record(CLIRecordAction, preset: String? = nil)
     case listUploaders
     case history(limit: Int)
@@ -43,6 +44,8 @@ struct CLIUploadResult: Codable, Equatable, Sendable {
 struct CLICaptureResult: Codable, Equatable, Sendable {
     let file: String?
     var link: String?
+    var files: [String]?
+    var links: [String]?
 }
 
 struct CLIUploaderInfo: Codable, Equatable, Sendable {

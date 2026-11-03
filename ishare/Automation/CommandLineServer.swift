@@ -64,6 +64,11 @@ final class CommandLineServer {
             case let .success(result): response.payload.capture = result
             case let .failure(error): return .failure(request.id, error.message)
             }
+        case let .captureApp(app, contactSheet, upload):
+            switch await actions.captureApp(app, contactSheet: contactSheet, upload: upload) {
+            case let .success(result): response.payload.capture = result
+            case let .failure(error): return .failure(request.id, error.message)
+            }
         case let .record(action, preset):
             switch await actions.record(action, gif: false, region: false, preset: preset) {
             case let .success(recording):

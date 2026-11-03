@@ -10,6 +10,7 @@ enum AutomationOpenTarget: Equatable, Sendable {
 enum URLSchemeCommand: Equatable, Sendable {
     case capture(CLICaptureMode)
     case captureWebPage(String, WebPageWidth)
+    case captureApp(String?, contactSheet: Bool)
     case record(CLIRecordAction, gif: Bool, region: Bool, preset: String? = nil)
     case upload([URL])
     case selectUploader(String)
@@ -149,6 +150,8 @@ enum URLSchemeParser {
             }
             let width = value("width", in: items).flatMap(WebPageWidth.init(rawValue:)) ?? .desktop
             return .success(.captureWebPage(address, width))
+        case "capture" where argument == "app":
+            return .success(.captureApp(value("name", in: items), contactSheet: flag("sheet", in: items)))
         case "capture":
             let name = argument ?? value("type", in: items)?.lowercased() ?? CLICaptureMode.region.rawValue
             guard let mode = CLICaptureMode(rawValue: name) else { return .failure(.invalidValue(parameter: "capture", value: name)) }

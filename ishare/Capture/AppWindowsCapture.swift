@@ -38,6 +38,13 @@ enum AppWindowsCapture {
         await capture(pid: apps[max(0, picker.indexOfSelectedItem)].ownerPID, as: Defaults[.appWindowsResult])
     }
 
+    static func resolveApp(_ query: String?) async -> Int32? {
+        guard let content = try? await ScreenshotEngine.shareableContent() else { return nil }
+        let names = Dictionary(content.applications.map { ($0.processID, $0.applicationName) }, uniquingKeysWith: { first, _ in first })
+        let apps = AppWindowsPlan.apps(in: content.windows.map(ScreenshotEngine.windowDescriptor), names: names, ownPID: ProcessInfo.processInfo.processIdentifier)
+        return AppWindowsPlan.match(query, in: apps, frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)?.ownerPID
+    }
+
     static func capture(pid: Int32, as result: AppWindowsResult, options: CaptureOptions = .standard) async {
         guard let content = try? await ScreenshotEngine.shareableContent() else { return }
         let order = AppWindowsPlan.windows(of: pid, in: content.windows.map(ScreenshotEngine.windowDescriptor)).map(\.id)

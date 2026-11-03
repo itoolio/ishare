@@ -114,6 +114,10 @@ extension AppCommand {
                 id: "capture.replay", title: "Screenshot Replay…", keywords: ["replay", "rewind", "missed", "past", "moment"], symbol: "clock.arrow.circlepath",
                 perform: afterDismissing { ScreenshotReplay.shared.open() }),
             AppCommand(
+                id: "capture.otherSpace", title: "Capture from Another Space…", keywords: ["space", "desktop", "full screen", "mission control", "hidden window"],
+                symbol: "rectangle.3.group",
+                perform: afterDismissing { await OtherSpaceCapture.prompt() }),
+            AppCommand(
                 id: "capture.appWindows", title: "Capture App Windows…", keywords: ["windows", "app", "contact sheet", "all windows"],
                 symbol: "macwindow.on.rectangle",
                 perform: afterDismissing { await AppWindowsCapture.prompt() }),
