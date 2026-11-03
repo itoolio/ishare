@@ -48,6 +48,7 @@ struct HistoryGridView: View {
     @State private var filter = HistoryFilter()
     @State private var selection = HistorySelection()
     @State private var shareAnchor = ViewAnchor()
+    @Default(.historyGrouping) private var grouping
     @State private var exportRequest: HistoryExportRequest?
 
     private var uploaders: [CustomUploader] {
@@ -126,7 +127,7 @@ struct HistoryGridView: View {
         let visible = filteredHistory
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 10, pinnedViews: [.sectionHeaders]) {
-                ForEach(HistoryTimeline.sections(for: visible)) { section in
+                ForEach(HistoryTimeline.sections(for: visible, groupedBy: grouping)) { section in
                     Section {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 220), spacing: 12)], spacing: 12) {
                             ForEach(section.items, id: \.self) { item in
@@ -267,6 +268,16 @@ struct HistoryGridView: View {
             .labelsHidden()
             .fixedSize()
             .accessibilityIdentifier("history.filter.type")
+
+            Picker("Group by".localized(), selection: $grouping) {
+                Text("Day".localized()).tag(HistoryGrouping.day)
+                Text("App".localized()).tag(HistoryGrouping.app)
+                Text("Project".localized()).tag(HistoryGrouping.project)
+            }
+            .labelsHidden()
+            .fixedSize()
+            .help("Group uploads by day, by the app they were captured in, or by the project in the window title".localized())
+            .accessibilityIdentifier("history.groupBy")
 
             Text(String(format: "%d of %d".localized(), filteredHistory.count, uploadHistory.count))
                 .font(.system(size: 11).monospacedDigit())

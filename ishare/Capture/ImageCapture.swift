@@ -412,6 +412,7 @@ enum ImageCaptureFlow {
         let fileType = Defaults[.captureFileType]
         let url = availableURL(SaveLocation.fileURL(for: .captures, fileName: fileName(for: captured, ext: fileType.rawValue)))
         try ImageEncoder.write(captured.image, as: fileType, to: url, pointScale: captured.pointScale ?? captured.geometry?.scale)
+        CaptureSourceRegistry.remember(captured.source, for: url)
         return url
     }
 

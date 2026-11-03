@@ -346,3 +346,21 @@ struct SettingsSearchHitTests {
         #expect(SettingsSearchIndex.hits(for: "e", in: .capture).count <= SettingsSearchIndex.maximumHits)
     }
 }
+
+struct HistoryGroupingSectionTests {
+    func item(_ app: String?, _ title: String?) -> HistoryItem {
+        var item = HistoryItem(fileUrl: "https://x/\(UUID().uuidString).png", date: Date())
+        item.sourceApp = app
+        item.sourceTitle = title
+        return item
+    }
+
+    @Test func groupsByAppAndByProject() {
+        let items = [item("Xcode", "ishare — App.swift"), item("Safari", "Docs"), item("Xcode", "website — main.ts"), item(nil, nil)]
+        let byApp = HistoryTimeline.sections(for: items, groupedBy: .app, localize: { $0 })
+        #expect(byApp.map(\.title) == ["Xcode", "Safari", "Other"])
+        #expect(byApp[0].items.count == 2)
+        let byProject = HistoryTimeline.sections(for: items, groupedBy: .project, localize: { $0 })
+        #expect(byProject.map(\.title) == ["ishare", "Docs", "website", "Other"])
+    }
+}

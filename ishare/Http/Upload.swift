@@ -339,6 +339,10 @@ enum UploadCoordinator {
             uploadedSize: outcome.savedBytes == nil ? nil : outcome.uploadedBytes
         )
         item.viewCountUrl = outcome.viewCountURL
+        if let source = localFileURL.flatMap(CaptureSourceRegistry.source(for:)) {
+            item.sourceApp = source.appName
+            item.sourceTitle = source.windowTitle
+        }
         if case let .custom(uploader) = target, item.canDeleteFromServer, item.remoteURL != nil {
             item.expiresAt = UploadExpiry.expiryDate(uploadedAt: now, days: uploader.effectiveAutoDeleteDays)
         }
