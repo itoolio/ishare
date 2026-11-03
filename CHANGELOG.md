@@ -1,3 +1,9 @@
+## [5.5.1](https://github.com/itoolio/ishare/compare/v5.5.0...v5.5.1) (2026-11-03)
+
+### Bug Fixes
+
+* freeze the screen before the region selector opens ([b847e05](https://github.com/itoolio/ishare/commit/b847e0548e9ba3cc204b002bc7bf84370eca96db))
+
 ## [5.5.0](https://github.com/itoolio/ishare/compare/v5.4.1...v5.5.0) (2026-10-26)
 
 ### Features
