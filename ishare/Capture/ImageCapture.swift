@@ -228,7 +228,7 @@ enum ImageCaptureFlow {
                     windowID, bundleID: bundleID, title: title,
                     among: candidates.map { (id: $0.windowID, bundleID: $0.owningApplication?.bundleIdentifier, title: $0.title) })
                 guard let match, let window = candidates.first(where: { $0.windowID == match }) else { return nil }
-                return try await captureWindowImage(window)
+                return try await captureWindowImage(window, content: content)
             case .appWindows, .webPage:
                 return nil
             }
@@ -245,7 +245,7 @@ enum ImageCaptureFlow {
                 return try await capturePopup(picked.window, content: content)
             }
             CaptureAgain.remember(.window(windowID: picked.window.windowID, bundleID: picked.window.owningApplication?.bundleIdentifier, title: picked.window.title))
-            return try await captureWindowImage(picked.window)
+            return try await captureWindowImage(picked.window, content: content)
         case .switchToRegion:
             return try await captureRegion(content: content, delay: delay)
         case .cancelled:
@@ -253,9 +253,12 @@ enum ImageCaptureFlow {
         }
     }
 
-    static func captureWindowImage(_ window: SCWindow) async throws -> CapturedImage? {
+    static func captureWindowImage(_ window: SCWindow, content: SCShareableContent? = nil) async throws -> CapturedImage? {
         let source = windowSource(window)
         let settings = CaptureSettings.current(for: source.bundleIdentifier)
+        if let grouped = try await captureWithChildWindows(window, content: content, includesShadow: settings.includesWindowShadow) {
+            return CapturedImage(image: grouped.image, suffix: window.owningApplication?.applicationName ?? "window", isWindow: true, pointScale: grouped.scale, source: source)
+        }
         let image = try await ScreenshotEngine.captureWindow(window, includesShadow: settings.includesWindowShadow)
         let scale = max(1, (CGFloat(image.width) / max(1, window.frame.width)).rounded())
         return CapturedImage(
@@ -265,6 +268,21 @@ enum ImageCaptureFlow {
             pointScale: scale,
             source: source
         )
+    }
+
+    private static func captureWithChildWindows(_ window: SCWindow, content: SCShareableContent?, includesShadow: Bool) async throws -> (image: CGImage, scale: CGFloat)? {
+        guard Defaults[.windowCaptureIncludesChildWindows], let content else { return nil }
+        let related = ChildWindowPlan.related(to: ScreenshotEngine.windowDescriptor(window), in: content.windows.map(ScreenshotEngine.windowDescriptor))
+        guard !related.isEmpty,
+            let display = content.displays.first(where: { CGDisplayBounds($0.displayID).intersects(window.frame) })
+        else { return nil }
+        let ids = Set(related.map(\.id)).union([window.windowID])
+        let windows = content.windows.filter { ids.contains($0.windowID) }
+        let rect = ChildWindowPlan.captureRect(
+            main: window.frame, related: related.map(\.frame), within: CGDisplayBounds(display.displayID), includesShadow: includesShadow)
+        let image = try await ScreenshotEngine.captureWindows(windows, on: display, globalRect: rect)
+        Log.capture.info("Captured the window with \(related.count) attached windows")
+        return (image, CGFloat(image.width) / max(1, rect.width))
     }
 
     static let menuCaptureCountdown = 3

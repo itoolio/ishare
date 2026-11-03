@@ -9,6 +9,7 @@ struct CaptureSettingsView: View {
     @Default(.captureFileType) var fileType
     @Default(.screenshotShowsCursor) var showsCursor
     @Default(.windowShadow) var windowShadow
+    @Default(.windowCaptureIncludesChildWindows) var includesChildWindows
     @Default(.screenshotReplayEnabled) var screenshotReplayEnabled
     @Default(.screenshotReplaySeconds) var screenshotReplaySeconds
     @Default(.trimUniformBorders) var trimUniformBorders
@@ -37,6 +38,7 @@ struct CaptureSettingsView: View {
             Section("Capture".localized()) {
                 Toggle("Show pointer in screenshots".localized(), isOn: $showsCursor)
                 Toggle("Include window shadow".localized(), isOn: $windowShadow)
+                Toggle("Include sheets, popovers and attached windows".localized(), isOn: $includesChildWindows)
                 Toggle("Show magnifier while selecting".localized(), isOn: $showMagnifier)
                 Toggle("Keep the last seconds for Screenshot Replay".localized(), isOn: $screenshotReplayEnabled)
                     .help("Keeps a few frames per second of the main display in memory so you can capture a moment that already passed.".localized())

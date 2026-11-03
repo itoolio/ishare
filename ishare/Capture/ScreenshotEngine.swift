@@ -102,6 +102,17 @@ enum ScreenshotEngine {
         return configuration
     }
 
+    static func captureWindows(_ windows: [SCWindow], on display: SCDisplay, globalRect: CGRect) async throws -> CGImage {
+        let filter = SCContentFilter(display: display, including: windows)
+        let scale = CGFloat(filter.pointPixelScale)
+        let bounds = CGDisplayBounds(display.displayID)
+        let local = CGRect(x: globalRect.minX - bounds.minX, y: globalRect.minY - bounds.minY, width: globalRect.width, height: globalRect.height)
+        let configuration = baseConfiguration(pixelSize: CGSize(width: local.width * scale, height: local.height * scale), showsCursor: false)
+        configuration.sourceRect = local
+        configuration.backgroundColor = .clear
+        return try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
+    }
+
     static func captureDisplay(_ display: SCDisplay, region: CGRect? = nil, in content: SCShareableContent, showsCursor: Bool? = nil) async throws -> CGImage {
         let filter = SCContentFilter(display: display, excludingApplications: excludedApplications(in: content), exceptingWindows: [])
         let scale = CGFloat(filter.pointPixelScale)
