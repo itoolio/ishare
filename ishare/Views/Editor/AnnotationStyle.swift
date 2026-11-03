@@ -128,6 +128,37 @@ struct AnnotationStylePasteboard {
 }
 
 @MainActor
+struct AnnotationClipboard {
+    static let type = NSPasteboard.PasteboardType("dev.adrian.ishare.annotations")
+    static let shared = AnnotationClipboard(pasteboard: NSPasteboard(name: NSPasteboard.Name("dev.adrian.ishare.annotations")))
+    static let pasteOffset: CGFloat = 12
+
+    let pasteboard: NSPasteboard
+
+    func write(_ annotations: [Annotation]) {
+        guard !annotations.isEmpty, let data = try? JSONEncoder().encode(annotations) else { return }
+        pasteboard.clearContents()
+        pasteboard.setData(data, forType: Self.type)
+    }
+
+    func read() -> [Annotation] {
+        guard let data = pasteboard.data(forType: Self.type), let annotations = try? JSONDecoder().decode([Annotation].self, from: data) else { return [] }
+        return annotations
+    }
+
+    static func pasted(_ annotations: [Annotation], into bounds: CGRect) -> [Annotation] {
+        annotations.map { annotation in
+            var copy = annotation.offset(by: CGVector(dx: pasteOffset, dy: pasteOffset))
+            copy.id = UUID()
+            copy.locked = false
+            copy.hidden = false
+            return copy
+        }
+        .filter { bounds.intersects($0.bounds) }
+    }
+}
+
+@MainActor
 final class ToolStyleStore {
     static let standard = ToolStyleStore()
 

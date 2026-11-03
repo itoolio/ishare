@@ -348,6 +348,17 @@ final class EditorDocument: ObservableObject {
         selectedIDs = Set(redactions.map(\.id))
     }
 
+    func copyAnnotations(to clipboard: AnnotationClipboard = .shared) {
+        clipboard.write(annotations.filter { selectedIDs.contains($0.id) })
+    }
+
+    func pasteAnnotations(from clipboard: AnnotationClipboard = .shared) {
+        let pasted = AnnotationClipboard.pasted(clipboard.read(), into: imageBounds)
+        guard !pasted.isEmpty else { return }
+        add(contentsOf: pasted)
+        selectedIDs = Set(pasted.map(\.id))
+    }
+
     func measureSelection() {
         let selected = annotations.filter { selectedIDs.contains($0.id) }
         guard !selected.isEmpty else { return }

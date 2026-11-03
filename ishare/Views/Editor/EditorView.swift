@@ -215,6 +215,12 @@ struct EditorView: View {
             Button("Paste Style".localized()) { document.pasteStyle() }
                 .keyboardShortcut("v", modifiers: [.command, .option])
                 .disabled(document.editingText != nil || document.selectedIDs.isEmpty)
+            Button("Copy Annotations".localized()) { document.copyAnnotations() }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .disabled(document.editingText != nil || document.selectedIDs.isEmpty)
+            Button("Paste Annotations".localized()) { document.pasteAnnotations() }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
+                .disabled(document.editingText != nil)
         }
         .frame(width: 0, height: 0)
         .opacity(0)
