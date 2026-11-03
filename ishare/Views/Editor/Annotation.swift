@@ -355,3 +355,29 @@ struct Annotation: Identifiable, Hashable, Sendable {
         return hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy))
     }
 }
+
+extension Annotation {
+    var kindName: String {
+        switch shape {
+        case .arrow, .curvedArrow: "arrow"
+        case .line, .curvedLine: "line"
+        case .rectangle: "rectangle"
+        case .ellipse: "ellipse"
+        case .highlight: "highlight"
+        case .pen: "pen"
+        case .marker: "marker"
+        case .text: "text"
+        case .callout: "callout"
+        case .step: "step"
+        case .magnify: "magnify"
+        case .spotlight: "spotlight"
+        case .blur: "blur"
+        case .pixelate: "pixelate"
+        case .eraser: "eraser"
+        case .cursor: "cursor"
+        case .stamp: "stamp"
+        case .measure: "measure"
+        case .library: "shape"
+        }
+    }
+}

@@ -32,6 +32,49 @@ final class EditorFlowTests: AppUITestCase {
         assertState("annotations=1 undo=true redo=false")
     }
 
+    func testDrawingALibraryShapeAndAMeasurement() {
+        for tool in ["shapes", "measure"] {
+            element("editor.tool.\(tool)").click()
+            assertState("tool=\(tool)")
+            drag(from: CGVector(dx: 0.35, dy: 0.35), to: CGVector(dx: 0.5, dy: 0.5))
+        }
+        assertState("annotations=2")
+        assertState("kinds=shape,measure")
+    }
+
+    func testCopiedAnnotationsPasteAsNewOnes() {
+        drawRectangle()
+        element("editor.tool.select").click()
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.49)).click()
+        assertState("selected=1")
+        window.typeKey("c", modifierFlags: [.command, .shift])
+        window.typeKey("v", modifierFlags: [.command, .shift])
+        assertState("annotations=2")
+        assertState("kinds=rectangle,rectangle")
+    }
+
+    func testTheGridCanBeShown() {
+        assertState("grid=false")
+        let menu = element("editor.grid")
+        XCTAssertTrue(menu.waitForExistence(timeout: 5), "The grid menu is missing")
+        menu.click()
+        let item = app.menuItems["Show Grid"]
+        XCTAssertTrue(item.waitForExistence(timeout: 5), "Show Grid is missing")
+        item.click()
+        assertState("grid=true")
+    }
+
+    func testArrangingNeedsASelection() {
+        let arrange = element("editor.arrange")
+        XCTAssertTrue(arrange.waitForExistence(timeout: 5), "The arrange menu is missing")
+        XCTAssertFalse(arrange.isEnabled)
+        drawRectangle()
+        element("editor.tool.select").click()
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.49)).click()
+        assertState("selected=1")
+        XCTAssertTrue(arrange.isEnabled)
+    }
+
     func testDiscardClosesTheEditor() {
         drawRectangle()
         let discard = element("editor.discard")
@@ -55,6 +98,10 @@ final class EditorFlowTests: AppUITestCase {
         let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.58))
         start.click(forDuration: 0.2, thenDragTo: end)
         assertState("annotations=1", file: file, line: line)
+    }
+
+    private func drag(from start: CGVector, to end: CGVector) {
+        window.coordinate(withNormalizedOffset: start).click(forDuration: 0.2, thenDragTo: window.coordinate(withNormalizedOffset: end))
     }
 
     private func undo() {
