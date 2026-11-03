@@ -60,6 +60,14 @@ struct EditorView: View {
             EditorBeautifySheet(document: document) { showsBeautify = false }
         }
         .modifier(EditorTranslationTask(document: document, translation: document.translation))
+        .onAppear {
+            if let zoom = document.preferredZoom {
+                viewport.setZoom(zoom)
+            }
+        }
+        .onDisappear {
+            document.rememberZoom(viewport.zoom)
+        }
         .onChange(of: showsAdjustments) { _, shown in
             if !shown {
                 document.straightenAngle = 0

@@ -1,4 +1,5 @@
 import AppKit
+import Defaults
 import Foundation
 import ishareCore
 import Testing
@@ -166,5 +167,25 @@ struct WindowShadowEditorTests {
     @Test func addsANewShadowWithRoomForIt() throws {
         let soft = try #require(WindowShadowEditor.apply(.soft, to: shadowedWindow(), scale: 1))
         #expect(soft.width == 120 + Int(WindowShadowStyle.soft.padding * 2))
+    }
+}
+
+@MainActor
+@Suite(.serialized)
+struct EditorKindPreferenceTests {
+    @Test func remembersTheToolAndColorPerKindOfImage() throws {
+        Defaults[.editorKindPreferences] = [:]
+        let image = try #require(ScreenshotMode.sampleImage(size: CGSize(width: 400, height: 300), hue: 0.5, title: "Kind"))
+        let web = URL(fileURLWithPath: "/tmp/ishare-2026-example.com.png")
+        let first = EditorDocument(image: image, fileURL: web)
+        #expect(first.kind == .webPage)
+        first.select(tool: .measure)
+        first.color = .blue
+        let second = EditorDocument(image: image, fileURL: web)
+        #expect(second.tool == .measure)
+        #expect(second.color == .blue)
+        let screenshot = EditorDocument(image: image, fileURL: URL(fileURLWithPath: "/tmp/ishare-2026-Safari.png"))
+        #expect(screenshot.tool != .measure)
+        Defaults[.editorKindPreferences] = [:]
     }
 }
