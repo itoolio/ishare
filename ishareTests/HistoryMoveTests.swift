@@ -189,3 +189,17 @@ struct EditorKindPreferenceTests {
         Defaults[.editorKindPreferences] = [:]
     }
 }
+
+@MainActor
+struct RedactionReviewTests {
+    @Test func previewsEachRedactionWithSomeContext() throws {
+        let image = try #require(ScreenshotMode.sampleImage(size: CGSize(width: 800, height: 600), hue: 0.4, title: "Review"))
+        let document = EditorDocument(image: image, fileURL: nil)
+        document.add(Annotation(shape: .blur(CGRect(x: 100, y: 100, width: 200, height: 50)), color: .red, lineWidth: 2))
+        document.add(Annotation(shape: .rectangle(CGRect(x: 10, y: 10, width: 50, height: 50)), color: .red, lineWidth: 2))
+        #expect(document.redactions.count == 1)
+        let preview = try #require(document.redactionPreview(for: document.redactions[0], rendered: document.render()))
+        #expect(preview.width == 360)
+        #expect(EditorDocument.reviewRect(for: CGRect(x: 0, y: 0, width: 10, height: 10), in: document.imageBounds).minX == 0)
+    }
+}

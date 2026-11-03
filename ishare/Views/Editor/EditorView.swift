@@ -14,6 +14,10 @@ struct EditorView: View {
     @ObservedObject private var templates = TemplateStore.shared
     @Default(.editorShowsLayers) private var showsLayers
     @State private var showsAdjustments = false
+    @State private var redactionReviewAction: (() -> Void)?
+    @State private var showsRedactionReview = false
+    @State private var reviewedRedactions: Set<UUID> = []
+    @Default(.reviewRedactionsBeforeExport) private var reviewsRedactions
     @State private var showsBeautify = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
@@ -56,6 +60,19 @@ struct EditorView: View {
         }
         .frame(minWidth: 980, minHeight: 560)
         .background(.background)
+        .sheet(isPresented: $showsRedactionReview) {
+            RedactionReviewSheet(document: document) { approved in
+                showsRedactionReview = false
+                if approved {
+                    reviewedRedactions = Set(document.redactions.map(\.id))
+                    let action = redactionReviewAction
+                    redactionReviewAction = nil
+                    action?()
+                } else {
+                    redactionReviewAction = nil
+                }
+            }
+        }
         .sheet(isPresented: $showsBeautify) {
             EditorBeautifySheet(document: document) { showsBeautify = false }
         }
@@ -441,6 +458,11 @@ struct EditorView: View {
                 Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }
             }
             .disabled(document.isProcessing)
+            Button("Review Redactions…".localized()) {
+                redactionReviewAction = nil
+                showsRedactionReview = true
+            }
+            .disabled(document.redactions.isEmpty)
             Button("Translate Text in Place".localized()) {
                 Task { await document.beginTranslateInPlace() }
             }
@@ -478,7 +500,7 @@ struct EditorView: View {
     private var exportMenu: some View {
         Menu {
             ForEach(EditorExportFormat.allCases) { format in
-                Button(format.title) { EditorExport.export(document, as: format) }
+                Button(format.title) { afterReviewingRedactions { EditorExport.export(document, as: format) } }
             }
         } label: {
             Label("Export".localized(), systemImage: "square.and.arrow.up")
@@ -502,6 +524,16 @@ struct EditorView: View {
         CombineWindowController.present(urls: urls, leading: [current])
     }
 
+    private func afterReviewingRedactions(_ action: @escaping () -> Void) {
+        let ids = Set(document.redactions.map(\.id))
+        guard reviewsRedactions, !ids.isEmpty, !ids.isSubset(of: reviewedRedactions) else {
+            action()
+            return
+        }
+        redactionReviewAction = action
+        showsRedactionReview = true
+    }
+
     private var actionButtons: some View {
         HStack(spacing: 8) {
             Button(role: .destructive, action: onDiscard) {
@@ -510,14 +542,14 @@ struct EditorView: View {
             .keyboardShortcut(.delete, modifiers: .command)
             .accessibilityIdentifier("editor.discard")
             exportMenu
-            Button(action: onCopy) {
+            Button(action: { afterReviewingRedactions(onCopy) }) {
                 Label("Copy".localized(), systemImage: "doc.on.doc")
             }
             .keyboardShortcut("c", modifiers: .command)
             .accessibilityIdentifier("editor.copy")
             Button(action: {
                 document.commitPendingEdits()
-                onDone()
+                afterReviewingRedactions(onDone)
             }) {
                 Label("Done".localized(), systemImage: "checkmark")
             }

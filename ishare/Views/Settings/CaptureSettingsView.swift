@@ -19,6 +19,7 @@ struct CaptureSettingsView: View {
     @Default(.showLastRegionOutline) var showLastRegionOutline
     @Default(.editorOpensInTabs) var editorOpensInTabs
     @Default(.openEditorAfterCapture) var openEditorAfterCapture
+    @Default(.reviewRedactionsBeforeExport) var reviewsRedactions
     @Default(.editorSmartShapes) var editorSmartShapes
     @Default(.scrollingAutoScroll) var scrollingAutoScroll
     @Default(.nameFilesAfterWindowTitle) var nameFilesAfterWindowTitle
@@ -58,6 +59,7 @@ struct CaptureSettingsView: View {
                 Toggle("Open editor after capture".localized(), isOn: $openEditorAfterCapture)
                 Toggle("Open images as tabs in one editor window".localized(), isOn: $editorOpensInTabs)
                 Toggle("Snap editor shapes to detected elements".localized(), isOn: $editorSmartShapes)
+                Toggle("Review blurred areas before copying or exporting".localized(), isOn: $reviewsRedactions)
             }
             CaptureSelectionSettings()
             CaptureShelfSettingsSection()
