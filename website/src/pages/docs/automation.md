@@ -22,7 +22,7 @@ sudo mkdir -p /usr/local/bin && sudo ln -sf /Applications/ishare.app/Contents/He
 The tool starts ishare in the background when it isn't running.
 
 ```text
-ishare upload <file…> [--uploader NAME]   Upload files and print their links
+ishare upload <file…> [--uploader NAME]   Upload files and print their links; folders are zipped first
 ishare capture region|window|screen|scrolling|displays [--upload]
                                           Take a screenshot and print its file, or its link with --upload
 ishare capture app [NAME] [--sheet] [--upload]

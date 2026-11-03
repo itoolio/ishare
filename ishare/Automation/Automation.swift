@@ -153,7 +153,17 @@ final class LiveAutomationActions: AutomationActions {
             let scoped = file.startAccessingSecurityScopedResource()
             defer { if scoped { file.stopAccessingSecurityScopedResource() } }
             Log.app.info("Automation upload of \(file.path, privacy: .public)")
-            switch await UploadCoordinator.upload(fileURL: file, target: target, localFileURL: file) {
+            var archive: URL?
+            if FolderArchive.isFolder(file) {
+                do {
+                    archive = try await FolderArchive.zipped(file)
+                } catch {
+                    results.append(CLIUploadResult(file: file.path, error: error.localizedDescription))
+                    continue
+                }
+            }
+            defer { archive.map(FolderArchive.discard) }
+            switch await UploadCoordinator.upload(fileURL: archive ?? file, target: target, localFileURL: archive == nil ? file : nil) {
             case let .success(outcome):
                 results.append(CLIUploadResult(file: file.path, link: outcome.deliveredURL?.absoluteString ?? outcome.url.absoluteString))
                 presentToast(for: file)

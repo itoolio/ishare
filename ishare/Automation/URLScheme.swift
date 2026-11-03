@@ -93,9 +93,7 @@ struct URLSchemeFileAccess: Sendable {
     var isReadableFile: @Sendable (String) -> Bool
 
     static let live = URLSchemeFileAccess { path in
-        var isDirectory: ObjCBool = false
-        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) && !isDirectory.boolValue
-            && FileManager.default.isReadableFile(atPath: path)
+        FileManager.default.fileExists(atPath: path) && FileManager.default.isReadableFile(atPath: path)
     }
 }
 

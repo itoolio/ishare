@@ -261,3 +261,20 @@ struct WebcamLayoutCompositionTests {
         #expect(pixel[0] > 200 && pixel[2] < 50)
     }
 }
+
+struct FolderArchiveTests {
+    @Test func zipsAFolderIntoOneFile() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "Project \(UUID().uuidString.prefix(6))", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder.appending(path: "nested"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        try Data("one".utf8).write(to: folder.appending(path: "a.txt"))
+        try Data("two".utf8).write(to: folder.appending(path: "nested/b.txt"))
+        #expect(FolderArchive.isFolder(folder))
+        let archive = try await FolderArchive.zipped(folder)
+        defer { FolderArchive.discard(archive) }
+        #expect(archive.lastPathComponent == folder.lastPathComponent + ".zip")
+        let data = try Data(contentsOf: archive)
+        #expect(data.prefix(2) == Data("PK".utf8))
+        #expect(!FolderArchive.isFolder(archive))
+    }
+}

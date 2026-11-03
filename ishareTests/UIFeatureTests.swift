@@ -233,7 +233,7 @@ struct ExternalUploadTests {
         let directory = file.deletingLastPathComponent()
         let missing = directory.appending(path: "missing.png")
         let web = URL(string: "https://example.com/a.png")!
-        #expect(ExternalUpload.uploadableFiles([file, directory, missing, web]) == [file])
+        #expect(ExternalUpload.uploadableFiles([file, directory, missing, web]) == [file, directory])
     }
 
     @Test func readsFileURLsFromThePasteboard() throws {

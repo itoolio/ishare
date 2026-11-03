@@ -44,7 +44,8 @@ enum CLIArguments {
 
         Commands:
           upload <file…> [--uploader NAME] [--reuse|--no-reuse]
-                                              Upload files and print their links; --reuse returns the
+                                              Upload files and print their links (folders are zipped);
+                                              --reuse returns the
                                               existing link for files that were uploaded before
           capture region|window|screen|scrolling|menu|displays [--upload]
                                               Take a screenshot and print its file or link

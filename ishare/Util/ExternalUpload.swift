@@ -13,8 +13,7 @@ enum ExternalUpload {
 
     nonisolated static func uploadableFiles(_ urls: [URL], fileManager: FileManager = .default) -> [URL] {
         urls.filter { url in
-            var isDirectory: ObjCBool = false
-            return url.isFileURL && fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) && !isDirectory.boolValue
+            url.isFileURL && fileManager.fileExists(atPath: url.path)
         }
     }
 
@@ -60,6 +59,16 @@ enum ExternalUpload {
     static func upload(fileURL: URL, keepsLocalCopy: Bool = true) async {
         let scoped = fileURL.startAccessingSecurityScopedResource()
         defer { if scoped { fileURL.stopAccessingSecurityScopedResource() } }
+        if FolderArchive.isFolder(fileURL) {
+            do {
+                let archive = try await FolderArchive.zipped(fileURL)
+                defer { FolderArchive.discard(archive) }
+                await upload(fileURL: archive, keepsLocalCopy: false)
+            } catch {
+                Log.upload.error("Zipping \(fileURL.lastPathComponent, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            }
+            return
+        }
         Log.upload.info("Uploading external file \(fileURL.path, privacy: .public)")
         let toast = Task { @MainActor in
             await showToast(fileURL: fileURL, awaitingUpload: true)
