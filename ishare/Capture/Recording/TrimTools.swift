@@ -122,6 +122,24 @@ struct TrimToolbar: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            if model.hasCuts {
+                Button {
+                    model.reviewCut(forward: false)
+                } label: {
+                    Image(systemName: "backward.end")
+                }
+                .buttonStyle(.borderless)
+                .help("Play from just before the previous cut".localized())
+                .accessibilityLabel("Previous Cut".localized())
+                Button {
+                    model.reviewCut(forward: true)
+                } label: {
+                    Image(systemName: "forward.end")
+                }
+                .buttonStyle(.borderless)
+                .help("Play from just before the next cut".localized())
+                .accessibilityLabel("Next Cut".localized())
+            }
 
             Divider().frame(height: 16)
 
