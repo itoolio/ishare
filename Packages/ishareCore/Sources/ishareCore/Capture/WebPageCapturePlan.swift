@@ -17,7 +17,35 @@ public enum WebPageWidth: String, CaseIterable, Codable, Hashable, Sendable, Ide
     }
 }
 
+public enum WebPageFormat: String, CaseIterable, Codable, Hashable, Sendable {
+    case image
+    case pdf
+}
+
+public struct WebPageCaptureRequest: Equatable, Hashable, Sendable {
+    public var address: String
+    public var width: CGFloat
+    public var format: WebPageFormat
+    public var dismissesCookieBanners: Bool
+
+    public init(address: String, width: CGFloat = WebPageWidth.desktop.points, format: WebPageFormat = .image, dismissesCookieBanners: Bool = true) {
+        self.address = address
+        self.width = width
+        self.format = format
+        self.dismissesCookieBanners = dismissesCookieBanners
+    }
+}
+
 public enum WebPageCapturePlan {
+    public static let widthRange: ClosedRange<CGFloat> = 320...3840
+
+    public static func width(from parameter: String?) -> CGFloat? {
+        guard let parameter = parameter?.trimmingCharacters(in: .whitespaces).lowercased(), !parameter.isEmpty else { return WebPageWidth.desktop.points }
+        if let preset = WebPageWidth(rawValue: parameter) { return preset.points }
+        guard let value = Double(parameter.replacingOccurrences(of: "px", with: "").replacingOccurrences(of: "pt", with: "")), value.isFinite else { return nil }
+        return min(max(CGFloat(value).rounded(), widthRange.lowerBound), widthRange.upperBound)
+    }
+
     public static let maximumHeight: CGFloat = 30000
     public static let chunkHeight: CGFloat = 4000
 

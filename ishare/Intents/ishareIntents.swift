@@ -176,16 +176,28 @@ struct CaptureWebPageIntent: AppIntent {
     @Parameter(title: "Phone Width", default: false)
     var phoneWidth: Bool
 
+    @Parameter(title: "Width in Points")
+    var width: Int?
+
+    @Parameter(title: "As PDF", default: false)
+    var asPDF: Bool
+
+    @Parameter(title: "Dismiss Cookie Banners", default: true)
+    var dismissesCookieBanners: Bool
+
     @Parameter(title: "Upload", default: false)
     var upload: Bool
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
         let options = CaptureOptions(forceUpload: upload, resultHandler: { _ in })
-        guard let fileURL = await WebPageCaptureFlow.capture(address, width: phoneWidth ? .mobile : .desktop, options: options) else {
+        let points = width.flatMap { WebPageCapturePlan.width(from: String($0)) } ?? (phoneWidth ? WebPageWidth.mobile.points : WebPageWidth.desktop.points)
+        let request = WebPageCaptureRequest(address: address, width: points, format: asPDF ? .pdf : .image, dismissesCookieBanners: dismissesCookieBanners)
+        guard let fileURL = await WebPageCaptureFlow.capture(request, options: options) else {
             throw IntentError.cancelled
         }
-        let result = IntentFile(fileURL: fileURL, filename: fileURL.lastPathComponent, type: ImageEncoder.contentType(for: Defaults[.captureFileType]))
+        let type = asPDF ? UTType.pdf : ImageEncoder.contentType(for: Defaults[.captureFileType])
+        let result = IntentFile(fileURL: fileURL, filename: fileURL.lastPathComponent, type: type)
         Task { @MainActor in
             await CaptureSession.finish(fileURL: fileURL, kind: .image, options: CaptureOptions(forceUpload: upload))
         }

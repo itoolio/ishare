@@ -316,9 +316,9 @@ final class URLSchemeRouter {
         switch command {
         case let .capture(mode):
             return .success(await actions.captureWithAfterCaptureSteps(mode))
-        case let .captureWebPage(address, width):
+        case let .captureWebPage(request):
             let before = Defaults[.uploadHistory].first
-            guard await WebPageCaptureFlow.capture(address, width: width) != nil else {
+            guard await WebPageCaptureFlow.capture(request) != nil else {
                 return .failure(.failed(WebPageCaptureError.snapshotFailed.localizedDescription))
             }
             let latest = Defaults[.uploadHistory].first

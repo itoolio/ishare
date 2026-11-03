@@ -12,6 +12,8 @@ extension Defaults.Keys {
     static let trimUniformBorders = Key<Bool>("trimUniformBorders", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let screenshotReplayEnabled = Key<Bool>("screenshotReplayEnabled", default: false, suite: .ishare)
     static let screenshotReplaySeconds = Key<Int>("screenshotReplaySeconds", default: 20, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let webCaptureFormat = Key<WebPageFormat>("webCaptureFormat", default: .image, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let webCaptureDismissesCookieBanners = Key<Bool>("webCaptureDismissesCookieBanners", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let appWindowsResult = Key<AppWindowsResult>("appWindowsResult", default: .separate, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let trimBorderPadding = Key<Int>("trimBorderPadding", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let snapSelectionToEdges = Key<Bool>("snapSelectionToEdges", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -63,3 +65,5 @@ extension SelectionConstraint: @retroactive Defaults.Serializable {}
 extension FixedSelectionSize: @retroactive Defaults.Serializable {}
 extension MultiRegionResult: @retroactive Defaults.Serializable {}
 extension AppWindowsResult: @retroactive Defaults.Serializable {}
+
+extension WebPageFormat: @retroactive Defaults.Serializable {}

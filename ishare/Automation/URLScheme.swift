@@ -9,7 +9,7 @@ enum AutomationOpenTarget: Equatable, Sendable {
 
 enum URLSchemeCommand: Equatable, Sendable {
     case capture(CLICaptureMode)
-    case captureWebPage(String, WebPageWidth)
+    case captureWebPage(WebPageCaptureRequest)
     case captureApp(String?, contactSheet: Bool)
     case record(CLIRecordAction, gif: Bool, region: Bool, preset: String? = nil)
     case upload([URL])
@@ -148,8 +148,12 @@ enum URLSchemeParser {
             guard let address = value("url", in: items), WebPageCapturePlan.normalizedURL(from: address) != nil else {
                 return .failure(.missingParameter("url"))
             }
-            let width = value("width", in: items).flatMap(WebPageWidth.init(rawValue:)) ?? .desktop
-            return .success(.captureWebPage(address, width))
+            guard let width = WebPageCapturePlan.width(from: value("width", in: items)) else {
+                return .failure(.invalidValue(parameter: "width", value: value("width", in: items) ?? ""))
+            }
+            let format: WebPageFormat = value("format", in: items)?.lowercased() == "pdf" ? .pdf : .image
+            let dismisses = items.contains { $0.name.lowercased() == "banners" } ? flag("banners", in: items) : true
+            return .success(.captureWebPage(WebPageCaptureRequest(address: address, width: width, format: format, dismissesCookieBanners: dismisses)))
         case "capture" where argument == "app":
             return .success(.captureApp(value("name", in: items), contactSheet: flag("sheet", in: items)))
         case "capture":

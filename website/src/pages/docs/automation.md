@@ -95,6 +95,7 @@ end tell
 | URL | Action |
 | --- | --- |
 | `ishare://capture/region` | Capture a region; also `window`, `screen` and `scrolling` |
+| `ishare://capture/web?url=example.com` | Capture a whole web page. Add `width=mobile`, `tablet` or a number of points, `format=pdf` for a PDF, and `banners=0` to keep cookie banners |
 | `ishare://capture/app?name=Safari` | Capture every window of an app by name or bundle identifier, or of the frontmost app without `name`. Add `sheet=1` for one contact sheet |
 | `ishare://record/start` | Start a recording; also `stop` and `toggle`. Add `gif=1` or `region=1` |
 | `ishare://upload?path=/Users/me/Pictures/a.png` | Upload a file; repeat `path` for up to 50 files |
