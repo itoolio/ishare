@@ -31,6 +31,8 @@ ishare capture app [NAME] [--sheet] [--upload]
 ishare record start|stop|toggle           Start or stop a screen recording
 ishare uploaders list                     List the configured uploaders (* marks the active one)
 ishare history [--limit N]                Print recent uploads, newest first (20 by default)
+ishare watch list                         List the watch folders and their steps
+ishare watch run <file> [--folder NAME]   Run a watch folder's steps on a file
 
 --json                                    Print machine-readable JSON
 --timeout SECONDS                         How long to wait for ishare (120, or 600 for capture and record)
@@ -60,6 +62,14 @@ The payload contains `uploads` (`file`, `link`, `error`), `capture` (`file`, `li
 The App Store build is sandboxed, so it can only upload files it is allowed to read, for example in your Pictures folder. The GitHub build can upload any file.
 
 The tool and the app exchange small JSON request and response files in ishare's app group container (`~/Library/Group Containers/L988J7YMK5.group.dev.adrian.ishare/CommandLine`), and the tool wakes the app with an `ishare://cli?id=…` URL. Each response carries its request's ID, and stale files are removed after 15 minutes.
+
+### Watch folder steps from scripts
+
+`ishare watch run` runs the steps of a watch folder on one file, so other tools can decide when: a launchd job with `WatchPaths`, Hazel, Folder Actions or a build script. Without `--folder` it uses the first watch folder.
+
+```sh
+ishare watch run ~/Desktop/export.png --folder Drop
+```
 
 ## AI assistants (MCP)
 

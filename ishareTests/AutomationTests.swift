@@ -25,6 +25,15 @@ final class FakeAutomationActions: AutomationActions {
         return afterCaptureLink
     }
 
+    func watchFolders() -> [CLIWatchFolderInfo] {
+        [CLIWatchFolderInfo(name: "Drop", path: "/Users/me/Drop", enabled: true, steps: ["Rename", "Upload"])]
+    }
+
+    func runWatchFolder(on file: URL, folder: String?) async -> Result<CLICaptureResult, AutomationError> {
+        calls.append("watch \(file.lastPathComponent) via \(folder ?? "first")")
+        return .success(CLICaptureResult(file: file.path, link: "https://example.com/\(file.lastPathComponent)"))
+    }
+
     func captureApp(_ app: String?, contactSheet: Bool, upload: Bool) async -> Result<CLICaptureResult, AutomationError> {
         calls.append("app \(app ?? "frontmost") sheet=\(contactSheet) upload=\(upload)")
         return captureResult
@@ -306,6 +315,14 @@ struct CLIArgumentTests {
         #expect(CLIArguments.usage.contains("--no-reuse"))
     }
 
+    @Test func parsesWatchFolderCommands() throws {
+        #expect(try run(["watch", "list"]).command == .listWatchFolders)
+        #expect(try run(["watch", "run", "shot.png", "--folder", "Drop"]).command == .runWatchFolder(file: "/Users/me/Desktop/shot.png", folder: "Drop"))
+        #expect(try run(["watch", "run", "/tmp/a.png"]).command == .runWatchFolder(file: "/tmp/a.png", folder: nil))
+        #expect(error(["watch"]) == .missingArgument("watch subcommand (list or run)"))
+        #expect(error(["watch", "run"]) == .missingArgument("file"))
+    }
+
     @Test func parsesAppWindowCaptures() throws {
         #expect(try run(["capture", "app"]).command == .captureApp(app: nil, contactSheet: false, upload: false))
         let named = try run(["capture", "app", "Safari", "--sheet", "--upload"])
@@ -488,6 +505,16 @@ struct CommandLineEndToEndTests {
         let record = try await client.send(.record(.start), timeout: 5)
         #expect(record.payload.recording == true)
         #expect(actions.calls == ["capture region upload=true", "record start gif=false region=false"])
+    }
+
+    @Test func runsWatchFolderStepsFromTheCommandLine() async throws {
+        let (client, server, files) = try makeSystem()
+        server.fileAccess = URLSchemeFileAccess { _ in true }
+        let list = try await client.send(.listWatchFolders, timeout: 5)
+        #expect(list.payload.watchFolders?.first?.steps == ["Rename", "Upload"])
+        let run = try await client.send(.runWatchFolder(file: files.directory.appending(path: "shot.png").path, folder: "Drop"), timeout: 5)
+        #expect(run.payload.capture?.link == "https://example.com/shot.png")
+        #expect(actions.calls == ["watch shot.png via Drop"])
     }
 
     @Test func capturesAppWindowsFromTheCommandLine() async throws {

@@ -219,6 +219,14 @@ final class AutomationTestActions: AutomationActions {
         live.history(limit: limit)
     }
 
+    func watchFolders() -> [CLIWatchFolderInfo] {
+        live.watchFolders()
+    }
+
+    func runWatchFolder(on file: URL, folder: String?) async -> Result<CLICaptureResult, AutomationError> {
+        await live.runWatchFolder(on: file, folder: folder)
+    }
+
     func open(_ target: AutomationOpenTarget) {
         switch target {
         case .history:

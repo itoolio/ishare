@@ -81,6 +81,16 @@ final class CommandLineServer {
             response.payload.uploaders = actions.uploaders()
         case let .history(limit):
             response.payload.history = actions.history(limit: limit)
+        case .listWatchFolders:
+            response.payload.watchFolders = actions.watchFolders()
+        case let .runWatchFolder(path, folder):
+            guard case let .success(file) = URLSchemeParser.validatedFile(path, fileAccess: fileAccess) else {
+                return .failure(request.id, "ishare can't read \(path)")
+            }
+            switch await actions.runWatchFolder(on: file, folder: folder) {
+            case let .success(result): response.payload.capture = result
+            case let .failure(error): return .failure(request.id, error.message)
+            }
         }
         return response
     }

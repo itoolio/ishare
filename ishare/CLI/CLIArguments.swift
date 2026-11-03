@@ -56,6 +56,9 @@ enum CLIArguments {
                                               Start, stop, pause or resume a screen recording
           uploaders list                      List the configured uploaders
           history [--limit N]                 Print recent uploads
+          watch list                          List the watch folders and their steps
+          watch run <file> [--folder NAME]    Run a watch folder's steps on a file, for scripts
+                                              and launchd jobs (the first folder without NAME)
           mcp                                 Run a Model Context Protocol server on stdin and stdout
                                               so AI assistants can use ishare
 
@@ -114,7 +117,7 @@ enum CLIArguments {
                 reuse = true
             case "--no-reuse":
                 reuse = false
-            case "--uploader", "-u":
+            case "--uploader", "-u", "--folder":
                 let raw = try optionValue()
                 guard !raw.trimmingCharacters(in: .whitespaces).isEmpty else { throw .invalidValue(option: name, value: raw) }
                 uploader = raw
@@ -170,6 +173,18 @@ enum CLIArguments {
         case "history":
             try rejectExtra(rest[...])
             command = .history(limit: limit ?? 20)
+        case "watch":
+            switch rest.first?.lowercased() {
+            case "list":
+                try rejectExtra(rest.dropFirst())
+                command = .listWatchFolders
+            case "run":
+                guard let file = rest.dropFirst().first else { throw .missingArgument("file") }
+                try rejectExtra(rest.dropFirst(2))
+                command = .runWatchFolder(file: absolutePath(file, relativeTo: workingDirectory), folder: uploader)
+            default:
+                throw .missingArgument("watch subcommand (list or run)")
+            }
         default:
             throw .unknownCommand(commandName)
         }
@@ -217,7 +232,7 @@ enum CLICommandOption {
 extension CLICommand {
     func accepts(_ option: CLICommandOption) -> Bool {
         switch (self, option) {
-        case (.upload, .uploader), (.upload, .reuse), (.capture, .upload), (.captureApp, .upload), (.captureApp, .sheet), (.history, .limit), (.record, .preset): true
+        case (.upload, .uploader), (.runWatchFolder, .uploader), (.upload, .reuse), (.capture, .upload), (.captureApp, .upload), (.captureApp, .sheet), (.history, .limit), (.record, .preset): true
         default: false
         }
     }
@@ -239,6 +254,12 @@ enum CLIOutput {
             return payload.message ?? ""
         case .listUploaders:
             return (payload.uploaders ?? []).map { ($0.selected ? "* " : "  ") + "\($0.name) (\($0.kind))" }.joined(separator: "\n")
+        case .listWatchFolders:
+            return (payload.watchFolders ?? []).map { folder in
+                "\(folder.enabled ? "*" : " ") \(folder.name)\t\(folder.path)\t\(folder.steps.joined(separator: " → "))"
+            }.joined(separator: "\n")
+        case .runWatchFolder:
+            return payload.capture?.link ?? payload.capture?.file ?? payload.message ?? ""
         case .history:
             return (payload.history ?? []).map { entry in
                 [entry.shortLink ?? entry.link ?? entry.localPath ?? "", entry.title].filter { !$0.isEmpty }.joined(separator: "\t")

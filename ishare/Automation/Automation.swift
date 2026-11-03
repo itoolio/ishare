@@ -26,6 +26,8 @@ protocol AutomationActions: AnyObject {
     func selectUploader(named name: String) -> Bool
     func uploaders() -> [CLIUploaderInfo]
     func history(limit: Int) -> [CLIHistoryEntry]
+    func watchFolders() -> [CLIWatchFolderInfo]
+    func runWatchFolder(on file: URL, folder: String?) async -> Result<CLICaptureResult, AutomationError>
     func open(_ target: AutomationOpenTarget)
     func openCallback(_ url: URL)
 }
@@ -182,6 +184,28 @@ final class LiveAutomationActions: AutomationActions {
 
     func uploaders() -> [CLIUploaderInfo] {
         AutomationUploaders.list()
+    }
+
+    func watchFolders() -> [CLIWatchFolderInfo] {
+        Defaults[.watchedFolders].map { folder in
+            CLIWatchFolderInfo(name: folder.displayName, path: folder.path, enabled: folder.isEnabled, steps: folder.actions.map(\.kind.title))
+        }
+    }
+
+    func runWatchFolder(on file: URL, folder name: String?) async -> Result<CLICaptureResult, AutomationError> {
+        let folders = Defaults[.watchedFolders]
+        let folder = name.map { name in
+            folders.first { $0.displayName.caseInsensitiveCompare(name) == .orderedSame || $0.path == (name as NSString).expandingTildeInPath }
+        } ?? folders.first
+        guard let folder else {
+            return .failure(.failed(name.map { String(format: "No watch folder named “%@”".localized(), $0) } ?? "Add a watch folder in Settings first".localized()))
+        }
+        let outcome = await WatchFolderChainRunner.run(folder.actions, on: file) { WatchFolderService.markProcessed($0) }
+        WatchFolderUndo.record(outcome.moves)
+        if let failure = outcome.failure {
+            return .failure(.failed(failure))
+        }
+        return .success(CLICaptureResult(file: outcome.finalURL?.path, link: outcome.link))
     }
 
     func history(limit: Int) -> [CLIHistoryEntry] {
