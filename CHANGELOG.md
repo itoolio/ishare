@@ -1,3 +1,38 @@
+## [5.6.0](https://github.com/itoolio/ishare/compare/v5.5.1...v5.6.0) (2026-11-03)
+
+### Features
+
+* add a focused window spotlight timeline to ishareCore ([f92ffd4](https://github.com/itoolio/ishare/commit/f92ffd4ee74a5fe82f61738527d66d187f31e62c))
+* add a shape library to the editor ([6468980](https://github.com/itoolio/ishare/commit/64689805ce344d71637f4865eef44d30d4c17ce6))
+* add Shortcuts actions for ishare's image editing ([ca69498](https://github.com/itoolio/ishare/commit/ca694988956c22bee3660f967faf11184d7e839a))
+* capture a full web page from its address ([87e4755](https://github.com/itoolio/ishare/commit/87e4755d329ce3d1799829b9a9f10063a3f892c0))
+* capture a moment that already passed with Screenshot Replay ([dd659b5](https://github.com/itoolio/ishare/commit/dd659b5bc67886e2aa88e8aaa169b4d632f79af1))
+* capture every window of an app at once ([7784b20](https://github.com/itoolio/ishare/commit/7784b201fc867652a571740446d83829baa73f2a))
+* choose the display for result toasts and hold them during full-screen presentations ([d6675dd](https://github.com/itoolio/ishare/commit/d6675dd1273b69120c557e7833c59fe4c85a8de1))
+* combine multiple regions with the remembered combine layout ([7db64c0](https://github.com/itoolio/ishare/commit/7db64c0033ef6929f74374f6cfb714d2aaf75fb6))
+* export WebP with a bundled libwebp encoder ([78fa081](https://github.com/itoolio/ishare/commit/78fa08157e7ed10296b4cb4e0bb4d45184afe028))
+* **i18n:** translate the 5.6 strings into all supported languages ([19cec42](https://github.com/itoolio/ishare/commit/19cec420ea342224c11cc5f70fb31f0d75fbdd6d))
+* measure distances and selections in the editor ([8ea3de5](https://github.com/itoolio/ishare/commit/8ea3de5286e17745fbe7633f35072011feb6eb85))
+* open images as tabs in one editor window and copy annotations between them ([6648176](https://github.com/itoolio/ishare/commit/6648176c5ca86f459289d0b18c6a2e84a3237de3))
+* preview history items with Quick Look ([d42c393](https://github.com/itoolio/ishare/commit/d42c3936f3af529aaa353ea5c053171dadc735ed))
+* record voice-overs from the microphone chosen in the recording settings ([aac87af](https://github.com/itoolio/ishare/commit/aac87af96ca881bf364ecc5632789883644e4bbc))
+* redact faces in the editor with one blur or pixelate box per face ([be43e03](https://github.com/itoolio/ishare/commit/be43e03c595e22b14e6d26f671827835331c0737))
+* resolve the voice-over microphone from the configured device ([6d48bf1](https://github.com/itoolio/ishare/commit/6d48bf1a428ce7ac513dcd8735c062d9c1d00793))
+* run watch-folder files through configurable action chains ([9faa06d](https://github.com/itoolio/ishare/commit/9faa06df31b9c290219ccda9e4a7790cbdb3f3ee))
+* script ishare with AppleScript ([c2fb941](https://github.com/itoolio/ishare/commit/c2fb941be046bae4cb513f5558f6d9d984f81fef))
+* select a region with the keyboard alone ([5fa70a1](https://github.com/itoolio/ishare/commit/5fa70a10c608a7b1a927e3a5c83d07094c375654))
+* spotlight the active window in screen recordings ([0377e59](https://github.com/itoolio/ishare/commit/0377e59f9ee1879a7316f27b53349288565a02c4))
+* trim uniform borders from captures automatically or on demand ([672c4e9](https://github.com/itoolio/ishare/commit/672c4e947359108d46f539a8073dc1d57f1f1fdb))
+
+### Bug Fixes
+
+* refer to the screenshot replay window explicitly so older compilers resolve it ([211c203](https://github.com/itoolio/ishare/commit/211c203996d787857f0f7f67b1f3253347891b6f))
+* send the complete age rating declaration to App Store Connect ([72e2d9c](https://github.com/itoolio/ishare/commit/72e2d9c2c2e222e0a220bc55b20503577082e1fe))
+
+### Performance Improvements
+
+* start the freeze-frame when the region shortcut goes down ([8954392](https://github.com/itoolio/ishare/commit/8954392a919611d9ef6ea1729739103070d943a1))
+
 ## [5.5.1](https://github.com/itoolio/ishare/compare/v5.5.0...v5.5.1) (2026-11-03)
 
 ### Bug Fixes
