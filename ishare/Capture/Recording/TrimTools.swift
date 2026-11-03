@@ -283,7 +283,10 @@ struct VoiceOverBar: View {
     private var status: String {
         switch model.voicePhase {
         case let .countdown(count): String(format: "Starting in %d…".localized(), count)
-        case .recording: "Recording voice-over".localized()
+        case .recording:
+            model.voiceRecorder.usesFallbackMicrophone
+                ? "Recording voice-over with the system microphone because the chosen one isn't connected".localized()
+                : "Recording voice-over".localized()
         case .paused: "Voice-over paused".localized()
         case .inactive: ""
         }
