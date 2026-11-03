@@ -364,3 +364,18 @@ struct HistoryGroupingSectionTests {
         #expect(byProject.map(\.title) == ["ishare", "Docs", "website", "Other"])
     }
 }
+
+@MainActor
+@Suite(.serialized)
+struct HistoryBulkEditTests {
+    @Test func keepsAndExpiresManyUploadsAtOnce() {
+        let id = UUID()
+        let items = (0..<3).map { HistoryItem(fileUrl: "https://x/\($0).png", deletionUrl: "https://x/d/\($0)", uploaderId: id, date: Date(timeIntervalSince1970: Double($0))) }
+        Defaults[.uploadHistory] = items
+        HistoryBulkEdit.setKeepForever(Array(items.prefix(2)), true)
+        #expect(Defaults[.uploadHistory].map(\.keepForever) == [true, true, nil])
+        HistoryBulkEdit.setExpiry(items, days: 7)
+        #expect(Defaults[.uploadHistory].allSatisfy { $0.expiresAt != nil && $0.keepForever == nil })
+        Defaults[.uploadHistory] = []
+    }
+}

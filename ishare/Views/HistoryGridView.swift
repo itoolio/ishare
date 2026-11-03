@@ -337,7 +337,7 @@ struct HistoryCard: View {
                 .frame(height: 110)
                 .overlay { HistoryThumbnail(item: item, pointSize: 220) }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            Text(item.fileName)
+            Text(item.title?.isEmpty == false ? item.title ?? item.fileName : item.fileName)
                 .font(.system(size: 11, weight: .medium))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -396,6 +396,7 @@ struct HistoryCard: View {
                 Button("Combine…".localized()) { HistoryActions.combine(bulkItems) }
             }
             HistoryMoveMenu(items: bulkItems)
+            HistoryBulkEditMenu(items: bulkItems)
             Divider()
             if bulkItems.contains(where: \.canDeleteFromServer) {
                 Button("Delete from Server…".localized(), role: .destructive) { HistoryActions.confirmDeleteFromServer(bulkItems) }
