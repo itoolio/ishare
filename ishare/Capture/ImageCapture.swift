@@ -148,6 +148,7 @@ enum ImageCaptureFlow {
         case let .single(.region(screen, rect)):
             guard let displayID = screen.displayID else { return nil }
             LastRegionStore.remember(rect, for: displayID)
+            CaptureAgain.remember(.region(displayID: displayID, rect: rect))
             return try await imaging.image(screen: screen, region: rect)
         case let .single(.fullScreen(screen)):
             return try await imaging.image(screen: screen, region: nil)
@@ -187,6 +188,7 @@ enum ImageCaptureFlow {
 
     static func captureAllDisplays(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
         guard let live = try await contentAfterCountdown(delay, content: content) else { return nil }
+        CaptureAgain.remember(.allDisplays)
         let images = await ScreenshotEngine.backdrops(for: live)
         let source = frontmostSource(in: live)
         let entries = live.displays.compactMap { display in images[display.displayID].map { (display, $0) } }
@@ -210,6 +212,29 @@ enum ImageCaptureFlow {
         return CapturedImage(image: combined, suffix: "displays", pointScale: scale, source: source)
     }
 
+    static func captureAgain(_ recipe: CaptureRecipe) async -> CapturedImage? {
+        await withCaptureContent { content in
+            switch recipe {
+            case let .region(displayID, rect):
+                guard content.displays.contains(where: { $0.displayID == displayID }) else { return nil }
+                return try await captureDisplayImage(displayID: displayID, region: rect, content: content, suffix: frontmostAppName())
+            case let .screen(displayID):
+                return try await captureDisplayImage(displayID: displayID, region: nil, content: content, suffix: NSScreen.screen(for: displayID)?.captureSuffix)
+            case .allDisplays:
+                return try await captureAllDisplays(content: content)
+            case let .window(windowID, bundleID, title):
+                let candidates = ScreenshotEngine.candidateWindows(in: content)
+                let match = CaptureRecipe.windowMatch(
+                    windowID, bundleID: bundleID, title: title,
+                    among: candidates.map { (id: $0.windowID, bundleID: $0.owningApplication?.bundleIdentifier, title: $0.title) })
+                guard let match, let window = candidates.first(where: { $0.windowID == match }) else { return nil }
+                return try await captureWindowImage(window)
+            case .appWindows, .webPage:
+                return nil
+            }
+        }
+    }
+
     static func captureWindow(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
         let outcome = await WindowPicker.pick(from: ScreenshotEngine.pickableWindows(in: content))
         switch outcome {
@@ -219,23 +244,27 @@ enum ImageCaptureFlow {
             if picked.kind == .popup {
                 return try await capturePopup(picked.window, content: content)
             }
-            let window = picked.window
-            let source = windowSource(window)
-            let settings = CaptureSettings.current(for: source.bundleIdentifier)
-            let image = try await ScreenshotEngine.captureWindow(window, includesShadow: settings.includesWindowShadow)
-            let scale = max(1, (CGFloat(image.width) / max(1, window.frame.width)).rounded())
-            return CapturedImage(
-                image: settings.blursPrivateApps ? PrivacyFilter.redactWindow(image, window: window, scale: scale) : image,
-                suffix: window.owningApplication?.applicationName ?? "window",
-                isWindow: true,
-                pointScale: scale,
-                source: source
-            )
+            CaptureAgain.remember(.window(windowID: picked.window.windowID, bundleID: picked.window.owningApplication?.bundleIdentifier, title: picked.window.title))
+            return try await captureWindowImage(picked.window)
         case .switchToRegion:
             return try await captureRegion(content: content, delay: delay)
         case .cancelled:
             return nil
         }
+    }
+
+    static func captureWindowImage(_ window: SCWindow) async throws -> CapturedImage? {
+        let source = windowSource(window)
+        let settings = CaptureSettings.current(for: source.bundleIdentifier)
+        let image = try await ScreenshotEngine.captureWindow(window, includesShadow: settings.includesWindowShadow)
+        let scale = max(1, (CGFloat(image.width) / max(1, window.frame.width)).rounded())
+        return CapturedImage(
+            image: settings.blursPrivateApps ? PrivacyFilter.redactWindow(image, window: window, scale: scale) : image,
+            suffix: window.owningApplication?.applicationName ?? "window",
+            isWindow: true,
+            pointScale: scale,
+            source: source
+        )
     }
 
     static let menuCaptureCountdown = 3
@@ -298,6 +327,7 @@ enum ImageCaptureFlow {
 
     static func captureScreen(screen: NSScreen, content: SCShareableContent) async throws -> CapturedImage? {
         guard let displayID = screen.displayID else { throw CaptureError.displayNotFound }
+        CaptureAgain.remember(.screen(displayID: displayID))
         return try await captureDisplayImage(displayID: displayID, region: nil, content: content, suffix: screen.captureSuffix)
     }
 

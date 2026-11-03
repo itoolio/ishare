@@ -114,6 +114,9 @@ extension AppCommand {
                 id: "capture.replay", title: "Screenshot Replay…", keywords: ["replay", "rewind", "missed", "past", "moment"], symbol: "clock.arrow.circlepath",
                 perform: afterDismissing { ScreenshotReplay.shared.open() }),
             AppCommand(
+                id: "capture.again", title: "Capture Again", keywords: ["repeat", "same", "last", "redo"], symbol: "arrow.clockwise",
+                perform: afterDismissing { await CaptureAgain.run() }),
+            AppCommand(
                 id: "capture.allDisplays", title: "Capture All Displays", keywords: ["screens", "monitors", "displays", "everything", "stitch"],
                 symbol: "rectangle.on.rectangle",
                 perform: afterDismissing { await CaptureSession.captureImage(.ALL_DISPLAYS) }),
