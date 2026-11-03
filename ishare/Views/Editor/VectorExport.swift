@@ -244,6 +244,21 @@ enum SVGExporter {
             guard rect.width >= 1, rect.height >= 1, let image = stamp.image(size: min(rect.width, rect.height), color: annotation.color) else { return [] }
             let target = Stamp.fittedRect(for: image.size, in: rect)
             return imageElement(rasterized(image, size: target.size), in: target).map { [$0] } ?? []
+        case let .library(rect, shape, text):
+            let data = LibraryShape.svgPathData(shape.path(in: rect)) { number($0) }
+            let paint =
+                annotation.filled && shape.isClosed
+                ? #"\#(fill(annotation.color)) stroke="none""#
+                : stroke(annotation.color, width: annotation.lineWidth, cap: "round", dash: nil)
+            var elements = [#"<path d="\#(data)" \#(paint)/>"#]
+            if shape.holdsText, !text.isEmpty {
+                let area = shape.textRect(in: rect)
+                let size = AnnotationRenderer.textSize(text, fontSize: annotation.fontSize)
+                let origin = CGPoint(x: area.midX - size.width / 2, y: area.midY - size.height / 2)
+                elements.append(
+                    textElement(text, origin: origin, fontSize: annotation.fontSize, color: annotation.filled ? annotation.color.contrastingText : annotation.color))
+            }
+            return elements
         case .blur, .pixelate, .eraser, .spotlight:
             return []
         }

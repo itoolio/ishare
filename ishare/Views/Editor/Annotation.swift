@@ -67,6 +67,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
     case eraser
     case cursor
     case measure
+    case shapes
     case crop
 
     var id: Self { self }
@@ -100,6 +101,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .eraser: "eraser"
         case .cursor: "cursorarrow.rays"
         case .measure: "ruler"
+        case .shapes: "square.on.circle"
         case .crop: "crop"
         }
     }
@@ -125,6 +127,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .eraser: "Smart Eraser"
         case .cursor: "Cursor"
         case .measure: "Measure"
+        case .shapes: "Shapes"
         case .crop: "Crop"
         }
     }
@@ -150,6 +153,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .eraser: "e"
         case .cursor: "u"
         case .measure: "d"
+        case .shapes: "q"
         case .crop: "c"
         }
     }
@@ -200,6 +204,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
         case cursor(CGPoint)
         case stamp(CGRect, Stamp)
         case measure(CGPoint, CGPoint)
+        case library(CGRect, LibraryShape, String)
     }
 
     var id = UUID()
@@ -252,7 +257,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
             ScreenGeometry.rect(from: start, to: end).insetBy(dx: -fontSize, dy: -fontSize)
         case let .curvedArrow(start, control, end), let .curvedLine(start, control, end):
             QuadraticCurve(start: start, control: control, end: end).boundingBox.insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
-        case let .stamp(rect, _):
+        case let .stamp(rect, _), let .library(rect, _, _):
             rect
         case let .rectangle(rect), let .ellipse(rect), let .highlight(rect), let .blur(rect), let .pixelate(rect),
             let .magnify(rect), let .spotlight(rect), let .eraser(rect):
@@ -303,6 +308,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
             case let .curvedArrow(start, control, end): .curvedArrow(move(start), move(control), move(end))
             case let .curvedLine(start, control, end): .curvedLine(move(start), move(control), move(end))
             case let .stamp(rect, stamp): .stamp(move(rect), stamp)
+            case let .library(rect, shape, text): .library(move(rect), shape, text)
             case let .rectangle(rect): .rectangle(move(rect))
             case let .ellipse(rect): .ellipse(move(rect))
             case let .highlight(rect): .highlight(move(rect))

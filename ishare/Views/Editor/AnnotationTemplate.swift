@@ -55,6 +55,7 @@ extension Annotation {
             case let .eraser(bounds): .eraser(rect(bounds))
             case let .magnify(bounds): .magnify(mapping.square(bounds))
             case let .stamp(bounds, stamp): .stamp(mapping.square(bounds), stamp)
+            case let .library(bounds, shape, text): .library(rect(bounds), shape, text)
             case let .pen(points): .pen(points.map(point))
             case let .marker(points): .marker(points.map(point))
             case let .text(origin, string): .text(point(origin), string)

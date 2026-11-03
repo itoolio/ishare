@@ -38,6 +38,7 @@ final class EditorDocument: ObservableObject {
     @Published var filled = false
     @Published var textBackground = false
     @Published var selectedIDs: Set<UUID> = []
+    @Published var libraryShape: LibraryShape = .roundBubble
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
     @Published var editingText: TextEdit?
@@ -542,6 +543,11 @@ final class EditorDocument: ObservableObject {
                 replace(existing)
                 return
             }
+            if case let .library(rect, shape, _) = existing.shape {
+                existing.shape = .library(rect, shape, trimmed)
+                replace(existing)
+                return
+            }
             if trimmed.isEmpty {
                 commit { annotations.removeAll { $0.id == replacing } }
             } else {
@@ -561,6 +567,7 @@ final class EditorDocument: ObservableObject {
             case .arrow: arrowPath == .curved ? .curvedArrow(start, ArrowGeometry.defaultControl(from: start, to: end), end) : .arrow(start, end)
             case .line: .line(start, end)
             case .measure: .measure(start, end)
+            case .shapes: .library(rect, libraryShape, libraryShape == .keycap ? "⌘" : "")
             case .rectangle: .rectangle(rect)
             case .ellipse: .ellipse(rect)
             case .highlight: .highlight(rect)

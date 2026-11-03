@@ -145,6 +145,8 @@ enum AnnotationRenderer {
             context.strokePath()
         case let .stamp(rect, stamp):
             drawStamp(stamp, in: rect, color: annotation.color, context: context)
+        case let .library(rect, shape, text):
+            drawLibraryShape(shape, in: rect, text: text, annotation: annotation, in: context)
         case let .rectangle(rect):
             let path = CGPath(roundedRect: rect, cornerWidth: min(6, rect.width / 2), cornerHeight: min(6, rect.height / 2), transform: nil)
             context.addPath(path)
@@ -376,6 +378,20 @@ enum AnnotationRenderer {
             attributes[.shadow] = textShadow
         }
         return attributes
+    }
+
+    static func drawLibraryShape(_ shape: LibraryShape, in rect: CGRect, text: String, annotation: Annotation, in context: CGContext) {
+        context.addPath(shape.path(in: rect))
+        if annotation.filled, shape.isClosed {
+            context.fillPath()
+        } else {
+            context.strokePath()
+        }
+        guard shape.holdsText, !text.isEmpty else { return }
+        let area = shape.textRect(in: rect)
+        let size = textSize(text, fontSize: annotation.fontSize)
+        let color = annotation.filled ? annotation.color.contrastingText : annotation.color
+        drawText(text, at: CGPoint(x: area.midX - size.width / 2, y: area.midY - size.height / 2), fontSize: annotation.fontSize, color: color, shadow: false, in: context)
     }
 
     static var measurementPointScale: CGFloat {

@@ -573,6 +573,8 @@ struct EditorCanvas: View {
                 document.editingText = .init(origin: origin, text: text, replacing: existing.id)
             } else if let existing = document.annotation(at: end, tolerance: tolerance), case let .callout(_, rect, text) = existing.shape {
                 document.editingText = .init(origin: AnnotationRenderer.calloutTextOrigin(for: rect, fontSize: existing.fontSize), text: text, replacing: existing.id)
+            } else if let existing = document.annotation(at: end, tolerance: tolerance), case let .library(rect, shape, text) = existing.shape, shape.holdsText {
+                document.editingText = .init(origin: shape.textRect(in: rect).origin, text: text, replacing: existing.id)
             } else {
                 document.beginText(at: end)
             }
@@ -580,6 +582,16 @@ struct EditorCanvas: View {
             document.add(Annotation(shape: .step(end, document.nextStepNumber), color: document.color, lineWidth: document.lineWidth, fontSize: document.fontSize))
         case .cursor:
             document.add(Annotation(shape: .cursor(end), color: document.color, lineWidth: document.lineWidth, fontSize: document.fontSize))
+        case .shapes:
+            if let draft = document.makeAnnotation(tool: .shapes, from: start, to: end, points: []), document.isSubstantial(draft),
+                case let .library(rect, shape, text) = draft.shape
+            {
+                document.add(draft)
+                if shape.holdsText {
+                    document.editingText = .init(origin: shape.textRect(in: rect).origin, text: text, replacing: draft.id)
+                }
+            }
+            document.draft = nil
         case .callout:
             if let draft = document.makeAnnotation(tool: .callout, from: start, to: end, points: []), document.isSubstantial(draft),
                 case let .callout(_, rect, _) = draft.shape

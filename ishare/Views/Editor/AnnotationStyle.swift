@@ -72,6 +72,7 @@ extension Annotation {
         case .arrow, .curvedArrow: [.color, .lineWidth, .arrowHead, .dash]
         case .line, .curvedLine: [.color, .lineWidth, .dash]
         case .measure: [.color, .lineWidth, .fontSize]
+        case .library: [.color, .lineWidth, .fontSize, .fill]
         case .rectangle, .ellipse: [.color, .lineWidth, .fill, .dash]
         case .pen, .marker: [.color, .lineWidth]
         case .magnify: [.color, .lineWidth]
