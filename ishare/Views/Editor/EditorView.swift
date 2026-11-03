@@ -458,6 +458,10 @@ struct EditorView: View {
                 Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }
             }
             .disabled(document.isProcessing)
+            Button("Describe an Annotation…".localized()) {
+                AnnotationFromText.prompt(for: document)
+            }
+            .disabled(document.isProcessing)
             Button("Review Redactions…".localized()) {
                 redactionReviewAction = nil
                 showsRedactionReview = true

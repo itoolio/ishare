@@ -203,3 +203,22 @@ struct RedactionReviewTests {
         #expect(EditorDocument.reviewRect(for: CGRect(x: 0, y: 0, width: 10, height: 10), in: document.imageBounds).minX == 0)
     }
 }
+
+@MainActor
+struct AnnotationFromTextTests {
+    @Test func resolvesRequestsWithoutTheModel() async {
+        let result = await AnnotationFromText.resolve("box around Export", labels: ["File", "Export…", "Share"])
+        #expect(result?.0 == .rectangle)
+        #expect(result?.1 == 1)
+    }
+
+    @Test func placesEachKindAroundTheTarget() throws {
+        let image = try #require(ScreenshotMode.sampleImage(size: CGSize(width: 800, height: 600), hue: 0.3, title: "Text"))
+        let document = EditorDocument(image: image, fileURL: nil)
+        let target = CGRect(x: 600, y: 500, width: 100, height: 30)
+        for kind in AnnotationCommandKind.allCases {
+            let annotation = AnnotationFromText.makeAnnotation(kind, around: target, document: document)
+            #expect(annotation.bounds.intersects(target.insetBy(dx: -20, dy: -20)) || kind == .arrow)
+        }
+    }
+}
