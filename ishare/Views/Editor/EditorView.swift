@@ -364,8 +364,44 @@ struct EditorView: View {
             .popover(isPresented: $showsAdjustments, arrowEdge: .top) {
                 EditorAdjustPanel(document: document)
             }
+            arrangeMenu
+            EditorGridMenu()
             imageActionsMenu
         }
+    }
+
+    private var arrangeMenu: some View {
+        Menu {
+            Section("Align".localized()) {
+                ForEach(AlignmentEdge.allCases, id: \.self) { edge in
+                    Button {
+                        document.align(edge)
+                    } label: {
+                        Label(edge.title, systemImage: edge.symbol)
+                    }
+                }
+            }
+            Section("Distribute".localized()) {
+                Button {
+                    document.distribute(.horizontal)
+                } label: {
+                    Label("Distribute Horizontally".localized(), systemImage: "distribute.horizontal.center")
+                }
+                Button {
+                    document.distribute(.vertical)
+                } label: {
+                    Label("Distribute Vertically".localized(), systemImage: "distribute.vertical.center")
+                }
+            }
+            .disabled(document.arrangeableIDs.count < 3)
+        } label: {
+            Image(systemName: "align.horizontal.left")
+        }
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .disabled(document.arrangeableIDs.isEmpty)
+        .helpAndAccessibilityLabel("Arrange".localized())
+        .accessibilityIdentifier("editor.arrange")
     }
 
     private var imageActionsMenu: some View {
@@ -523,5 +559,57 @@ struct ZoomControls: View {
                 .accessibilityIdentifier("editor.zoom.actual")
         }
         .fixedSize()
+    }
+}
+
+extension AlignmentEdge {
+    var title: String {
+        switch self {
+        case .left: "Align Left Edges".localized()
+        case .horizontalCenter: "Align Centers Horizontally".localized()
+        case .right: "Align Right Edges".localized()
+        case .top: "Align Top Edges".localized()
+        case .verticalCenter: "Align Centers Vertically".localized()
+        case .bottom: "Align Bottom Edges".localized()
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .left: "align.horizontal.left"
+        case .horizontalCenter: "align.horizontal.center"
+        case .right: "align.horizontal.right"
+        case .top: "align.vertical.top"
+        case .verticalCenter: "align.vertical.center"
+        case .bottom: "align.vertical.bottom"
+        }
+    }
+}
+
+struct EditorGridMenu: View {
+    @Default(.editorShowsGrid) private var showsGrid
+    @Default(.editorSnapsToGrid) private var snapsToGrid
+    @Default(.editorGridSpacing) private var spacing
+    @Default(.editorShowsRulers) private var showsRulers
+
+    var body: some View {
+        Menu {
+            Toggle("Show Grid".localized(), isOn: $showsGrid)
+            Toggle("Snap to Grid".localized(), isOn: $snapsToGrid)
+                .disabled(!showsGrid)
+            Picker("Grid Spacing".localized(), selection: $spacing) {
+                ForEach(EditorGrid.spacingChoices, id: \.self) { value in
+                    Text(verbatim: "\(value) px").tag(value)
+                }
+            }
+            Divider()
+            Toggle("Show Rulers".localized(), isOn: $showsRulers)
+        } label: {
+            Image(systemName: "grid")
+        }
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .helpAndAccessibilityLabel("Grid and Rulers".localized())
+        .accessibilityIdentifier("editor.grid")
     }
 }

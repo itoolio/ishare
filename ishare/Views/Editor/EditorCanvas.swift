@@ -1,4 +1,5 @@
 import AppKit
+import Defaults
 import ishareCore
 import SwiftUI
 
@@ -30,14 +31,22 @@ struct EditorCanvas: View {
     @State private var drawingSnapTarget: CGRect?
     @State private var textHighlightDrafts: [Annotation] = []
     @StateObject private var effectPreview = LiveEffectPreview()
+    @Default(.editorShowsGrid) private var showsGrid
+    @Default(.editorSnapsToGrid) private var snapsToGridSetting
+    @Default(.editorGridSpacing) private var gridSpacing
+    @Default(.editorShowsRulers) private var showsRulers
+    @State private var rulerPointer: CGPoint?
     @FocusState private var textFocused: Bool
 
     var body: some View {
         GeometryReader { geometry in
             let transform = viewport.transform
             ZStack(alignment: .topLeading) {
-                Canvas { context, _ in
+                Canvas { context, size in
                     draw(in: &context, transform: transform)
+                    if showsRulers {
+                        drawRulers(in: &context, size: size, transform: transform)
+                    }
                 }
                 .background(CanvasEventMonitor(onScroll: handleScroll, onSpace: handleSpace, onContextMenu: { contextMenu(at: $0) }))
                 .contentShape(Rectangle())
@@ -46,10 +55,14 @@ struct EditorCanvas: View {
                 .onContinuousHover { phase in
                     if case let .active(location) = phase {
                         viewport.pointerLocation = location
+                        if showsRulers {
+                            rulerPointer = location
+                        }
                         cursor(at: location, transform: transform).set()
                         updateHoverSnapTarget(at: location, transform: transform)
                     } else {
                         viewport.pointerLocation = nil
+                        rulerPointer = nil
                         hoverSnapTarget = nil
                         NSCursor.arrow.set()
                     }
@@ -135,6 +148,9 @@ struct EditorCanvas: View {
             cg.concatenate(transform.cgTransform)
             AnnotationRenderer.draw(annotations, in: cg, source: nil, canvasSize: document.imageSize)
         }
+        if showsGrid {
+            drawGrid(in: &clipped, transform: transform)
+        }
         if let snapOutline = interaction == nil ? hoverSnapTarget : drawingSnapTarget {
             drawSnapOutline(snapOutline, in: &context, transform: transform)
         }
@@ -146,6 +162,79 @@ struct EditorCanvas: View {
                 drawSelection(of: annotation, showsHandles: selected.count == 1 && !annotation.locked, in: &context, transform: transform)
             }
         }
+    }
+
+    private var grid: EditorGrid {
+        EditorGrid(spacing: CGFloat(gridSpacing))
+    }
+
+    private var snapsToGrid: Bool {
+        showsGrid && snapsToGridSetting && !NSEvent.modifierFlags.contains(.command)
+    }
+
+    private func drawGrid(in context: inout GraphicsContext, transform: CanvasTransform) {
+        let visible = transform.visibleRect
+        let lines = grid.lines(in: visible, scale: transform.scale)
+        var path = Path()
+        for x in lines.vertical {
+            path.move(to: transform.toView(CGPoint(x: x, y: visible.minY)))
+            path.addLine(to: transform.toView(CGPoint(x: x, y: visible.maxY)))
+        }
+        for y in lines.horizontal {
+            path.move(to: transform.toView(CGPoint(x: visible.minX, y: y)))
+            path.addLine(to: transform.toView(CGPoint(x: visible.maxX, y: y)))
+        }
+        context.stroke(path, with: .color(.accentColor.opacity(0.28)), lineWidth: 0.5)
+    }
+
+    private func drawRulers(in context: inout GraphicsContext, size: CGSize, transform: CanvasTransform) {
+        let thickness: CGFloat = 18
+        let background = Color(nsColor: .windowBackgroundColor).opacity(0.92)
+        context.fill(Path(CGRect(x: 0, y: 0, width: size.width, height: thickness)), with: .color(background))
+        context.fill(Path(CGRect(x: 0, y: 0, width: thickness, height: size.height)), with: .color(background))
+        let topLeft = transform.toImage(CGPoint(x: thickness, y: thickness))
+        let bottomRight = transform.toImage(CGPoint(x: size.width, y: size.height))
+        var ticks = Path()
+        for tick in Ruler.ticks(from: topLeft.x, to: bottomRight.x, scale: transform.scale) {
+            let x = transform.toView(CGPoint(x: tick.position, y: 0)).x
+            ticks.move(to: CGPoint(x: x, y: thickness))
+            ticks.addLine(to: CGPoint(x: x, y: thickness - (tick.isMajor ? thickness : 4)))
+            if let label = tick.label {
+                context.draw(Text(label).font(.system(size: 8).monospacedDigit()).foregroundStyle(.secondary), at: CGPoint(x: x + 2, y: 1), anchor: .topLeading)
+            }
+        }
+        for tick in Ruler.ticks(from: topLeft.y, to: bottomRight.y, scale: transform.scale) {
+            let y = transform.toView(CGPoint(x: 0, y: tick.position)).y
+            ticks.move(to: CGPoint(x: thickness, y: y))
+            ticks.addLine(to: CGPoint(x: thickness - (tick.isMajor ? thickness : 4), y: y))
+            if let label = tick.label {
+                var rotated = context
+                rotated.translateBy(x: 1, y: y + 2)
+                rotated.rotate(by: .degrees(90))
+                rotated.draw(Text(label).font(.system(size: 8).monospacedDigit()).foregroundStyle(.secondary), at: .zero, anchor: .bottomLeading)
+            }
+        }
+        context.stroke(ticks, with: .color(.secondary.opacity(0.7)), lineWidth: 0.5)
+        if let pointer = rulerPointer {
+            var markers = Path()
+            markers.move(to: CGPoint(x: pointer.x, y: 0))
+            markers.addLine(to: CGPoint(x: pointer.x, y: thickness))
+            markers.move(to: CGPoint(x: 0, y: pointer.y))
+            markers.addLine(to: CGPoint(x: thickness, y: pointer.y))
+            context.stroke(markers, with: .color(.accentColor), lineWidth: 1)
+        }
+        context.fill(Path(CGRect(x: 0, y: 0, width: thickness, height: thickness)), with: .color(background))
+    }
+
+    private func movingBounds(_ ids: Set<UUID>) -> CGRect? {
+        let rects = document.annotations.filter { ids.contains($0.id) }.map(\.bounds)
+        guard let first = rects.first else { return nil }
+        return rects.dropFirst().reduce(first) { $0.union($1) }
+    }
+
+    private func gridSnapped(_ start: CGPoint, _ end: CGPoint) -> (start: CGPoint, end: CGPoint) {
+        guard snapsToGrid else { return (start, end) }
+        return (grid.snap(start), grid.snap(end))
     }
 
     private func drawSnapOutline(_ rect: CGRect, in context: inout GraphicsContext, transform: CanvasTransform) {
@@ -221,12 +310,12 @@ struct EditorCanvas: View {
     private func snapped(from start: CGPoint, to end: CGPoint) -> (start: CGPoint, end: CGPoint) {
         guard snapsShapes, !document.snapTargets.isEmpty else {
             drawingSnapTarget = nil
-            return (start, end)
+            return gridSnapped(start, end)
         }
         let threshold = viewport.transform.toImage(SmartShapes.snapDistance)
         let corners = SmartShapes.snappedCorners(from: start, to: end, targets: document.snapTargets, threshold: threshold)
         drawingSnapTarget = SmartShapes.matchedTarget(for: ScreenGeometry.rect(from: corners.start, to: corners.end), in: document.snapTargets)
-        return corners
+        return drawingSnapTarget == nil ? gridSnapped(corners.start, corners.end) : corners
     }
 
     private func drawSelection(of annotation: Annotation, showsHandles: Bool, in context: inout GraphicsContext, transform: CanvasTransform) {
@@ -500,6 +589,9 @@ struct EditorCanvas: View {
         switch interaction {
         case let .moving(ids):
             moveOffset = CGVector(dx: current.x - start.x, dy: current.y - start.y)
+            if snapsToGrid, let bounds = movingBounds(ids) {
+                moveOffset = grid.offsetSnapping(bounds, movedBy: moveOffset)
+            }
             if effectPreview.isActive, let id = ids.first, let moving = document.annotations.first(where: { $0.id == id }) {
                 effectPreview.update(moving.offset(by: moveOffset))
             }
