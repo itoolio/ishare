@@ -343,6 +343,25 @@ final class EditorDocument: ObservableObject {
         selectedIDs = Set(overlays.map(\.id))
     }
 
+    func setWindowShadow(_ style: WindowShadowStyle) async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        let image = adjustedBase
+        let scale = pointScale
+        guard let result = await BlockingWork.run({ WindowShadowEditor.apply(style, to: image, scale: scale) }) else {
+            BezelNotification.show(messageText: "This image has no window shadow".localized(), icon: ToastIcon)
+            return
+        }
+        commit {
+            base = result
+            adjustments = .identity
+            annotations = []
+            crop = nil
+        }
+    }
+
     func blurBackground(strength: Double) async {
         commitPendingEdits()
         guard !isProcessing else { return }

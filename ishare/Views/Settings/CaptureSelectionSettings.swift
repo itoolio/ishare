@@ -10,6 +10,7 @@ struct CaptureSelectionSettings: View {
     @Default(.menuCaptureIncludesParentWindow) var includesParentWindow
     @Default(.snapSelectionToEdges) var snapsToEdges
     @Default(.snapSelectionToElements) var snapsToElements
+    @Default(.pixelExactSelection) var pixelExact
 
     var body: some View {
         Section {
@@ -43,6 +44,8 @@ struct CaptureSelectionSettings: View {
             Toggle("Snap the selection to window edges".localized(), isOn: $snapsToEdges)
             Toggle("Also snap to buttons, text and panels".localized(), isOn: $snapsToElements)
                 .disabled(!snapsToEdges)
+            Toggle("Select whole device pixels".localized(), isOn: $pixelExact)
+                .help("On Retina displays, selections and arrow-key nudges move by single pixels instead of points, for crisp interface captures.".localized())
             Picker("Multiple regions".localized(), selection: $multiRegionResult) {
                 Text("Combine into one image".localized()).tag(MultiRegionResult.combined)
                 Text("Save as separate captures".localized()).tag(MultiRegionResult.separate)

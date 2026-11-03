@@ -18,6 +18,7 @@ extension Defaults.Keys {
     static let lastCaptureRecipe = Key<CaptureRecipe?>("lastCaptureRecipe", default: nil, suite: .ishare)
     static let appWindowsResult = Key<AppWindowsResult>("appWindowsResult", default: .separate, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let trimBorderPadding = Key<Int>("trimBorderPadding", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let pixelExactSelection = Key<Bool>("pixelExactSelection", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let snapSelectionToEdges = Key<Bool>("snapSelectionToEdges", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let snapSelectionToElements = Key<Bool>("snapSelectionToElements", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showSelectionGuides = Key<Bool>("showSelectionGuides", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

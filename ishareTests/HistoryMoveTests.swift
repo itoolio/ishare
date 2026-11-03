@@ -145,3 +145,26 @@ struct BufferingIconTests {
         #expect(icon.accessibilityDescription?.isEmpty == false)
     }
 }
+
+struct WindowShadowEditorTests {
+    func shadowedWindow() -> CGImage {
+        let context = CGContext(
+            data: nil, width: 200, height: 150, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        context.setShadow(offset: CGSize(width: 0, height: -6), blur: 20, color: CGColor(gray: 0, alpha: 0.5))
+        context.setFillColor(CGColor(red: 0.2, green: 0.5, blue: 0.9, alpha: 1))
+        context.fill(CGRect(x: 40, y: 30, width: 120, height: 90))
+        return context.makeImage()!
+    }
+
+    @Test func removesTheShadowAroundAWindow() throws {
+        let removed = try #require(WindowShadowEditor.apply(.none, to: shadowedWindow()))
+        #expect(removed.width == 120)
+        #expect(removed.height == 90)
+    }
+
+    @Test func addsANewShadowWithRoomForIt() throws {
+        let soft = try #require(WindowShadowEditor.apply(.soft, to: shadowedWindow(), scale: 1))
+        #expect(soft.width == 120 + Int(WindowShadowStyle.soft.padding * 2))
+    }
+}

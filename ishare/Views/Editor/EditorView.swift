@@ -416,6 +416,12 @@ struct EditorView: View {
                 Task { await document.liftSubject() }
             }
             .disabled(document.isProcessing)
+            Menu("Window Shadow".localized()) {
+                Button("Remove Shadow".localized()) { Task { await document.setWindowShadow(.none) } }
+                Button("Soft Shadow".localized()) { Task { await document.setWindowShadow(.soft) } }
+                Button("Strong Shadow".localized()) { Task { await document.setWindowShadow(.strong) } }
+            }
+            .disabled(document.isProcessing)
             Menu("Blur Background".localized()) {
                 Button("Soft".localized()) { Task { await document.blurBackground(strength: 0.5) } }
                 Button("Medium".localized()) { Task { await document.blurBackground(strength: 1) } }
