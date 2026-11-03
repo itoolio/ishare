@@ -35,11 +35,11 @@ enum ExternalUpload {
         return nil
     }
 
-    static func upload(_ payload: ExternalUploadPayload) async {
+    static func upload(_ payload: ExternalUploadPayload, target: UploadTarget? = nil) async {
         switch payload {
         case let .files(urls):
             for url in urls {
-                await upload(fileURL: url)
+                await upload(fileURL: url, target: target)
             }
         case let .imageData(data):
             let url = FileManager.default.temporaryDirectory.appending(
@@ -51,19 +51,19 @@ enum ExternalUpload {
                 Log.upload.error("Writing the dropped image failed: \(error.localizedDescription, privacy: .public)")
                 return
             }
-            await upload(fileURL: url, keepsLocalCopy: false)
+            await upload(fileURL: url, keepsLocalCopy: false, target: target)
             try? FileManager.default.removeItem(at: url)
         }
     }
 
-    static func upload(fileURL: URL, keepsLocalCopy: Bool = true) async {
+    static func upload(fileURL: URL, keepsLocalCopy: Bool = true, target: UploadTarget? = nil) async {
         let scoped = fileURL.startAccessingSecurityScopedResource()
         defer { if scoped { fileURL.stopAccessingSecurityScopedResource() } }
         if FolderArchive.isFolder(fileURL) {
             do {
                 let archive = try await FolderArchive.zipped(fileURL)
                 defer { FolderArchive.discard(archive) }
-                await upload(fileURL: archive, keepsLocalCopy: false)
+                await upload(fileURL: archive, keepsLocalCopy: false, target: target)
             } catch {
                 Log.upload.error("Zipping \(fileURL.lastPathComponent, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
             }
@@ -74,7 +74,7 @@ enum ExternalUpload {
             await showToast(fileURL: fileURL, awaitingUpload: true)
         }
         await UploadOrigin.$current.withValue(.imported) {
-            _ = await UploadCoordinator.upload(fileURL: fileURL, localFileURL: keepsLocalCopy ? fileURL : nil)
+            _ = await UploadCoordinator.upload(fileURL: fileURL, target: target, localFileURL: keepsLocalCopy ? fileURL : nil)
         }
         if !keepsLocalCopy {
             await toast.value

@@ -32,6 +32,7 @@ extension Defaults.Keys {
     static let scriptHookPath = Key<String?>("scriptHookPath", default: nil, suite: .ishare)
     static let scriptHookAfterCapture = Key<Bool>("scriptHookAfterCapture", default: true, suite: .ishare)
     static let scriptHookAfterUpload = Key<Bool>("scriptHookAfterUpload", default: true, suite: .ishare)
+    static let dropAsksForUploader = Key<Bool>("dropAsksForUploader", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showsUploadProgressHUD = Key<Bool>("showsUploadProgressHUD", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let optimizeImagesBeforeUpload = Key<Bool>("optimizeImagesBeforeUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let imageOptimizationFormat = Key<ImageOptimizationFormat>("imageOptimizationFormat", default: .lossless, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
