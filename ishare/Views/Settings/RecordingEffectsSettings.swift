@@ -7,6 +7,7 @@ struct RecordingEffectsSettings: View {
     var body: some View {
         Group {
             AutoZoomSettingsSection()
+            WindowSpotlightSettingsSection()
             PointerEffectsSettingsSection()
             LiveDrawingSettingsSection()
             RecordingLimitsSettingsSection()
@@ -64,6 +65,31 @@ private struct AutoZoomSettingsSection: View {
 
     static func seconds(_ value: Double) -> String {
         String(format: "%.1f s", value)
+    }
+}
+
+private struct WindowSpotlightSettingsSection: View {
+    @Default(.spotlightActiveWindow) private var enabled
+    @Default(.spotlightDimming) private var dimming
+    @Default(.spotlightBlursBackground) private var blursBackground
+
+    var body: some View {
+        Section {
+            Toggle("Spotlight the active window".localized(), isOn: $enabled)
+            if enabled {
+                SliderRow(title: "Dim the rest by", value: $dimming, range: SpotlightStyle.dimmingRange, step: 0.05, format: { "\(Int(($0 * 100).rounded())) %" })
+                Toggle("Blur the rest".localized(), isOn: $blursBackground)
+            }
+        } header: {
+            Text("Window Spotlight".localized())
+        } footer: {
+            Text(
+                "After you stop recording, everything except the window you're working in is dimmed. The spotlight follows focus changes and window moves while you record."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
     }
 }
 
