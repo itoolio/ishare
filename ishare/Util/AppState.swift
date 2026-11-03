@@ -20,6 +20,7 @@ final class AppState: ObservableObject {
             InstantReplay.shared.activate()
             ScreenshotReplay.shared.activate()
             UploadProgressHUD.shared.activate()
+            LocalAPIServer.shared.activate()
         }
     }
 

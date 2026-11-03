@@ -606,3 +606,52 @@ struct LatestUploadCommandTests {
         #expect(!AppCommand.all().map(\.id).contains("history.qr"))
     }
 }
+
+@MainActor
+struct LocalAPIRouterTests {
+    let actions = FakeAutomationActions()
+
+    func request(_ text: String) throws -> LocalAPIRequest {
+        guard case let .complete(request) = LocalAPIRequest.parse(Data(text.utf8)) else { throw CLIArgumentError.missingCommand }
+        return request
+    }
+
+    func status(_ reply: Data) -> String {
+        String(decoding: reply.prefix(12), as: UTF8.self)
+    }
+
+    @Test func runsToolsWithTheToken() async throws {
+        let server = CommandLineServer(mailbox: nil, actions: actions)
+        let capture = try request("POST /v1/capture HTTP/1.1\r\nAuthorization: Bearer secret\r\nContent-Length: 31\r\n\r\n{\"mode\":\"screen\",\"upload\":true}")
+        let reply = await LocalAPIRouter.reply(to: capture, token: "secret", server: server)
+        #expect(status(reply) == "HTTP/1.1 200")
+        #expect(String(decoding: reply, as: UTF8.self).contains("https://example.com/shot.png"))
+        let history = try request("GET /v1/recent_uploads?limit=2 HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n")
+        #expect(status(await LocalAPIRouter.reply(to: history, token: "secret", server: server)) == "HTTP/1.1 200")
+        #expect(actions.calls == ["capture screen upload=true"])
+    }
+
+    @Test func refusesMissingTokensAndUnknownTools() async throws {
+        let server = CommandLineServer(mailbox: nil, actions: actions)
+        #expect(status(await LocalAPIRouter.reply(to: try request("GET /v1/list_uploaders HTTP/1.1\r\n\r\n"), token: "secret", server: server)) == "HTTP/1.1 401")
+        #expect(status(await LocalAPIRouter.reply(to: try request("GET /v1/teleport HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n"), token: "secret", server: server)) == "HTTP/1.1 404")
+        #expect(status(await LocalAPIRouter.reply(to: try request("GET /v1/capture HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n"), token: "secret", server: server)) == "HTTP/1.1 400")
+        #expect(actions.calls.isEmpty)
+    }
+}
+
+struct LocalAPISocketTests {
+    @Test func answersOverTheLoopbackInterface() async throws {
+        let server = LocalAPIServer()
+        server.start(port: 0)
+        defer { server.stop() }
+        var port: UInt16?
+        for _ in 0..<50 where port == nil || port == 0 {
+            try await Task.sleep(for: .milliseconds(20))
+            port = server.boundPort
+        }
+        let bound = try #require(port)
+        let (_, response) = try await URLSession.shared.data(from: try #require(URL(string: "http://127.0.0.1:\(bound)/v1/list_uploaders")))
+        #expect((response as? HTTPURLResponse)?.statusCode == 401)
+    }
+}
