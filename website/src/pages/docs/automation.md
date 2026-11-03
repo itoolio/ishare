@@ -75,6 +75,21 @@ The tool and the app exchange small JSON request and response files in ishare's 
 
 The tools are `capture`, `capture_app`, `upload`, `list_uploaders`, `recent_uploads` and `record`. They answer with the same JSON as `--json`. Region, window, scrolling and menu captures still wait for you to choose what to capture.
 
+## AppleScript
+
+ishare has a scripting dictionary you can open in Script Editor. For example:
+
+```applescript
+tell application "ishare"
+    set link to capture screen uploading true
+    set framed to edit image (POSIX file "/Users/me/Pictures/shot.png") applying device frame in device phone
+    upload {framed}
+    name of every uploader
+end tell
+```
+
+`edit image` beautifies, frames, trims, redacts or lifts the subject of an image and returns the new file, saved next to the original or in the folder given with `saving in`.
+
 ## URL actions
 
 | URL | Action |

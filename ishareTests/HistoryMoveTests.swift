@@ -83,3 +83,26 @@ struct ScriptHookRunnerTests {
         #expect(try String(contentsOf: output, encoding: .utf8) == "upload /tmp/a.png https://x/a.png https://x/a.png\n")
     }
 }
+
+@MainActor
+struct ImageOperationsTests {
+    @Test func trimsIntoANewFileNextToTheOriginal() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "ops-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let input = folder.appending(path: "shot.png")
+        try ImageEncoder.write(TestImages.solid(width: 40, height: 30, color: CaptureColor(red: 1, green: 1, blue: 1)), as: .PNG, to: input)
+        let output = try await ImageOperations.apply(.trim, to: input)
+        #expect(output == folder.appending(path: "shot-trimmed.png"))
+        #expect(FileManager.default.fileExists(atPath: output.path))
+        let again = try await ImageOperations.apply(.trim, to: input)
+        #expect(again.lastPathComponent == "shot-trimmed-2.png")
+    }
+
+    @Test func mapsScriptingCodes() {
+        #expect(ScriptingCodes.imageOperation(ScriptingCodes.fourCharCode("eFrm")) == .frame)
+        #expect(ScriptingCodes.imageOperation(nil) == nil)
+        #expect(ScriptingCodes.deviceFrame(nil) == .laptop)
+        #expect(ScriptingCodes.deviceFrame(ScriptingCodes.fourCharCode("dPho")) == .phone)
+    }
+}
