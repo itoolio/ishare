@@ -562,6 +562,7 @@ final class ScreenRecorder: ObservableObject {
         pointerFollower?.stop()
         pointerFollower = nil
         let result = await captureEngine.stopCapture()
+        let webcamTrack = await webcamBubble.finishTrack()
         hideCaptureOverlays()
         RecordingNotesController.shared.recordingDidStop()
         let overlay = await overlayRecorder.stop()
@@ -570,7 +571,8 @@ final class ScreenRecorder: ObservableObject {
         appAudioRecorder = nil
         let finalPauses = pauses.closed(at: RecordingClock.now)
         sidecar = RecordingSidecar(
-            markers: markerLog.markers, overlay: overlay, effects: effects, recordingStart: captureEngine.startClock.time, appAudio: appAudio, pauses: finalPauses)
+            markers: markerLog.markers, overlay: overlay, effects: effects, recordingStart: captureEngine.startClock.time, appAudio: appAudio, pauses: finalPauses,
+            webcamTrack: webcamTrack)
         markerLog = RecordingMarkerLog()
         stopAudioMetering()
         isRunning = false

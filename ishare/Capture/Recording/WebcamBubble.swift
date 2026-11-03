@@ -127,6 +127,7 @@ final class WebcamBubbleController {
     private var panel: NSPanel?
     private var runner: CaptureSessionRunner?
     private var processedFeed: WebcamProcessedFeed?
+    private var trackRecorder: WebcamFrameRecorder?
     private(set) var isCompositedLater = false
 
     var windowID: CGWindowID? {
@@ -184,13 +185,26 @@ final class WebcamBubbleController {
             }
             runner.session.commitConfiguration()
         }
+        if Defaults[.saveSeparateTracks] {
+            let recorder = WebcamFrameRecorder()
+            if recorder.attach(to: runner.session) {
+                trackRecorder = recorder
+            }
+        }
         panel.orderFrontRegardless()
         runner.start()
         self.runner = runner
         self.panel = panel
     }
 
+    func finishTrack() async -> WebcamFrameRecorder.Clip? {
+        guard let recorder = trackRecorder else { return nil }
+        trackRecorder = nil
+        return await recorder.stop()
+    }
+
     func hide() {
+        trackRecorder = nil
         runner?.stop()
         runner = nil
         processedFeed = nil

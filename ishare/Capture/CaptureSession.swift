@@ -213,6 +213,7 @@ enum CaptureSession {
     }
 
     private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions, sidecar: RecordingSidecar) async {
+        await SeparateTracksExporter.exportIfEnabled(url, sidecar: sidecar)
         await RecordingPostProcessor.mergeAppAudio(url, sidecar: sidecar)
         let deferredZoom = await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
         var fileURL = url

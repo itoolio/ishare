@@ -148,16 +148,32 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var startTime: Double?
     private var lastTime: CMTime = .invalid
     private var isStopped = false
+    private var attachedSession: AVCaptureSession?
+
+    func attach(to session: AVCaptureSession) -> Bool {
+        let output = makeOutput()
+        session.beginConfiguration()
+        defer { session.commitConfiguration() }
+        guard session.canAddOutput(output) else { return false }
+        session.addOutput(output)
+        attachedSession = session
+        return true
+    }
+
+    private func makeOutput() -> AVCaptureVideoDataOutput {
+        let output = AVCaptureVideoDataOutput()
+        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        output.alwaysDiscardsLateVideoFrames = true
+        output.setSampleBufferDelegate(self, queue: queue)
+        return output
+    }
 
     func start(deviceID: String?) async -> Bool {
         guard await CaptureDevices.requestAccess(for: .video),
             let device = CaptureDevices.camera(id: deviceID),
             let deviceInput = try? AVCaptureDeviceInput(device: device)
         else { return false }
-        let output = AVCaptureVideoDataOutput()
-        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-        output.alwaysDiscardsLateVideoFrames = true
-        output.setSampleBufferDelegate(self, queue: queue)
+        let output = makeOutput()
         let session = runner.session
         session.beginConfiguration()
         session.sessionPreset = .high
@@ -173,7 +189,9 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 
     func stop() async -> Clip? {
-        runner.stop()
+        if attachedSession == nil {
+            runner.stop()
+        }
         return await withCheckedContinuation { continuation in
             queue.async { [self] in
                 isStopped = true
@@ -236,7 +254,8 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
         guard writer.startWriting() else { return }
         writer.startSession(atSourceTime: time)
-        let hostTime = CMSyncConvertTime(time, from: runner.session.synchronizationClock ?? CMClockGetHostTimeClock(), to: CMClockGetHostTimeClock())
+        let clock = (attachedSession ?? runner.session).synchronizationClock ?? CMClockGetHostTimeClock()
+        let hostTime = CMSyncConvertTime(time, from: clock, to: CMClockGetHostTimeClock())
         startTime = hostTime.seconds
         self.writer = writer
         self.input = input
