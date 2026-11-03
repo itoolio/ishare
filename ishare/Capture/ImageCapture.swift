@@ -105,10 +105,10 @@ enum ImageCaptureFlow {
         let blursPrivateApps = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
         let loader = SelectionBackdropLoader(
             content: content, blursPrivateApps: blursPrivateApps, mode: SelectionFreezeMode(prefersFrozen: Defaults[.freezeScreenWhileSelecting]))
-        loader.startIfFrozen()
+        let backdrops = await loader.captureBeforeSelectionIfFrozen()
         let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
         let options = RegionSelector.Options(
-            hint: "Select the area to capture".localized(), lastRegions: lastRegions, awaitsBackdrops: loader.mode.loadsBackdrops,
+            backdrops: backdrops, hint: "Select the area to capture".localized(), lastRegions: lastRegions,
             allowsMultipleRegions: allowsMultipleRegions, allowsFreezeToggle: true, freezeMode: loader.mode,
             liveSampler: LiveMagnifierSampler(content: content),
             onFreezeModeChange: { mode in loader.change(to: mode) }

@@ -33,6 +33,17 @@ updates:
           website:
               update-types: [minor, patch]
 
+    - package-ecosystem: npm
+      directory: /integrations/raycast
+      target-branch: dev
+      schedule:
+          interval: weekly
+      commit-message:
+          prefix: build
+      groups:
+          raycast:
+              update-types: [minor, patch]
+
     - package-ecosystem: bundler
       directory: /
       target-branch: dev

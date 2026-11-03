@@ -17,10 +17,13 @@ final class SelectionBackdropLoader {
         self.mode = mode
     }
 
-    func startIfFrozen() {
-        if mode.loadsBackdrops {
-            load()
-        }
+    func captureBeforeSelectionIfFrozen() async -> [CGDirectDisplayID: CGImage] {
+        guard mode.loadsBackdrops else { return [:] }
+        generation += 1
+        let raw = await ScreenshotEngine.backdrops(for: content)
+        let backdrops = blursPrivateApps ? PrivacyFilter.redactBackdrops(raw, content: content) : raw
+        task = Task { backdrops }
+        return backdrops
     }
 
     func change(to mode: SelectionFreezeMode) {
