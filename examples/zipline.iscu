@@ -5,5 +5,9 @@
 		"Authorization": "API_KEY",
 	},
 	"responseURL": "{{files[0].url}}",
-	"fileFormName": "file"
+	"fileFormName": "file",
+	"viewCount": {
+		"url": "https://your-zipline-host.com/api/user/files/{{files[0].id}}",
+		"path": "views"
+	}
 }

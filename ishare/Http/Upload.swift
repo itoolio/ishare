@@ -337,6 +337,7 @@ enum UploadCoordinator {
             originalSize: outcome.savedBytes == nil ? nil : outcome.originalBytes,
             uploadedSize: outcome.savedBytes == nil ? nil : outcome.uploadedBytes
         )
+        item.viewCountUrl = outcome.viewCountURL
         if case let .custom(uploader) = target, item.canDeleteFromServer, item.remoteURL != nil {
             item.expiresAt = UploadExpiry.expiryDate(uploadedAt: now, days: uploader.effectiveAutoDeleteDays)
         }

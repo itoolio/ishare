@@ -1,4 +1,5 @@
 import Foundation
+import ishareCore
 import Testing
 @testable import ishare
 
@@ -49,5 +50,22 @@ struct UploadProgressHUDLayoutTests {
         let centered = UploadProgressHUDLayout.frame(below: nil, on: screen, visible: CGRect(x: 0, y: 0, width: 1440, height: 1040))
         #expect(centered.midX == 720)
         #expect(centered.maxY == 1040 - UploadProgressHUDLayout.gap)
+    }
+}
+
+@MainActor
+struct ViewCountHistoryTests {
+    @Test func storesTheViewCountLinkFromTheUploadResponse() throws {
+        let uploader = CustomUploader(
+            name: "zipline", requestURL: "https://z.example/api/upload", headers: nil, formData: nil, fileFormName: "file",
+            responseURL: "{{files[0].url}}")
+        var withViews = uploader
+        withViews.viewCount = ViewCountSpec(url: "https://z.example/api/user/files/{{files[0].id}}", path: "views")
+        let response = Data(#"{"files": [{"id": "abc", "url": "https://z.example/u/abc.png"}]}"#.utf8)
+        let outcome = try HTTPUploader.outcome(from: response, uploader: withViews)
+        #expect(outcome.viewCountURL == "https://z.example/api/user/files/abc")
+        #expect(try HTTPUploader.outcome(from: response, uploader: uploader).viewCountURL == nil)
+        let item = UploadCoordinator.historyItem(for: outcome, target: .custom(withViews), localFileURL: nil, now: Date())
+        #expect(item.viewCountUrl == "https://z.example/api/user/files/abc")
     }
 }

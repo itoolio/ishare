@@ -81,6 +81,7 @@ struct HistoryGridView: View {
             HistoryExportSheet(request: request) { exportRequest = nil }
         }
         .quickLookPreview($previewURL, in: HistoryPreview.urls(for: filteredHistory))
+        .task { await ViewCounts.refresh(uploadHistory) }
     }
 
     private func togglePreview() {
@@ -343,6 +344,12 @@ struct HistoryCard: View {
                     Text("·")
                     Text(uploaderName)
                         .lineLimit(1)
+                }
+                if let views = item.viewCount {
+                    Spacer(minLength: 2)
+                    Label(ViewCountParser.label(for: views), systemImage: "eye")
+                        .labelStyle(.titleAndIcon)
+                        .help(String(format: "%d views".localized(), views))
                 }
             }
             .font(.system(size: 10))

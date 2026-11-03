@@ -16,6 +16,7 @@ struct UploadOutcome: Sendable, Equatable {
     var originalBytes: Int? = nil
     var uploadedBytes: Int? = nil
     var isReused = false
+    var viewCountURL: String? = nil
 
     var savedBytes: Int? {
         guard let originalBytes, let uploadedBytes, uploadedBytes < originalBytes else { return nil }

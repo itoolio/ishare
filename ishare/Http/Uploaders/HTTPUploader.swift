@@ -68,6 +68,10 @@ struct HTTPUploader: Uploader {
             guard !template.isEmpty else { return nil }
             return try? ResponseTemplate.render(template, data: data)
         }
-        return UploadOutcome(url: url, deletionURL: deletionURL, uploaderID: uploader.id, s3Key: nil)
+        var outcome = UploadOutcome(url: url, deletionURL: deletionURL, uploaderID: uploader.id, s3Key: nil)
+        outcome.viewCountURL = uploader.viewCount.flatMap { spec in
+            spec.url.isEmpty ? nil : try? ResponseTemplate.render(spec.url, data: data)
+        }
+        return outcome
     }
 }
