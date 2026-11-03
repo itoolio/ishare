@@ -1,6 +1,7 @@
 import AppKit
 import Defaults
 import Foundation
+import ImageIO
 import ishareCore
 import Testing
 @testable import ishare
@@ -220,5 +221,18 @@ struct AnnotationFromTextTests {
             let annotation = AnnotationFromText.makeAnnotation(kind, around: target, document: document)
             #expect(annotation.bounds.intersects(target.insetBy(dx: -20, dy: -20)) || kind == .arrow)
         }
+    }
+}
+
+@MainActor
+struct ExportPresetRunnerTests {
+    @Test func encodesAtThePresetSize() throws {
+        let image = try #require(ScreenshotMode.sampleImage(size: CGSize(width: 2000, height: 1000), hue: 0.2, title: "Preset"))
+        let small = ExportPreset.builtIn[3]
+        let data = try ExportPresetRunner.data(for: image, preset: small, pointScale: 2)
+        let source = try #require(CGImageSourceCreateWithData(data as CFData, nil))
+        let decoded = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        #expect(decoded.width == 1000)
+        #expect(CGImageSourceGetType(source) as String? == "public.jpeg")
     }
 }

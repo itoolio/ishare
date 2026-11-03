@@ -13,6 +13,8 @@ extension Defaults.Keys {
     static let combineBackground = Key<BeautifyBackground>("combineBackground", default: .transparent, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let editorToolStyles = Key<[String: AnnotationStyle]>("editorToolStyles", default: [:], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let reviewRedactionsBeforeExport = Key<Bool>("reviewRedactionsBeforeExport", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let exportPresets = Key<[ExportPreset]>("exportPresets", default: ExportPreset.builtIn, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let lastExportPresetID = Key<UUID?>("lastExportPresetID", default: nil, suite: .ishare)
     static let editorKindPreferences = Key<[String: EditorKindPreference]>("editorKindPreferences", default: [:], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let editorShowsGrid = Key<Bool>("editorShowsGrid", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let editorSnapsToGrid = Key<Bool>("editorSnapsToGrid", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)

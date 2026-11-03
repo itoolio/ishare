@@ -546,6 +546,7 @@ struct EditorView: View {
             .keyboardShortcut(.delete, modifiers: .command)
             .accessibilityIdentifier("editor.discard")
             exportMenu
+            ExportPresetButton(document: document, beforeExport: afterReviewingRedactions)
             Button(action: { afterReviewingRedactions(onCopy) }) {
                 Label("Copy".localized(), systemImage: "doc.on.doc")
             }

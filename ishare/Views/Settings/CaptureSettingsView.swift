@@ -61,6 +61,7 @@ struct CaptureSettingsView: View {
                 Toggle("Snap editor shapes to detected elements".localized(), isOn: $editorSmartShapes)
                 Toggle("Review blurred areas before copying or exporting".localized(), isOn: $reviewsRedactions)
             }
+            ExportPresetSettings()
             CaptureSelectionSettings()
             CaptureShelfSettingsSection()
             CaptureExtrasSettings()
