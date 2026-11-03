@@ -171,18 +171,11 @@ struct AnimatedExportTests {
         }
     }
 
-    @Test func exportsWebPOnlyWhenImageIOCanEncodeIt() async throws {
+    @Test func exportsAnimatedWebPWithTheBundledEncoder() async throws {
         let video = try await SyntheticVideo.make(size: CGSize(width: 160, height: 120), seconds: 1, frameRate: 30)
         defer { try? FileManager.default.removeItem(at: video.deletingLastPathComponent()) }
         let settings = RecordingExportSettings(format: .webp, size: .original, gifFrameRate: .fps10)
-        #expect(RecordingExportFormat.webp.isAvailable == AnimatedImageFormat.encodableTypeIdentifiers.contains("org.webmproject.webp"))
-        guard AnimatedImageFormat.webp.isAvailable else {
-            await #expect(throws: AnimatedImageError.self) {
-                _ = try await RecordingConversions.export(video, settings: settings, deletingSource: false)
-            }
-            #expect(!AnimatedImageFormat.unavailableMessage.isEmpty)
-            return
-        }
+        #expect(RecordingExportFormat.webp.isAvailable)
         let output = try await RecordingConversions.export(video, settings: settings, deletingSource: false)
         let image = try source(output)
         #expect(CGImageSourceGetCount(image) == 10)

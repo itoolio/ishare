@@ -21,6 +21,7 @@ enum FileType: String, CaseIterable, Identifiable, Defaults.Serializable {
     case PDF = "pdf"
     case TIFF = "tiff"
     case HEIC = "heic"
+    case WEBP = "webp"
     var id: Self { self }
 }
 

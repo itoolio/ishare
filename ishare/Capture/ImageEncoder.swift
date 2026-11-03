@@ -18,6 +18,7 @@ enum ImageEncoder {
         case .PDF: .pdf
         case .TIFF: .tiff
         case .HEIC: .heic
+        case .WEBP: UTType("org.webmproject.webp") ?? .image
         }
     }
 
@@ -26,6 +27,9 @@ enum ImageEncoder {
         if fileType == .PDF {
             try writePDF(image, consumer: CGDataConsumer(data: output as CFMutableData))
             return output as Data
+        }
+        if fileType == .WEBP {
+            return try WebPEncoder.encode(image)
         }
         guard let destination = CGImageDestinationCreateWithData(output as CFMutableData, contentType(for: fileType).identifier as CFString, 1, nil) else {
             throw ImageEncoderError.destinationUnavailable
