@@ -278,3 +278,18 @@ struct FolderArchiveTests {
         #expect(!FolderArchive.isFolder(archive))
     }
 }
+
+struct RecentUploadFactsTests {
+    @Test func listsHostSizeViewsAndExpiry() {
+        var item = HistoryItem(fileUrl: "https://files.example.com/a.png", date: Date())
+        item.uploadedSize = 2_048_000
+        item.viewCount = 1260
+        item.expiresAt = Date().addingTimeInterval(3 * 86400)
+        let facts = RecentUploadPreview.facts(for: item, fileSize: { _ in nil })
+        #expect(facts.first == "files.example.com")
+        #expect(facts.count == 4)
+        #expect(facts[2].contains("1.3K"))
+        item.keepForever = true
+        #expect(RecentUploadPreview.facts(for: item, fileSize: { _ in nil }).last == "Kept forever")
+    }
+}
