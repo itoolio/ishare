@@ -40,6 +40,7 @@ struct CaptureSettingsView: View {
                 Toggle("Show pointer in screenshots".localized(), isOn: $showsCursor)
                 Toggle("Include window shadow".localized(), isOn: $windowShadow)
                 Toggle("Include sheets, popovers and attached windows".localized(), isOn: $includesChildWindows)
+                    .settingsEntry(NewerSettingsSearch.childWindows)
                 Toggle("Show magnifier while selecting".localized(), isOn: $showMagnifier)
                 Toggle("Keep the last seconds for Screenshot Replay".localized(), isOn: $screenshotReplayEnabled)
                     .help("Keeps a few frames per second of the main display in memory so you can capture a moment that already passed.".localized())
@@ -60,6 +61,7 @@ struct CaptureSettingsView: View {
                 Toggle("Open images as tabs in one editor window".localized(), isOn: $editorOpensInTabs)
                 Toggle("Snap editor shapes to detected elements".localized(), isOn: $editorSmartShapes)
                 Toggle("Review blurred areas before copying or exporting".localized(), isOn: $reviewsRedactions)
+                    .settingsEntry(NewerSettingsSearch.redactionReview)
             }
             ExportPresetSettings()
             CaptureSelectionSettings()

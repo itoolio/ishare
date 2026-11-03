@@ -37,6 +37,7 @@ struct ScriptHookSection: View {
             }
         } header: {
             Text("Script Hook".localized())
+                .settingsEntry(NewerSettingsSearch.scriptHook)
         } footer: {
             Text(
                 "ishare runs the script with the event (capture, recording or upload), the file path and the link as arguments, and as ISHARE_EVENT, ISHARE_FILE and ISHARE_LINK. Scripts that aren’t executable run with zsh. A script is stopped after a minute."

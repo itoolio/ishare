@@ -37,6 +37,7 @@ struct LocalAPISection: View {
             }
         } header: {
             Text("Local API".localized())
+                .settingsEntry(NewerSettingsSearch.localAPI)
         } footer: {
             Text(
                 "Only reachable from this Mac, and only with the token. The endpoints match the MCP tools: GET or POST /v1/capture, /v1/capture_app, /v1/upload, /v1/list_uploaders, /v1/recent_uploads and /v1/record, with the same JSON answers as the command-line tool."

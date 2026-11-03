@@ -141,6 +141,22 @@ struct SettingsView: View {
                     .buttonStyle(SettingsSidebarButtonStyle(isSelected: match.pane == selection))
                     .accessibilityAddTraits(match.pane == selection ? .isSelected : [])
                     .accessibilityIdentifier("settings.pane.\(match.pane.rawValue)")
+                    ForEach(SettingsSearchIndex.hits(for: searchText, in: match.pane), id: \.anchor) { hit in
+                        Button {
+                            select(hit)
+                        } label: {
+                            Text((hit.keyword ?? "").localized())
+                                .font(.caption)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.leading, 40)
+                                .padding(.vertical, 3)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("settings.hit.\(hit.anchor ?? "")")
+                    }
                 }
             }
             .padding(.horizontal, 10)

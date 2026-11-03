@@ -23,6 +23,7 @@ struct WatchFolderSettings: View {
             }
         } header: {
             Text("Watch Folders".localized())
+                .settingsEntry(NewerSettingsSearch.watchFolders)
         } footer: {
             Text("Files that appear in these folders run through each folder’s steps once they finish writing. Existing files are left alone. Undo Last Steps moves the last renamed, moved or trashed file back.".localized())
                 .font(.footnote)

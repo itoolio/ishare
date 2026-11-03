@@ -335,3 +335,14 @@ struct PointerResultHUDLayoutTests {
         #expect(ResultPresentation.pointer.showsToast == false && ResultPresentation.pointer.postsNotification == false)
     }
 }
+
+@MainActor
+struct SettingsSearchHitTests {
+    @Test func listsEachMatchingSettingUnderItsPane() {
+        let hits = SettingsSearchIndex.hits(for: "halo", in: .recording)
+        #expect(hits.map(\.anchor) == ["recording.pointerHighlight"])
+        #expect(SettingsSearchIndex.hits(for: "token", in: .advanced).first?.anchor == "advanced.localAPI")
+        #expect(SettingsSearchIndex.hits(for: "", in: .capture).isEmpty)
+        #expect(SettingsSearchIndex.hits(for: "e", in: .capture).count <= SettingsSearchIndex.maximumHits)
+    }
+}

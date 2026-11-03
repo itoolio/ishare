@@ -98,6 +98,7 @@ private struct WebcamSettingsSection: View {
                     Text("Full screen at each marker".localized()).tag(WebcamLayout.fullScreenAtMarkers)
                 }
                 .help("Side by side and full screen are added after you stop recording; add markers with the marker button or shortcut.".localized())
+                .settingsEntry(NewerSettingsSearch.webcamLayout)
                 Picker("Background".localized(), selection: $webcamBackground) {
                     ForEach(WebcamBackground.allCases) { Text($0.title).tag($0) }
                 }
@@ -177,6 +178,7 @@ private struct AfterRecordingSettingsSection: View {
                 Text("5 s").tag(5)
                 Text("10 s").tag(10)
             }
+            .settingsEntry(NewerSettingsSearch.countdown)
             Toggle("Play a chime when recording starts".localized(), isOn: $chime)
                 .disabled(countdown == 0)
                 .help("The countdown and the chime happen before recording begins, so neither ends up in the video. Press Esc to cancel.".localized())
@@ -185,6 +187,7 @@ private struct AfterRecordingSettingsSection: View {
             Toggle("Trim recordings before saving".localized(), isOn: $trimBeforeSaving)
             Toggle("Also save separate tracks for editing".localized(), isOn: $saveSeparateTracks)
                 .help("Saves the screen, each audio track and the webcam as separate files in a folder next to the recording, for Final Cut Pro, DaVinci Resolve or other editors.".localized())
+                .settingsEntry(NewerSettingsSearch.separateTracks)
             Picker("GIF size".localized(), selection: $gifMaxSize) {
                 ForEach(GIFMaxSize.allCases) { Text($0.title.localized()).tag($0) }
             }
@@ -222,6 +225,7 @@ private struct CaptionsSettingsSection: View {
                     }
                 }
                 .help("Shows what you say at the bottom of full-screen and region recordings, recognized on this Mac.".localized())
+                .settingsEntry(NewerSettingsSearch.liveCaptions)
             if !authorized, SFSpeechRecognizer.authorizationStatus() == .denied || SFSpeechRecognizer.authorizationStatus() == .restricted {
                 PermissionRow(title: "Speech Recognition", granted: false) {
                     SystemSettingsLink.open("Privacy_SpeechRecognition")
@@ -261,6 +265,7 @@ struct AudioSourceSettingsRows: View {
         .accessibilityIdentifier("settings.recording.audioSource")
         Toggle("Keep notification banners out of recordings".localized(), isOn: $hidesNotifications)
             .help("Notification banners and alerts from other apps don’t appear in full-screen and region recordings. Choose Selected apps above to also leave out their sounds.".localized())
+            .settingsEntry(NewerSettingsSearch.notifications)
         if audioSource == .selectedApps {
             LabeledContent("Apps".localized()) {
                 HStack {

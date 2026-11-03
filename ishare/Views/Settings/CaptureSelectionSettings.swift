@@ -42,9 +42,11 @@ struct CaptureSelectionSettings: View {
             }
             Toggle("Freeze the screen while selecting".localized(), isOn: $freezeScreen)
             Toggle("Snap the selection to window edges".localized(), isOn: $snapsToEdges)
+                .settingsEntry(NewerSettingsSearch.snapping)
             Toggle("Also snap to buttons, text and panels".localized(), isOn: $snapsToElements)
                 .disabled(!snapsToEdges)
             Toggle("Select whole device pixels".localized(), isOn: $pixelExact)
+                .settingsEntry(NewerSettingsSearch.pixelExact)
                 .help("On Retina displays, selections and arrow-key nudges move by single pixels instead of points, for crisp interface captures.".localized())
             Picker("Multiple regions".localized(), selection: $multiRegionResult) {
                 Text("Combine into one image".localized()).tag(MultiRegionResult.combined)

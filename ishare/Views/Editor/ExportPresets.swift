@@ -149,6 +149,7 @@ struct ExportPresetSettings: View {
             }
         } header: {
             Text("Editor Export Presets".localized())
+                .settingsEntry(NewerSettingsSearch.exportPresets)
         } footer: {
             Text("The editor’s preset button copies or saves the image with these settings. Leave the longest side empty to keep the full size.".localized())
                 .font(.footnote)

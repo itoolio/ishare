@@ -26,6 +26,7 @@ struct UploadBehaviorSettings: View {
             }
             Toggle("Open URL in browser after upload".localized(), isOn: $openURLAfterUpload)
             Toggle("Show progress below the menu bar icon for long uploads".localized(), isOn: $showsUploadProgressHUD)
+                .settingsEntry(NewerSettingsSearch.progressHUD)
             Picker("Choose destination while holding".localized(), selection: $destinationChooserModifier) {
                 Text("Off".localized()).tag(ForceUploadModifier?.none)
                 ForEach(ForceUploadModifier.allCases) { modifier in

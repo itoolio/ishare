@@ -101,7 +101,25 @@ struct SettingsSearchMatch: Equatable, Sendable {
 
 @MainActor
 enum SettingsSearchIndex {
-    static let entries: [SettingsSearchEntry] = SettingsPane.allCases.flatMap { $0.searchable.searchEntries }
+    static let entries: [SettingsSearchEntry] = SettingsPane.allCases.flatMap { $0.searchable.searchEntries + NewerSettingsSearch.entries(for: $0) }
+
+    static let maximumHits = 4
+
+    static func hits(
+        for query: String, in pane: SettingsPane, entries: [SettingsSearchEntry] = entries, localize: (String) -> String = { $0.localized() }
+    ) -> [SettingsSearchMatch] {
+        let needle = normalized(query)
+        guard !needle.isEmpty else { return [] }
+        var seen = Set<String>()
+        return entries.filter { $0.pane == pane && $0.anchor != nil }.compactMap { entry -> SettingsSearchMatch? in
+            guard let anchor = entry.anchor, seen.insert(anchor).inserted,
+                let keyword = entry.searchTerms.first(where: { contains($0, needle, localize: localize) })
+            else { return nil }
+            _ = keyword
+            return SettingsSearchMatch(pane: pane, keyword: entry.title, anchor: anchor)
+        }
+        .prefix(maximumHits).map { $0 }
+    }
 
     static func normalized(_ text: String) -> String {
         text.folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
