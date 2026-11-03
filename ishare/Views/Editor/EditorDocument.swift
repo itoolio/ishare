@@ -321,6 +321,32 @@ final class EditorDocument: ObservableObject {
         }
     }
 
+    func redactFaces(pixelate: Bool) async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        let image = adjustedBase
+        let boxes: [CGRect]
+        do {
+            boxes = try await FaceDetector.faces(in: image)
+        } catch {
+            Log.app.error("Face detection failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: "Faces couldn't be detected".localized(), icon: ToastIcon)
+            return
+        }
+        let rects = FaceRedactionLayout.rects(forNormalized: boxes, imageSize: imageSize)
+        guard !rects.isEmpty else {
+            BezelNotification.show(messageText: "No faces found".localized(), icon: ToastIcon)
+            return
+        }
+        let redactions = rects.map { rect in
+            Annotation(shape: pixelate ? .pixelate(rect) : .blur(rect), color: color, lineWidth: lineWidth, fontSize: fontSize)
+        }
+        add(contentsOf: redactions)
+        selectedIDs = Set(redactions.map(\.id))
+    }
+
     func trimBorders() async {
         commitPendingEdits()
         guard !isProcessing else { return }

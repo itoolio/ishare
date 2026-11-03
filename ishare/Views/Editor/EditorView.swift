@@ -372,6 +372,11 @@ struct EditorView: View {
                 Task { await document.liftSubject() }
             }
             .disabled(document.isProcessing)
+            Menu("Redact Faces".localized()) {
+                Button("Blur Faces".localized()) { Task { await document.redactFaces(pixelate: false) } }
+                Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }
+            }
+            .disabled(document.isProcessing)
             Button("Trim Borders".localized()) {
                 Task { await document.trimBorders() }
             }
