@@ -1,4 +1,5 @@
 import AppKit
+import Quartz
 import SwiftUI
 
 @MainActor
@@ -20,6 +21,29 @@ class HistoryWindowController: NSWindowController {
         window.contentView = contentView
         window.center()
         self.init(window: window)
+        installSpaceMonitor()
+    }
+
+    private var spaceMonitor: Any?
+
+    private func installSpaceMonitor() {
+        spaceMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, HistoryQuickLook.shouldToggle(on: event, in: window) else { return event }
+            NotificationCenter.default.post(name: HistoryQuickLook.toggleRequest, object: nil)
+            return nil
+        }
+    }
+
+    override func acceptsPreviewPanelControl(_: QLPreviewPanel!) -> Bool {
+        true
+    }
+
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        HistoryQuickLook.shared.begin(panel)
+    }
+
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        HistoryQuickLook.shared.end(panel)
     }
 }
 

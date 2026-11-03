@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import ishare
@@ -29,5 +30,27 @@ struct HistoryPreviewTests {
         #expect(first == HistoryPreview.cachedRemoteURL(for: item))
         #expect(first?.lastPathComponent.hasSuffix("-shot.png") == true)
         #expect(HistoryPreview.cachedRemoteURL(for: HistoryItem(fileUrl: "file:///tmp/x.png")) == nil)
+    }
+}
+
+@MainActor
+struct HistoryQuickLookTests {
+    func space(in window: NSWindow, modifiers: NSEvent.ModifierFlags = [], repeated: Bool = false) -> NSEvent? {
+        NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0, windowNumber: window.windowNumber, context: nil,
+            characters: " ", charactersIgnoringModifiers: " ", isARepeat: repeated, keyCode: 49)
+    }
+
+    @Test func ignoresSpaceOutsideTheKeyHistoryWindow() throws {
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 100, height: 100), styleMask: [.titled], backing: .buffered, defer: false)
+        let event = try #require(space(in: window))
+        #expect(!HistoryQuickLook.shouldToggle(on: event, in: window))
+        let other = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 100, height: 100), styleMask: [.titled], backing: .buffered, defer: false)
+        #expect(!HistoryQuickLook.shouldToggle(on: event, in: other))
+    }
+
+    @Test func doesNothingWithoutPreviewableFiles() {
+        HistoryQuickLook.shared.toggle(urls: [], start: nil)
+        #expect(!HistoryQuickLook.shared.isVisible)
     }
 }
