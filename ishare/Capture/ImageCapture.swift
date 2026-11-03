@@ -13,6 +13,7 @@ enum CaptureType: String, CaseIterable, Sendable {
     case LAST_REGION
     case TEXT
     case MENU
+    case ALL_DISPLAYS
 }
 
 enum FileType: String, CaseIterable, Identifiable, Defaults.Serializable {
@@ -61,6 +62,8 @@ enum ImageCaptureFlow {
                 try await ScrollingCapture.run(content: content)
             case .LAST_REGION:
                 try await captureLastRegion(displayID: nil, content: content, delay: delay)
+            case .ALL_DISPLAYS:
+                try await captureAllDisplays(content: content, delay: delay)
             }
         }
     }
@@ -180,6 +183,31 @@ enum ImageCaptureFlow {
         let geometry = PrivacyFilter.geometry(displayID: displayID, region: rect, image: cropped)
         Log.capture.info("Captured the last region from the frame taken when the shortcut was pressed")
         return CapturedImage(image: cropped, suffix: frontmostAppName(), geometry: geometry, pointScale: scale, source: source)
+    }
+
+    static func captureAllDisplays(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
+        guard let live = try await contentAfterCountdown(delay, content: content) else { return nil }
+        let images = await ScreenshotEngine.backdrops(for: live)
+        let source = frontmostSource(in: live)
+        let entries = live.displays.compactMap { display in images[display.displayID].map { (display, $0) } }
+        guard let first = entries.first else { return nil }
+        if entries.count == 1 {
+            return CapturedImage(image: first.1, suffix: "displays", pointScale: CGFloat(first.1.width) / max(1, CGFloat(first.0.width)), source: source)
+        }
+        let scale = entries.map { CGFloat($0.1.width) / max(1, CGFloat($0.0.width)) }.max() ?? 2
+        guard let arrangement = DisplayArrangement.layout(frames: entries.map { ($0.0.displayID, CGDisplayBounds($0.0.displayID)) }, scale: scale),
+            let context = CGContext(
+                data: nil, width: Int(arrangement.pixelSize.width), height: Int(arrangement.pixelSize.height), bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        context.interpolationQuality = .high
+        for (display, image) in entries {
+            guard let placement = arrangement.placements.first(where: { $0.id == display.displayID }) else { continue }
+            let rect = placement.pixelRect
+            context.draw(image, in: CGRect(x: rect.minX, y: arrangement.pixelSize.height - rect.maxY, width: rect.width, height: rect.height))
+        }
+        guard let combined = context.makeImage() else { return nil }
+        return CapturedImage(image: combined, suffix: "displays", pointScale: scale, source: source)
     }
 
     static func captureWindow(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {

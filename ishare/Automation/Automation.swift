@@ -38,6 +38,7 @@ extension CLICaptureMode {
         case .screen: .SCREEN
         case .scrolling: .SCROLLING
         case .menu: .MENU
+        case .displays: .ALL_DISPLAYS
         }
     }
 }

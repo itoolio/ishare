@@ -46,7 +46,7 @@ enum CLIArguments {
           upload <file…> [--uploader NAME] [--reuse|--no-reuse]
                                               Upload files and print their links; --reuse returns the
                                               existing link for files that were uploaded before
-          capture region|window|screen|scrolling|menu [--upload]
+          capture region|window|screen|scrolling|menu|displays [--upload]
                                               Take a screenshot and print its file or link
           capture app [NAME] [--sheet] [--upload]
                                               Capture every window of an app (the frontmost one
@@ -152,7 +152,7 @@ enum CLIArguments {
             guard names.count <= 1 else { throw .unexpectedArgument(names.dropFirst().first ?? "") }
             command = .captureApp(app: names.first, contactSheet: contactSheet, upload: upload)
         case "capture":
-            guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen, scrolling, menu or app)") }
+            guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen, scrolling, menu, displays or app)") }
             guard let mode = CLICaptureMode(rawValue: modeName.lowercased()) else { throw .invalidValue(option: "capture", value: modeName) }
             try rejectExtra(rest.dropFirst())
             command = .capture(mode: mode, upload: upload)

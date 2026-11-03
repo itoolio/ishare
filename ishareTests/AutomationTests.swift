@@ -342,7 +342,7 @@ struct CLIArgumentTests {
         #expect(error([]) == .missingCommand)
         #expect(error(["frobnicate"]) == .unknownCommand("frobnicate"))
         #expect(error(["upload"]) == .missingArgument("file"))
-        #expect(error(["capture"]) == .missingArgument("capture mode (region, window, screen, scrolling, menu or app)"))
+        #expect(error(["capture"]) == .missingArgument("capture mode (region, window, screen, scrolling, menu, displays or app)"))
         #expect(error(["capture", "everything"]) == .invalidValue(option: "capture", value: "everything"))
         #expect(error(["capture", "region", "extra"]) == .unexpectedArgument("extra"))
         #expect(error(["record", "rewind"]) == .invalidValue(option: "record", value: "rewind"))
