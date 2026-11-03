@@ -276,6 +276,13 @@ final class URLSchemeRouter {
         switch command {
         case let .capture(mode):
             return .success(await actions.captureWithAfterCaptureSteps(mode))
+        case let .captureWebPage(address, width):
+            let before = Defaults[.uploadHistory].first
+            guard await WebPageCaptureFlow.capture(address, width: width) != nil else {
+                return .failure(.failed(WebPageCaptureError.snapshotFailed.localizedDescription))
+            }
+            let latest = Defaults[.uploadHistory].first
+            return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
         case let .record(action, gif, region, preset):
             return await actions.record(action, gif: gif, region: region, preset: preset).map { _ in nil }
         case let .upload(files):
