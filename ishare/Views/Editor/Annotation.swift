@@ -66,6 +66,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
     case pixelate
     case eraser
     case cursor
+    case measure
     case crop
 
     var id: Self { self }
@@ -98,6 +99,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .pixelate: "squareshape.split.3x3"
         case .eraser: "eraser"
         case .cursor: "cursorarrow.rays"
+        case .measure: "ruler"
         case .crop: "crop"
         }
     }
@@ -122,6 +124,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .pixelate: "Pixelate"
         case .eraser: "Smart Eraser"
         case .cursor: "Cursor"
+        case .measure: "Measure"
         case .crop: "Crop"
         }
     }
@@ -146,6 +149,7 @@ enum EditorTool: String, CaseIterable, Identifiable, Sendable {
         case .pixelate: "x"
         case .eraser: "e"
         case .cursor: "u"
+        case .measure: "d"
         case .crop: "c"
         }
     }
@@ -195,6 +199,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
         case eraser(CGRect)
         case cursor(CGPoint)
         case stamp(CGRect, Stamp)
+        case measure(CGPoint, CGPoint)
     }
 
     var id = UUID()
@@ -243,6 +248,8 @@ struct Annotation: Identifiable, Hashable, Sendable {
         switch shape {
         case let .arrow(start, end), let .line(start, end):
             ScreenGeometry.rect(from: start, to: end).insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
+        case let .measure(start, end):
+            ScreenGeometry.rect(from: start, to: end).insetBy(dx: -fontSize, dy: -fontSize)
         case let .curvedArrow(start, control, end), let .curvedLine(start, control, end):
             QuadraticCurve(start: start, control: control, end: end).boundingBox.insetBy(dx: -lineWidth * 2, dy: -lineWidth * 2)
         case let .stamp(rect, _):
@@ -269,7 +276,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
 
     func hitTest(_ point: CGPoint, tolerance: CGFloat) -> Bool {
         switch shape {
-        case let .arrow(start, end), let .line(start, end):
+        case let .arrow(start, end), let .line(start, end), let .measure(start, end):
             Annotation.distance(from: point, toSegment: start, end) <= max(tolerance, lineWidth)
         case let .curvedArrow(start, control, end), let .curvedLine(start, control, end):
             QuadraticCurve(start: start, control: control, end: end).distance(to: point) <= max(tolerance, lineWidth)
@@ -292,6 +299,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
             switch shape {
             case let .arrow(start, end): .arrow(move(start), move(end))
             case let .line(start, end): .line(move(start), move(end))
+            case let .measure(start, end): .measure(move(start), move(end))
             case let .curvedArrow(start, control, end): .curvedArrow(move(start), move(control), move(end))
             case let .curvedLine(start, control, end): .curvedLine(move(start), move(control), move(end))
             case let .stamp(rect, stamp): .stamp(move(rect), stamp)

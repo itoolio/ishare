@@ -347,6 +347,19 @@ final class EditorDocument: ObservableObject {
         selectedIDs = Set(redactions.map(\.id))
     }
 
+    func measureSelection() {
+        let selected = annotations.filter { selectedIDs.contains($0.id) }
+        guard !selected.isEmpty else { return }
+        let offset = max(12, fontSize * 0.6)
+        let measures = selected.flatMap { annotation in
+            DimensionMeasure.selectionDimensions(of: annotation.bounds, offset: offset).map { line in
+                Annotation(shape: .measure(line.0, line.1), color: color, lineWidth: max(1, lineWidth / 2), fontSize: fontSize)
+            }
+        }
+        add(contentsOf: measures)
+        selectedIDs = Set(measures.map(\.id))
+    }
+
     func trimBorders() async {
         commitPendingEdits()
         guard !isProcessing else { return }
@@ -547,6 +560,7 @@ final class EditorDocument: ObservableObject {
             switch tool {
             case .arrow: arrowPath == .curved ? .curvedArrow(start, ArrowGeometry.defaultControl(from: start, to: end), end) : .arrow(start, end)
             case .line: .line(start, end)
+            case .measure: .measure(start, end)
             case .rectangle: .rectangle(rect)
             case .ellipse: .ellipse(rect)
             case .highlight: .highlight(rect)

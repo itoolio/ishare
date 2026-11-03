@@ -377,6 +377,10 @@ struct EditorView: View {
                 Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }
             }
             .disabled(document.isProcessing)
+            Button("Measure Selection".localized()) {
+                document.measureSelection()
+            }
+            .disabled(document.selectedIDs.isEmpty)
             Button("Trim Borders".localized()) {
                 Task { await document.trimBorders() }
             }

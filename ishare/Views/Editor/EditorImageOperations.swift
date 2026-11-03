@@ -109,6 +109,7 @@ extension Annotation {
             switch shape {
             case let .arrow(start, end): .arrow(point(start), point(end))
             case let .line(start, end): .line(point(start), point(end))
+            case let .measure(start, end): .measure(point(start), point(end))
             case let .curvedArrow(start, control, end): .curvedArrow(point(start), point(control), point(end))
             case let .curvedLine(start, control, end): .curvedLine(point(start), point(control), point(end))
             case let .stamp(rect, stamp): .stamp(mapping.mapKeepingSize(rect), stamp)

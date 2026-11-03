@@ -71,6 +71,7 @@ extension Annotation {
         switch shape {
         case .arrow, .curvedArrow: [.color, .lineWidth, .arrowHead, .dash]
         case .line, .curvedLine: [.color, .lineWidth, .dash]
+        case .measure: [.color, .lineWidth, .fontSize]
         case .rectangle, .ellipse: [.color, .lineWidth, .fill, .dash]
         case .pen, .marker: [.color, .lineWidth]
         case .magnify: [.color, .lineWidth]
