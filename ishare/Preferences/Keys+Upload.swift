@@ -19,6 +19,8 @@ extension Defaults.Keys {
     static let watchFolderFilter = Key<WatchFolderFilter>("watchFolderFilter", default: .images, suite: .ishare)
     static let watchFolderProcessed = Key<[String]>("watchFolderProcessed", default: [], suite: .ishare)
     static let watchFolderActions = Key<[WatchFolderAction]>("watchFolderActions", default: WatchFolderChain.defaultActions, suite: .ishare)
+    static let watchedFolders = Key<[WatchedFolder]>("watchedFolders", default: [], suite: .ishare)
+    static let watchFolderUndoLog = Key<WatchFolderUndoLog>("watchFolderUndoLog", default: WatchFolderUndoLog(), suite: .ishare)
     static let watchFolderCounter = Key<Int>("watchFolderCounter", default: 0, suite: .ishare)
     static let urlShortener = Key<URLShortenerConfiguration>("urlShortener", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let uploadPresets = Key<[UploadPreset]>("uploadPresets", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -57,3 +59,5 @@ extension DuplicateIndex: Defaults.Serializable {}
 extension HealthCheckRecord: Defaults.Serializable {}
 
 extension WatchFolderAction: @retroactive Defaults.Serializable {}
+
+extension WatchFolderUndoLog: @retroactive Defaults.Serializable {}

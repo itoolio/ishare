@@ -3,7 +3,8 @@ import ishareCore
 import SwiftUI
 
 struct WatchFolderChainSettings: View {
-    @Default(.watchFolderActions) private var actions
+    @Binding var actions: [WatchFolderAction]
+    var title = "Steps for New Files"
 
     var body: some View {
         Section {
@@ -27,7 +28,7 @@ struct WatchFolderChainSettings: View {
                     .font(.caption)
             }
         } header: {
-            Text("Steps for New Files".localized())
+            Text(title.localized())
         } footer: {
             Text("Each new file runs through these steps in order. Rename templates can use {{date}}, {{time}}, {{counter}} and {{name}}.".localized())
                 .font(.footnote)

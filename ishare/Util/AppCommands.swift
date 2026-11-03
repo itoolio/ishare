@@ -254,6 +254,10 @@ extension AppCommand {
             AppCommand(
                 id: "upload.clipboard", title: "Upload Clipboard", keywords: ["pasteboard", "paste"], symbol: "doc.on.clipboard",
                 perform: afterDismissing { await AppState.uploadPasteboard() }),
+            AppCommand(id: "watch.undo", title: "Undo Last Watch Folder Steps", keywords: ["watch folder", "restore", "undo", "rename"], symbol: "arrow.uturn.backward") {
+                MenuController.shared.dismiss()
+                WatchFolderUndo.undoLast()
+            },
             AppCommand(id: "history.open", title: "Open History Window", keywords: ["uploads", "recent", "links"], symbol: "square.grid.2x2") {
                 MenuController.shared.dismiss()
                 openHistoryWindow(uploadHistory: Defaults[.uploadHistory])

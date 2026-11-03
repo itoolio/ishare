@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import ishareCore
 import UniformTypeIdentifiers
 
 enum WatchFolderFilter: String, CaseIterable, Identifiable, Codable, Defaults.Serializable {
@@ -25,6 +26,30 @@ enum WatchFolderFilter: String, CaseIterable, Identifiable, Codable, Defaults.Se
         case .videos: return type.conforms(to: .audiovisualContent)
         case .all: return true
         }
+    }
+}
+
+struct WatchedFolder: Codable, Hashable, Identifiable, Defaults.Serializable {
+    var id = UUID()
+    var path: String
+    var bookmark: Data?
+    var filter: WatchFolderFilter = .images
+    var isEnabled = true
+    var actions: [WatchFolderAction] = WatchFolderChain.defaultActions
+
+    var displayName: String {
+        URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    static func migrated(enabled: Bool, path: String, bookmark: Data?, filter: WatchFolderFilter, actions: [WatchFolderAction]) -> [WatchedFolder] {
+        guard !path.isEmpty else { return [] }
+        return [WatchedFolder(path: path, bookmark: bookmark, filter: filter, isEnabled: enabled, actions: actions)]
+    }
+
+    static func chosen(_ url: URL) -> WatchedFolder {
+        WatchedFolder(
+            path: url.path(percentEncoded: false),
+            bookmark: try? url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil))
     }
 }
 
@@ -165,45 +190,59 @@ final class WatchFolderMonitor {
 @MainActor
 final class WatchFolderService {
     static let shared = WatchFolderService()
-    private var monitor: WatchFolderMonitor?
-    private var accessedURL: URL?
+    private var monitors: [WatchFolderMonitor] = []
+    private var accessedURLs: [URL] = []
     private var observation: Task<Void, Never>?
 
     func start() {
+        Self.migrateLegacyFolder()
         restart()
         guard observation == nil else { return }
         observation = Task { [weak self] in
-            for await _ in Defaults.updates([.watchFolderEnabled, .watchFolderBookmark, .watchFolderFilter], initial: false) {
+            for await _ in Defaults.updates([.watchedFolders], initial: false) {
                 self?.restart()
             }
         }
     }
 
-    static func choose(_ url: URL) {
-        Defaults[.watchFolderBookmark] = try? url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil)
-        Defaults[.watchFolderPath] = url.path(percentEncoded: false)
-        Defaults[.watchFolderProcessed] = []
+    static func migrateLegacyFolder() {
+        guard Defaults[.watchedFolders].isEmpty, !Defaults[.watchFolderPath].isEmpty else { return }
+        Defaults[.watchedFolders] = WatchedFolder.migrated(
+            enabled: Defaults[.watchFolderEnabled], path: Defaults[.watchFolderPath], bookmark: Defaults[.watchFolderBookmark],
+            filter: Defaults[.watchFolderFilter], actions: Defaults[.watchFolderActions])
+        Defaults[.watchFolderPath] = ""
+        Defaults[.watchFolderBookmark] = nil
+    }
+
+    static func add(_ url: URL) {
+        let folder = WatchedFolder.chosen(url)
+        guard !Defaults[.watchedFolders].contains(where: { $0.path == folder.path }) else { return }
+        Defaults[.watchedFolders].append(folder)
     }
 
     private func restart() {
-        monitor?.stop()
-        monitor = nil
-        accessedURL?.stopAccessingSecurityScopedResource()
-        accessedURL = nil
-        guard Defaults[.watchFolderEnabled], let directory = resolveDirectory() else { return }
+        monitors.forEach { $0.stop() }
+        monitors.removeAll()
+        accessedURLs.forEach { $0.stopAccessingSecurityScopedResource() }
+        accessedURLs.removeAll()
         let processed = Set(Defaults[.watchFolderProcessed]).filter { FileManager.default.fileExists(atPath: $0) }
-        let monitor = WatchFolderMonitor(directory: directory, filter: Defaults[.watchFolderFilter], processed: processed) { url in
-            WatchFolderService.markProcessed(url)
-            Task { @MainActor in
-                guard !WatchFolderService.isOwnCapture(url) else { return }
-                let outcome = await WatchFolderChainRunner.run(Defaults[.watchFolderActions], on: url) { WatchFolderService.markProcessed($0) }
-                if outcome.link != nil, let shown = outcome.finalURL ?? Optional(url) {
-                    await showToast(fileURL: shown)
+        for folder in Defaults[.watchedFolders] where folder.isEnabled {
+            guard let directory = resolveDirectory(folder) else { continue }
+            let actions = folder.actions
+            let monitor = WatchFolderMonitor(directory: directory, filter: folder.filter, processed: processed) { url in
+                WatchFolderService.markProcessed(url)
+                Task { @MainActor in
+                    guard !WatchFolderService.isOwnCapture(url) else { return }
+                    let outcome = await WatchFolderChainRunner.run(actions, on: url) { WatchFolderService.markProcessed($0) }
+                    WatchFolderUndo.record(outcome.moves)
+                    if outcome.link != nil, let shown = outcome.finalURL ?? Optional(url) {
+                        await showToast(fileURL: shown)
+                    }
                 }
             }
+            monitor.start()
+            monitors.append(monitor)
         }
-        monitor.start()
-        self.monitor = monitor
     }
 
     static func isOwnCapture(_ url: URL) -> Bool {
@@ -222,20 +261,19 @@ final class WatchFolderService {
         Defaults[.watchFolderProcessed] = Array(processed.suffix(500))
     }
 
-    private func resolveDirectory() -> URL? {
-        if let bookmark = Defaults[.watchFolderBookmark] {
+    private func resolveDirectory(_ folder: WatchedFolder) -> URL? {
+        if let bookmark = folder.bookmark {
             var isStale = false
             if let url = try? URL(resolvingBookmarkData: bookmark, options: [.withSecurityScope], relativeTo: nil, bookmarkDataIsStale: &isStale) {
                 if url.startAccessingSecurityScopedResource() {
-                    accessedURL = url
+                    accessedURLs.append(url)
                 }
-                if isStale {
-                    Defaults[.watchFolderBookmark] = try? url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil)
+                if isStale, let index = Defaults[.watchedFolders].firstIndex(where: { $0.id == folder.id }) {
+                    Defaults[.watchedFolders][index].bookmark = try? url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil)
                 }
                 return url
             }
         }
-        let path = Defaults[.watchFolderPath]
-        return path.isEmpty ? nil : URL(fileURLWithPath: path, isDirectory: true)
+        return folder.path.isEmpty ? nil : URL(fileURLWithPath: folder.path, isDirectory: true)
     }
 }
