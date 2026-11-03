@@ -23,6 +23,7 @@ struct MainMenuView: View {
     @Default(.menuSectionOrder) private var sectionOrder
     @Default(.hiddenMenuSections) private var hiddenSections
     @Default(.menuDensity) private var density
+    @Default(.menuSize) private var menuSize
     @Default(.menuFavorites) private var favoriteIDs
 
     private var metrics: MenuMetrics { density.metrics }
@@ -47,7 +48,7 @@ struct MainMenuView: View {
             if showsPalette {
                 CommandPaletteView(onClose: closePalette)
             } else {
-                if !favoriteCommands.isEmpty {
+                if !favoriteCommands.isEmpty, !isCompact {
                     MenuFavoritesSection(commands: favoriteCommands, isPreview: isPreview)
                 }
                 ForEach(renderedSections) { section in
@@ -86,8 +87,12 @@ struct MainMenuView: View {
         .rotationEffect(aussieMode ? .degrees(180) : .zero)
     }
 
+    private var isCompact: Bool {
+        menuSize.isCompact(visibleHeight: (NSScreen.underMouse ?? NSScreen.main)?.visibleFrame.height)
+    }
+
     private var renderedSections: [MenuSection] {
-        layout.visibleSections.filter { $0 != .recentUploads || !uploadHistory.isEmpty }
+        MenuSize.sections(layout.visibleSections, compact: isCompact).filter { $0 != .recentUploads || !uploadHistory.isEmpty }
     }
 
     @ViewBuilder

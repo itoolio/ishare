@@ -119,3 +119,17 @@ struct FeatureTourTests {
         #expect(ids.contains("app.tour"))
     }
 }
+
+struct MenuSizeTests {
+    @Test func compactMenusKeepOnlyCaptureAndRecentUploads() {
+        #expect(MenuSize.sections(MenuSection.allCases, compact: true) == [.capture, .recentUploads])
+        #expect(MenuSize.sections(MenuSection.allCases, compact: false) == MenuSection.allCases)
+    }
+
+    @Test func automaticallyCompactsOnShortScreens() {
+        #expect(MenuSize.automatic.isCompact(visibleHeight: 760))
+        #expect(!MenuSize.automatic.isCompact(visibleHeight: 1050))
+        #expect(MenuSize.compact.isCompact(visibleHeight: 2000))
+        #expect(!MenuSize.full.isCompact(visibleHeight: 400))
+    }
+}
