@@ -125,7 +125,7 @@
 		</dict>
 	</array>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>ishare transcribes the audio of your recordings on this Mac to create captions if you turn on Generate captions</string>
+	<string>ishare transcribes your voice on this Mac to create captions if you turn on Generate captions or live captions</string>
 	<key>OSAScriptingDefinition</key>
 	<string>ishare.sdef</string>
 	<key>UTExportedTypeDeclarations</key>

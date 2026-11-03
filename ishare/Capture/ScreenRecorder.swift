@@ -147,6 +147,7 @@ final class ScreenRecorder: ObservableObject {
     private let captureEngine = CaptureEngine()
     private var overlayWindows: [NSWindow] = []
     private let inputOverlay = InputOverlayController()
+    private let liveCaptions = LiveCaptionController()
     private let webcamBubble = WebcamBubbleController()
     private let overlayRecorder = OverlayEventRecorder()
     private let pointerRecorder = PointerActivityRecorder()
@@ -165,7 +166,7 @@ final class ScreenRecorder: ObservableObject {
 
     private var captureOverlayWindowIDs: Set<CGWindowID> {
         RecordingCaptureExclusion.capturedOverlayIDs(
-            overlays: inputOverlay.windowIDs + drawing.windowIDs + [webcamBubble.windowID].compactMap(\.self),
+            overlays: inputOverlay.windowIDs + liveCaptions.windowIDs + drawing.windowIDs + [webcamBubble.windowID].compactMap(\.self),
             privateWindows: [RecordingNotesController.shared.windowID]
         )
     }
@@ -414,6 +415,7 @@ final class ScreenRecorder: ObservableObject {
             showsKeystrokes: RecordingDefaults[.showKeystrokes],
             shortcutsOnly: RecordingDefaults[.keystrokesShortcutsOnly]
         )
+        await liveCaptions.start(areas: areas)
         drawing.prepare(screens: Self.uniqueScreens(areas.map(\.screen)))
         hudModel.canDraw = drawing.isPrepared
         if RecordingDefaults[.showWebcam], let bubbleArea {
@@ -423,6 +425,7 @@ final class ScreenRecorder: ObservableObject {
 
     private func hideCaptureOverlays() {
         inputOverlay.stop()
+        liveCaptions.stop()
         webcamBubble.hide()
         drawing.tearDown()
         hudModel.canDraw = false

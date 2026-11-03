@@ -171,6 +171,7 @@ private struct AfterRecordingSettingsSection: View {
 private struct CaptionsSettingsSection: View {
     @Default(.generateCaptions) private var generateCaptions
     @Default(.captionOutput) private var captionOutput
+    @Default(.liveCaptions) private var liveCaptions
     @State private var authorized = SpeechCaptioner.isAuthorized
 
     var body: some View {
@@ -188,6 +189,15 @@ private struct CaptionsSettingsSection: View {
                     ForEach(CaptionOutput.allCases) { Text($0.title.localized()).tag($0) }
                 }
             }
+            Toggle("Show live captions while recording".localized(), isOn: $liveCaptions)
+                .onChange(of: liveCaptions) { _, enabled in
+                    guard enabled else { return }
+                    Task { @MainActor in
+                        authorized = await SpeechCaptioner.requestAuthorization()
+                        if !authorized { liveCaptions = false }
+                    }
+                }
+                .help("Shows what you say at the bottom of full-screen and region recordings, recognized on this Mac.".localized())
             if !authorized, SFSpeechRecognizer.authorizationStatus() == .denied || SFSpeechRecognizer.authorizationStatus() == .restricted {
                 PermissionRow(title: "Speech Recognition", granted: false) {
                     SystemSettingsLink.open("Privacy_SpeechRecognition")

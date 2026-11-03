@@ -29,6 +29,7 @@ extension Defaults.Keys {
     static let microphoneDeviceID = Key<String?>("microphoneDeviceID", default: nil, suite: .ishare)
     static let trimBeforeSaving = Key<Bool>("trimBeforeSaving", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let gifMaxSize = Key<GIFMaxSize>("gifMaxSize", default: .original, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let liveCaptions = Key<Bool>("liveCaptions", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let generateCaptions = Key<Bool>("generateCaptions", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let captionOutput = Key<CaptionOutput>("captionOutput", default: .srtFile, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let recordingAudioSource = Key<RecordingAudioSource>("recordingAudioSource", default: .allSystemAudio, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
