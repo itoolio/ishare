@@ -24,6 +24,7 @@ extension Defaults.Keys {
     static let showWebcam = Key<Bool>("showWebcam", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamSize = Key<WebcamBubbleSize>("webcamSize", default: .medium, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamCorner = Key<WebcamCorner>("webcamCorner", default: .bottomRight, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let webcamLayout = Key<WebcamLayout>("webcamLayout", default: .bubble, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamBackground = Key<WebcamBackground>("webcamBackground", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamDeviceID = Key<String?>("webcamDeviceID", default: nil, suite: .ishare)
     static let microphoneDeviceID = Key<String?>("microphoneDeviceID", default: nil, suite: .ishare)
@@ -85,3 +86,5 @@ extension Defaults.Keys {
 extension FollowPointerSize: @retroactive Defaults.Serializable {}
 
 extension PointerHighlight: @retroactive Defaults.Serializable {}
+
+extension WebcamLayout: @retroactive Defaults.Serializable {}

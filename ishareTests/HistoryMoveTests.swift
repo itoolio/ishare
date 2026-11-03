@@ -1,4 +1,5 @@
 import AppKit
+import CoreImage
 import Defaults
 import Foundation
 import ImageIO
@@ -243,5 +244,20 @@ struct PointerHighlightTests {
         #expect(!PointerEffectSettings().rendersPointer)
         #expect(!PointerEffectSettings(recordsPointer: false, highlight: .spotlight).rendersPointer)
         #expect(PointerHighlight.spotlight.radius > PointerHighlight.halo.radius)
+    }
+}
+
+struct WebcamLayoutCompositionTests {
+    @Test func composesTheWebcamBesideTheScreen() throws {
+        let size = CGSize(width: 400, height: 200)
+        let screen = CIImage(color: CIColor(red: 0, green: 0, blue: 1)).cropped(to: CGRect(origin: .zero, size: size))
+        let webcam = CIImage(color: CIColor(red: 1, green: 0, blue: 0)).cropped(to: CGRect(x: 0, y: 0, width: 640, height: 480))
+        var layout = OverlayCompositionLayout(videoSize: size, pixelsPerPoint: 1, webcamFrame: CGRect(x: 300, y: 20, width: 60, height: 60))
+        layout.webcamLayout = .sideBySide
+        let composed = OverlayImageRenderer().compose(screen: screen, webcam: webcam, time: 1, timeline: OverlayTimeline(), layout: layout)
+        let context = CIContext()
+        var pixel = [UInt8](repeating: 0, count: 4)
+        context.render(composed, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 395, y: 100, width: 1, height: 1), format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+        #expect(pixel[0] > 200 && pixel[2] < 50)
     }
 }

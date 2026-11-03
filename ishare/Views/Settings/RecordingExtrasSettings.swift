@@ -1,5 +1,6 @@
 import AVFoundation
 import Defaults
+import ishareCore
 import Speech
 import SwiftUI
 
@@ -64,6 +65,7 @@ private struct WebcamSettingsSection: View {
     @Default(.webcamCorner) private var webcamCorner
     @Default(.webcamDeviceID) private var webcamDeviceID
     @Default(.webcamBackground) private var webcamBackground
+    @Default(.webcamLayout) private var webcamLayout
     @State private var cameras: [AVCaptureDevice] = []
     @State private var authorization = AVCaptureDevice.authorizationStatus(for: .video)
 
@@ -90,6 +92,12 @@ private struct WebcamSettingsSection: View {
                 Picker("Position".localized(), selection: $webcamCorner) {
                     ForEach(WebcamCorner.allCases) { Text($0.title.localized()).tag($0) }
                 }
+                Picker("Layout".localized(), selection: $webcamLayout) {
+                    Text("Bubble in a corner".localized()).tag(WebcamLayout.bubble)
+                    Text("Side by side".localized()).tag(WebcamLayout.sideBySide)
+                    Text("Full screen at each marker".localized()).tag(WebcamLayout.fullScreenAtMarkers)
+                }
+                .help("Side by side and full screen are added after you stop recording; add markers with the marker button or shortcut.".localized())
                 Picker("Background".localized(), selection: $webcamBackground) {
                     ForEach(WebcamBackground.allCases) { Text($0.title).tag($0) }
                 }

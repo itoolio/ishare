@@ -38,6 +38,7 @@ struct OverlayCapture: Sendable {
     var contentSize: CGSize
     var webcamDiameter: CGFloat
     var webcamCorner: WebcamCorner
+    var webcamLayout: WebcamLayout = .bubble
 
     var isEmpty: Bool { log.isEmpty && webcam == nil }
 }
@@ -101,7 +102,8 @@ final class OverlayEventRecorder {
             webcam: clip,
             contentSize: source.contentSize,
             webcamDiameter: RecordingDefaults[.webcamSize].diameter,
-            webcamCorner: RecordingDefaults[.webcamCorner]
+            webcamCorner: RecordingDefaults[.webcamCorner],
+            webcamLayout: RecordingDefaults[.webcamLayout]
         )
         log = OverlayEventLog()
         return capture.isEmpty ? nil : capture

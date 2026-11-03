@@ -86,8 +86,18 @@ final class OverlayImageRenderer: @unchecked Sendable {
             image = zoomed(image, to: camera.visibleRect(at: time), videoSize: layout.videoSize)
         }
         if let webcam, let frame = layout.webcamFrame {
-            image = bubble(from: webcam, in: frame).composited(over: image)
-            image = ring(diameter: frame.width, scale: layout.pixelsPerPoint).transformed(by: CGAffineTransform(translationX: frame.minX, y: frame.minY)).composited(over: image)
+            let placement = WebcamLayoutPlanner.placement(
+                layout: layout.webcamLayout, videoSize: layout.videoSize, sourceSize: layout.videoSize, bubble: frame, time: time, sections: layout.sections)
+            if placement.screen != CGRect(origin: .zero, size: layout.videoSize) {
+                image = placed(image, in: placement.screen, videoSize: layout.videoSize)
+            }
+            if placement.isRound {
+                image = bubble(from: webcam, in: placement.webcam).composited(over: image)
+                image = ring(diameter: placement.webcam.width, scale: layout.pixelsPerPoint)
+                    .transformed(by: CGAffineTransform(translationX: placement.webcam.minX, y: placement.webcam.minY)).composited(over: image)
+            } else {
+                image = filled(from: webcam, in: placement.webcam).composited(over: image)
+            }
         }
         if let text = timeline.keystroke(at: time) {
             let badge = badgeImage(text, scale: layout.pixelsPerPoint)
@@ -248,6 +258,29 @@ final class OverlayImageRenderer: @unchecked Sendable {
         return image.transformed(by: CGAffineTransform(translationX: point.x - canvas / 2, y: point.y - canvas / 2))
     }
 
+    private func placed(_ screen: CIImage, in rect: CGRect, videoSize: CGSize) -> CIImage {
+        let extent = CGRect(origin: .zero, size: videoSize)
+        let scaled = screen
+            .transformed(by: CGAffineTransform(scaleX: rect.width / videoSize.width, y: rect.height / videoSize.height))
+            .transformed(by: CGAffineTransform(translationX: rect.minX, y: rect.minY))
+        return scaled.composited(over: CIImage(color: CIColor(red: 0.08, green: 0.08, blue: 0.1)).cropped(to: extent))
+    }
+
+    private func filled(from webcam: CIImage, in frame: CGRect) -> CIImage {
+        let extent = webcam.extent
+        guard extent.width > 0, extent.height > 0, frame.width > 0, frame.height > 0 else { return CIImage.empty() }
+        let scale = max(frame.width / extent.width, frame.height / extent.height)
+        let mirrored = webcam
+            .transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
+            .transformed(by: CGAffineTransform(scaleX: -scale, y: scale))
+            .transformed(by: CGAffineTransform(translationX: extent.width * scale, y: 0))
+        let width = extent.width * scale
+        let height = extent.height * scale
+        return mirrored
+            .cropped(to: CGRect(x: (width - frame.width) / 2, y: (height - frame.height) / 2, width: frame.width, height: frame.height))
+            .transformed(by: CGAffineTransform(translationX: frame.minX - (width - frame.width) / 2, y: frame.minY - (height - frame.height) / 2))
+    }
+
     private func bubble(from webcam: CIImage, in frame: CGRect) -> CIImage {
         let extent = webcam.extent
         guard extent.width > 0, extent.height > 0 else { return CIImage.empty() }
@@ -377,7 +410,7 @@ enum OverlayCompositor {
     @discardableResult
     static func composite(
         _ url: URL, capture: OverlayCapture?, effects: RecordingEffectsCapture?, recordingStart: Double, pauses: RecordingPauseTimeline = RecordingPauseTimeline(), hevc: Bool,
-        defersZoom: Bool = false,
+        defersZoom: Bool = false, sections: [Double] = [],
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> CameraPath? {
         let asset = AVURLAsset(url: url)
@@ -403,12 +436,14 @@ enum OverlayCompositor {
             timeline.effects = plan
         }
         guard !timeline.isEmpty else { return deferredCamera }
-        let layout = OverlayCompositionLayout.make(
+        var layout = OverlayCompositionLayout.make(
             videoSize: videoSize,
             sourceSize: capture?.contentSize ?? effects?.contentSize ?? videoSize,
             webcamDiameter: webcamClip == nil ? nil : capture?.webcamDiameter,
             corner: capture?.webcamCorner ?? .bottomRight
         )
+        layout.webcamLayout = capture?.webcamLayout ?? .bubble
+        layout.sections = sections
         try await composite(asset, screenTrack: screenTrack, duration: duration, timeline: timeline, layout: layout, replacing: url, hevc: hevc, progress: progress)
         return deferredCamera
     }
