@@ -77,6 +77,10 @@ func CLICases(ctx Context) []Case {
 		{Name: "cli-record-resume", Args: json("record", "resume"), Check: all(exitCode(0), succeeded)},
 		{Name: "cli-history", Args: json("history", "--limit", "3"), Check: all(exitCode(0), succeeded, historyCount(1, 3))},
 		{Name: "cli-history-text", Args: []string{"history", "--limit", "1", "--timeout", "30"}, Timeout: 45 * time.Second, Check: all(exitCode(0), stdoutContains(StubHost))},
+		{Name: "applescript-history-links", Script: "tell " + ctx.ScriptTarget() + ` to get link of every history item`, Timeout: 45 * time.Second, Check: all(exitCode(0), stdoutContains(StubHost))},
+		{Name: "applescript-uploaders", Script: "tell " + ctx.ScriptTarget() + ` to get name of every uploader`, Timeout: 45 * time.Second, Check: all(exitCode(0), stdoutContains(StubUploader))},
+		{Name: "applescript-select-uploader", Script: "tell " + ctx.ScriptTarget() + ` to select uploader "` + StubUploader + `"`, Timeout: 45 * time.Second, Check: all(exitCode(0), stdoutContains("true"))},
+		{Name: "applescript-upload", Script: "tell " + ctx.ScriptTarget() + ` to upload (POSIX file "` + ctx.Fixture + `")`, Timeout: 90 * time.Second, Check: all(exitCode(0), stdoutContains(StubHost))},
 	}
 }
 

@@ -66,6 +66,9 @@ packages:
   Citadel:
     url: https://github.com/orlandos-nl/Citadel
     exactVersion: 0.12.0
+  libwebp:
+    url: https://github.com/SDWebImage/libwebp-Xcode
+    exactVersion: 1.6.0
   ishareCore:
     path: Packages/ishareCore
 targetTemplates:
@@ -92,6 +95,7 @@ targetTemplates:
       - package: KeyboardShortcuts
       - package: LaunchAtLogin
       - package: Citadel
+      - package: libwebp
       - package: ishareCore
       - target: sharemenuext
         embed: true

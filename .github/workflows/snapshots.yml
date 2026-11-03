@@ -23,7 +23,7 @@ jobs:
         steps:
             - uses: actions/checkout@v7
               with:
-                  ref: dev
+                  ref: ${{ github.ref_name }}
                   token: ${{ secrets.REPO_ACCESS_TOKEN }}
             - uses: maxim-lobanov/setup-xcode@v1
               with:
@@ -65,9 +65,10 @@ jobs:
               with:
                   name: snapshot-references
                   path: ishareTests/Snapshots/${{ steps.os.outputs.folder }}
-            - name: Commit the references to dev
+            - name: Commit the references to the dispatched branch
               env:
                   FOLDER: ishareTests/Snapshots/${{ steps.os.outputs.folder }}
+                  BRANCH: ${{ github.ref_name }}
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -77,6 +78,6 @@ jobs:
                       exit 0
                   fi
                   git commit -q -m "test: record the ${{ steps.os.outputs.folder }} snapshot references"
-                  git fetch -q origin dev
-                  git rebase -q origin/dev
-                  git push -q origin HEAD:dev
+                  git fetch -q origin "$BRANCH"
+                  git rebase -q "origin/$BRANCH"
+                  git push -q origin "HEAD:$BRANCH"

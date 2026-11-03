@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import ishareCore
 
 enum EditorExportFormat: String, CaseIterable, Identifiable, Sendable {
     case png
@@ -193,6 +194,8 @@ enum SVGExporter {
             let cap = annotation.dashed ? "butt" : "round"
             let path = "M\(number(start.x)) \(number(start.y)) Q\(number(control.x)) \(number(control.y)) \(number(end.x)) \(number(end.y))"
             return [#"<path d="\#(path)" \#(stroke(annotation.color, width: annotation.lineWidth, cap: cap, dash: dash(for: annotation)))/>"#]
+        case let .measure(start, end):
+            return measureElements(from: start, to: end, annotation: annotation)
         case let .line(start, end):
             let cap = annotation.dashed ? "butt" : "round"
             return [
@@ -241,6 +244,21 @@ enum SVGExporter {
             guard rect.width >= 1, rect.height >= 1, let image = stamp.image(size: min(rect.width, rect.height), color: annotation.color) else { return [] }
             let target = Stamp.fittedRect(for: image.size, in: rect)
             return imageElement(rasterized(image, size: target.size), in: target).map { [$0] } ?? []
+        case let .library(rect, shape, text):
+            let data = LibraryShape.svgPathData(shape.path(in: rect)) { number($0) }
+            let paint =
+                annotation.filled && shape.isClosed
+                ? #"\#(fill(annotation.color)) stroke="none""#
+                : stroke(annotation.color, width: annotation.lineWidth, cap: "round", dash: nil)
+            var elements = [#"<path d="\#(data)" \#(paint)/>"#]
+            if shape.holdsText, !text.isEmpty {
+                let area = shape.textRect(in: rect)
+                let size = AnnotationRenderer.textSize(text, fontSize: annotation.fontSize)
+                let origin = CGPoint(x: area.midX - size.width / 2, y: area.midY - size.height / 2)
+                elements.append(
+                    textElement(text, origin: origin, fontSize: annotation.fontSize, color: annotation.filled ? annotation.color.contrastingText : annotation.color))
+            }
+            return elements
         case .blur, .pixelate, .eraser, .spotlight:
             return []
         }
@@ -294,6 +312,30 @@ enum SVGExporter {
         let font = NSFont.systemFont(ofSize: fontSize, weight: weight)
         let lineHeight = NSLayoutManager().defaultLineHeight(for: font)
         return (font.ascender, lineHeight)
+    }
+
+    private static func measureElements(from start: CGPoint, to end: CGPoint, annotation: Annotation) -> [String] {
+        let paint = stroke(annotation.color, width: annotation.lineWidth, cap: "round", dash: nil)
+        var elements = [
+            #"<line x1="\#(number(start.x))" y1="\#(number(start.y))" x2="\#(number(end.x))" y2="\#(number(end.y))" \#(paint)/>"#
+        ]
+        for tick in DimensionMeasure.ticks(from: start, to: end, length: max(10, annotation.lineWidth * 4)) {
+            elements.append(
+                #"<line x1="\#(number(tick.0.x))" y1="\#(number(tick.0.y))" x2="\#(number(tick.1.x))" y2="\#(number(tick.1.y))" \#(paint)/>"#)
+        }
+        let label = DimensionMeasure.label(from: start, to: end, pointScale: AnnotationRenderer.measurementPointScale)
+        let fontSize = max(11, annotation.fontSize * 0.5)
+        let size = AnnotationRenderer.textSize(label, fontSize: fontSize)
+        let padding = fontSize * 0.35
+        let pill = CGRect(
+            x: (start.x + end.x) / 2 - size.width / 2 - padding, y: (start.y + end.y) / 2 - size.height / 2 - padding / 2,
+            width: size.width + padding * 2, height: size.height + padding)
+        elements.append(
+            #"<rect x="\#(number(pill.minX))" y="\#(number(pill.minY))" width="\#(number(pill.width))" height="\#(number(pill.height))" rx="\#(number(pill.height / 2))" \#(fill(annotation.color))/>"#
+        )
+        elements.append(
+            textElement(label, origin: CGPoint(x: pill.minX + padding, y: pill.minY + padding / 2), fontSize: fontSize, color: annotation.color.contrastingText))
+        return elements
     }
 
     private static func textElement(_ string: String, origin: CGPoint, fontSize: CGFloat, color paint: RGBAColor, weight: Int = 600) -> String {

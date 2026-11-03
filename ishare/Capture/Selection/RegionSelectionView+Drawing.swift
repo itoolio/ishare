@@ -19,6 +19,7 @@ extension RegionSelectionView {
         }
         parts.append("G for guides".localized())
         parts.append(hasMagnifier ? "Z for zoom and position".localized() : "Z for position".localized())
+        parts.append("Arrows and Return to select with the keyboard".localized())
         parts.append("Return for full screen".localized())
         return parts.joined(separator: "  ·  ")
     }

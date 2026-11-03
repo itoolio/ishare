@@ -148,6 +148,7 @@ struct RecordingEffectsCapture: Sendable {
     var pointer: PointerEffectSettings
     var autoZoom: AutoZoomSettings?
     var shapes: PointerShapeSet?
+    var spotlight: SpotlightCapture?
 }
 
 struct PointerShapeSet: Hashable, @unchecked Sendable {
@@ -172,9 +173,10 @@ struct RecordingEffectsPlan: Hashable, Sendable {
     var rippleColor: CaptureColor = .defaultRipple
     var camera: CameraPath?
     var pointerShapes: PointerShapeSet?
+    var spotlight: SpotlightPlan?
 
     var isEmpty: Bool {
-        pointer == nil && ripples.isEmpty && (camera?.isEmpty ?? true)
+        pointer == nil && ripples.isEmpty && (camera?.isEmpty ?? true) && spotlight == nil
     }
 
     static func make(

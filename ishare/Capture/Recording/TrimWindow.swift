@@ -462,11 +462,13 @@ extension TrimModel {
         isPlaying = false
         voiceRecorder.endClip()
         voicePhase = .inactive
-        let clips = voiceRecorder.clips
-        voiceClips = clips
         Task { @MainActor [weak self] in
+            guard let self else { return }
+            await voiceRecorder.finishPendingClips()
+            let clips = voiceRecorder.clips
+            voiceClips = clips
             let levels = await VoiceOverRecorder.levels(for: clips)
-            guard let self, voiceClips == clips else { return }
+            guard voiceClips == clips else { return }
             voiceLevels = levels
             refreshSilencePlan()
             refreshPlayerItem()

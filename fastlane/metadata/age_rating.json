@@ -1,9 +1,25 @@
 {
   "advertising": false,
   "ageAssurance": false,
+  "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+  "contests": "NONE",
+  "gambling": false,
+  "gamblingSimulated": "NONE",
   "gunsOrOtherWeapons": "NONE",
   "healthOrWellnessTopics": false,
+  "horrorOrFearThemes": "NONE",
+  "lootBox": false,
+  "matureOrSuggestiveThemes": "NONE",
+  "medicalOrTreatmentInformation": "NONE",
   "messagingAndChat": false,
   "parentalControls": false,
-  "userGeneratedContent": false
+  "profanityOrCrudeHumor": "NONE",
+  "sexualContentGraphicAndNudity": "NONE",
+  "sexualContentOrNudity": "NONE",
+  "socialMedia": false,
+  "unrestrictedWebAccess": false,
+  "userGeneratedContent": false,
+  "violenceCartoonOrFantasy": "NONE",
+  "violenceRealistic": "NONE",
+  "violenceRealisticProlongedGraphicOrSadistic": "NONE"
 }

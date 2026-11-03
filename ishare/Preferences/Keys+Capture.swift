@@ -9,6 +9,11 @@ extension Defaults.Keys {
     static let screenshotShowsCursor = Key<Bool>("screenshotShowsCursor", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let windowShadow = Key<Bool>("windowShadow", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showMagnifier = Key<Bool>("showMagnifier", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let trimUniformBorders = Key<Bool>("trimUniformBorders", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let screenshotReplayEnabled = Key<Bool>("screenshotReplayEnabled", default: false, suite: .ishare)
+    static let screenshotReplaySeconds = Key<Int>("screenshotReplaySeconds", default: 20, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let appWindowsResult = Key<AppWindowsResult>("appWindowsResult", default: .separate, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let trimBorderPadding = Key<Int>("trimBorderPadding", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showSelectionGuides = Key<Bool>("showSelectionGuides", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showLastRegionOutline = Key<Bool>("showLastRegionOutline", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let scrollingAutoScroll = Key<Bool>("scrollingAutoScroll", default: ScrollingCapture.autoScrollsByDefault, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -55,3 +60,4 @@ extension Defaults.Keys {
 extension SelectionConstraint: @retroactive Defaults.Serializable {}
 extension FixedSelectionSize: @retroactive Defaults.Serializable {}
 extension MultiRegionResult: @retroactive Defaults.Serializable {}
+extension AppWindowsResult: @retroactive Defaults.Serializable {}

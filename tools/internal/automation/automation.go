@@ -77,6 +77,14 @@ type Result struct {
 type Context struct {
 	Work    string
 	Fixture string
+	App     string
+}
+
+func (c Context) ScriptTarget() string {
+	if c.App == "" {
+		return `application id "dev.adrian.ishare"`
+	}
+	return `application "` + c.App + `"`
 }
 
 func (c Context) Uploads() string { return filepath.Join(c.Work, "uploads") }
@@ -86,6 +94,7 @@ func (c Context) Replies() string { return filepath.Join(c.Work, "replies") }
 type Case struct {
 	Name    string
 	URL     string
+	Script  string
 	Args    []string
 	Timeout time.Duration
 	Check   func(Context, Result) error
@@ -179,6 +188,10 @@ type Options struct {
 	Poll         time.Duration
 	Launch       bool
 	Cases        []Case
+	Rounds       int
+	KeepRunning  bool
+	LaunchEnv    []string
+	SnapshotDir  string
 }
 
 type Failure struct {
@@ -188,15 +201,18 @@ type Failure struct {
 
 func (f Failure) Error() string { return f.Case + ": " + f.Err.Error() }
 
-func LaunchArguments(app, work string) []string {
-	return []string{
-		"-n", "-g", "-a", app, "--args",
+func LaunchArguments(app, work string, environment ...string) []string {
+	arguments := []string{"-n", "-g"}
+	for _, variable := range environment {
+		arguments = append(arguments, "--env", variable)
+	}
+	return append(arguments, "-a", app, "--args",
 		"-ishareAutomationTestMode", "YES",
 		"-ishareAutomationDirectory", work,
 		"-ishareSkipOnboarding",
 		"-AppleLanguages", "(en)",
 		"-AppleLocale", "en_US",
-	}
+	)
 }
 
 func Prepare(work string) (Context, error) {
@@ -226,12 +242,15 @@ func Run(options Options) ([]Failure, error) {
 	if err != nil {
 		return nil, err
 	}
+	if app, err := filepath.Abs(options.App); err == nil {
+		ctx.App = app
+	}
 	cases := options.Cases
 	if cases == nil {
 		cases = Plan(ctx)
 	}
 	if options.Launch {
-		if _, stderr, code, err := options.Executor.Run(context.Background(), nil, "open", LaunchArguments(options.App, options.Work)...); err != nil || code != 0 {
+		if _, stderr, code, err := options.Executor.Run(context.Background(), nil, "open", LaunchArguments(options.App, options.Work, options.LaunchEnv...)...); err != nil || code != 0 {
 			return nil, fmt.Errorf("launching %s failed (%d): %v %s", options.App, code, err, stderr)
 		}
 	}
@@ -244,6 +263,29 @@ func Run(options Options) ([]Failure, error) {
 	}
 	_ = json.Unmarshal(ready, &pid)
 	fmt.Fprintf(options.Output, "ishare is ready in automation test mode (pid %d)\n", pid.PID)
+	var failures []Failure
+	rounds := max(1, options.Rounds)
+	for round := 1; round <= rounds; round++ {
+		if rounds > 1 {
+			fmt.Fprintf(options.Output, "round %d of %d\n", round, rounds)
+		}
+		failures = append(failures, runRound(options, ctx, cases)...)
+		if options.SnapshotDir != "" && pid.PID > 0 {
+			stdout, _, _, _ := options.Executor.Run(context.Background(), nil, "footprint", fmt.Sprint(pid.PID))
+			_ = os.WriteFile(filepath.Join(options.SnapshotDir, fmt.Sprintf("footprint-%d.txt", round)), []byte(stdout), 0o644)
+		}
+	}
+	if options.Launch && !options.KeepRunning && pid.PID > 0 {
+		_, _, _, _ = options.Executor.Run(context.Background(), nil, "kill", fmt.Sprint(pid.PID))
+	}
+	if options.SnapshotDir != "" {
+		_ = os.WriteFile(filepath.Join(options.SnapshotDir, "pid"), []byte(fmt.Sprint(pid.PID)), 0o644)
+	}
+	fmt.Fprintf(options.Output, "%d of %d automation checks passed\n", len(cases)*rounds-len(failures), len(cases)*rounds)
+	return failures, nil
+}
+
+func runRound(options Options, ctx Context, cases []Case) []Failure {
 	var failures []Failure
 	for _, testCase := range cases {
 		started := time.Now()
@@ -264,11 +306,7 @@ func Run(options Options) ([]Failure, error) {
 			}
 		}
 	}
-	if options.Launch && pid.PID > 0 {
-		_, _, _, _ = options.Executor.Run(context.Background(), nil, "kill", fmt.Sprint(pid.PID))
-	}
-	fmt.Fprintf(options.Output, "%d of %d automation checks passed\n", len(cases)-len(failures), len(cases))
-	return failures, nil
+	return failures
 }
 
 func timeout(testCase Case) time.Duration {
@@ -304,6 +342,14 @@ func execute(options Options, ctx Context, testCase Case) (Result, error) {
 		}
 		result.Reply = &reply
 		return result, nil
+	}
+	if testCase.Script != "" {
+		stdout, stderr, code, err := options.Executor.Run(runContext, nil, "osascript", "-e", testCase.Script)
+		result := Result{Stdout: stdout, Stderr: stderr, ExitCode: code}
+		if runContext.Err() != nil {
+			return result, fmt.Errorf("timed out after %s", limit)
+		}
+		return result, err
 	}
 	cli := filepath.Join(options.App, "Contents", "Helpers", "ishare")
 	stdout, stderr, code, err := options.Executor.Run(runContext, []string{MailboxEnv + "=" + ctx.Mailbox()}, cli, testCase.Args...)

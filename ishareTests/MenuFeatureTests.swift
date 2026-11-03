@@ -162,6 +162,16 @@ struct ToastPlacementTests {
         #expect(ToastPlacement.resolve(.capturedContent, screens: screens, main: left, pointer: pointer, capturedDisplayID: nil) == right)
         #expect(ToastPlacement.resolve(.pointer, screens: screens, main: nil, pointer: CGPoint(x: -50, y: 0), capturedDisplayID: nil) == left)
     }
+
+    @Test func resolvesASpecificScreenByNameWithAFallback() {
+        let left = ToastScreenCandidate(
+            displayID: 1, frame: CGRect(x: 0, y: 0, width: 100, height: 100), visibleFrame: CGRect(x: 0, y: 0, width: 100, height: 90), name: "Built-in Display")
+        let right = ToastScreenCandidate(
+            displayID: 2, frame: CGRect(x: 100, y: 0, width: 100, height: 100), visibleFrame: CGRect(x: 100, y: 0, width: 100, height: 90), name: "Studio Display")
+        let pointer = CGPoint(x: 10, y: 10)
+        #expect(ToastPlacement.resolve(.specific, screens: [left, right], main: left, pointer: pointer, capturedDisplayID: nil, specificName: "Studio Display") == right)
+        #expect(ToastPlacement.resolve(.specific, screens: [left, right], main: left, pointer: pointer, capturedDisplayID: nil, specificName: "Unplugged") == left)
+    }
 }
 
 struct HistoryTimelineTests {

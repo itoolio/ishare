@@ -196,10 +196,10 @@ final class WatchFolderService {
             WatchFolderService.markProcessed(url)
             Task { @MainActor in
                 guard !WatchFolderService.isOwnCapture(url) else { return }
-                await UploadOrigin.$current.withValue(.imported) {
-                    _ = await UploadCoordinator.upload(fileURL: url, localFileURL: url)
+                let outcome = await WatchFolderChainRunner.run(Defaults[.watchFolderActions], on: url) { WatchFolderService.markProcessed($0) }
+                if outcome.link != nil, let shown = outcome.finalURL ?? Optional(url) {
+                    await showToast(fileURL: shown)
                 }
-                await showToast(fileURL: url)
             }
         }
         monitor.start()
@@ -216,7 +216,7 @@ final class WatchFolderService {
         }
     }
 
-    private static func markProcessed(_ url: URL) {
+    static func markProcessed(_ url: URL) {
         var processed = Defaults[.watchFolderProcessed].filter { $0 != url.path }
         processed.append(url.path)
         Defaults[.watchFolderProcessed] = Array(processed.suffix(500))

@@ -48,6 +48,7 @@ final class ToastController {
     }
 
     static func show(model: ToastModel, minimumTimeout: Double = 0) async {
+        guard !PresentationHold.holdsIfPresenting(model, minimumTimeout: minimumTimeout) else { return }
         let controller = ToastController(model: model, minimumTimeout: minimumTimeout)
         screenFrame = ToastPlacement.currentScreenFrame()
         visible.insert(controller, at: 0)

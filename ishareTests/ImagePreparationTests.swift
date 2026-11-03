@@ -123,7 +123,7 @@ struct ImageOptimizerTests {
         #expect(ImageEncoders.conversionTarget(for: .avif, available: ["public.avif", "public.heic"])?.fileExtension == "avif")
         #expect(ImageEncoders.conversionTarget(for: .avif, available: ["public.heic"])?.fileExtension == "heic")
         #expect(ImageEncoders.conversionTarget(for: .avif, available: []) == nil)
-        #expect(ImageEncoders.conversionTarget(for: .webp, available: ["public.heic"]) == nil)
+        #expect(ImageEncoders.conversionTarget(for: .webp, available: [])?.fileExtension == "webp")
         #expect(ImageEncoders.conversionTarget(for: .webp, available: ["org.webmproject.webp"])?.fileExtension == "webp")
         #expect(ImageEncoders.conversionTarget(for: .lossless) == nil)
     }

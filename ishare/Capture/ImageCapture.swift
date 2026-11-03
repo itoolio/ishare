@@ -21,6 +21,7 @@ enum FileType: String, CaseIterable, Identifiable, Defaults.Serializable {
     case PDF = "pdf"
     case TIFF = "tiff"
     case HEIC = "heic"
+    case WEBP = "webp"
     var id: Self { self }
 }
 
@@ -105,7 +106,13 @@ enum ImageCaptureFlow {
         let blursPrivateApps = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps
         let loader = SelectionBackdropLoader(
             content: content, blursPrivateApps: blursPrivateApps, mode: SelectionFreezeMode(prefersFrozen: Defaults[.freezeScreenWhileSelecting]))
+        let started = ProcessInfo.processInfo.systemUptime
+        var order = SelectionOrderLog(expectsFreezeFrames: loader.mode.loadsBackdrops)
         let backdrops = await loader.captureBeforeSelectionIfFrozen()
+        if !backdrops.isEmpty {
+            order.record(.freezeFramesReady(at: ProcessInfo.processInfo.systemUptime))
+        }
+        let readyMilliseconds = Int((ProcessInfo.processInfo.systemUptime - started) * 1000)
         let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
         let options = RegionSelector.Options(
             backdrops: backdrops, hint: "Select the area to capture".localized(), lastRegions: lastRegions,
@@ -113,7 +120,18 @@ enum ImageCaptureFlow {
             liveSampler: LiveMagnifierSampler(content: content),
             onFreezeModeChange: { mode in loader.change(to: mode) }
         )
-        let selection = await RegionSelector.selectRegions(options: options)
+        var shownOptions = options
+        shownOptions.onShown = {
+            let shown = ProcessInfo.processInfo.systemUptime
+            order.record(.selectorShown(at: shown))
+            Log.capture.info(
+                "Region selector shown \(Int((shown - started) * 1000)) ms after the shortcut, freeze-frames took \(readyMilliseconds) ms"
+            )
+            if let violation = order.violation {
+                Log.capture.error("Region selector order is wrong: \(violation, privacy: .public)")
+            }
+        }
+        let selection = await RegionSelector.selectRegions(options: shownOptions)
         let imaging = RegionImaging(
             content: content, delay: delay, mode: loader.mode, backdrops: await loader.currentBackdrops(), frontmost: frontmost, source: source)
         switch selection {
@@ -257,6 +275,9 @@ enum ImageCaptureFlow {
         var result = captured
         result.additionalCaptures = result.additionalCaptures.map(finalize)
         result.image = PrivacyFilter.hideMenuBarIfNeeded(result.image, geometry: result.geometry)
+        if !result.isWindow {
+            result.image = BorderTrimmer.trimIfEnabled(result.image)
+        }
         result.image = beautifyIfNeeded(result)
         return result
     }

@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import ishareCore
 
 enum AnnotationRenderer {
     static let magnification: CGFloat = 2
@@ -134,6 +135,8 @@ enum AnnotationRenderer {
         case let .line(start, end):
             applyDash(for: annotation, in: context)
             context.strokeLineSegments(between: [start, end])
+        case let .measure(start, end):
+            drawMeasurement(from: start, to: end, annotation: annotation, in: context)
         case let .curvedLine(start, control, end):
             applyDash(for: annotation, in: context)
             context.beginPath()
@@ -142,6 +145,8 @@ enum AnnotationRenderer {
             context.strokePath()
         case let .stamp(rect, stamp):
             drawStamp(stamp, in: rect, color: annotation.color, context: context)
+        case let .library(rect, shape, text):
+            drawLibraryShape(shape, in: rect, text: text, annotation: annotation, in: context)
         case let .rectangle(rect):
             let path = CGPath(roundedRect: rect, cornerWidth: min(6, rect.width / 2), cornerHeight: min(6, rect.height / 2), transform: nil)
             context.addPath(path)
@@ -373,6 +378,44 @@ enum AnnotationRenderer {
             attributes[.shadow] = textShadow
         }
         return attributes
+    }
+
+    static func drawLibraryShape(_ shape: LibraryShape, in rect: CGRect, text: String, annotation: Annotation, in context: CGContext) {
+        context.addPath(shape.path(in: rect))
+        if annotation.filled, shape.isClosed {
+            context.fillPath()
+        } else {
+            context.strokePath()
+        }
+        guard shape.holdsText, !text.isEmpty else { return }
+        let area = shape.textRect(in: rect)
+        let size = textSize(text, fontSize: annotation.fontSize)
+        let color = annotation.filled ? annotation.color.contrastingText : annotation.color
+        drawText(text, at: CGPoint(x: area.midX - size.width / 2, y: area.midY - size.height / 2), fontSize: annotation.fontSize, color: color, shadow: false, in: context)
+    }
+
+    static var measurementPointScale: CGFloat {
+        NSScreen.main?.backingScaleFactor ?? 2
+    }
+
+    static func drawMeasurement(from start: CGPoint, to end: CGPoint, annotation: Annotation, in context: CGContext) {
+        context.strokeLineSegments(between: [start, end])
+        for tick in DimensionMeasure.ticks(from: start, to: end, length: max(10, annotation.lineWidth * 4)) {
+            context.strokeLineSegments(between: [tick.0, tick.1])
+        }
+        let label = DimensionMeasure.label(from: start, to: end, pointScale: measurementPointScale)
+        let fontSize = max(11, annotation.fontSize * 0.5)
+        let size = textSize(label, fontSize: fontSize)
+        let padding = fontSize * 0.35
+        let center = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
+        let pill = CGRect(
+            x: center.x - size.width / 2 - padding, y: center.y - size.height / 2 - padding / 2, width: size.width + padding * 2, height: size.height + padding)
+        context.setFillColor(annotation.color.cgColor)
+        context.addPath(CGPath(roundedRect: pill, cornerWidth: pill.height / 2, cornerHeight: pill.height / 2, transform: nil))
+        context.fillPath()
+        drawText(
+            label, at: CGPoint(x: pill.minX + padding, y: pill.minY + padding / 2), fontSize: fontSize, color: annotation.color.contrastingText, shadow: false,
+            in: context)
     }
 
     static func textSize(_ string: String, fontSize: CGFloat, weight: NSFont.Weight = .semibold) -> CGSize {

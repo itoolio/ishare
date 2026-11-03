@@ -76,6 +76,7 @@ final class OverlayImageRenderer: @unchecked Sendable {
 
     func compose(screen: CIImage, webcam: CIImage?, time: Double, timeline: OverlayTimeline, layout: OverlayCompositionLayout) -> CIImage {
         var image = BlurRegionRenderer.apply(timeline.blurRegions, to: screen, time: time, videoSize: layout.videoSize)
+        image = SpotlightRenderer.apply(timeline.effects.spotlight, to: image, time: time, videoSize: layout.videoSize)
         for ripple in timeline.ripples(at: time) {
             let point = OverlayCoordinateMapper.flipped(ripple.point, videoHeight: layout.videoSize.height)
             image = rippleImage(progress: ripple.progress, at: point, scale: layout.pixelsPerPoint).composited(over: image)
@@ -351,6 +352,7 @@ enum OverlayCompositor {
             let shapes = effects.shapes?.retimed { pauses.recordedDuration(from: recordingStart, to: $0) }
             var plan = RecordingEffectsPlan.make(
                 activity: activity, pointer: effects.pointer, autoZoom: effects.autoZoom, videoSize: videoSize, duration: duration.seconds, shapes: shapes)
+            plan.spotlight = effects.spotlight?.plan(recordingStart: recordingStart, videoSize: videoSize, pauses: pauses)
             if defersZoom {
                 deferredCamera = plan.camera
                 plan = plan.withoutCamera()

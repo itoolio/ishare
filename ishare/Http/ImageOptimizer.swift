@@ -37,7 +37,7 @@ enum ImageEncoders {
         case .avif:
             available.contains(avif) ? (avif, "avif") : available.contains(heic) ? (heic, "heic") : nil
         case .webp:
-            available.contains(webp) ? (webp, "webp") : nil
+            (webp, "webp")
         }
     }
 }
@@ -110,6 +110,10 @@ enum ImageOptimizer {
     static func convert(_ source: CGImageSource, to target: (type: String, fileExtension: String), quality: Double, name: String, in directory: URL) -> URL? {
         guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
         let output = directory.appending(path: "\(name).\(target.fileExtension)", directoryHint: .notDirectory)
+        if target.type == ImageEncoders.webp {
+            guard let data = try? WebPEncoder.encode(image, quality: min(1, max(0.1, quality))), (try? data.write(to: output)) != nil else { return nil }
+            return output
+        }
         var properties = preservedProperties(of: source)
         properties[kCGImageDestinationLossyCompressionQuality] = min(1, max(0.1, quality))
         return write(image, type: target.type, to: output, properties: properties) ? output : nil
