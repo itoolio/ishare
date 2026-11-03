@@ -18,6 +18,7 @@ import (
 	"github.com/itoolio/ishare/tools/internal/buildlog"
 	"github.com/itoolio/ishare/tools/internal/coverage"
 	"github.com/itoolio/ishare/tools/internal/docc"
+	"github.com/itoolio/ishare/tools/internal/leaks"
 	"github.com/itoolio/ishare/tools/internal/metadata"
 	"github.com/itoolio/ishare/tools/internal/releasecheck"
 	"github.com/itoolio/ishare/tools/internal/releasenotes"
@@ -59,6 +60,7 @@ var commands = map[string]command{
 	"symbolicate":        {"symbolicate <crash.ips|crash> --dsyms <dSYMs.zip|dir> [--output file]", symbolicate},
 	"automation":         {"automation --app ishare.app [--work dir] [--no-launch] [--ready-timeout seconds]", runAutomation},
 	"sbom":               {"sbom --version <version> --output file.spdx.json [--package-resolved Package.resolved]... [--package-dir dir]... [--go-mod go.mod]... [--created RFC3339]", writeSBOM},
+	"leaks-check":        {"leaks-check --leaks leaks.txt --before footprint1.txt --after footprint2.txt [--max-leaks n] [--max-growth-mb n]", leaksCheck},
 	"release-retry":      {"release-retry --attempt n < jobs.json", releaseRetry},
 	"release-check":      {"release-check [--app ishare.app|ishare.xcarchive] [--release-notes file] [--allowlist file] [--review-notes file] [--screenshots dir] [--metadata dir]", releaseCheck},
 }
@@ -518,6 +520,11 @@ func runAutomation(env environment, arguments []string) error {
 	work := flags.String("work", "", "")
 	noLaunch := flags.Bool("no-launch", false, "")
 	readyTimeout := flags.Int("ready-timeout", 90, "")
+	rounds := flags.Int("rounds", 1, "")
+	keepRunning := flags.Bool("keep-running", false, "")
+	snapshots := flags.String("snapshots", "", "")
+	var launchEnv stringList
+	flags.Var(&launchEnv, "launch-env", "")
 	if err := flags.Parse(arguments); err != nil || flags.NArg() > 0 || *app == "" || *readyTimeout <= 0 {
 		return errUsage
 	}
@@ -536,6 +543,7 @@ func runAutomation(env environment, arguments []string) error {
 	failures, err := automation.Run(automation.Options{
 		App: appPath, Work: directory, Output: env.stdout, Launch: !*noLaunch,
 		ReadyTimeout: time.Duration(*readyTimeout) * time.Second,
+		Rounds:       *rounds, KeepRunning: *keepRunning, LaunchEnv: launchEnv, SnapshotDir: *snapshots,
 	})
 	if err != nil {
 		return err
@@ -559,5 +567,61 @@ func releaseRetry(env environment, arguments []string) error {
 	}
 	decision := releaseretry.Decide(jobs, *attempt)
 	fmt.Fprintf(env.stdout, "retry=%t\nreason=%s\n", decision.Retry, decision.Reason)
+	return nil
+}
+
+func leaksCheck(env environment, arguments []string) error {
+	flags := flag.NewFlagSet("leaks-check", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	leaksPath := flags.String("leaks", "", "")
+	beforePath := flags.String("before", "", "")
+	afterPath := flags.String("after", "", "")
+	maxLeaks := flags.Int("max-leaks", 0, "")
+	maxGrowth := flags.Float64("max-growth-mb", 40, "")
+	if err := flags.Parse(arguments); err != nil {
+		return err
+	}
+	read := func(path string) (string, error) {
+		data, err := os.ReadFile(path)
+		return string(data), err
+	}
+	leakOutput, err := read(*leaksPath)
+	if err != nil {
+		return err
+	}
+	beforeOutput, err := read(*beforePath)
+	if err != nil {
+		return err
+	}
+	afterOutput, err := read(*afterPath)
+	if err != nil {
+		return err
+	}
+	summary, err := leaks.ParseLeaks(leakOutput)
+	if err != nil {
+		return err
+	}
+	before, err := leaks.ParseFootprint(beforeOutput)
+	if err != nil {
+		return err
+	}
+	after, err := leaks.ParseFootprint(afterOutput)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(env.stdout, "leaks: %d (%d bytes)\nfootprint: %.1f MB -> %.1f MB\n", summary.Leaks, summary.Bytes, float64(before.Bytes)/1048576, float64(after.Bytes)/1048576)
+	problems := leaks.Check(summary, before, after, leaks.Limits{MaxLeaks: *maxLeaks, MaxGrowthBytes: int64(*maxGrowth * 1048576)})
+	if len(problems) > 0 {
+		return fmt.Errorf("%s", strings.Join(problems, "; "))
+	}
+	return nil
+}
+
+type stringList []string
+
+func (list *stringList) String() string { return strings.Join(*list, ",") }
+
+func (list *stringList) Set(value string) error {
+	*list = append(*list, value)
 	return nil
 }
