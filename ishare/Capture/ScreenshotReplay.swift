@@ -161,20 +161,20 @@ enum ScreenshotReplayWindow {
     private static var window: NSWindow?
 
     static func show(frames: [Data], displayID: CGDirectDisplayID, age: @escaping (Int) -> Double) {
-        window?.close()
+        Self.window?.close()
         let view = ScreenshotReplayView(frames: frames, age: age) { data, wholeFrame in
-            window?.close()
-            window = nil
+            Self.window?.close()
+            Self.window = nil
             Task { @MainActor in await capture(data, displayID: displayID, wholeFrame: wholeFrame) }
         }
-        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 860, height: 620), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        window.title = "Screenshot Replay".localized()
-        window.contentView = NSHostingView(rootView: view)
-        window.isReleasedWhenClosed = false
-        window.center()
+        let replayWindow = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 860, height: 620), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        replayWindow.title = "Screenshot Replay".localized()
+        replayWindow.contentView = NSHostingView(rootView: view)
+        replayWindow.isReleasedWhenClosed = false
+        replayWindow.center()
         NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
-        self.window = window
+        replayWindow.makeKeyAndOrderFront(nil)
+        Self.window = replayWindow
     }
 
     static func capture(_ data: Data, displayID: CGDirectDisplayID, wholeFrame: Bool) async {
