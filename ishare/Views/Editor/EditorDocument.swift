@@ -3,6 +3,7 @@ import BezelNotification
 import Combine
 import Defaults
 import ishareCore
+import Translation
 
 @MainActor
 final class EditorDocument: ObservableObject {
@@ -38,6 +39,7 @@ final class EditorDocument: ObservableObject {
     @Published var filled = false
     @Published var textBackground = false
     @Published var selectedIDs: Set<UUID> = []
+    let translation = EditorTranslation()
     @Published var libraryShape: LibraryShape = .roundBubble
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
@@ -320,6 +322,23 @@ final class EditorDocument: ObservableObject {
             base = lifted
             adjustments = .identity
         }
+    }
+
+    func beginTranslateInPlace() async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        if !(await translation.begin(on: adjustedBase)) {
+            isProcessing = false
+        }
+    }
+
+    func translateInPlace(using session: TranslationSession) async {
+        defer { isProcessing = false }
+        let overlays = await translation.annotations(using: session)
+        guard !overlays.isEmpty else { return }
+        add(contentsOf: overlays)
+        selectedIDs = Set(overlays.map(\.id))
     }
 
     func redactFaces(pixelate: Bool) async {

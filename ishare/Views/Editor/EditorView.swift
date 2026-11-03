@@ -1,6 +1,7 @@
 import BezelNotification
 import Defaults
 import SwiftUI
+import Translation
 import ishareCore
 
 struct EditorView: View {
@@ -58,6 +59,7 @@ struct EditorView: View {
         .sheet(isPresented: $showsBeautify) {
             EditorBeautifySheet(document: document) { showsBeautify = false }
         }
+        .modifier(EditorTranslationTask(document: document, translation: document.translation))
         .onChange(of: showsAdjustments) { _, shown in
             if !shown {
                 document.straightenAngle = 0
@@ -419,6 +421,10 @@ struct EditorView: View {
                 Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }
             }
             .disabled(document.isProcessing)
+            Button("Translate Text in Place".localized()) {
+                Task { await document.beginTranslateInPlace() }
+            }
+            .disabled(document.isProcessing)
             Button("Measure Selection".localized()) {
                 document.measureSelection()
             }
@@ -611,5 +617,16 @@ struct EditorGridMenu: View {
         .fixedSize()
         .helpAndAccessibilityLabel("Grid and Rulers".localized())
         .accessibilityIdentifier("editor.grid")
+    }
+}
+
+struct EditorTranslationTask: ViewModifier {
+    let document: EditorDocument
+    @ObservedObject var translation: EditorTranslation
+
+    func body(content: Content) -> some View {
+        content.translationTask(translation.configuration) { session in
+            await document.translateInPlace(using: session)
+        }
     }
 }
