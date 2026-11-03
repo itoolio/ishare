@@ -50,9 +50,19 @@ type leakRoot struct {
 }
 
 func systemFrameworkLeaks(output string) (int, int) {
+	leaks, bytes := 0, 0
+	for _, section := range strings.Split(output, "\nSTACK OF ") {
+		sectionLeaks, sectionBytes := systemFrameworkLeaksInSection(section)
+		leaks += sectionLeaks
+		bytes += sectionBytes
+	}
+	return leaks, bytes
+}
+
+func systemFrameworkLeaksInSection(section string) (int, int) {
 	var roots []leakRoot
 	topDepth := -1
-	for _, line := range strings.Split(output, "\n") {
+	for _, line := range strings.Split(section, "\n") {
 		match := rootLine.FindStringSubmatch(line)
 		if match == nil {
 			continue

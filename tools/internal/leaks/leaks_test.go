@@ -37,7 +37,12 @@ func TestChecksLeaksAndGrowthAgainstTheLimits(t *testing.T) {
 }
 
 func TestDiscountsLeaksRootedInSystemServiceConnections(t *testing.T) {
-	report := `Process 14425: 99 leaks for 6400 total leaked bytes.
+	report := `Process 14425: 195 leaks for 12544 total leaked bytes.
+
+STACK OF 1 INSTANCE OF 'ROOT CYCLE: <NSXPCConnection>':
+====
+    96 (6.12K) ROOT CYCLE: <NSXPCConnection 0xa18c6c900> [192]  Connection: "com.apple.linkd.autoShortcut" [no process]
+       6 (800 bytes) _connection --> ROOT CYCLE: <xpc_connection_t 0xa190b5040> [320]  "com.apple.linkd.autoShortcut"
 
 STACK OF 1 INSTANCE OF 'ROOT CYCLE: <NSXPCConnection>':
 2   libobjc.A.dylib                       0x187b69f64 _objc_rootAllocWithZone + 52
@@ -50,7 +55,7 @@ STACK OF 1 INSTANCE OF 'ROOT LEAK: <UploadTask>':
       3 (144 bytes) ROOT LEAK: <UploadTask 0xa18c70000> [48]
 `
 	summary, err := ParseLeaks(report)
-	if err != nil || summary.Leaks != 99 || summary.SystemLeaks != 96 || summary.OwnLeaks() != 3 {
+	if err != nil || summary.Leaks != 195 || summary.SystemLeaks != 192 || summary.OwnLeaks() != 3 {
 		t.Fatalf("unexpected %+v %v", summary, err)
 	}
 	if problems := Check(summary, Footprint{}, Footprint{}, Limits{MaxLeaks: 2}); len(problems) != 1 {
