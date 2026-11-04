@@ -5,12 +5,14 @@ enum AutomationOpenTarget: Equatable, Sendable {
     case history
     case settings(String?)
     case editor
+    case replay
 }
 
 enum URLSchemeCommand: Equatable, Sendable {
     case capture(CLICaptureMode)
     case captureWebPage(WebPageCaptureRequest)
     case captureApp(String?, contactSheet: Bool)
+    case captureAgain
     case record(CLIRecordAction, gif: Bool, region: Bool, preset: String? = nil)
     case upload([URL])
     case selectUploader(String)
@@ -93,9 +95,7 @@ struct URLSchemeFileAccess: Sendable {
     var isReadableFile: @Sendable (String) -> Bool
 
     static let live = URLSchemeFileAccess { path in
-        var isDirectory: ObjCBool = false
-        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) && !isDirectory.boolValue
-            && FileManager.default.isReadableFile(atPath: path)
+        FileManager.default.fileExists(atPath: path) && FileManager.default.isReadableFile(atPath: path)
     }
 }
 
@@ -154,6 +154,8 @@ enum URLSchemeParser {
             let format: WebPageFormat = value("format", in: items)?.lowercased() == "pdf" ? .pdf : .image
             let dismisses = items.contains { $0.name.lowercased() == "banners" } ? flag("banners", in: items) : true
             return .success(.captureWebPage(WebPageCaptureRequest(address: address, width: width, format: format, dismissesCookieBanners: dismisses)))
+        case "capture" where argument == "again":
+            return .success(.captureAgain)
         case "capture" where argument == "app":
             return .success(.captureApp(value("name", in: items), contactSheet: flag("sheet", in: items)))
         case "capture":
@@ -178,6 +180,7 @@ enum URLSchemeParser {
             case "history": return .success(.open(.history))
             case "settings": return .success(.open(.settings(value("pane", in: items)?.lowercased())))
             case "editor": return .success(.open(.editor))
+            case "replay": return .success(.open(.replay))
             default: return .failure(.invalidValue(parameter: "open", value: argument ?? ""))
             }
         case "cli":

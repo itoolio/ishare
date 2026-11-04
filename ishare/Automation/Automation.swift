@@ -26,6 +26,8 @@ protocol AutomationActions: AnyObject {
     func selectUploader(named name: String) -> Bool
     func uploaders() -> [CLIUploaderInfo]
     func history(limit: Int) -> [CLIHistoryEntry]
+    func watchFolders() -> [CLIWatchFolderInfo]
+    func runWatchFolder(on file: URL, folder: String?) async -> Result<CLICaptureResult, AutomationError>
     func open(_ target: AutomationOpenTarget)
     func openCallback(_ url: URL)
 }
@@ -38,6 +40,7 @@ extension CLICaptureMode {
         case .screen: .SCREEN
         case .scrolling: .SCROLLING
         case .menu: .MENU
+        case .displays: .ALL_DISPLAYS
         }
     }
 }
@@ -152,7 +155,17 @@ final class LiveAutomationActions: AutomationActions {
             let scoped = file.startAccessingSecurityScopedResource()
             defer { if scoped { file.stopAccessingSecurityScopedResource() } }
             Log.app.info("Automation upload of \(file.path, privacy: .public)")
-            switch await UploadCoordinator.upload(fileURL: file, target: target, localFileURL: file) {
+            var archive: URL?
+            if FolderArchive.isFolder(file) {
+                do {
+                    archive = try await FolderArchive.zipped(file)
+                } catch {
+                    results.append(CLIUploadResult(file: file.path, error: error.localizedDescription))
+                    continue
+                }
+            }
+            defer { archive.map(FolderArchive.discard) }
+            switch await UploadCoordinator.upload(fileURL: archive ?? file, target: target, localFileURL: archive == nil ? file : nil) {
             case let .success(outcome):
                 results.append(CLIUploadResult(file: file.path, link: outcome.deliveredURL?.absoluteString ?? outcome.url.absoluteString))
                 presentToast(for: file)
@@ -171,6 +184,29 @@ final class LiveAutomationActions: AutomationActions {
 
     func uploaders() -> [CLIUploaderInfo] {
         AutomationUploaders.list()
+    }
+
+    func watchFolders() -> [CLIWatchFolderInfo] {
+        Defaults[.watchedFolders].map { folder in
+            CLIWatchFolderInfo(name: folder.displayName, path: folder.path, enabled: folder.isEnabled, steps: folder.actions.map(\.kind.title))
+        }
+    }
+
+    func runWatchFolder(on file: URL, folder name: String?) async -> Result<CLICaptureResult, AutomationError> {
+        let folders = Defaults[.watchedFolders]
+        let folder =
+            name.map { name in
+                folders.first { $0.displayName.caseInsensitiveCompare(name) == .orderedSame || $0.path == (name as NSString).expandingTildeInPath }
+            } ?? folders.first
+        guard let folder else {
+            return .failure(.failed(name.map { String(format: "No watch folder named “%@”".localized(), $0) } ?? "Add a watch folder in Settings first".localized()))
+        }
+        let outcome = await WatchFolderChainRunner.run(folder.actions, on: file) { WatchFolderService.markProcessed($0) }
+        WatchFolderUndo.record(outcome.moves)
+        if let failure = outcome.failure {
+            return .failure(.failed(failure))
+        }
+        return .success(CLICaptureResult(file: outcome.finalURL?.path, link: outcome.link))
     }
 
     func history(limit: Int) -> [CLIHistoryEntry] {
@@ -193,6 +229,8 @@ final class LiveAutomationActions: AutomationActions {
             MenuController.shared.openSettings(pane: pane.flatMap(SettingsPane.init(rawValue:)))
         case .editor:
             Task { @MainActor in await ImageEditor.chooseAndEdit() }
+        case .replay:
+            ScreenshotReplay.shared.open()
         }
     }
 
@@ -325,6 +363,11 @@ final class URLSchemeRouter {
             return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
         case let .captureApp(app, contactSheet):
             return await actions.captureAppWithAfterCaptureSteps(app, contactSheet: contactSheet)
+        case .captureAgain:
+            let before = Defaults[.uploadHistory].first
+            await CaptureAgain.run()
+            let latest = Defaults[.uploadHistory].first
+            return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
         case let .record(action, gif, region, preset):
             return await actions.record(action, gif: gif, region: region, preset: preset).map { _ in nil }
         case let .upload(files):

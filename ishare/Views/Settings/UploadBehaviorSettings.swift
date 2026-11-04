@@ -11,6 +11,7 @@ struct UploadBehaviorSettings: View {
     @Default(.savedCustomUploaders) var savedCustomUploaders
     @Default(.savedLocalUploaders) var savedLocalUploaders
     @Default(.showsUploadProgressHUD) var showsUploadProgressHUD
+    @Default(.dropAsksForUploader) var dropAsksForUploader
 
     private var destinations: [(title: String, destination: UploadDestination)] {
         [("Imgur", UploadDestination.builtIn(.IMGUR))] + CustomUploader.allCases.map { ($0.name, UploadDestination.custom($0.id)) }
@@ -26,6 +27,9 @@ struct UploadBehaviorSettings: View {
             }
             Toggle("Open URL in browser after upload".localized(), isOn: $openURLAfterUpload)
             Toggle("Show progress below the menu bar icon for long uploads".localized(), isOn: $showsUploadProgressHUD)
+                .settingsEntry(NewerSettingsSearch.progressHUD)
+            Toggle("Ask which uploader to use when dropping files on the menu bar icon".localized(), isOn: $dropAsksForUploader)
+                .help("You can also hold the destination key while dropping.".localized())
             Picker("Choose destination while holding".localized(), selection: $destinationChooserModifier) {
                 Text("Off".localized()).tag(ForceUploadModifier?.none)
                 ForEach(ForceUploadModifier.allCases) { modifier in

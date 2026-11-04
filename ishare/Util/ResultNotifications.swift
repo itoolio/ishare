@@ -207,6 +207,10 @@ enum MaintenanceNotifications {
 enum ResultPresenter {
     static func present(_ model: ToastModel) async {
         let presentation = Defaults[.resultPresentation]
+        if presentation == .pointer, model.fileURL != nil, !ScreenshotMode.isActive {
+            await PointerResultHUD.present(model)
+            return
+        }
         let notifies = presentation.postsNotification && model.fileURL != nil
         let canNotify = notifies ? await ResultNotifier.shared.canPost() : false
         guard canNotify else {

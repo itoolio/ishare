@@ -2,7 +2,7 @@ import { Clipboard, getPreferenceValues, open, showHUD, showToast, Toast } from 
 import { execFile } from "node:child_process";
 import { accessSync, constants } from "node:fs";
 
-export type CaptureMode = "region" | "window" | "screen";
+export type CaptureMode = "region" | "window" | "screen" | "displays";
 
 export interface UploadResult {
   file: string;
@@ -31,7 +31,7 @@ export interface HistoryEntry {
 export interface Payload {
   message?: string;
   uploads?: UploadResult[];
-  capture?: { file?: string; link?: string };
+  capture?: { file?: string; link?: string; files?: string[]; links?: string[] };
   uploaders?: UploaderInfo[];
   history?: HistoryEntry[];
   recording?: boolean;

@@ -117,6 +117,14 @@ private struct CaptureProfileSection: View {
             overridePicker("Add a background".localized(), value: $profile.addsBackground)
             overridePicker("Blur private apps".localized(), value: $profile.blursPrivateApps)
             overridePicker("Include window shadow".localized(), value: $profile.includesWindowShadow)
+            overridePicker("Redact sensitive text before uploading".localized(), value: $profile.redactsSensitiveText)
+            Toggle("Open in the editor".localized(), isOn: Binding(get: { profile.opensEditor == true }, set: { profile.opensEditor = $0 ? true : nil }))
+            Picker("Upload to".localized(), selection: $profile.uploadDestination) {
+                Text("Default".localized()).tag(UploadDestination?.none)
+                ForEach(UploadDestinationSwitcher.destinations, id: \.self) { destination in
+                    Text(UploadDestinationSwitcher.title(for: destination)).tag(UploadDestination?.some(destination))
+                }
+            }
             LabeledContent("File prefix:".localized()) {
                 TextField(
                     "",

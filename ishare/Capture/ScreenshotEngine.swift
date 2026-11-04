@@ -78,6 +78,14 @@ enum ScreenshotEngine {
         }
     }
 
+    static let notificationBundleIdentifiers: Set<String> = ["com.apple.notificationcenterui", "com.apple.UserNotificationCenter"]
+
+    static func recordingExcludedApplications(in content: SCShareableContent) -> [SCRunningApplication] {
+        let excluded = excludedApplications(in: content)
+        guard RecordingDefaults[.hideNotificationsInRecordings] else { return excluded }
+        return excluded + content.applications.filter { notificationBundleIdentifiers.contains($0.bundleIdentifier) }
+    }
+
     static func excludedApplications(in content: SCShareableContent) -> [SCRunningApplication] {
         let ignored = Set(Defaults[.ignoredBundleIdentifiers])
         let ownBundleID = Bundle.main.bundleIdentifier
@@ -100,6 +108,17 @@ enum ScreenshotEngine {
         configuration.scalesToFit = false
         configuration.shouldBeOpaque = false
         return configuration
+    }
+
+    static func captureWindows(_ windows: [SCWindow], on display: SCDisplay, globalRect: CGRect) async throws -> CGImage {
+        let filter = SCContentFilter(display: display, including: windows)
+        let scale = CGFloat(filter.pointPixelScale)
+        let bounds = CGDisplayBounds(display.displayID)
+        let local = CGRect(x: globalRect.minX - bounds.minX, y: globalRect.minY - bounds.minY, width: globalRect.width, height: globalRect.height)
+        let configuration = baseConfiguration(pixelSize: CGSize(width: local.width * scale, height: local.height * scale), showsCursor: false)
+        configuration.sourceRect = local
+        configuration.backgroundColor = .clear
+        return try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
     }
 
     static func captureDisplay(_ display: SCDisplay, region: CGRect? = nil, in content: SCShareableContent, showsCursor: Bool? = nil) async throws -> CGImage {

@@ -1,5 +1,6 @@
 import AVFoundation
 import Defaults
+import ishareCore
 import Speech
 import SwiftUI
 
@@ -64,6 +65,7 @@ private struct WebcamSettingsSection: View {
     @Default(.webcamCorner) private var webcamCorner
     @Default(.webcamDeviceID) private var webcamDeviceID
     @Default(.webcamBackground) private var webcamBackground
+    @Default(.webcamLayout) private var webcamLayout
     @State private var cameras: [AVCaptureDevice] = []
     @State private var authorization = AVCaptureDevice.authorizationStatus(for: .video)
 
@@ -90,6 +92,13 @@ private struct WebcamSettingsSection: View {
                 Picker("Position".localized(), selection: $webcamCorner) {
                     ForEach(WebcamCorner.allCases) { Text($0.title.localized()).tag($0) }
                 }
+                Picker("Layout".localized(), selection: $webcamLayout) {
+                    Text("Bubble in a corner".localized()).tag(WebcamLayout.bubble)
+                    Text("Side by side".localized()).tag(WebcamLayout.sideBySide)
+                    Text("Full screen at each marker".localized()).tag(WebcamLayout.fullScreenAtMarkers)
+                }
+                .help("Side by side and full screen are added after you stop recording; add markers with the marker button or shortcut.".localized())
+                .settingsEntry(NewerSettingsSearch.webcamLayout)
                 Picker("Background".localized(), selection: $webcamBackground) {
                     ForEach(WebcamBackground.allCases) { Text($0.title).tag($0) }
                 }
@@ -156,16 +165,32 @@ private struct MicrophoneSettingsSection: View {
 
 private struct AfterRecordingSettingsSection: View {
     @Default(.trimBeforeSaving) private var trimBeforeSaving
+    @Default(.recordingCountdownSeconds) private var countdown
+    @Default(.recordingCountdownChime) private var chime
     @Default(.gifMaxSize) private var gifMaxSize
     @Default(.saveSeparateTracks) private var saveSeparateTracks
 
     var body: some View {
+        Section("Countdown".localized()) {
+            Picker("Count down before recording".localized(), selection: $countdown) {
+                Text("Off".localized()).tag(0)
+                Text("3 s").tag(3)
+                Text("5 s").tag(5)
+                Text("10 s").tag(10)
+            }
+            .settingsEntry(NewerSettingsSearch.countdown)
+            Toggle("Play a chime when recording starts".localized(), isOn: $chime)
+                .disabled(countdown == 0)
+                .help("The countdown and the chime happen before recording begins, so neither ends up in the video. Press Esc to cancel.".localized())
+        }
         Section("After Recording".localized()) {
             Toggle("Trim recordings before saving".localized(), isOn: $trimBeforeSaving)
             Toggle("Also save separate tracks for editing".localized(), isOn: $saveSeparateTracks)
                 .help(
                     "Saves the screen, each audio track and the webcam as separate files in a folder next to the recording, for Final Cut Pro, DaVinci Resolve or other editors."
-                        .localized())
+                        .localized()
+                )
+                .settingsEntry(NewerSettingsSearch.separateTracks)
             Picker("GIF size".localized(), selection: $gifMaxSize) {
                 ForEach(GIFMaxSize.allCases) { Text($0.title.localized()).tag($0) }
             }
@@ -203,6 +228,7 @@ private struct CaptionsSettingsSection: View {
                     }
                 }
                 .help("Shows what you say at the bottom of full-screen and region recordings, recognized on this Mac.".localized())
+                .settingsEntry(NewerSettingsSearch.liveCaptions)
             if !authorized, SFSpeechRecognizer.authorizationStatus() == .denied || SFSpeechRecognizer.authorizationStatus() == .restricted {
                 PermissionRow(title: "Speech Recognition", granted: false) {
                     SystemSettingsLink.open("Privacy_SpeechRecognition")
@@ -232,6 +258,7 @@ private enum SystemSettingsLink {
 struct AudioSourceSettingsRows: View {
     @Binding var audioSource: RecordingAudioSource
     @Default(.recordingAudioBundleIDs) private var bundleIDs
+    @Default(.hideNotificationsInRecordings) private var hidesNotifications
     @State private var isAppPickerPresented = false
 
     var body: some View {
@@ -239,6 +266,12 @@ struct AudioSourceSettingsRows: View {
             ForEach(RecordingAudioSource.allCases) { Text($0.title.localized()).tag($0) }
         }
         .accessibilityIdentifier("settings.recording.audioSource")
+        Toggle("Keep notification banners out of recordings".localized(), isOn: $hidesNotifications)
+            .help(
+                "Notification banners and alerts from other apps don’t appear in full-screen and region recordings. Choose Selected apps above to also leave out their sounds."
+                    .localized()
+            )
+            .settingsEntry(NewerSettingsSearch.notifications)
         if audioSource == .selectedApps {
             LabeledContent("Apps".localized()) {
                 HStack {

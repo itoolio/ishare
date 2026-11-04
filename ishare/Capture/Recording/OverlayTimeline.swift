@@ -147,6 +147,9 @@ struct OverlayCompositionLayout: Hashable, Sendable {
     var videoSize: CGSize
     var pixelsPerPoint: CGFloat
     var webcamFrame: CGRect?
+    var webcamLayout: WebcamLayout = .bubble
+    var sections: [Double] = []
+    var sourceSize: CGSize = .zero
 
     static func make(videoSize: CGSize, sourceSize: CGSize, webcamDiameter: CGFloat?, corner: WebcamCorner) -> OverlayCompositionLayout {
         let scale = OverlayCoordinateMapper.pixelsPerPoint(sourceSize: sourceSize, videoSize: videoSize)

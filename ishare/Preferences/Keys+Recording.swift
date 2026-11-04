@@ -24,6 +24,9 @@ extension Defaults.Keys {
     static let showWebcam = Key<Bool>("showWebcam", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamSize = Key<WebcamBubbleSize>("webcamSize", default: .medium, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamCorner = Key<WebcamCorner>("webcamCorner", default: .bottomRight, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingCountdownSeconds = Key<Int>("recordingCountdownSeconds", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let recordingCountdownChime = Key<Bool>("recordingCountdownChime", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let webcamLayout = Key<WebcamLayout>("webcamLayout", default: .bubble, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamBackground = Key<WebcamBackground>("webcamBackground", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamDeviceID = Key<String?>("webcamDeviceID", default: nil, suite: .ishare)
     static let microphoneDeviceID = Key<String?>("microphoneDeviceID", default: nil, suite: .ishare)
@@ -55,6 +58,8 @@ extension Defaults.Keys {
     static let autoZoomFollowsPointer = Key<Bool>("autoZoomFollowsPointer", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let autoZoomOnTyping = Key<Bool>("autoZoomOnTyping", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let pointerSmoothing = Key<Bool>("pointerSmoothing", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let hideNotificationsInRecordings = Key<Bool>("hideNotificationsInRecordings", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let pointerHighlight = Key<PointerHighlight>("pointerHighlight", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let pointerScale = Key<Double>("pointerScale", default: 1, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let clickRipples = Key<Bool>("clickRipples", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let clickRippleColor = Key<String>("clickRippleColor", default: "#FFCC00", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -81,3 +86,7 @@ extension Defaults.Keys {
 }
 
 extension FollowPointerSize: @retroactive Defaults.Serializable {}
+
+extension PointerHighlight: @retroactive Defaults.Serializable {}
+
+extension WebcamLayout: @retroactive Defaults.Serializable {}

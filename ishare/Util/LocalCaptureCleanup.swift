@@ -99,6 +99,12 @@ enum LocalCaptureCleanup {
         )
     }
 
+    @MainActor static func allCapturesPlan() -> LocalCaptureCleanupPlan? {
+        LocalCaptureCleanupPlan(
+            directories: [SaveLocation.directory(for: .captures), SaveLocation.directory(for: .recordings)],
+            prefixes: [Defaults[.captureFileName], Defaults[.recordingFileName]], cutoff: .distantFuture, protectedPaths: [])
+    }
+
     @MainActor static func runNow() {
         guard let plan = currentPlan() else { return }
         Task.detached(priority: .utility) {

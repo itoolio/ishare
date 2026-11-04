@@ -51,6 +51,20 @@ public struct RetimingPlan: Hashable, Sendable {
 
     public var isIdentity: Bool { segments.allSatisfy { $0.action == .keep } }
 
+    public static let reviewLeadIn = 1.5
+
+    public var cutStarts: [Double] {
+        segments.filter { $0.action != .keep }.map(\.start)
+    }
+
+    public func reviewTime(after time: Double) -> Double? {
+        cutStarts.first { $0 - Self.reviewLeadIn > time + 0.05 }.map { max(0, $0 - Self.reviewLeadIn) }
+    }
+
+    public func reviewTime(before time: Double) -> Double? {
+        cutStarts.last { $0 - Self.reviewLeadIn < time - 0.25 }.map { max(0, $0 - Self.reviewLeadIn) }
+    }
+
     public var changedSegments: [RetimingSegment] { segments.filter { $0.action != .keep } }
 
     public var hasSpeedChanges: Bool {

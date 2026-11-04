@@ -20,6 +20,7 @@ final class AppState: ObservableObject {
             InstantReplay.shared.activate()
             ScreenshotReplay.shared.activate()
             UploadProgressHUD.shared.activate()
+            LocalAPIServer.shared.activate()
         }
     }
 
@@ -66,6 +67,9 @@ final class AppState: ObservableObject {
         onRecord(.recordGif, gif: true)
         onRecord(.recordRegion, gif: false, region: true)
         onRecord(.recordRegionGif, gif: true, region: true)
+        KeyboardShortcuts.onKeyUp(for: .captureAgain) {
+            Task { @MainActor in await CaptureAgain.run() }
+        }
         KeyboardShortcuts.onKeyUp(for: .recordFollowingPointer) {
             Task { @MainActor in CaptureSession.toggleFollowPointerRecording() }
         }

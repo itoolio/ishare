@@ -296,3 +296,20 @@ struct BlurRegionTests {
         #expect(RegionGeometry.flippedVertically(CGRect(x: 0, y: 0, width: 0.5, height: 0.25)) == CGRect(x: 0, y: 0.75, width: 0.5, height: 0.25))
     }
 }
+
+struct CutReviewTests {
+    let plan = RetimingPlan(segments: [
+        RetimingSegment(start: 0, end: 10, action: .keep), RetimingSegment(start: 10, end: 14, action: .remove),
+        RetimingSegment(start: 14, end: 30, action: .keep), RetimingSegment(start: 30, end: 40, action: .speed(4)),
+        RetimingSegment(start: 40, end: 50, action: .keep),
+    ])
+
+    @Test func stepsThroughEachCutWithALeadIn() {
+        #expect(plan.cutStarts == [10, 30])
+        #expect(plan.reviewTime(after: 0) == 8.5)
+        #expect(plan.reviewTime(after: 8.5) == 28.5)
+        #expect(plan.reviewTime(after: 28.5) == nil)
+        #expect(plan.reviewTime(before: 28.5) == 8.5)
+        #expect(plan.reviewTime(before: 8.5) == nil)
+    }
+}

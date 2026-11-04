@@ -159,7 +159,7 @@ struct SettingsSearchTests {
     }
 
     @Test func ignoresCaseDiacriticsAndTrailingColons() {
-        #expect(SettingsSearchIndex.matches(for: "MAGNÏFIER", localize: { $0 }).map(\.pane) == [.capture])
+        #expect(SettingsSearchIndex.matches(for: "MAGNÏFIER", localize: { $0 }).map(\.pane).contains(.capture))
         #expect(SettingsSearchIndex.matches(for: "client id:", localize: { $0 }).map(\.pane) == [.advanced])
     }
 
@@ -175,7 +175,7 @@ struct SettingsSearchTests {
     }
 
     @Test func derivesTheIndexFromWhatEachPaneDeclares() {
-        #expect(SettingsSearchIndex.entries == SettingsPane.allCases.flatMap { $0.searchable.searchEntries })
+        #expect(SettingsSearchIndex.entries == SettingsPane.allCases.flatMap { $0.searchable.searchEntries + NewerSettingsSearch.entries(for: $0) })
         for pane in SettingsPane.allCases {
             #expect(pane.searchable.searchEntries.allSatisfy { $0.pane == pane })
         }
@@ -233,7 +233,7 @@ struct ExternalUploadTests {
         let directory = file.deletingLastPathComponent()
         let missing = directory.appending(path: "missing.png")
         let web = URL(string: "https://example.com/a.png")!
-        #expect(ExternalUpload.uploadableFiles([file, directory, missing, web]) == [file])
+        #expect(ExternalUpload.uploadableFiles([file, directory, missing, web]) == [file, directory])
     }
 
     @Test func readsFileURLsFromThePasteboard() throws {

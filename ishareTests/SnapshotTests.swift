@@ -88,7 +88,7 @@ struct SnapshotTests {
                     actions: [WatchFolderAction(kind: .rename, template: "{{date}}-{{counter}}"), WatchFolderAction(kind: .upload)]),
                 WatchedFolder(path: "/Users/me/Movies/Exports", filter: .videos, isEnabled: false, actions: [WatchFolderAction(kind: .upload)]),
             ]
-            return AnyView(Form { WatchFolderSettings() }.formStyle(.grouped))
+            return AnyView(Form { WatchFolderSettings() }.formStyle(.grouped).appModel())
         case .featureTour:
             return AnyView(FeatureTourView(stops: FeatureTour.stops, onTry: { _ in }, onClose: {}))
         case .uploadProgress:

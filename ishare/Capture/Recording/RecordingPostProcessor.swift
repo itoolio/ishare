@@ -99,7 +99,8 @@ enum RecordingPostProcessor {
         do {
             return try await ProcessingHUDPresenter.run("Processing…".localized()) { progress in
                 try await OverlayCompositor.composite(
-                    url, capture: capture, effects: effects, recordingStart: start, pauses: pauses, hevc: hevc, defersZoom: defersZoom, progress: progress)
+                    url, capture: capture, effects: effects, recordingStart: start, pauses: pauses, hevc: hevc, defersZoom: defersZoom,
+                    sections: sidecar.markers.map(\.time), progress: progress)
             }
         } catch {
             Log.capture.error("Compositing overlays failed, keeping the original: \(error.localizedDescription, privacy: .public)")

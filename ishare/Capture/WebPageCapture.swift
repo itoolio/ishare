@@ -229,6 +229,8 @@ enum WebPageCaptureFlow {
             BezelNotification.show(messageText: WebPageCaptureError.invalidAddress.localizedDescription, icon: ToastIcon)
             return nil
         }
+        CaptureAgain.remember(
+            .webPage(address: request.address, width: request.width, pdf: request.format == .pdf, dismissesCookieBanners: request.dismissesCookieBanners))
         do {
             if request.format == .pdf {
                 return try await deliverPDF(try await WebPageCapture.pdf(url, request: request), host: url.host() ?? "web", options: options)

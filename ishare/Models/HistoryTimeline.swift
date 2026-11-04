@@ -1,9 +1,11 @@
+import ishareCore
 import Foundation
 
 struct HistoryDaySection: Identifiable, Equatable, Sendable {
     enum Day: Hashable, Sendable {
         case date(Date)
         case undated
+        case group(String)
     }
 
     let day: Day
@@ -34,7 +36,7 @@ enum HistoryTimeline {
             switch (lhs, rhs) {
             case let (.date(a), .date(b)): a > b
             case (.date, .undated): true
-            case (.undated, _): false
+            case (.undated, _), (.group, _), (_, .group): false
             }
         }
         return sorted.map { day in
@@ -42,7 +44,25 @@ enum HistoryTimeline {
         }
     }
 
+    static func sections(for items: [HistoryItem], groupedBy grouping: HistoryGrouping, localize: (String) -> String = { $0.localized() }) -> [HistoryDaySection] {
+        guard grouping != .day else { return sections(for: items, localize: localize) }
+        var order: [String] = []
+        var grouped: [String: [HistoryItem]] = [:]
+        for item in items {
+            let key: String =
+                switch grouping {
+                case .app: item.sourceApp ?? localize("Other")
+                case .project: HistoryGrouping.project(fromTitle: item.sourceTitle, appName: item.sourceApp) ?? item.sourceApp ?? localize("Other")
+                case .day: ""
+                }
+            if grouped[key] == nil { order.append(key) }
+            grouped[key, default: []].append(item)
+        }
+        return order.map { HistoryDaySection(day: .group($0), title: $0, items: grouped[$0] ?? []) }
+    }
+
     static func title(for day: HistoryDaySection.Day, now: Date, calendar: Calendar, locale: Locale, localize: (String) -> String) -> String {
+        if case let .group(name) = day { return name }
         guard case let .date(date) = day else { return localize("Undated") }
         let today = calendar.startOfDay(for: now)
         let days = calendar.dateComponents([.day], from: date, to: today).day ?? 0

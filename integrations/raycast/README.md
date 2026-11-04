@@ -8,6 +8,12 @@ Capture, upload and browse your uploads with [ishare](https://ishare.itoolio.dev
 | Upload Files | Uploads the files selected in Finder and copies their links |
 | Recent Uploads | Lists your recent uploads with thumbnails; copy or open links, alt text and Markdown |
 | Switch Uploader | Picks the uploader ishare uses from now on |
+| Capture All Displays | Captures every display in one image, uploads it and copies the link |
+| Capture App Windows | Captures every window of an app, or the frontmost one, and copies the links |
+| Capture Web Page | Captures a whole web page from its address, optionally at a width such as `mobile` or `1024` |
+| Capture Again | Repeats the last capture with the same settings |
+| Screenshot Replay | Opens the last seconds of your screen to pick a frame |
+| Set Up AI Assistants | Shows and copies the MCP configuration for `ishare mcp` |
 
 The extension talks to ishare through its command-line tool and its JSON output (`ishare … --json`). When the tool isn't installed, captures and uploads fall back to the `ishare://` URL actions, which run the same actions without returning the link.
 

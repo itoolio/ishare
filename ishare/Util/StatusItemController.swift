@@ -136,8 +136,15 @@ final class StatusItemController: NSObject {
     fileprivate func handleDrop(_ sender: any NSDraggingInfo) -> Bool {
         setDropTargeted(false)
         guard let payload = ExternalUpload.payload(from: sender.draggingPasteboard) else { return false }
+        let asks = Defaults[.dropAsksForUploader] || DestinationChooser.isRequested()
+        let anchor = buttonScreenFrame.map { NSPoint(x: $0.minX, y: $0.minY - 4) } ?? NSEvent.mouseLocation
         Task { @MainActor in
-            await ExternalUpload.upload(payload)
+            if asks {
+                guard let target = DestinationChooser.choose(at: anchor) else { return }
+                await ExternalUpload.upload(payload, target: target)
+            } else {
+                await ExternalUpload.upload(payload)
+            }
         }
         return true
     }

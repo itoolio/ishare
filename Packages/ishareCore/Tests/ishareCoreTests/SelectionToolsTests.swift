@@ -368,3 +368,11 @@ struct WindowClassificationTests {
         #expect(WindowClassifier.captureBounds(of: [CGRect(x: 5000, y: 0, width: 10, height: 10)], shadowMargin: 0, within: display) == nil)
     }
 }
+
+struct PixelExactSelectionTests {
+    @Test func keepsOddPixelSizesOnRetinaDisplays() {
+        let rect = SelectionConstraintMath.alignedToPixels(CGRect(x: 10.3, y: 20.74, width: 100.52, height: 50.26), scale: 2)
+        #expect(rect == CGRect(x: 10.5, y: 20.5, width: 100.5, height: 50.5))
+        #expect(ScreenGeometry.pixelRect(for: rect, scale: 2).width == 201)
+    }
+}

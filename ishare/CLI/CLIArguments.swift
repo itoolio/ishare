@@ -44,9 +44,10 @@ enum CLIArguments {
 
         Commands:
           upload <file…> [--uploader NAME] [--reuse|--no-reuse]
-                                              Upload files and print their links; --reuse returns the
+                                              Upload files and print their links (folders are zipped);
+                                              --reuse returns the
                                               existing link for files that were uploaded before
-          capture region|window|screen|scrolling|menu [--upload]
+          capture region|window|screen|scrolling|menu|displays [--upload]
                                               Take a screenshot and print its file or link
           capture app [NAME] [--sheet] [--upload]
                                               Capture every window of an app (the frontmost one
@@ -55,6 +56,9 @@ enum CLIArguments {
                                               Start, stop, pause or resume a screen recording
           uploaders list                      List the configured uploaders
           history [--limit N]                 Print recent uploads
+          watch list                          List the watch folders and their steps
+          watch run <file> [--folder NAME]    Run a watch folder's steps on a file, for scripts
+                                              and launchd jobs (the first folder without NAME)
           mcp                                 Run a Model Context Protocol server on stdin and stdout
                                               so AI assistants can use ishare
 
@@ -113,7 +117,7 @@ enum CLIArguments {
                 reuse = true
             case "--no-reuse":
                 reuse = false
-            case "--uploader", "-u":
+            case "--uploader", "-u", "--folder":
                 let raw = try optionValue()
                 guard !raw.trimmingCharacters(in: .whitespaces).isEmpty else { throw .invalidValue(option: name, value: raw) }
                 uploader = raw
@@ -152,7 +156,7 @@ enum CLIArguments {
             guard names.count <= 1 else { throw .unexpectedArgument(names.dropFirst().first ?? "") }
             command = .captureApp(app: names.first, contactSheet: contactSheet, upload: upload)
         case "capture":
-            guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen, scrolling, menu or app)") }
+            guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen, scrolling, menu, displays or app)") }
             guard let mode = CLICaptureMode(rawValue: modeName.lowercased()) else { throw .invalidValue(option: "capture", value: modeName) }
             try rejectExtra(rest.dropFirst())
             command = .capture(mode: mode, upload: upload)
@@ -169,6 +173,18 @@ enum CLIArguments {
         case "history":
             try rejectExtra(rest[...])
             command = .history(limit: limit ?? 20)
+        case "watch":
+            switch rest.first?.lowercased() {
+            case "list":
+                try rejectExtra(rest.dropFirst())
+                command = .listWatchFolders
+            case "run":
+                guard let file = rest.dropFirst().first else { throw .missingArgument("file") }
+                try rejectExtra(rest.dropFirst(2))
+                command = .runWatchFolder(file: absolutePath(file, relativeTo: workingDirectory), folder: uploader)
+            default:
+                throw .missingArgument("watch subcommand (list or run)")
+            }
         default:
             throw .unknownCommand(commandName)
         }
@@ -216,7 +232,9 @@ enum CLICommandOption {
 extension CLICommand {
     func accepts(_ option: CLICommandOption) -> Bool {
         switch (self, option) {
-        case (.upload, .uploader), (.upload, .reuse), (.capture, .upload), (.captureApp, .upload), (.captureApp, .sheet), (.history, .limit), (.record, .preset): true
+        case (.upload, .uploader), (.runWatchFolder, .uploader), (.upload, .reuse), (.capture, .upload), (.captureApp, .upload), (.captureApp, .sheet), (.history, .limit),
+            (.record, .preset):
+            true
         default: false
         }
     }
@@ -238,6 +256,12 @@ enum CLIOutput {
             return payload.message ?? ""
         case .listUploaders:
             return (payload.uploaders ?? []).map { ($0.selected ? "* " : "  ") + "\($0.name) (\($0.kind))" }.joined(separator: "\n")
+        case .listWatchFolders:
+            return (payload.watchFolders ?? []).map { folder in
+                "\(folder.enabled ? "*" : " ") \(folder.name)\t\(folder.path)\t\(folder.steps.joined(separator: " → "))"
+            }.joined(separator: "\n")
+        case .runWatchFolder:
+            return payload.capture?.link ?? payload.capture?.file ?? payload.message ?? ""
         case .history:
             return (payload.history ?? []).map { entry in
                 [entry.shortLink ?? entry.link ?? entry.localPath ?? "", entry.title].filter { !$0.isEmpty }.joined(separator: "\t")
