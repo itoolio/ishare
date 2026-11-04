@@ -31,10 +31,12 @@ struct AdvancedSettingsView: View {
             }
             SharingSettingsSection()
             CommandLineToolSection()
+            LocalAPISection()
             if ScriptHooks.isAvailable {
                 ScriptHookSection()
             }
             LocalCaptureCleanupSection()
+            StorageOverviewSection()
             DiagnosticsSection()
             SettingsTransferSection()
         }

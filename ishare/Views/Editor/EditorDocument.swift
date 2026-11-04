@@ -41,6 +41,8 @@ final class EditorDocument: ObservableObject {
     @Published var selectedIDs: Set<UUID> = []
     let translation = EditorTranslation()
     var pointScale: CGFloat
+    let kind: EditorImageKind
+    private var preferenceObservers: Set<AnyCancellable> = []
     @Published var libraryShape: LibraryShape = .roundBubble
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
@@ -82,7 +84,36 @@ final class EditorDocument: ObservableObject {
         let longest = CGFloat(max(image.width, image.height))
         lineWidth = max(4, (longest / 220).rounded())
         fontSize = max(18, (longest / 50).rounded())
+        kind = EditorKindPreferences.kind(of: fileURL)
         adoptDefaultStyle(for: tool)
+        restoreKindPreference()
+    }
+
+    private func restoreKindPreference() {
+        let preference = EditorKindPreferences.preference(for: kind)
+        if let raw = preference?.tool, let saved = EditorTool(rawValue: raw), saved != .crop {
+            select(tool: saved)
+        }
+        if let saved = preference?.color {
+            color = saved
+        }
+        let kind = kind
+        $tool.dropFirst().removeDuplicates().sink { tool in
+            EditorKindPreferences.update(kind) { $0.tool = tool == .crop ? nil : tool.rawValue }
+        }
+        .store(in: &preferenceObservers)
+        $color.dropFirst().removeDuplicates().sink { color in
+            EditorKindPreferences.update(kind) { $0.color = color }
+        }
+        .store(in: &preferenceObservers)
+    }
+
+    var preferredZoom: CGFloat? {
+        EditorKindPreferences.preference(for: kind)?.zoom.map { CGFloat($0) }
+    }
+
+    func rememberZoom(_ zoom: CGFloat?) {
+        EditorKindPreferences.update(kind) { $0.zoom = zoom.map(Double.init) }
     }
 
     var imageSize: CGSize { CGSize(width: base.width, height: base.height) }
@@ -341,6 +372,25 @@ final class EditorDocument: ObservableObject {
         guard !overlays.isEmpty else { return }
         add(contentsOf: overlays)
         selectedIDs = Set(overlays.map(\.id))
+    }
+
+    func setWindowShadow(_ style: WindowShadowStyle) async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        let image = adjustedBase
+        let scale = pointScale
+        guard let result = await BlockingWork.run({ WindowShadowEditor.apply(style, to: image, scale: scale) }) else {
+            BezelNotification.show(messageText: "This image has no window shadow".localized(), icon: ToastIcon)
+            return
+        }
+        commit {
+            base = result
+            adjustments = .identity
+            annotations = []
+            crop = nil
+        }
     }
 
     func blurBackground(strength: Double) async {

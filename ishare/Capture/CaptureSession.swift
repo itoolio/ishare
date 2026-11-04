@@ -12,6 +12,8 @@ struct CaptureOptions: Sendable {
     var recordingPreset: RecordingPreset?
     var delay: Int?
     var resultHandler: (@MainActor @Sendable (URL) -> Void)?
+    var ruleDestination: UploadDestination?
+    var redactsSensitiveText: Bool?
 
     static let standard = CaptureOptions()
 }
@@ -50,6 +52,7 @@ enum CaptureSession {
 
     @discardableResult
     static func deliverCapture(_ captured: CapturedImage, options: CaptureOptions) async -> URL? {
+        let options = CaptureRules.options(options, for: captured.source.bundleIdentifier)
         let finalized = ImageCaptureFlow.finalize(captured)
         do {
             let fileURL = try ImageCaptureFlow.save(finalized)
@@ -68,6 +71,7 @@ enum CaptureSession {
     }
 
     private static func deliver(_ captured: CapturedImage, options: CaptureOptions) async {
+        let options = CaptureRules.options(options, for: captured.source.bundleIdentifier)
         ToastPlacement.capturedDisplayID = captured.geometry?.displayID
         do {
             let fileURL = try ImageCaptureFlow.save(captured)
@@ -306,7 +310,7 @@ enum CaptureSession {
     private static func upload(_ fileURL: URL, kind: PostCapture.Kind, options: CaptureOptions, keepsLocalFile: Bool) async {
         var redactedURL: URL?
         if kind == .image {
-            switch await Redactor.prepareUpload(of: fileURL) {
+            switch await Redactor.prepareUpload(of: fileURL, enabled: options.redactsSensitiveText) {
             case .unchanged:
                 break
             case let .redacted(url):

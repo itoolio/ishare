@@ -82,6 +82,7 @@ private struct FollowPointerSettingsSection: View {
             }
         } header: {
             Text("Follow the Pointer".localized())
+                .settingsEntry(NewerSettingsSearch.followPointer)
         } footer: {
             Text(
                 "Record Following the Pointer records an area of this size, in points, that pans live as you move the pointer near its edges. Use it from the command palette or its shortcut."
@@ -126,9 +127,19 @@ private struct PointerEffectsSettingsSection: View {
     @Default(.hidesIdlePointer) private var hidesIdle
     @Default(.pointerIdleSeconds) private var idleSeconds
     @Default(.recordPointer) private var recordPointer
+    @Default(.pointerHighlight) private var highlight
 
     var body: some View {
         Section {
+            Picker("Pointer highlight".localized(), selection: $highlight) {
+                Text("None".localized()).tag(PointerHighlight.none)
+                Text("Halo".localized()).tag(PointerHighlight.halo)
+                Text("Spotlight".localized()).tag(PointerHighlight.spotlight)
+                Text("Magnifier".localized()).tag(PointerHighlight.magnifier)
+            }
+            .disabled(!recordPointer)
+            .help("Added after you stop recording, like the other pointer effects.".localized())
+            .settingsEntry(NewerSettingsSearch.pointerHighlight)
             Toggle("Smooth pointer movement".localized(), isOn: $smoothing)
                 .disabled(!recordPointer)
             SliderRow(title: "Pointer size", value: $scale, range: PointerEffectSettings.scaleRange, step: 0.25, format: { String(format: "%.2g×", $0) })

@@ -1,3 +1,4 @@
+import ishareCore
 import SwiftUI
 
 struct RecentUploadPreview: View {
@@ -48,6 +49,14 @@ struct RecentUploadPreview: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            let facts = Self.facts(for: item)
+            if !facts.isEmpty {
+                Text(facts.joined(separator: " · "))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .accessibilityIdentifier("menu.preview.facts")
+            }
         }
     }
 
@@ -95,6 +104,25 @@ struct RecentUploadPreview: View {
         .fixedSize()
         .help("Delete".localized())
         .accessibilityIdentifier("menu.preview.delete")
+    }
+
+    static func facts(for item: HistoryItem, now: Date = Date(), fileSize: (URL) -> Int? = { (try? $0.resourceValues(forKeys: [.fileSizeKey]))?.fileSize }) -> [String] {
+        var facts: [String] = []
+        if let host = item.preferredURL?.host() {
+            facts.append(host)
+        }
+        if let bytes = item.uploadedSize ?? item.existingLocalFileURL.flatMap(fileSize) {
+            facts.append(ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file))
+        }
+        if let views = item.viewCount {
+            facts.append(String(format: "%@ views".localized(), ViewCountParser.label(for: views)))
+        }
+        if item.isKeptForever {
+            facts.append("Kept forever".localized())
+        } else if let expiresAt = item.expiresAt, !item.isExpired {
+            facts.append(String(format: "Deletes %@".localized(), expiresAt.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))))
+        }
+        return facts
     }
 
     private var metadata: String {

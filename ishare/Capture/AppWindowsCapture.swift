@@ -60,6 +60,9 @@ enum AppWindowsCapture {
             BezelNotification.show(messageText: "No app windows to capture".localized(), icon: ToastIcon)
             return
         }
+        if let bundleID = windows.first?.owningApplication?.bundleIdentifier {
+            CaptureAgain.remember(.appWindows(bundleID: bundleID, contactSheet: result == .contactSheet))
+        }
         let appName = windows.first?.owningApplication?.applicationName ?? "app"
         let source = CaptureSource(bundleIdentifier: windows.first?.owningApplication?.bundleIdentifier, appName: appName)
         switch result {

@@ -22,8 +22,8 @@ sudo mkdir -p /usr/local/bin && sudo ln -sf /Applications/ishare.app/Contents/He
 The tool starts ishare in the background when it isn't running.
 
 ```text
-ishare upload <file…> [--uploader NAME]   Upload files and print their links
-ishare capture region|window|screen|scrolling [--upload]
+ishare upload <file…> [--uploader NAME]   Upload files and print their links; folders are zipped first
+ishare capture region|window|screen|scrolling|displays [--upload]
                                           Take a screenshot and print its file, or its link with --upload
 ishare capture app [NAME] [--sheet] [--upload]
                                           Capture every window of an app (the frontmost one without NAME),
@@ -31,6 +31,8 @@ ishare capture app [NAME] [--sheet] [--upload]
 ishare record start|stop|toggle           Start or stop a screen recording
 ishare uploaders list                     List the configured uploaders (* marks the active one)
 ishare history [--limit N]                Print recent uploads, newest first (20 by default)
+ishare watch list                         List the watch folders and their steps
+ishare watch run <file> [--folder NAME]   Run a watch folder's steps on a file
 
 --json                                    Print machine-readable JSON
 --timeout SECONDS                         How long to wait for ishare (120, or 600 for capture and record)
@@ -60,6 +62,14 @@ The payload contains `uploads` (`file`, `link`, `error`), `capture` (`file`, `li
 The App Store build is sandboxed, so it can only upload files it is allowed to read, for example in your Pictures folder. The GitHub build can upload any file.
 
 The tool and the app exchange small JSON request and response files in ishare's app group container (`~/Library/Group Containers/L988J7YMK5.group.dev.adrian.ishare/CommandLine`), and the tool wakes the app with an `ishare://cli?id=…` URL. Each response carries its request's ID, and stale files are removed after 15 minutes.
+
+### Watch folder steps from scripts
+
+`ishare watch run` runs the steps of a watch folder on one file, so other tools can decide when: a launchd job with `WatchPaths`, Hazel, Folder Actions or a build script. Without `--folder` it uses the first watch folder.
+
+```sh
+ishare watch run ~/Desktop/export.png --folder Drop
+```
 
 ## AI assistants (MCP)
 
@@ -94,7 +104,7 @@ end tell
 
 | URL | Action |
 | --- | --- |
-| `ishare://capture/region` | Capture a region; also `window`, `screen` and `scrolling` |
+| `ishare://capture/region` | Capture a region; also `window`, `screen`, `scrolling` and `displays` (every display in one image) |
 | `ishare://capture/web?url=example.com` | Capture a whole web page. Add `width=mobile`, `tablet` or a number of points, `format=pdf` for a PDF, and `banners=0` to keep cookie banners |
 | `ishare://capture/app?name=Safari` | Capture every window of an app by name or bundle identifier, or of the frontmost app without `name`. Add `sheet=1` for one contact sheet |
 | `ishare://record/start` | Start a recording; also `stop` and `toggle`. Add `gif=1` or `region=1` |
@@ -103,6 +113,8 @@ end tell
 | `ishare://open/history` | Open the history window |
 | `ishare://open/settings?pane=uploaders` | Open settings, optionally on `general`, `capture`, `recording`, `uploaders`, `keybinds` or `advanced` |
 | `ishare://open/editor` | Choose an image to annotate |
+| `ishare://open/replay` | Open Screenshot Replay |
+| `ishare://capture/again` | Repeat the last capture with the same settings |
 
 Captures and recordings run your after-capture settings, so they upload and copy the link the way they do from the menu. Paths must be absolute files that ishare can read; anything else is rejected and logged. The older `ishare://capture?type=region`, `ishare://record?gif=1` and `ishare://upload?file=<file URL>` forms keep working.
 

@@ -14,6 +14,10 @@ struct EditorView: View {
     @ObservedObject private var templates = TemplateStore.shared
     @Default(.editorShowsLayers) private var showsLayers
     @State private var showsAdjustments = false
+    @State private var redactionReviewAction: (() -> Void)?
+    @State private var showsRedactionReview = false
+    @State private var reviewedRedactions: Set<UUID> = []
+    @Default(.reviewRedactionsBeforeExport) private var reviewsRedactions
     @State private var showsBeautify = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
@@ -56,10 +60,31 @@ struct EditorView: View {
         }
         .frame(minWidth: 980, minHeight: 560)
         .background(.background)
+        .sheet(isPresented: $showsRedactionReview) {
+            RedactionReviewSheet(document: document) { approved in
+                showsRedactionReview = false
+                if approved {
+                    reviewedRedactions = Set(document.redactions.map(\.id))
+                    let action = redactionReviewAction
+                    redactionReviewAction = nil
+                    action?()
+                } else {
+                    redactionReviewAction = nil
+                }
+            }
+        }
         .sheet(isPresented: $showsBeautify) {
             EditorBeautifySheet(document: document) { showsBeautify = false }
         }
         .modifier(EditorTranslationTask(document: document, translation: document.translation))
+        .onAppear {
+            if let zoom = document.preferredZoom {
+                viewport.setZoom(zoom)
+            }
+        }
+        .onDisappear {
+            document.rememberZoom(viewport.zoom)
+        }
         .onChange(of: showsAdjustments) { _, shown in
             if !shown {
                 document.straightenAngle = 0
@@ -416,6 +441,12 @@ struct EditorView: View {
                 Task { await document.liftSubject() }
             }
             .disabled(document.isProcessing)
+            Menu("Window Shadow".localized()) {
+                Button("Remove Shadow".localized()) { Task { await document.setWindowShadow(.none) } }
+                Button("Soft Shadow".localized()) { Task { await document.setWindowShadow(.soft) } }
+                Button("Strong Shadow".localized()) { Task { await document.setWindowShadow(.strong) } }
+            }
+            .disabled(document.isProcessing)
             Menu("Blur Background".localized()) {
                 Button("Soft".localized()) { Task { await document.blurBackground(strength: 0.5) } }
                 Button("Medium".localized()) { Task { await document.blurBackground(strength: 1) } }
@@ -427,6 +458,15 @@ struct EditorView: View {
                 Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }
             }
             .disabled(document.isProcessing)
+            Button("Describe an Annotation…".localized()) {
+                AnnotationFromText.prompt(for: document)
+            }
+            .disabled(document.isProcessing)
+            Button("Review Redactions…".localized()) {
+                redactionReviewAction = nil
+                showsRedactionReview = true
+            }
+            .disabled(document.redactions.isEmpty)
             Button("Translate Text in Place".localized()) {
                 Task { await document.beginTranslateInPlace() }
             }
@@ -464,7 +504,7 @@ struct EditorView: View {
     private var exportMenu: some View {
         Menu {
             ForEach(EditorExportFormat.allCases) { format in
-                Button(format.title) { EditorExport.export(document, as: format) }
+                Button(format.title) { afterReviewingRedactions { EditorExport.export(document, as: format) } }
             }
         } label: {
             Label("Export".localized(), systemImage: "square.and.arrow.up")
@@ -488,6 +528,16 @@ struct EditorView: View {
         CombineWindowController.present(urls: urls, leading: [current])
     }
 
+    private func afterReviewingRedactions(_ action: @escaping () -> Void) {
+        let ids = Set(document.redactions.map(\.id))
+        guard reviewsRedactions, !ids.isEmpty, !ids.isSubset(of: reviewedRedactions) else {
+            action()
+            return
+        }
+        redactionReviewAction = action
+        showsRedactionReview = true
+    }
+
     private var actionButtons: some View {
         HStack(spacing: 8) {
             Button(role: .destructive, action: onDiscard) {
@@ -496,14 +546,15 @@ struct EditorView: View {
             .keyboardShortcut(.delete, modifiers: .command)
             .accessibilityIdentifier("editor.discard")
             exportMenu
-            Button(action: onCopy) {
+            ExportPresetButton(document: document, beforeExport: afterReviewingRedactions)
+            Button(action: { afterReviewingRedactions(onCopy) }) {
                 Label("Copy".localized(), systemImage: "doc.on.doc")
             }
             .keyboardShortcut("c", modifiers: .command)
             .accessibilityIdentifier("editor.copy")
             Button(action: {
                 document.commitPendingEdits()
-                onDone()
+                afterReviewingRedactions(onDone)
             }) {
                 Label("Done".localized(), systemImage: "checkmark")
             }

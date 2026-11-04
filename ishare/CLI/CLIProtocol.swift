@@ -7,6 +7,7 @@ enum CLICaptureMode: String, Codable, CaseIterable, Sendable {
     case screen
     case scrolling
     case menu
+    case displays
 }
 
 enum CLIRecordAction: String, Codable, CaseIterable, Sendable {
@@ -24,6 +25,8 @@ enum CLICommand: Codable, Equatable, Sendable {
     case record(CLIRecordAction, preset: String? = nil)
     case listUploaders
     case history(limit: Int)
+    case listWatchFolders
+    case runWatchFolder(file: String, folder: String?)
 }
 
 struct CLIRequest: Codable, Equatable, Sendable {
@@ -55,6 +58,13 @@ struct CLIUploaderInfo: Codable, Equatable, Sendable {
     let selected: Bool
 }
 
+struct CLIWatchFolderInfo: Codable, Equatable, Sendable {
+    let name: String
+    let path: String
+    let enabled: Bool
+    let steps: [String]
+}
+
 struct CLIHistoryEntry: Codable, Equatable, Sendable {
     let link: String?
     var shortLink: String?
@@ -73,6 +83,7 @@ struct CLIResponsePayload: Codable, Equatable, Sendable {
     var uploaders: [CLIUploaderInfo]?
     var history: [CLIHistoryEntry]?
     var recording: Bool?
+    var watchFolders: [CLIWatchFolderInfo]?
 }
 
 struct CLIResponse: Codable, Equatable, Sendable {

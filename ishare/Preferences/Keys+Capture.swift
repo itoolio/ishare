@@ -7,6 +7,7 @@ extension Defaults.Keys {
     static let captureFileType = Key<FileType>("captureFileType", default: .PNG, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let captureFileName = Key<String>("captureFileName", default: "ishare", suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let screenshotShowsCursor = Key<Bool>("screenshotShowsCursor", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let windowCaptureIncludesChildWindows = Key<Bool>("windowCaptureIncludesChildWindows", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let windowShadow = Key<Bool>("windowShadow", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showMagnifier = Key<Bool>("showMagnifier", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let trimUniformBorders = Key<Bool>("trimUniformBorders", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -14,8 +15,10 @@ extension Defaults.Keys {
     static let screenshotReplaySeconds = Key<Int>("screenshotReplaySeconds", default: 20, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webCaptureFormat = Key<WebPageFormat>("webCaptureFormat", default: .image, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webCaptureDismissesCookieBanners = Key<Bool>("webCaptureDismissesCookieBanners", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let lastCaptureRecipe = Key<CaptureRecipe?>("lastCaptureRecipe", default: nil, suite: .ishare)
     static let appWindowsResult = Key<AppWindowsResult>("appWindowsResult", default: .separate, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let trimBorderPadding = Key<Int>("trimBorderPadding", default: 0, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let pixelExactSelection = Key<Bool>("pixelExactSelection", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let snapSelectionToEdges = Key<Bool>("snapSelectionToEdges", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let snapSelectionToElements = Key<Bool>("snapSelectionToElements", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let showSelectionGuides = Key<Bool>("showSelectionGuides", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -67,3 +70,5 @@ extension MultiRegionResult: @retroactive Defaults.Serializable {}
 extension AppWindowsResult: @retroactive Defaults.Serializable {}
 
 extension WebPageFormat: @retroactive Defaults.Serializable {}
+
+extension CaptureRecipe: @retroactive Defaults.Serializable {}

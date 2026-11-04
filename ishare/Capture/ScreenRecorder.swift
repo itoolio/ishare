@@ -292,12 +292,12 @@ final class ScreenRecorder: ObservableObject {
     private func startRegion(_ fileURL: URL, screen: NSScreen, rect: CGRect) async {
         do {
             let area = RecordingArea.region(rect, on: screen)
-            await showCaptureOverlays(areas: [area], bubbleArea: area.rect)
+            await showCaptureOverlays(areas: [area], bubbleArea: area.rect, webcamSource: Self.regionSource(rect, on: screen))
             let content = try await ScreenshotEngine.shareableContent()
             guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
             let overlayIDs = captureOverlayWindowIDs
             let overlayWindows = content.windows.filter { overlayIDs.contains($0.windowID) }
-            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: overlayWindows)
+            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.recordingExcludedApplications(in: content), exceptingWindows: overlayWindows)
             let scale = CGFloat(filter.pointPixelScale)
             let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
             configuration.sourceRect = rect
@@ -325,7 +325,7 @@ final class ScreenRecorder: ObservableObject {
             guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
             let overlayIDs = captureOverlayWindowIDs
             let capturedOverlays = content.windows.filter { overlayIDs.contains($0.windowID) }
-            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: capturedOverlays)
+            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.recordingExcludedApplications(in: content), exceptingWindows: capturedOverlays)
             let scale = CGFloat(filter.pointPixelScale)
             let rect = follower.rect
             let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
@@ -408,7 +408,7 @@ final class ScreenRecorder: ObservableObject {
                 }), near: rect, on: screen)
     }
 
-    private func showCaptureOverlays(areas: [RecordingArea], bubbleArea: CGRect?) async {
+    private func showCaptureOverlays(areas: [RecordingArea], bubbleArea: CGRect?, webcamSource: OverlaySource? = nil) async {
         inputOverlay.start(
             areas: areas,
             showsClicks: showsClicks,
@@ -418,7 +418,10 @@ final class ScreenRecorder: ObservableObject {
         await liveCaptions.start(areas: areas)
         drawing.prepare(screens: Self.uniqueScreens(areas.map(\.screen)))
         hudModel.canDraw = drawing.isPrepared
-        if RecordingDefaults[.showWebcam], let bubbleArea {
+        guard RecordingDefaults[.showWebcam], let bubbleArea else { return }
+        if RecordingDefaults[.webcamLayout] != .bubble, let webcamSource {
+            await overlayRecorder.start(source: webcamSource, showsClicks: false, showsKeystrokes: false, shortcutsOnly: true, recordsWebcam: true)
+        } else {
             await webcamBubble.show(in: bubbleArea)
         }
     }
@@ -635,7 +638,7 @@ final class ScreenRecorder: ObservableObject {
         let style = RecordingContentStyle(pickedFilter.style)
         startPointerRecording(source: OverlaySource.make(for: pickedFilter))
         if style == .display, let screen = recordedScreen(for: pickedFilter) {
-            await showCaptureOverlays(areas: [.fullScreen(screen)], bubbleArea: screen.visibleFrame)
+            await showCaptureOverlays(areas: [.fullScreen(screen)], bubbleArea: screen.visibleFrame, webcamSource: OverlaySource.make(for: pickedFilter))
             if RecordingLimits.current.hasRecordingLimit {
                 showPickerHUD()
             }
@@ -674,7 +677,7 @@ final class ScreenRecorder: ObservableObject {
         else { return filter }
         let overlayIDs = captureOverlayWindowIDs
         let overlayWindows = content.windows.filter { overlayIDs.contains($0.windowID) }
-        return SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: overlayWindows)
+        return SCContentFilter(display: display, excludingApplications: ScreenshotEngine.recordingExcludedApplications(in: content), exceptingWindows: overlayWindows)
     }
 
     private func prepareAudio(style: RecordingContentStyle, screen: NSScreen?, content knownContent: SCShareableContent?) async {
@@ -699,6 +702,15 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private func run(configuration: SCStreamConfiguration, filter: SCContentFilter, fileURL: URL) async {
+        guard await RecordingCountdown.run() else {
+            pointerFollower?.stop()
+            pointerFollower = nil
+            removeOverlay()
+            hideCaptureOverlays()
+            isRunning = false
+            RecordingDefaults.end()
+            return
+        }
         RecordingNotesController.shared.recordingDidStart()
         hudModel.showsNotes = RecordingNotesController.shared.isVisible
         let startDate = Date()

@@ -14,11 +14,13 @@ struct PointerEffectSettings: Hashable, Sendable {
     var rippleColor: CaptureColor
     var hidesWhenIdle: Bool
     var idleDelay: Double
+    var highlight: PointerHighlight
 
     init(
         recordsPointer: Bool = true, smoothing: Bool = false, scale: Double = 1, ripples: Bool = false, rippleColor: CaptureColor = .defaultRipple, hidesWhenIdle: Bool = false,
-        idleDelay: Double = 3
+        idleDelay: Double = 3, highlight: PointerHighlight = .none
     ) {
+        self.highlight = highlight
         self.recordsPointer = recordsPointer
         self.smoothing = smoothing
         self.scale = scale.clamped(to: Self.scaleRange)
@@ -29,7 +31,7 @@ struct PointerEffectSettings: Hashable, Sendable {
     }
 
     var rendersPointer: Bool {
-        recordsPointer && (smoothing || scale > 1.001 || hidesWhenIdle)
+        recordsPointer && (smoothing || scale > 1.001 || hidesWhenIdle || highlight != .none)
     }
 
     var isActive: Bool {
@@ -44,7 +46,8 @@ struct PointerEffectSettings: Hashable, Sendable {
             ripples: RecordingDefaults[.clickRipples],
             rippleColor: CaptureColor(hex: Defaults[.clickRippleColor]) ?? .defaultRipple,
             hidesWhenIdle: RecordingDefaults[.hidesIdlePointer],
-            idleDelay: Defaults[.pointerIdleSeconds]
+            idleDelay: Defaults[.pointerIdleSeconds],
+            highlight: RecordingDefaults[.pointerHighlight]
         )
     }
 }
@@ -174,6 +177,7 @@ struct RecordingEffectsPlan: Hashable, Sendable {
     var camera: CameraPath?
     var pointerShapes: PointerShapeSet?
     var spotlight: SpotlightPlan?
+    var pointerHighlight: PointerHighlight = .none
 
     var isEmpty: Bool {
         pointer == nil && ripples.isEmpty && (camera?.isEmpty ?? true) && spotlight == nil
@@ -193,7 +197,7 @@ struct RecordingEffectsPlan: Hashable, Sendable {
         }
         return RecordingEffectsPlan(
             pointer: track, ripples: ripples, rippleColor: settings.rippleColor, camera: camera?.isEmpty == false ? camera : nil,
-            pointerShapes: track == nil || shapes?.isEmpty != false ? nil : shapes)
+            pointerShapes: track == nil || shapes?.isEmpty != false ? nil : shapes, pointerHighlight: track == nil ? .none : settings.highlight)
     }
 
     func withoutCamera() -> RecordingEffectsPlan {

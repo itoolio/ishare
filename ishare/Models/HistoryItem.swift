@@ -25,6 +25,8 @@ struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var viewCountUrl: String?
     var viewCount: Int?
     var viewCountCheckedAt: Date?
+    var sourceApp: String?
+    var sourceTitle: String?
     var id: Self { self }
 }
 

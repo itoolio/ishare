@@ -398,6 +398,18 @@ extension TrimModel {
         silencePlan = silenceAnalysis.map { $0.plan(settings: silenceSettings, extraAudio: voiceLevels) }
     }
 
+    func reviewCut(forward: Bool) {
+        guard let plan = activePlan else { return }
+        let target = forward ? plan.reviewTime(after: playhead) : plan.reviewTime(before: playhead)
+        guard let target else { return }
+        seek(to: max(selection.start, target))
+        if !isPlaying { togglePlayback() }
+    }
+
+    var hasCuts: Bool {
+        !(activePlan?.cutStarts.isEmpty ?? true)
+    }
+
     var silenceSummary: String? {
         guard cutsSilence else { return nil }
         if isAnalyzingSilence { return "Finding silent parts…".localized() }

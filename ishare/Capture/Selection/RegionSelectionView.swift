@@ -315,7 +315,7 @@ final class RegionSelectionView: NSView {
             if wasInactive, keyboard.stage == .placingFirstCorner {
                 announce("Keyboard selection. Move to a corner and press Return.".localized())
             }
-            nudge(keyCode: event.keyCode, step: event.modifierFlags.contains(.shift) ? 10 : 1)
+            nudge(keyCode: event.keyCode, step: (event.modifierFlags.contains(.shift) ? 10 : 1) * nudgeUnit)
         default:
             if !event.isARepeat, handleCharacter(event.charactersIgnoringModifiers?.lowercased()) {
                 return
@@ -472,7 +472,11 @@ final class RegionSelectionView: NSView {
     }
 
     func finalized(_ rect: CGRect) -> CGRect {
-        session.constraint.fixedSize != nil ? SelectionConstraintMath.alignedToPixels(rect, scale: scale) : rect.integral
+        session.constraint.fixedSize != nil || Defaults[.pixelExactSelection] ? SelectionConstraintMath.alignedToPixels(rect, scale: scale) : rect.integral
+    }
+
+    private var nudgeUnit: CGFloat {
+        Defaults[.pixelExactSelection] ? 1 / max(scale, 1) : 1
     }
 
     private func finishSelection(_ rect: CGRect, keepModifierHeld: Bool, keeping: Bool = true) {

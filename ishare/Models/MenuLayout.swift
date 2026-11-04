@@ -240,6 +240,7 @@ enum ResultPresentation: String, CaseIterable, Identifiable, Codable, Sendable, 
     case toast
     case notification
     case both
+    case pointer
 
     var id: Self { self }
 
@@ -248,9 +249,10 @@ enum ResultPresentation: String, CaseIterable, Identifiable, Codable, Sendable, 
         case .toast: "Toast"
         case .notification: "Notification"
         case .both: "Both"
+        case .pointer: "Next to the Pointer"
         }
     }
 
-    var showsToast: Bool { self != .notification }
-    var postsNotification: Bool { self != .toast }
+    var showsToast: Bool { self == .toast || self == .both }
+    var postsNotification: Bool { self == .notification || self == .both }
 }

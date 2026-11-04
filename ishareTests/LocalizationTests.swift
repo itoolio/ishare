@@ -89,14 +89,14 @@ struct LocalizationTests {
 
     @Test func translationsKeepFormatSpecifiersAndPlaceholders() throws {
         let catalog = try Catalog()
-        let specifier = /%(?:\d+\$)?[@dfs]/
+        let specifier = /%(?:\d+\$)?([@dfs])/
         let placeholder = /\{\{[^}]*\}\}/
         var mismatches: [String] = []
         for (key, translations) in catalog.strings {
-            let expectedSpecifiers = key.matches(of: specifier).map { String($0.output) }.sorted()
+            let expectedSpecifiers = key.matches(of: specifier).map { String($0.output.1) }.sorted()
             let expectedPlaceholders = key.matches(of: placeholder).map { String($0.output) }.sorted()
             for (language, value) in translations {
-                let specifiers = value.matches(of: specifier).map { String($0.output) }.sorted()
+                let specifiers = value.matches(of: specifier).map { String($0.output.1) }.sorted()
                 let placeholders = value.matches(of: placeholder).map { String($0.output) }.sorted()
                 if specifiers != expectedSpecifiers || placeholders != expectedPlaceholders {
                     mismatches.append("\(language): \(key) → \(value)")

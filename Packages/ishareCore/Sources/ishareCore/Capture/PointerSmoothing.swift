@@ -96,3 +96,22 @@ public struct PointerTrack: Hashable, Sendable {
         self.scale = scale
     }
 }
+
+public enum PointerHighlight: String, CaseIterable, Codable, Hashable, Sendable {
+    case none
+    case halo
+    case spotlight
+    case magnifier
+
+    public var radius: CGFloat {
+        switch self {
+        case .none: 0
+        case .halo: 26
+        case .spotlight: 110
+        case .magnifier: 70
+        }
+    }
+
+    public static let magnification: CGFloat = 2
+    public static let spotlightDimming: CGFloat = 0.5
+}

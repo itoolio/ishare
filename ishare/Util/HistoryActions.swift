@@ -297,3 +297,70 @@ struct HistoryMoveMenu: View {
         .disabled(items.allSatisfy { $0.isExpired || ($0.existingLocalFileURL == nil && $0.remoteURL == nil) })
     }
 }
+
+@MainActor
+enum HistoryBulkEdit {
+    static func setKeepForever(_ items: [HistoryItem], _ keeps: Bool) {
+        update(items) { $0.keepForever = keeps ? true : nil }
+        BezelNotification.show(messageText: String(format: (keeps ? "Kept %d Uploads Forever" : "Allowed Auto-Delete for %d Uploads").localized(), items.count), icon: ToastIcon)
+    }
+
+    static func setExpiry(_ items: [HistoryItem], days: Int?) {
+        let date = BulkRename.expiry(days: days)
+        update(items.filter(\.canDeleteFromServer)) { item in
+            item.expiresAt = date
+            item.keepForever = date == nil ? item.keepForever : nil
+        }
+    }
+
+    static func rename(_ items: [HistoryItem]) {
+        let alert = NSAlert()
+        alert.messageText = String(format: "Rename %d Uploads".localized(), items.count)
+        alert.informativeText = "Use {{n}} for a number, {{name}} for the file name and {{date}} for today.".localized()
+        let field = NSTextField(string: "{{name}}")
+        field.frame = CGRect(x: 0, y: 0, width: 300, height: 24)
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Rename".localized())
+        alert.addButton(withTitle: "Cancel".localized())
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let titles = BulkRename.titles(template: field.stringValue, originals: items.map(\.fileName))
+        let byKey = Dictionary(zip(items.map(\.storageKey), titles), uniquingKeysWith: { first, _ in first })
+        updateUploadHistory { item in
+            guard let title = byKey[item.storageKey] else { return item }
+            var updated = item
+            updated.title = title
+            return updated
+        }
+    }
+
+    private static func update(_ items: [HistoryItem], _ change: (inout HistoryItem) -> Void) {
+        let keys = Set(items.map(\.storageKey))
+        updateUploadHistory { item in
+            guard keys.contains(item.storageKey) else { return item }
+            var updated = item
+            change(&updated)
+            return updated
+        }
+    }
+}
+
+struct HistoryBulkEditMenu: View {
+    let items: [HistoryItem]
+
+    var body: some View {
+        Menu(String(format: "Edit %d Uploads".localized(), items.count)) {
+            Button("Rename…".localized()) { HistoryBulkEdit.rename(items) }
+            Divider()
+            Button("Keep Forever".localized()) { HistoryBulkEdit.setKeepForever(items, true) }
+            Button("Allow Auto-Delete".localized()) { HistoryBulkEdit.setKeepForever(items, false) }
+            Menu("Delete from Server After".localized()) {
+                ForEach([1, 7, 30, 90], id: \.self) { days in
+                    Button(String(format: "%d Days".localized(), days)) { HistoryBulkEdit.setExpiry(items, days: days) }
+                }
+                Button("Never".localized()) { HistoryBulkEdit.setExpiry(items, days: nil) }
+            }
+            .disabled(!items.contains(where: \.canDeleteFromServer))
+        }
+    }
+}

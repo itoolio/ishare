@@ -25,6 +25,15 @@ final class FakeAutomationActions: AutomationActions {
         return afterCaptureLink
     }
 
+    func watchFolders() -> [CLIWatchFolderInfo] {
+        [CLIWatchFolderInfo(name: "Drop", path: "/Users/me/Drop", enabled: true, steps: ["Rename", "Upload"])]
+    }
+
+    func runWatchFolder(on file: URL, folder: String?) async -> Result<CLICaptureResult, AutomationError> {
+        calls.append("watch \(file.lastPathComponent) via \(folder ?? "first")")
+        return .success(CLICaptureResult(file: file.path, link: "https://example.com/\(file.lastPathComponent)"))
+    }
+
     func captureApp(_ app: String?, contactSheet: Bool, upload: Bool) async -> Result<CLICaptureResult, AutomationError> {
         calls.append("app \(app ?? "frontmost") sheet=\(contactSheet) upload=\(upload)")
         return captureResult
@@ -127,6 +136,8 @@ struct URLSchemeParserTests {
         #expect(command("ishare://capture/web") == nil)
         #expect(command("ishare://capture/web?url=javascript:alert(1)") == nil)
         #expect(command("ishare://capture/app") == .captureApp(nil, contactSheet: false))
+        #expect(command("ishare://capture/again") == .captureAgain)
+        #expect(command("ishare://open/replay") == .open(.replay))
         #expect(command("ishare://capture/app?name=Safari&sheet=1") == .captureApp("Safari", contactSheet: true))
     }
 
@@ -161,7 +172,7 @@ struct URLSchemeParserTests {
         let files = try TemporaryFiles()
         let file = try files.file("real.png")
         #expect(URLSchemeParser.validatedFile(file.path, fileAccess: .live) == .success(file))
-        #expect(URLSchemeParser.validatedFile(files.directory.path, fileAccess: .live) == .failure(.unreadablePath(files.directory.path)))
+        #expect(URLSchemeParser.validatedFile(files.directory.path, fileAccess: .live) == .success(files.directory.standardizedFileURL.resolvingSymlinksInPath()))
         #expect(URLSchemeParser.validatedFile(files.directory.appending(path: "missing.png").path, fileAccess: .live) != .success(file))
     }
 
@@ -306,6 +317,14 @@ struct CLIArgumentTests {
         #expect(CLIArguments.usage.contains("--no-reuse"))
     }
 
+    @Test func parsesWatchFolderCommands() throws {
+        #expect(try run(["watch", "list"]).command == .listWatchFolders)
+        #expect(try run(["watch", "run", "shot.png", "--folder", "Drop"]).command == .runWatchFolder(file: "/Users/me/Desktop/shot.png", folder: "Drop"))
+        #expect(try run(["watch", "run", "/tmp/a.png"]).command == .runWatchFolder(file: "/tmp/a.png", folder: nil))
+        #expect(error(["watch"]) == .missingArgument("watch subcommand (list or run)"))
+        #expect(error(["watch", "run"]) == .missingArgument("file"))
+    }
+
     @Test func parsesAppWindowCaptures() throws {
         #expect(try run(["capture", "app"]).command == .captureApp(app: nil, contactSheet: false, upload: false))
         let named = try run(["capture", "app", "Safari", "--sheet", "--upload"])
@@ -342,7 +361,7 @@ struct CLIArgumentTests {
         #expect(error([]) == .missingCommand)
         #expect(error(["frobnicate"]) == .unknownCommand("frobnicate"))
         #expect(error(["upload"]) == .missingArgument("file"))
-        #expect(error(["capture"]) == .missingArgument("capture mode (region, window, screen, scrolling, menu or app)"))
+        #expect(error(["capture"]) == .missingArgument("capture mode (region, window, screen, scrolling, menu, displays or app)"))
         #expect(error(["capture", "everything"]) == .invalidValue(option: "capture", value: "everything"))
         #expect(error(["capture", "region", "extra"]) == .unexpectedArgument("extra"))
         #expect(error(["record", "rewind"]) == .invalidValue(option: "record", value: "rewind"))
@@ -490,6 +509,16 @@ struct CommandLineEndToEndTests {
         #expect(actions.calls == ["capture region upload=true", "record start gif=false region=false"])
     }
 
+    @Test func runsWatchFolderStepsFromTheCommandLine() async throws {
+        let (client, server, files) = try makeSystem()
+        server.fileAccess = URLSchemeFileAccess { _ in true }
+        let list = try await client.send(.listWatchFolders, timeout: 5)
+        #expect(list.payload.watchFolders?.first?.steps == ["Rename", "Upload"])
+        let run = try await client.send(.runWatchFolder(file: files.directory.appending(path: "shot.png").path, folder: "Drop"), timeout: 5)
+        #expect(run.payload.capture?.link == "https://example.com/shot.png")
+        #expect(actions.calls == ["watch shot.png via Drop"])
+    }
+
     @Test func capturesAppWindowsFromTheCommandLine() async throws {
         let (client, _, _) = try makeSystem()
         let capture = try await client.send(.captureApp(app: "Xcode", contactSheet: false, upload: false), timeout: 5)
@@ -575,5 +604,58 @@ struct LatestUploadCommandTests {
         #expect(!ids.contains("history.localNetwork"))
         Defaults[.uploadHistory] = []
         #expect(!AppCommand.all().map(\.id).contains("history.qr"))
+    }
+}
+
+@MainActor
+struct LocalAPIRouterTests {
+    let actions = FakeAutomationActions()
+
+    func request(_ text: String) throws -> LocalAPIRequest {
+        guard case let .complete(request) = LocalAPIRequest.parse(Data(text.utf8)) else { throw CLIArgumentError.missingCommand }
+        return request
+    }
+
+    func status(_ reply: Data) -> String {
+        String(decoding: reply.prefix(12), as: UTF8.self)
+    }
+
+    @Test func runsToolsWithTheToken() async throws {
+        let server = CommandLineServer(mailbox: nil, actions: actions)
+        let capture = try request("POST /v1/capture HTTP/1.1\r\nAuthorization: Bearer secret\r\nContent-Length: 31\r\n\r\n{\"mode\":\"screen\",\"upload\":true}")
+        let reply = await LocalAPIRouter.reply(to: capture, token: "secret", server: server)
+        #expect(status(reply) == "HTTP/1.1 200")
+        #expect(String(decoding: reply, as: UTF8.self).contains("https://example.com/shot.png"))
+        let history = try request("GET /v1/recent_uploads?limit=2 HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n")
+        #expect(status(await LocalAPIRouter.reply(to: history, token: "secret", server: server)) == "HTTP/1.1 200")
+        #expect(actions.calls == ["capture screen upload=true"])
+    }
+
+    @Test func refusesMissingTokensAndUnknownTools() async throws {
+        let server = CommandLineServer(mailbox: nil, actions: actions)
+        #expect(status(await LocalAPIRouter.reply(to: try request("GET /v1/list_uploaders HTTP/1.1\r\n\r\n"), token: "secret", server: server)) == "HTTP/1.1 401")
+        #expect(
+            status(await LocalAPIRouter.reply(to: try request("GET /v1/teleport HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n"), token: "secret", server: server))
+                == "HTTP/1.1 404")
+        #expect(
+            status(await LocalAPIRouter.reply(to: try request("GET /v1/capture HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n"), token: "secret", server: server))
+                == "HTTP/1.1 400")
+        #expect(actions.calls.isEmpty)
+    }
+}
+
+struct LocalAPISocketTests {
+    @Test func answersOverTheLoopbackInterface() async throws {
+        let server = LocalAPIServer()
+        server.start(port: 0)
+        defer { server.stop() }
+        var port: UInt16?
+        for _ in 0 ..< 50 where port == nil || port == 0 {
+            try await Task.sleep(for: .milliseconds(20))
+            port = server.boundPort
+        }
+        let bound = try #require(port)
+        let (_, response) = try await URLSession.shared.data(from: try #require(URL(string: "http://127.0.0.1:\(bound)/v1/list_uploaders")))
+        #expect((response as? HTTPURLResponse)?.statusCode == 401)
     }
 }
