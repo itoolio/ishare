@@ -1,3 +1,39 @@
+## [5.7.0](https://github.com/itoolio/ishare/compare/v5.6.0...v5.7.0) (2026-11-04)
+
+### Features
+
+* align and distribute annotations in the editor ([1500170](https://github.com/itoolio/ishare/commit/1500170d99cadc6ee00799dce265cfb4fa52ccb8))
+* beautify, frame, trim, redact and lift images from AppleScript ([7efb420](https://github.com/itoolio/ishare/commit/7efb420df34257ec3cf01cad08e3963bd4efd0bf))
+* blur or remove the background behind the webcam bubble ([27f3048](https://github.com/itoolio/ishare/commit/27f3048a860a28946ec307e178508a09a9c95d03))
+* blur the background behind the subject in the editor ([6588785](https://github.com/itoolio/ishare/commit/65887858a581b9fe1efa307f9b87895ebe328bdf))
+* capture web pages as PDF at any width without cookie banners ([01e0304](https://github.com/itoolio/ishare/commit/01e030483a6b3e6ae8f4bf87a9d09916cdcfb9c0))
+* capture windows on other Spaces and app windows from the CLI, URL scheme and Shortcuts ([e1d1a77](https://github.com/itoolio/ishare/commit/e1d1a77cef34a3a98877d4a07ec20fa1b1fb7e0b))
+* drag annotations between editor tabs and windows ([7d62a45](https://github.com/itoolio/ishare/commit/7d62a45b403beb26b6aef0c24f07cd46a29193be))
+* **i18n:** translate the 5.7 strings into all supported languages ([651ee9b](https://github.com/itoolio/ishare/commit/651ee9be21b0b246ac4519d8ae444d6fa82d5ea1))
+* keep Screenshot Replay frames for every display ([fef74b6](https://github.com/itoolio/ishare/commit/fef74b604c17f97afdc5b76912b250229aa6aa4c))
+* let AI assistants use ishare through an MCP server in the command-line tool ([17c1806](https://github.com/itoolio/ishare/commit/17c18067271d30b227447fd3e456dcc05ef39da0))
+* mark the menu bar icon while replays keep recording in the background ([fc94a05](https://github.com/itoolio/ishare/commit/fc94a05793d331c827dee1c57ab1ae8aae14bfb6))
+* measure with each image's own point scale ([3994129](https://github.com/itoolio/ishare/commit/399412907a021e313c30f44798c30b946af95654))
+* move uploads in history to another host ([4dfaf76](https://github.com/itoolio/ishare/commit/4dfaf766b2a94366bf9c7700c5f8c296cc0f9020))
+* offer a compact menu with only the capture tiles and recent uploads ([2283404](https://github.com/itoolio/ishare/commit/228340406271528dee9f3c62d42af69046bc7a0b))
+* preview history in the native Quick Look panel with its sharing ([219cda7](https://github.com/itoolio/ishare/commit/219cda78602d1c0240463df051ddabe231833a13))
+* record an area that follows the pointer live ([3f3170e](https://github.com/itoolio/ishare/commit/3f3170e7117b91d45ee48f452692a5846d127ddb))
+* run a script after captures and uploads in the GitHub build ([84f86ff](https://github.com/itoolio/ishare/commit/84f86ffe58b58d73fcd16d740c0ebdd987d75e7d))
+* save the screen, webcam and audio as separate tracks for editing ([a7d56a9](https://github.com/itoolio/ishare/commit/a7d56a9e90783a063820788c3978646bd344fdb7))
+* show a grid and rulers in the editor and snap shapes to the grid ([c217e1e](https://github.com/itoolio/ishare/commit/c217e1ec378585028dc9c7aa7011eb88300a8d9b))
+* show a one-time tour of the newest features after updating ([fb7691a](https://github.com/itoolio/ishare/commit/fb7691a8c41680bc8105c6ee397d38271acd17ca))
+* show live captions on screen while recording ([de7b63d](https://github.com/itoolio/ishare/commit/de7b63d104183f953c31989a70086a99d0448c40))
+* show the magnifier at the keyboard crosshair while selecting ([a143b72](https://github.com/itoolio/ishare/commit/a143b72c4e4e5bc0fc405bbe825789bf6f88bf6d))
+* show upload progress below the menu bar icon for long uploads ([b3552d8](https://github.com/itoolio/ishare/commit/b3552d840d66bb737de730511b575c841bae30f5))
+* show view counts in history for hosts that report them ([66808fb](https://github.com/itoolio/ishare/commit/66808fbe50c11cb816cb2a164c851544ab12aac8))
+* snap the region selection to window and interface edges ([5d81eff](https://github.com/itoolio/ishare/commit/5d81eff2c968ecc29e7bbfd51982d3be46f2d6c0))
+* translate text in place in the editor ([80e800b](https://github.com/itoolio/ishare/commit/80e800bf5344decf37d73c210ca05173f1a5ee76))
+* watch several folders with their own steps and undo the last steps ([c6469d8](https://github.com/itoolio/ishare/commit/c6469d852119e4f6ab2acc867b086756ba38b2d8))
+
+### Performance Improvements
+
+* prefetch the screen for the window picker and the last-region shortcut ([7a12178](https://github.com/itoolio/ishare/commit/7a121785073f8afa219374ba5d2cfb5b4f9e311a))
+
 ## [5.6.0](https://github.com/itoolio/ishare/compare/v5.5.1...v5.6.0) (2026-11-03)
 
 ### Features
