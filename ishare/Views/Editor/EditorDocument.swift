@@ -3,6 +3,7 @@ import BezelNotification
 import Combine
 import Defaults
 import ishareCore
+import Translation
 
 @MainActor
 final class EditorDocument: ObservableObject {
@@ -38,6 +39,8 @@ final class EditorDocument: ObservableObject {
     @Published var filled = false
     @Published var textBackground = false
     @Published var selectedIDs: Set<UUID> = []
+    let translation = EditorTranslation()
+    var pointScale: CGFloat
     @Published var libraryShape: LibraryShape = .roundBubble
     @Published var draft: Annotation?
     @Published var draftCrop: CGRect?
@@ -74,6 +77,7 @@ final class EditorDocument: ObservableObject {
         originalBase = image
         adjustedBase = image
         self.fileURL = fileURL
+        pointScale = fileURL.flatMap(ImageEncoder.pointScale(of:)) ?? AnnotationRenderer.measurementPointScale
         effectedBase = image
         let longest = CGFloat(max(image.width, image.height))
         lineWidth = max(4, (longest / 220).rounded())
@@ -322,6 +326,35 @@ final class EditorDocument: ObservableObject {
         }
     }
 
+    func beginTranslateInPlace() async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        if !(await translation.begin(on: adjustedBase)) {
+            isProcessing = false
+        }
+    }
+
+    func translateInPlace(using session: TranslationSession) async {
+        defer { isProcessing = false }
+        let overlays = await translation.annotations(using: session)
+        guard !overlays.isEmpty else { return }
+        add(contentsOf: overlays)
+        selectedIDs = Set(overlays.map(\.id))
+    }
+
+    func blurBackground(strength: Double) async {
+        commitPendingEdits()
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        guard let blurred = await SubjectLiftFlow.blurBackground(adjustedBase, strength: strength) else { return }
+        commit {
+            base = blurred
+            adjustments = .identity
+        }
+    }
+
     func redactFaces(pixelate: Bool) async {
         commitPendingEdits()
         guard !isProcessing else { return }
@@ -352,6 +385,14 @@ final class EditorDocument: ObservableObject {
         clipboard.write(annotations.filter { selectedIDs.contains($0.id) })
     }
 
+    func dropAnnotations(_ dropped: [Annotation], at point: CGPoint) {
+        let placed = AnnotationClipboard.dropped(dropped, centeredAt: point, into: imageBounds)
+        guard !placed.isEmpty else { return }
+        add(contentsOf: placed)
+        selectedIDs = Set(placed.map(\.id))
+        NSApp.activate()
+    }
+
     func pasteAnnotations(from clipboard: AnnotationClipboard = .shared) {
         let pasted = AnnotationClipboard.pasted(clipboard.read(), into: imageBounds)
         guard !pasted.isEmpty else { return }
@@ -365,7 +406,7 @@ final class EditorDocument: ObservableObject {
         let offset = max(12, fontSize * 0.6)
         let measures = selected.flatMap { annotation in
             DimensionMeasure.selectionDimensions(of: annotation.bounds, offset: offset).map { line in
-                Annotation(shape: .measure(line.0, line.1), color: color, lineWidth: max(1, lineWidth / 2), fontSize: fontSize)
+                Annotation(shape: .measure(line.0, line.1), color: color, lineWidth: max(1, lineWidth / 2), fontSize: fontSize, measureScale: pointScale)
             }
         }
         add(contentsOf: measures)
@@ -533,6 +574,34 @@ final class EditorDocument: ObservableObject {
         }
     }
 
+    var arrangeableIDs: [UUID] {
+        selectedAnnotations.filter { !$0.locked && !$0.hidden }.map(\.id)
+    }
+
+    func align(_ edge: AlignmentEdge) {
+        let items = selectedAnnotations.filter { !$0.locked && !$0.hidden }
+        guard !items.isEmpty else { return }
+        let offsets = Arrangement.offsets(aligning: items.map(\.bounds), to: edge, within: items.count == 1 ? visibleRect : nil)
+        apply(offsets: Dictionary(uniqueKeysWithValues: zip(items.map(\.id), offsets)))
+    }
+
+    func distribute(_ axis: DistributionAxis) {
+        let items = selectedAnnotations.filter { !$0.locked && !$0.hidden }
+        guard items.count > 2 else { return }
+        let offsets = Arrangement.offsets(distributing: items.map(\.bounds), along: axis)
+        apply(offsets: Dictionary(uniqueKeysWithValues: zip(items.map(\.id), offsets)))
+    }
+
+    private func apply(offsets: [UUID: CGVector]) {
+        commit {
+            for index in annotations.indices {
+                if let offset = offsets[annotations[index].id], offset != .zero {
+                    annotations[index] = annotations[index].offset(by: offset)
+                }
+            }
+        }
+    }
+
     func clearAll() {
         commit {
             annotations.removeAll()
@@ -601,6 +670,9 @@ final class EditorDocument: ObservableObject {
             annotation.spotlightShape = spotlightShape
             annotation.dimAmount = dimAmount
             annotation.highlightStyle = highlightStyle
+            if case .measure = annotation.shape {
+                annotation.measureScale = pointScale
+            }
             return annotation
         }
     }

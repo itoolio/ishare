@@ -32,6 +32,37 @@ enum MenuSection: String, CaseIterable, Identifiable, Codable, Sendable, Default
     }
 }
 
+enum MenuSize: String, CaseIterable, Identifiable, Codable, Sendable, Defaults.Serializable {
+    case full
+    case compact
+    case automatic
+
+    static let compactSections: Set<MenuSection> = [.capture, .recentUploads]
+    static let automaticHeightThreshold: CGFloat = 820
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .full: "Full"
+        case .compact: "Compact"
+        case .automatic: "On Small Screens"
+        }
+    }
+
+    func isCompact(visibleHeight: CGFloat?) -> Bool {
+        switch self {
+        case .full: false
+        case .compact: true
+        case .automatic: (visibleHeight ?? .infinity) < Self.automaticHeightThreshold
+        }
+    }
+
+    static func sections(_ sections: [MenuSection], compact: Bool) -> [MenuSection] {
+        compact ? sections.filter(compactSections.contains) : sections
+    }
+}
+
 struct MenuLayout: Equatable, Sendable {
     var order: [MenuSection]
     var hidden: Set<MenuSection>

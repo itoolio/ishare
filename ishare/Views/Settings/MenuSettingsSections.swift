@@ -7,6 +7,8 @@ struct MenuLayoutSettingsSection: View {
     @Default(.menuSectionOrder) private var order
     @Default(.hiddenMenuSections) private var hidden
     @Default(.menuDensity) private var density
+    @Default(.menuSize) private var menuSize
+    @Default(.showsBackgroundCaptureDot) private var showsBackgroundCaptureDot
 
     private var layout: MenuLayout {
         MenuLayout(order: order, hidden: hidden)
@@ -20,6 +22,13 @@ struct MenuLayoutSettingsSection: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("settings.menu.density")
             .settingsEntry(Self.density)
+            Picker("Compact menu".localized(), selection: $menuSize) {
+                ForEach(MenuSize.allCases) { Text($0.title.localized()).tag($0) }
+            }
+            .help("The compact menu shows only the capture tiles and recent uploads.".localized())
+            .accessibilityIdentifier("settings.menu.size")
+            Toggle("Mark the menu bar icon while replays keep recording".localized(), isOn: $showsBackgroundCaptureDot)
+                .help("Shows a red dot while Instant Replay or Screenshot Replay keeps the last seconds of your screen.".localized())
             ForEach(Array(layout.order.enumerated()), id: \.element) { index, section in
                 row(section, index: index)
             }

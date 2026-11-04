@@ -26,3 +26,15 @@ struct WebPageCapturePlanTests {
         #expect(WebPageWidth.allCases.map(\.points) == [1440, 834, 390])
     }
 }
+
+struct WebPageWidthParsingTests {
+    @Test func acceptsPresetsAndCustomWidths() {
+        #expect(WebPageCapturePlan.width(from: nil) == 1440)
+        #expect(WebPageCapturePlan.width(from: "mobile") == 390)
+        #expect(WebPageCapturePlan.width(from: "1024") == 1024)
+        #expect(WebPageCapturePlan.width(from: "1280px") == 1280)
+        #expect(WebPageCapturePlan.width(from: "100") == 320)
+        #expect(WebPageCapturePlan.width(from: "99999") == 3840)
+        #expect(WebPageCapturePlan.width(from: "wide") == nil)
+    }
+}

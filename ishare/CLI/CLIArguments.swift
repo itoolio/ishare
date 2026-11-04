@@ -10,6 +10,7 @@ enum CLIAction: Equatable, Sendable {
     case run(CLIInvocation)
     case help(String)
     case version
+    case mcp
 }
 
 enum CLIArgumentError: Error, Equatable, CustomStringConvertible {
@@ -47,10 +48,15 @@ enum CLIArguments {
                                               existing link for files that were uploaded before
           capture region|window|screen|scrolling|menu [--upload]
                                               Take a screenshot and print its file or link
+          capture app [NAME] [--sheet] [--upload]
+                                              Capture every window of an app (the frontmost one
+                                              without NAME); --sheet combines them into one image
           record start|stop|toggle|pause|resume [--preset NAME]
                                               Start, stop, pause or resume a screen recording
           uploaders list                      List the configured uploaders
           history [--limit N]                 Print recent uploads
+          mcp                                 Run a Model Context Protocol server on stdin and stdout
+                                              so AI assistants can use ishare
 
         Options:
           --json                              Print machine-readable JSON
@@ -68,6 +74,7 @@ enum CLIArguments {
         var limit: Int?
         var upload = false
         var reuse: Bool?
+        var contactSheet = false
         var index = 0
         var optionsEnded = false
 
@@ -100,6 +107,8 @@ enum CLIArguments {
                 json = true
             case "--upload":
                 upload = true
+            case "--sheet":
+                contactSheet = true
             case "--reuse":
                 reuse = true
             case "--no-reuse":
@@ -132,11 +141,18 @@ enum CLIArguments {
         switch commandName {
         case "help":
             return .help(usage)
+        case "mcp":
+            try rejectExtra(rest[...])
+            return .mcp
         case "upload":
             guard !rest.isEmpty else { throw .missingArgument("file") }
             command = .upload(files: rest.map { absolutePath($0, relativeTo: workingDirectory) }, uploader: uploader, reuse: reuse)
+        case "capture" where rest.first?.lowercased() == "app":
+            let names = rest.dropFirst()
+            guard names.count <= 1 else { throw .unexpectedArgument(names.dropFirst().first ?? "") }
+            command = .captureApp(app: names.first, contactSheet: contactSheet, upload: upload)
         case "capture":
-            guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen, scrolling or menu)") }
+            guard let modeName = rest.first else { throw .missingArgument("capture mode (region, window, screen, scrolling, menu or app)") }
             guard let mode = CLICaptureMode(rawValue: modeName.lowercased()) else { throw .invalidValue(option: "capture", value: modeName) }
             try rejectExtra(rest.dropFirst())
             command = .capture(mode: mode, upload: upload)
@@ -161,9 +177,10 @@ enum CLIArguments {
         if let reuse, !command.accepts(.reuse) { throw .unknownOption(reuse ? "--reuse" : "--no-reuse") }
         if preset != nil, !command.accepts(.preset) { throw .unknownOption("--preset") }
         if limit != nil, !command.accepts(.limit) { throw .unknownOption("--limit") }
+        if contactSheet, !command.accepts(.sheet) { throw .unknownOption("--sheet") }
         let defaultTimeout: TimeInterval =
             switch command {
-            case .capture, .record: interactiveTimeout
+            case .capture, .captureApp, .record: interactiveTimeout
             default: defaultTimeout
             }
         return .run(CLIInvocation(command: command, json: json, timeout: timeout ?? defaultTimeout))
@@ -193,12 +210,13 @@ enum CLICommandOption {
     case limit
     case reuse
     case preset
+    case sheet
 }
 
 extension CLICommand {
     func accepts(_ option: CLICommandOption) -> Bool {
         switch (self, option) {
-        case (.upload, .uploader), (.upload, .reuse), (.capture, .upload), (.history, .limit), (.record, .preset): true
+        case (.upload, .uploader), (.upload, .reuse), (.capture, .upload), (.captureApp, .upload), (.captureApp, .sheet), (.history, .limit), (.record, .preset): true
         default: false
         }
     }
@@ -213,6 +231,9 @@ enum CLIOutput {
             return (payload.uploads ?? []).map { $0.link ?? "" }.filter { !$0.isEmpty }.joined(separator: "\n")
         case .capture:
             return payload.capture?.link ?? payload.capture?.file ?? payload.message ?? ""
+        case .captureApp:
+            let capture = payload.capture
+            return (capture?.links ?? capture?.files ?? [capture?.link ?? capture?.file].compactMap(\.self)).joined(separator: "\n")
         case .record:
             return payload.message ?? ""
         case .listUploaders:

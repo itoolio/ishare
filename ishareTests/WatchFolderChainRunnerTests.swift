@@ -1,4 +1,5 @@
 import CoreGraphics
+import Defaults
 import Foundation
 import ishareCore
 import Testing
@@ -62,5 +63,36 @@ struct WatchFolderChainRunnerTests {
         try Data().write(to: folder.appending(path: "a.png"))
         #expect(WatchFolderChainRunner.uniqueURL(in: folder, named: "a.png").lastPathComponent == "a-2.png")
         #expect(WatchFolderChainRunner.uniqueURL(in: folder, named: "b.png").lastPathComponent == "b.png")
+    }
+
+    @Test func undoesTheLastRenameAndMove() async throws {
+        let watched = try directory()
+        let archive = try directory()
+        defer {
+            try? FileManager.default.removeItem(at: watched)
+            try? FileManager.default.removeItem(at: archive)
+        }
+        Defaults[.watchFolderUndoLog] = WatchFolderUndoLog()
+        let original = watched.appending(path: "Shot.png")
+        try makeImage(at: original)
+        let chain = [WatchFolderAction(kind: .rename, template: "done-{{name}}"), WatchFolderAction(kind: .moveToFolder, folderPath: archive.path)]
+        let outcome = await WatchFolderChainRunner.run(chain, on: original)
+        #expect(outcome.moves.count == 2)
+        WatchFolderUndo.record(outcome.moves)
+        #expect(WatchFolderUndo.canUndo)
+        WatchFolderUndo.undoLast()
+        #expect(FileManager.default.fileExists(atPath: original.path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: archive.path).isEmpty)
+        #expect(!WatchFolderUndo.canUndo)
+    }
+
+    @Test func movesTheOldSingleFolderIntoTheList() {
+        let folders = WatchedFolder.migrated(
+            enabled: true, path: "/Users/me/Drop", bookmark: nil, filter: .videos, actions: [WatchFolderAction(kind: .upload)])
+        #expect(folders.count == 1)
+        #expect(folders[0].filter == .videos)
+        #expect(folders[0].actions.map(\.kind) == [.upload])
+        #expect(folders[0].displayName == "Drop")
+        #expect(WatchedFolder.migrated(enabled: true, path: "", bookmark: nil, filter: .images, actions: []).isEmpty)
     }
 }

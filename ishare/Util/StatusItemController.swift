@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import Defaults
 
 @MainActor
 final class StatusItemController: NSObject {
@@ -12,6 +13,7 @@ final class StatusItemController: NSObject {
     private var animationPhase: CGFloat = 0
     private var cancellables: Set<AnyCancellable> = []
     private(set) var isDropTargeted = false
+    private var isBuffering = false
 
     override private init() {
         super.init()
@@ -19,6 +21,15 @@ final class StatusItemController: NSObject {
             .removeDuplicates()
             .sink { [weak self] activity in
                 self?.render(activity)
+            }
+            .store(in: &cancellables)
+        Publishers.CombineLatest3(InstantReplay.shared.$isRunning, ScreenshotReplay.shared.$isRunning, Defaults.publisher(.showsBackgroundCaptureDot).map(\.newValue))
+            .map { instant, screenshot, shows in shows && (instant || screenshot) }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] buffering in
+                self?.isBuffering = buffering
+                self?.render(UploadManager.shared.activity)
             }
             .store(in: &cancellables)
     }
@@ -44,6 +55,15 @@ final class StatusItemController: NSObject {
         render(UploadManager.shared.activity)
     }
 
+    var buttonScreenFrame: CGRect? {
+        guard let button = statusItem?.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
+    var buttonScreen: NSScreen? {
+        statusItem?.button?.window?.screen
+    }
+
     func setRecordingToolTip(_ text: String?) {
         statusItem?.button?.toolTip = text
     }
@@ -58,7 +78,10 @@ final class StatusItemController: NSObject {
         switch activity {
         case .idle:
             stopAnimating()
-            if let baseImage {
+            if isBuffering {
+                captureBaseImage(from: button)
+                button.image = StatusIconRenderer.buffering(base: baseImage)
+            } else if let baseImage {
                 button.image = baseImage
                 self.baseImage = nil
             }
@@ -217,6 +240,27 @@ enum StatusIconRenderer {
         }
         image.isTemplate = template
         image.accessibilityDescription = "Uploading".localized()
+        return image
+    }
+
+    static func buffering(base: NSImage?) -> NSImage {
+        let image = NSImage(size: size, flipped: false) { rect in
+            if let base {
+                let tinted = NSImage(size: base.size, flipped: false) { tintRect in
+                    base.draw(in: tintRect)
+                    NSColor.labelColor.set()
+                    tintRect.fill(using: .sourceAtop)
+                    return true
+                }
+                tinted.draw(in: fitted(base.size, in: rect), from: .zero, operation: .sourceOver, fraction: 1)
+            }
+            let dot = NSRect(x: rect.maxX - 6, y: rect.maxY - 6, width: 6, height: 6)
+            NSColor.systemRed.setFill()
+            NSBezierPath(ovalIn: dot).fill()
+            return true
+        }
+        image.isTemplate = false
+        image.accessibilityDescription = "ishare is keeping the last seconds of your screen".localized()
         return image
     }
 

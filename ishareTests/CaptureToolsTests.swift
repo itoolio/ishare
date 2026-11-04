@@ -377,3 +377,14 @@ struct WindowTitleNameTests {
         #expect(ImageCaptureFlow.fileName(for: captured, ext: "png").hasPrefix("groceries-"))
     }
 }
+
+struct ImagePointScaleRoundTripTests {
+    @Test func savesTheRetinaScaleInTheFile() throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "scale-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try ImageEncoder.write(TestImages.solid(width: 40, height: 30, color: CaptureColor(red: 0.5, green: 0.5, blue: 0.5)), as: .PNG, to: url, pointScale: 2)
+        #expect(ImageEncoder.pointScale(of: url) == 2)
+        try ImageEncoder.write(TestImages.solid(width: 40, height: 30, color: CaptureColor(red: 0.5, green: 0.5, blue: 0.5)), as: .PNG, to: url)
+        #expect(ImageEncoder.pointScale(of: url) == nil || ImageEncoder.pointScale(of: url) == 1)
+    }
+}

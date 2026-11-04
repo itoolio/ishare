@@ -33,6 +33,7 @@ final class RegionSelector {
         var allowsWindowMode = true
         var hint: String?
         var lastRegions: [CGDirectDisplayID: CGRect] = [:]
+        var snapWindowFrames: [CGRect] = []
         var awaitsBackdrops = false
         var allowsMultipleRegions = false
         var allowsFreezeToggle = false
@@ -90,6 +91,10 @@ final class RegionSelector {
                 keyPanel?.makeFirstResponder(view)
             }
         }
+    }
+
+    static func cancel() {
+        active?.finish(.single(.cancelled))
     }
 
     static var panelWindowIDs: Set<CGWindowID> {

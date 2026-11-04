@@ -155,6 +155,7 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
     public var imageOptimization: ImageOptimizationOverride?
     public var linkRewrite: LinkRewrite?
     public var autoDeleteAfterDays: Int?
+    public var viewCount: ViewCountSpec?
 
     public init(
         id: UUID = UUID(), name: String, requestURL: String, headers: [String: String]?,
@@ -266,6 +267,7 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
         case imageOptimization = "imageoptimization"
         case linkRewrite = "linkrewrite"
         case autoDeleteAfterDays = "autodeleteafterdays"
+        case viewCount = "viewcount"
     }
 
     public init(from decoder: any Decoder) throws {
@@ -283,6 +285,7 @@ public struct CustomUploader: Codable, Hashable, Equatable, Identifiable, Sendab
         linkOptions = try container.decodeDynamicIfPresent(LinkOptionsSpec.self, forKey: .key(named: "linkoptions"))
         linkRewrite = try container.decodeDynamicIfPresent(LinkRewrite.self, forKey: .key(named: "linkrewrite"))
         autoDeleteAfterDays = try container.decodeDynamicIfPresent(Int.self, forKey: .key(named: "autodeleteafterdays"))
+        viewCount = try container.decodeDynamicIfPresent(ViewCountSpec.self, forKey: .key(named: "viewcount"))
         let declaredKind = try container.decodeDynamicIfPresent(UploaderKind.self, forKey: .key(named: "uploadertype"))
         uploaderType =
             declaredKind ?? Self.inferredKind(s3: s3, folder: folder, photos: photos)

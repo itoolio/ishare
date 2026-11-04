@@ -1,16 +1,38 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
+
+extension UTType {
+    static let ishareAnnotations = UTType(exportedAs: "dev.adrian.ishare.annotations", conformingTo: .data)
+}
+
+@MainActor
+final class AnnotationDragOut {
+    fileprivate weak var view: CanvasEventMonitor.MonitorView?
+    private(set) var isDragging = false
+
+    func begin(_ data: Data, preview: NSImage, onEnd: @escaping @MainActor () -> Void) {
+        guard !isDragging, let view, let event = NSApp.currentEvent else { return }
+        isDragging = true
+        view.beginAnnotationDrag(data, preview: preview, event: event) { [weak self] in
+            self?.isDragging = false
+            onEnd()
+        }
+    }
+}
 
 struct CanvasEventMonitor: NSViewRepresentable {
     var onScroll: (CGVector, CGPoint, NSEvent.ModifierFlags) -> Void
     var onSpace: (Bool) -> Bool
     var onContextMenu: (CGPoint) -> NSMenu? = { _ in nil }
+    var dragOut: AnnotationDragOut?
 
     func makeNSView(context _: Context) -> MonitorView {
         let view = MonitorView()
         view.onScroll = onScroll
         view.onSpace = onSpace
         view.onContextMenu = onContextMenu
+        dragOut?.view = view
         return view
     }
 
@@ -18,14 +40,37 @@ struct CanvasEventMonitor: NSViewRepresentable {
         view.onScroll = onScroll
         view.onSpace = onSpace
         view.onContextMenu = onContextMenu
+        dragOut?.view = view
     }
 
     static func dismantleNSView(_ view: MonitorView, coordinator _: ()) {
         view.removeMonitors()
     }
 
-    final class MonitorView: NSView {
+    final class MonitorView: NSView, NSDraggingSource {
         static let spaceKeyCode: UInt16 = 49
+        private var onDragEnd: (@MainActor () -> Void)?
+
+        func beginAnnotationDrag(_ data: Data, preview: NSImage, event: NSEvent, onEnd: @escaping @MainActor () -> Void) {
+            let item = NSPasteboardItem()
+            item.setData(data, forType: NSPasteboard.PasteboardType(UTType.ishareAnnotations.identifier))
+            let draggingItem = NSDraggingItem(pasteboardWriter: item)
+            let location = convert(event.locationInWindow, from: nil)
+            draggingItem.setDraggingFrame(
+                CGRect(x: location.x - preview.size.width / 2, y: location.y - preview.size.height / 2, width: preview.size.width, height: preview.size.height), contents: preview)
+            onDragEnd = onEnd
+            beginDraggingSession(with: [draggingItem], event: event, source: self)
+        }
+
+        func draggingSession(_: NSDraggingSession, sourceOperationMaskFor _: NSDraggingContext) -> NSDragOperation {
+            .copy
+        }
+
+        func draggingSession(_: NSDraggingSession, endedAt _: NSPoint, operation _: NSDragOperation) {
+            let end = onDragEnd
+            onDragEnd = nil
+            end?()
+        }
 
         var onScroll: ((CGVector, CGPoint, NSEvent.ModifierFlags) -> Void)?
         var onSpace: ((Bool) -> Bool)?

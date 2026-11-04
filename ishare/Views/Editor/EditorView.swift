@@ -1,6 +1,7 @@
 import BezelNotification
 import Defaults
 import SwiftUI
+import Translation
 import ishareCore
 
 struct EditorView: View {
@@ -58,6 +59,7 @@ struct EditorView: View {
         .sheet(isPresented: $showsBeautify) {
             EditorBeautifySheet(document: document) { showsBeautify = false }
         }
+        .modifier(EditorTranslationTask(document: document, translation: document.translation))
         .onChange(of: showsAdjustments) { _, shown in
             if !shown {
                 document.straightenAngle = 0
@@ -364,8 +366,44 @@ struct EditorView: View {
             .popover(isPresented: $showsAdjustments, arrowEdge: .top) {
                 EditorAdjustPanel(document: document)
             }
+            arrangeMenu
+            EditorGridMenu()
             imageActionsMenu
         }
+    }
+
+    private var arrangeMenu: some View {
+        Menu {
+            Section("Align".localized()) {
+                ForEach(AlignmentEdge.allCases, id: \.self) { edge in
+                    Button {
+                        document.align(edge)
+                    } label: {
+                        Label(edge.title, systemImage: edge.symbol)
+                    }
+                }
+            }
+            Section("Distribute".localized()) {
+                Button {
+                    document.distribute(.horizontal)
+                } label: {
+                    Label("Distribute Horizontally".localized(), systemImage: "distribute.horizontal.center")
+                }
+                Button {
+                    document.distribute(.vertical)
+                } label: {
+                    Label("Distribute Vertically".localized(), systemImage: "distribute.vertical.center")
+                }
+            }
+            .disabled(document.arrangeableIDs.count < 3)
+        } label: {
+            Image(systemName: "align.horizontal.left")
+        }
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .disabled(document.arrangeableIDs.isEmpty)
+        .helpAndAccessibilityLabel("Arrange".localized())
+        .accessibilityIdentifier("editor.arrange")
     }
 
     private var imageActionsMenu: some View {
@@ -378,9 +416,19 @@ struct EditorView: View {
                 Task { await document.liftSubject() }
             }
             .disabled(document.isProcessing)
+            Menu("Blur Background".localized()) {
+                Button("Soft".localized()) { Task { await document.blurBackground(strength: 0.5) } }
+                Button("Medium".localized()) { Task { await document.blurBackground(strength: 1) } }
+                Button("Strong".localized()) { Task { await document.blurBackground(strength: 2) } }
+            }
+            .disabled(document.isProcessing)
             Menu("Redact Faces".localized()) {
                 Button("Blur Faces".localized()) { Task { await document.redactFaces(pixelate: false) } }
                 Button("Pixelate Faces".localized()) { Task { await document.redactFaces(pixelate: true) } }
+            }
+            .disabled(document.isProcessing)
+            Button("Translate Text in Place".localized()) {
+                Task { await document.beginTranslateInPlace() }
             }
             .disabled(document.isProcessing)
             Button("Measure Selection".localized()) {
@@ -523,5 +571,68 @@ struct ZoomControls: View {
                 .accessibilityIdentifier("editor.zoom.actual")
         }
         .fixedSize()
+    }
+}
+
+extension AlignmentEdge {
+    var title: String {
+        switch self {
+        case .left: "Align Left Edges".localized()
+        case .horizontalCenter: "Align Centers Horizontally".localized()
+        case .right: "Align Right Edges".localized()
+        case .top: "Align Top Edges".localized()
+        case .verticalCenter: "Align Centers Vertically".localized()
+        case .bottom: "Align Bottom Edges".localized()
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .left: "align.horizontal.left"
+        case .horizontalCenter: "align.horizontal.center"
+        case .right: "align.horizontal.right"
+        case .top: "align.vertical.top"
+        case .verticalCenter: "align.vertical.center"
+        case .bottom: "align.vertical.bottom"
+        }
+    }
+}
+
+struct EditorGridMenu: View {
+    @Default(.editorShowsGrid) private var showsGrid
+    @Default(.editorSnapsToGrid) private var snapsToGrid
+    @Default(.editorGridSpacing) private var spacing
+    @Default(.editorShowsRulers) private var showsRulers
+
+    var body: some View {
+        Menu {
+            Toggle("Show Grid".localized(), isOn: $showsGrid)
+            Toggle("Snap to Grid".localized(), isOn: $snapsToGrid)
+                .disabled(!showsGrid)
+            Picker("Grid Spacing".localized(), selection: $spacing) {
+                ForEach(EditorGrid.spacingChoices, id: \.self) { value in
+                    Text(verbatim: "\(value) px").tag(value)
+                }
+            }
+            Divider()
+            Toggle("Show Rulers".localized(), isOn: $showsRulers)
+        } label: {
+            Image(systemName: "grid")
+        }
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .helpAndAccessibilityLabel("Grid and Rulers".localized())
+        .accessibilityIdentifier("editor.grid")
+    }
+}
+
+struct EditorTranslationTask: ViewModifier {
+    let document: EditorDocument
+    @ObservedObject var translation: EditorTranslation
+
+    func body(content: Content) -> some View {
+        content.translationTask(translation.configuration) { session in
+            await document.translateInPlace(using: session)
+        }
     }
 }

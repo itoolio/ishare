@@ -146,6 +146,29 @@ struct AnnotationClipboard {
         return annotations
     }
 
+    static func encoded(_ annotations: [Annotation]) -> Data? {
+        annotations.isEmpty ? nil : try? JSONEncoder().encode(annotations)
+    }
+
+    static func decoded(_ data: Data) -> [Annotation] {
+        (try? JSONDecoder().decode([Annotation].self, from: data)) ?? []
+    }
+
+    static func dropped(_ annotations: [Annotation], centeredAt point: CGPoint, into bounds: CGRect) -> [Annotation] {
+        let rects = annotations.map(\.bounds)
+        guard let first = rects.first else { return [] }
+        let union = rects.dropFirst().reduce(first) { $0.union($1) }
+        let delta = CGVector(dx: point.x - union.midX, dy: point.y - union.midY)
+        return annotations.map { annotation in
+            var copy = annotation.offset(by: delta)
+            copy.id = UUID()
+            copy.locked = false
+            copy.hidden = false
+            return copy
+        }
+        .filter { bounds.intersects($0.bounds) }
+    }
+
     static func pasted(_ annotations: [Annotation], into bounds: CGRect) -> [Annotation] {
         annotations.map { annotation in
             var copy = annotation.offset(by: CGVector(dx: pasteOffset, dy: pasteOffset))

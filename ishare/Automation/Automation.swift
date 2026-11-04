@@ -19,6 +19,8 @@ enum AutomationError: Error, Equatable, Sendable {
 protocol AutomationActions: AnyObject {
     func capture(_ mode: CLICaptureMode, upload: Bool) async -> Result<CLICaptureResult, AutomationError>
     func captureWithAfterCaptureSteps(_ mode: CLICaptureMode) async -> String?
+    func captureApp(_ app: String?, contactSheet: Bool, upload: Bool) async -> Result<CLICaptureResult, AutomationError>
+    func captureAppWithAfterCaptureSteps(_ app: String?, contactSheet: Bool) async -> Result<String?, AutomationError>
     func record(_ action: CLIRecordAction, gif: Bool, region: Bool, preset: String?) async -> Result<Bool, AutomationError>
     func upload(_ files: [URL], uploader: String?) async -> [CLIUploadResult]
     func selectUploader(named name: String) -> Bool
@@ -46,6 +48,11 @@ private final class CapturedFile {
 }
 
 @MainActor
+private final class CapturedFiles {
+    var urls: [URL] = []
+}
+
+@MainActor
 final class LiveAutomationActions: AutomationActions {
     static let shared = LiveAutomationActions()
 
@@ -62,6 +69,39 @@ final class LiveAutomationActions: AutomationActions {
         case let .failure(error):
             return .failure(.failed(error.localizedDescription))
         }
+    }
+
+    func captureApp(_ app: String?, contactSheet: Bool, upload: Bool) async -> Result<CLICaptureResult, AutomationError> {
+        guard let pid = await AppWindowsCapture.resolveApp(app) else {
+            return .failure(.failed(String(format: "No app named “%@” has open windows".localized(), app ?? "")))
+        }
+        let captured = CapturedFiles()
+        await AppWindowsCapture.capture(pid: pid, as: contactSheet ? .contactSheet : .separate, options: CaptureOptions(resultHandler: { captured.urls.append($0) }))
+        guard let first = captured.urls.first else { return .failure(.cancelled) }
+        let files = captured.urls.map(\.path)
+        guard upload else { return .success(CLICaptureResult(file: first.path, files: files)) }
+        var links: [String] = []
+        for fileURL in captured.urls {
+            let result = await UploadCoordinator.upload(fileURL: fileURL, localFileURL: fileURL)
+            presentToast(for: fileURL)
+            switch result {
+            case let .success(outcome):
+                if let link = outcome.deliveredURL?.absoluteString { links.append(link) }
+            case let .failure(error):
+                return .failure(.failed(error.localizedDescription))
+            }
+        }
+        return .success(CLICaptureResult(file: first.path, link: links.first, files: files, links: links))
+    }
+
+    func captureAppWithAfterCaptureSteps(_ app: String?, contactSheet: Bool) async -> Result<String?, AutomationError> {
+        guard let pid = await AppWindowsCapture.resolveApp(app) else {
+            return .failure(.failed(String(format: "No app named “%@” has open windows".localized(), app ?? "")))
+        }
+        let before = Defaults[.uploadHistory].first
+        await AppWindowsCapture.capture(pid: pid, as: contactSheet ? .contactSheet : .separate)
+        let latest = Defaults[.uploadHistory].first
+        return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
     }
 
     func captureWithAfterCaptureSteps(_ mode: CLICaptureMode) async -> String? {
@@ -276,13 +316,15 @@ final class URLSchemeRouter {
         switch command {
         case let .capture(mode):
             return .success(await actions.captureWithAfterCaptureSteps(mode))
-        case let .captureWebPage(address, width):
+        case let .captureWebPage(request):
             let before = Defaults[.uploadHistory].first
-            guard await WebPageCaptureFlow.capture(address, width: width) != nil else {
+            guard await WebPageCaptureFlow.capture(request) != nil else {
                 return .failure(.failed(WebPageCaptureError.snapshotFailed.localizedDescription))
             }
             let latest = Defaults[.uploadHistory].first
             return .success(latest != before ? latest?.preferredURL?.absoluteString : nil)
+        case let .captureApp(app, contactSheet):
+            return await actions.captureAppWithAfterCaptureSteps(app, contactSheet: contactSheet)
         case let .record(action, gif, region, preset):
             return await actions.record(action, gif: gif, region: region, preset: preset).map { _ in nil }
         case let .upload(files):

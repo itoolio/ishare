@@ -1,7 +1,6 @@
 import Defaults
 import Foundation
 import ishareCore
-import QuickLook
 import SwiftUI
 
 struct HistoryThumbnail: View {
@@ -50,7 +49,6 @@ struct HistoryGridView: View {
     @State private var selection = HistorySelection()
     @State private var shareAnchor = ViewAnchor()
     @State private var exportRequest: HistoryExportRequest?
-    @State private var previewURL: URL?
 
     private var uploaders: [CustomUploader] {
         Array((savedCustomUploaders ?? []).union(savedLocalUploaders))
@@ -80,19 +78,20 @@ struct HistoryGridView: View {
         .sheet(item: $exportRequest) { request in
             HistoryExportSheet(request: request) { exportRequest = nil }
         }
-        .quickLookPreview($previewURL, in: HistoryPreview.urls(for: filteredHistory))
+        .onReceive(NotificationCenter.default.publisher(for: HistoryQuickLook.toggleRequest)) { _ in togglePreview() }
+        .task { await ViewCounts.refresh(uploadHistory) }
     }
 
     private func togglePreview() {
-        if previewURL != nil {
-            previewURL = nil
+        if HistoryQuickLook.shared.isVisible {
+            HistoryQuickLook.shared.toggle(urls: [], start: nil)
             return
         }
         let selected = selectedItems
         let visible = filteredHistory
         Task { @MainActor in
             await HistoryPreview.downloadRemoteFiles(for: selected.isEmpty ? Array(visible.prefix(1)) : selected)
-            previewURL = HistoryPreview.startURL(selected: selected, visible: visible)
+            HistoryQuickLook.shared.toggle(urls: HistoryPreview.urls(for: visible), start: HistoryPreview.startURL(selected: selected, visible: visible))
         }
     }
 
@@ -150,10 +149,6 @@ struct HistoryGridView: View {
         }
         .focusable()
         .focusEffectDisabled()
-        .onKeyPress(.space) {
-            togglePreview()
-            return .handled
-        }
     }
 
     private func sectionHeader(_ section: HistoryDaySection) -> some View {
@@ -344,6 +339,12 @@ struct HistoryCard: View {
                     Text(uploaderName)
                         .lineLimit(1)
                 }
+                if let views = item.viewCount {
+                    Spacer(minLength: 2)
+                    Label(ViewCountParser.label(for: views), systemImage: "eye")
+                        .labelStyle(.titleAndIcon)
+                        .help(String(format: "%d views".localized(), views))
+                }
             }
             .font(.system(size: 10))
             .foregroundStyle(.secondary)
@@ -383,6 +384,7 @@ struct HistoryCard: View {
             if HistoryActions.canCombine(bulkItems) {
                 Button("Combine…".localized()) { HistoryActions.combine(bulkItems) }
             }
+            HistoryMoveMenu(items: bulkItems)
             Divider()
             if bulkItems.contains(where: \.canDeleteFromServer) {
                 Button("Delete from Server…".localized(), role: .destructive) { HistoryActions.confirmDeleteFromServer(bulkItems) }

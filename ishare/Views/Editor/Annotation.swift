@@ -223,6 +223,7 @@ struct Annotation: Identifiable, Hashable, Sendable {
     var hidden = false
     var rotation: CGFloat = 0
     var highlightStyle: HighlightStyle = .marker
+    var measureScale: CGFloat?
 
     var isEffect: Bool {
         switch shape {
@@ -352,5 +353,31 @@ struct Annotation: Identifiable, Hashable, Sendable {
         guard lengthSquared > 0 else { return hypot(point.x - start.x, point.y - start.y) }
         let t = max(0, min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared))
         return hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy))
+    }
+}
+
+extension Annotation {
+    var kindName: String {
+        switch shape {
+        case .arrow, .curvedArrow: "arrow"
+        case .line, .curvedLine: "line"
+        case .rectangle: "rectangle"
+        case .ellipse: "ellipse"
+        case .highlight: "highlight"
+        case .pen: "pen"
+        case .marker: "marker"
+        case .text: "text"
+        case .callout: "callout"
+        case .step: "step"
+        case .magnify: "magnify"
+        case .spotlight: "spotlight"
+        case .blur: "blur"
+        case .pixelate: "pixelate"
+        case .eraser: "eraser"
+        case .cursor: "cursor"
+        case .stamp: "stamp"
+        case .measure: "measure"
+        case .library: "shape"
+        }
     }
 }

@@ -24,10 +24,13 @@ extension Defaults.Keys {
     static let showWebcam = Key<Bool>("showWebcam", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamSize = Key<WebcamBubbleSize>("webcamSize", default: .medium, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamCorner = Key<WebcamCorner>("webcamCorner", default: .bottomRight, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let webcamBackground = Key<WebcamBackground>("webcamBackground", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let webcamDeviceID = Key<String?>("webcamDeviceID", default: nil, suite: .ishare)
     static let microphoneDeviceID = Key<String?>("microphoneDeviceID", default: nil, suite: .ishare)
     static let trimBeforeSaving = Key<Bool>("trimBeforeSaving", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let gifMaxSize = Key<GIFMaxSize>("gifMaxSize", default: .original, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let saveSeparateTracks = Key<Bool>("saveSeparateTracks", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let liveCaptions = Key<Bool>("liveCaptions", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let generateCaptions = Key<Bool>("generateCaptions", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let captionOutput = Key<CaptionOutput>("captionOutput", default: .srtFile, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let recordingAudioSource = Key<RecordingAudioSource>("recordingAudioSource", default: .allSystemAudio, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -41,6 +44,7 @@ extension Defaults.Keys {
     static let instantReplayDuration = Key<InstantReplayDuration>("instantReplayDuration", default: .seconds30, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let instantReplayResolution = Key<RecordingResolution>("instantReplayResolution", default: .p720, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let instantReplayFrameRate = Key<RecordingFrameRate>("instantReplayFrameRate", default: .fps30, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
+    static let followPointerSize = Key<FollowPointerSize>("followPointerSize", default: .hd1080, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let autoZoomEnabled = Key<Bool>("autoZoomEnabled", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let spotlightActiveWindow = Key<Bool>("spotlightActiveWindow", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let spotlightDimming = Key<Double>("spotlightDimming", default: 0.5, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -75,3 +79,5 @@ extension Defaults.Keys {
     static let blurRegionStyle = Key<BlurRegionStyle>("blurRegionStyle", default: .blur, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let blurDetectionInterval = Key<Double>("blurDetectionInterval", default: 1, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
 }
+
+extension FollowPointerSize: @retroactive Defaults.Serializable {}

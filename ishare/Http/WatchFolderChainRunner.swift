@@ -9,6 +9,7 @@ enum WatchFolderChainRunner {
         var finalURL: URL?
         var link: String?
         var failure: String?
+        var moves: [WatchFolderMove] = []
     }
 
     static var counter: Int {
@@ -35,6 +36,7 @@ enum WatchFolderChainRunner {
                 } catch {
                     return failed(outcome, "Renaming failed: %@", error)
                 }
+                outcome.moves.append(WatchFolderMove(from: source.path, to: destination.path))
                 if working == source { working = destination }
                 source = destination
                 outcome.finalURL = destination
@@ -80,13 +82,18 @@ enum WatchFolderChainRunner {
                 let destination = WatchFolderChainRunner.uniqueURL(in: folder, named: source.lastPathComponent)
                 do {
                     try FileManager.default.moveItem(at: source, to: destination)
+                    outcome.moves.append(WatchFolderMove(from: source.path, to: destination.path, folderBookmark: action.folderBookmark))
                     outcome.finalURL = destination
                 } catch {
                     return failed(outcome, "Moving failed: %@", error)
                 }
             case .moveToTrash:
                 do {
-                    try FileManager.default.trashItem(at: source, resultingItemURL: nil)
+                    var trashed: NSURL?
+                    try FileManager.default.trashItem(at: source, resultingItemURL: &trashed)
+                    if let trashed = trashed as URL? {
+                        outcome.moves.append(WatchFolderMove(from: source.path, to: trashed.path))
+                    }
                     outcome.finalURL = nil
                 } catch {
                     return failed(outcome, "Moving to the Trash failed: %@", error)
@@ -125,5 +132,48 @@ enum WatchFolderChainRunner {
             }
         }
         return action.folderPath.map { URL(fileURLWithPath: $0, isDirectory: true) }
+    }
+}
+
+@MainActor
+enum WatchFolderUndo {
+    static var canUndo: Bool {
+        Defaults[.watchFolderUndoLog].last != nil
+    }
+
+    static func record(_ moves: [WatchFolderMove]) {
+        var log = Defaults[.watchFolderUndoLog]
+        log.record(WatchFolderRun(date: Date(), moves: moves))
+        Defaults[.watchFolderUndoLog] = log
+    }
+
+    static func undoLast() {
+        var log = Defaults[.watchFolderUndoLog]
+        guard let run = log.popLast() else {
+            BezelNotification.show(messageText: "Nothing to undo".localized(), icon: ToastIcon)
+            return
+        }
+        Defaults[.watchFolderUndoLog] = log
+        do {
+            for move in run.undoMoves {
+                try restore(move)
+            }
+            BezelNotification.show(messageText: String(format: "Restored %@".localized(), run.fileName), icon: ToastIcon)
+        } catch {
+            Log.upload.error("Undoing the watch folder steps failed: \(error.localizedDescription, privacy: .public)")
+            BezelNotification.show(messageText: String(format: "Couldn’t restore %@".localized(), run.fileName), icon: ToastIcon)
+        }
+    }
+
+    private static func restore(_ move: WatchFolderMove) throws {
+        var stale = false
+        let folder = move.folderBookmark.flatMap { try? URL(resolvingBookmarkData: $0, options: [.withSecurityScope], relativeTo: nil, bookmarkDataIsStale: &stale) }
+        let scoped = folder?.startAccessingSecurityScopedResource() ?? false
+        defer { if scoped { folder?.stopAccessingSecurityScopedResource() } }
+        let source = URL(fileURLWithPath: move.from)
+        let target = URL(fileURLWithPath: move.to)
+        let destination = WatchFolderChainRunner.uniqueURL(in: target.deletingLastPathComponent(), named: target.lastPathComponent)
+        WatchFolderService.markProcessed(destination)
+        try FileManager.default.moveItem(at: source, to: destination)
     }
 }

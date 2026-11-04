@@ -126,6 +126,8 @@ enum WebcamBubblePreviewArea {
 final class WebcamBubbleController {
     private var panel: NSPanel?
     private var runner: CaptureSessionRunner?
+    private var processedFeed: WebcamProcessedFeed?
+    private var trackRecorder: WebcamFrameRecorder?
     private(set) var isCompositedLater = false
 
     var windowID: CGWindowID? {
@@ -169,15 +171,43 @@ final class WebcamBubbleController {
 
         let frame = WebcamBubbleLayout.frame(diameter: RecordingDefaults[.webcamSize].diameter, corner: RecordingDefaults[.webcamCorner], in: area)
         let panel = makePanel(frame: frame, session: runner.session, movable: true)
+        if let processor = WebcamBackgroundProcessor(style: Defaults[.webcamBackground]), let layer = panel.contentView?.layer?.sublayers?.first {
+            let processedLayer = CALayer()
+            processedLayer.frame = layer.frame
+            processedLayer.contentsGravity = .resizeAspectFill
+            processedLayer.setAffineTransform(CGAffineTransform(scaleX: -1, y: 1))
+            panel.contentView?.layer?.replaceSublayer(layer, with: processedLayer)
+            let feed = WebcamProcessedFeed(processor: processor, layer: processedLayer)
+            runner.session.beginConfiguration()
+            if runner.session.canAddOutput(feed.output) {
+                runner.session.addOutput(feed.output)
+                processedFeed = feed
+            }
+            runner.session.commitConfiguration()
+        }
+        if Defaults[.saveSeparateTracks] {
+            let recorder = WebcamFrameRecorder()
+            if recorder.attach(to: runner.session) {
+                trackRecorder = recorder
+            }
+        }
         panel.orderFrontRegardless()
         runner.start()
         self.runner = runner
         self.panel = panel
     }
 
+    func finishTrack() async -> WebcamFrameRecorder.Clip? {
+        guard let recorder = trackRecorder else { return nil }
+        trackRecorder = nil
+        return await recorder.stop()
+    }
+
     func hide() {
+        trackRecorder = nil
         runner?.stop()
         runner = nil
+        processedFeed = nil
         panel?.orderOut(nil)
         panel = nil
         isCompositedLater = false

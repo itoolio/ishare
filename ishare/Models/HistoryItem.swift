@@ -22,6 +22,9 @@ struct HistoryItem: Codable, Hashable, Defaults.Serializable {
     var expiryAttempts: Int?
     var nextExpiryAttemptAt: Date?
     var expiryError: String?
+    var viewCountUrl: String?
+    var viewCount: Int?
+    var viewCountCheckedAt: Date?
     var id: Self { self }
 }
 

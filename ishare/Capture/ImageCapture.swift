@@ -84,7 +84,8 @@ enum ImageCaptureFlow {
             return nil
         }
         do {
-            let content = try await ScreenshotEngine.shareableContent()
+            let prefetched = await SelectionPrefetch.takeContent()
+            let content = if let prefetched { prefetched } else { try await ScreenshotEngine.shareableContent() }
             let captured = try await body(content)
             return finalizing ? captured.map(finalize) : captured
         } catch {
@@ -116,6 +117,7 @@ enum ImageCaptureFlow {
         let lastRegions = LastRegionStore.regions(for: content.displays.map(\.displayID))
         let options = RegionSelector.Options(
             backdrops: backdrops, hint: "Select the area to capture".localized(), lastRegions: lastRegions,
+            snapWindowFrames: ScreenshotEngine.candidateWindows(in: content).map(\.frame),
             allowsMultipleRegions: allowsMultipleRegions, allowsFreezeToggle: true, freezeMode: loader.mode,
             liveSampler: LiveMagnifierSampler(content: content),
             onFreezeModeChange: { mode in loader.change(to: mode) }
@@ -162,8 +164,23 @@ enum ImageCaptureFlow {
             return try await captureRegion(content: content, delay: delay)
         }
         LastRegionStore.remember(rect, for: target)
+        if delay == 0, let frozen = await frozenLastRegion(rect, displayID: target, content: content) {
+            return frozen
+        }
         guard let live = try await contentAfterCountdown(delay, content: content) else { return nil }
         return try await captureDisplayImage(displayID: target, region: rect, content: live, suffix: frontmostAppName())
+    }
+
+    private static func frozenLastRegion(_ rect: CGRect, displayID: CGDirectDisplayID, content: SCShareableContent) async -> CapturedImage? {
+        guard let backdrops = await SelectionPrefetch.take(), let frame = backdrops[displayID], let screen = NSScreen.screen(for: displayID) else { return nil }
+        let source = frontmostSource(in: content)
+        let raw =
+            CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps ? PrivacyFilter.redactBackdrops([displayID: frame], content: content)[displayID] ?? frame : frame
+        let scale = CGFloat(raw.width) / max(1, screen.frame.width)
+        guard let cropped = ScreenshotEngine.crop(raw, toPoints: rect, scale: scale) else { return nil }
+        let geometry = PrivacyFilter.geometry(displayID: displayID, region: rect, image: cropped)
+        Log.capture.info("Captured the last region from the frame taken when the shortcut was pressed")
+        return CapturedImage(image: cropped, suffix: frontmostAppName(), geometry: geometry, pointScale: scale, source: source)
     }
 
     static func captureWindow(content: SCShareableContent, delay: Int = 0) async throws -> CapturedImage? {
@@ -319,7 +336,7 @@ enum ImageCaptureFlow {
     static func save(_ captured: CapturedImage) throws -> URL {
         let fileType = Defaults[.captureFileType]
         let url = availableURL(SaveLocation.fileURL(for: .captures, fileName: fileName(for: captured, ext: fileType.rawValue)))
-        try ImageEncoder.write(captured.image, as: fileType, to: url)
+        try ImageEncoder.write(captured.image, as: fileType, to: url, pointScale: captured.pointScale ?? captured.geometry?.scale)
         return url
     }
 

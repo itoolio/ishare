@@ -259,6 +259,9 @@ struct HistoryItemMenuItems: View {
         if showsFinder, item.existingLocalFileURL != nil {
             Button("Show in Finder".localized()) { HistoryActions.revealInFinder(item) }
         }
+        if showsImageActions {
+            HistoryMoveMenu(items: [item])
+        }
         if let shareAnchor {
             Button("Share…".localized()) { SharePicker.show(SharePicker.items(for: item), from: shareAnchor) }
         }
@@ -279,5 +282,18 @@ struct HistoryItemMenuItems: View {
             Button("Delete from Server…".localized(), role: .destructive) { HistoryActions.confirmDeleteFromServer(item) }
         }
         Button("Remove from History".localized()) { HistoryActions.removeFromHistory(item) }
+    }
+}
+
+struct HistoryMoveMenu: View {
+    let items: [HistoryItem]
+
+    var body: some View {
+        Menu("Move to".localized()) {
+            ForEach(HistoryMover.choices()) { choice in
+                Button(choice.target.displayName) { HistoryMover.confirmMove(items, to: choice.target) }
+            }
+        }
+        .disabled(items.allSatisfy { $0.isExpired || ($0.existingLocalFileURL == nil && $0.remoteURL == nil) })
     }
 }

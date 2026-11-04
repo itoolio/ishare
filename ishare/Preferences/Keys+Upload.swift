@@ -19,11 +19,17 @@ extension Defaults.Keys {
     static let watchFolderFilter = Key<WatchFolderFilter>("watchFolderFilter", default: .images, suite: .ishare)
     static let watchFolderProcessed = Key<[String]>("watchFolderProcessed", default: [], suite: .ishare)
     static let watchFolderActions = Key<[WatchFolderAction]>("watchFolderActions", default: WatchFolderChain.defaultActions, suite: .ishare)
+    static let watchedFolders = Key<[WatchedFolder]>("watchedFolders", default: [], suite: .ishare)
+    static let watchFolderUndoLog = Key<WatchFolderUndoLog>("watchFolderUndoLog", default: WatchFolderUndoLog(), suite: .ishare)
     static let watchFolderCounter = Key<Int>("watchFolderCounter", default: 0, suite: .ishare)
     static let urlShortener = Key<URLShortenerConfiguration>("urlShortener", default: .none, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let uploadPresets = Key<[UploadPreset]>("uploadPresets", default: [], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let linkOptionPreferences = Key<[String: LinkOptionPreferences]>("linkOptionPreferences", default: [:], suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let localFolderBookmarks = Key<[String: Data]>("localFolderBookmarks", default: [:], suite: .ishare)
+    static let scriptHookPath = Key<String?>("scriptHookPath", default: nil, suite: .ishare)
+    static let scriptHookAfterCapture = Key<Bool>("scriptHookAfterCapture", default: true, suite: .ishare)
+    static let scriptHookAfterUpload = Key<Bool>("scriptHookAfterUpload", default: true, suite: .ishare)
+    static let showsUploadProgressHUD = Key<Bool>("showsUploadProgressHUD", default: true, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let optimizeImagesBeforeUpload = Key<Bool>("optimizeImagesBeforeUpload", default: false, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let imageOptimizationFormat = Key<ImageOptimizationFormat>("imageOptimizationFormat", default: .lossless, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
     static let imageConversionQuality = Key<Double>("imageConversionQuality", default: 0.85, suite: .ishare, iCloud: SettingsStorage.syncsToCloud)
@@ -53,3 +59,5 @@ extension DuplicateIndex: Defaults.Serializable {}
 extension HealthCheckRecord: Defaults.Serializable {}
 
 extension WatchFolderAction: @retroactive Defaults.Serializable {}
+
+extension WatchFolderUndoLog: @retroactive Defaults.Serializable {}

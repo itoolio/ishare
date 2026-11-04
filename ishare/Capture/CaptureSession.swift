@@ -124,6 +124,25 @@ enum CaptureSession {
         }
     }
 
+    static func toggleFollowPointerRecording(gif: Bool = false, options: CaptureOptions = .standard) {
+        guard !isRecording else {
+            stopRecording()
+            return
+        }
+        pendingRecording = (gif, options)
+        Task { @MainActor in
+            let recorder = AppModel.shared.recorder
+            guard await recorder.canRecord, let screen = NSScreen.underMouse ?? NSScreen.main else {
+                pendingRecording = nil
+                BezelNotification.show(messageText: "Missing permission".localized(), icon: ToastIcon)
+                return
+            }
+            RecordingDefaults.begin(options.recordingPreset)
+            let size = Defaults[.followPointerSize].pointSize(fitting: screen.frame.size)
+            await recorder.start(RecordingFlow.recordingURL(), target: .followPointer(screen, size))
+        }
+    }
+
     static func recordDevice(_ device: ExternalScreenDevice, options: CaptureOptions = .standard) {
         guard !isRecording else {
             stopRecording()
@@ -194,6 +213,7 @@ enum CaptureSession {
     }
 
     private static func finishRecording(_ url: URL, gif: Bool, options: CaptureOptions, sidecar: RecordingSidecar) async {
+        await SeparateTracksExporter.exportIfEnabled(url, sidecar: sidecar)
         await RecordingPostProcessor.mergeAppAudio(url, sidecar: sidecar)
         let deferredZoom = await RecordingPostProcessor.compositeOverlays(url, sidecar: sidecar)
         var fileURL = url
@@ -228,6 +248,7 @@ enum CaptureSession {
     }
 
     static func finish(fileURL originalURL: URL, kind: PostCapture.Kind, options: CaptureOptions = .standard) async {
+        ScriptHooks.runIfEnabled(kind == .video ? .recording : .capture, file: originalURL)
         var fileURL = originalURL
         let saveToDisk = options.isEnabled(.saveToDisk)
         var copiedCode: Bool?

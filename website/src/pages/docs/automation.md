@@ -25,6 +25,9 @@ The tool starts ishare in the background when it isn't running.
 ishare upload <file…> [--uploader NAME]   Upload files and print their links
 ishare capture region|window|screen|scrolling [--upload]
                                           Take a screenshot and print its file, or its link with --upload
+ishare capture app [NAME] [--sheet] [--upload]
+                                          Capture every window of an app (the frontmost one without NAME),
+                                          one file per line, or one image with --sheet
 ishare record start|stop|toggle           Start or stop a screen recording
 ishare uploaders list                     List the configured uploaders (* marks the active one)
 ishare history [--limit N]                Print recent uploads, newest first (20 by default)
@@ -52,17 +55,48 @@ With `--json`, the tool prints one object:
 }
 ```
 
-The payload contains `uploads` (`file`, `link`, `error`), `capture` (`file`, `link`), `uploaders` (`id`, `name`, `kind`, `selected`), `history` (`link`, `shortLink`, `title`, `date`, `uploader`, `altText`, `deletionLink`, `localPath`) or `recording`, depending on the command. On failure, `success` is `false` and `error` explains why.
+The payload contains `uploads` (`file`, `link`, `error`), `capture` (`file`, `link`, and `files` and `links` for app windows), `uploaders` (`id`, `name`, `kind`, `selected`), `history` (`link`, `shortLink`, `title`, `date`, `uploader`, `altText`, `deletionLink`, `localPath`) or `recording`, depending on the command. On failure, `success` is `false` and `error` explains why.
 
 The App Store build is sandboxed, so it can only upload files it is allowed to read, for example in your Pictures folder. The GitHub build can upload any file.
 
 The tool and the app exchange small JSON request and response files in ishare's app group container (`~/Library/Group Containers/L988J7YMK5.group.dev.adrian.ishare/CommandLine`), and the tool wakes the app with an `ishare://cli?id=…` URL. Each response carries its request's ID, and stale files are removed after 15 minutes.
+
+## AI assistants (MCP)
+
+`ishare mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on standard input and output, so assistants such as Claude can take captures, capture app windows, upload files, start recordings and read your recent uploads. Add it to your assistant's MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "ishare": { "command": "/usr/local/bin/ishare", "args": ["mcp"] }
+  }
+}
+```
+
+The tools are `capture`, `capture_app`, `upload`, `list_uploaders`, `recent_uploads` and `record`. They answer with the same JSON as `--json`. Region, window, scrolling and menu captures still wait for you to choose what to capture.
+
+## AppleScript
+
+ishare has a scripting dictionary you can open in Script Editor. For example:
+
+```applescript
+tell application "ishare"
+    set link to capture screen uploading true
+    set framed to edit image (POSIX file "/Users/me/Pictures/shot.png") applying device frame in device phone
+    upload {framed}
+    name of every uploader
+end tell
+```
+
+`edit image` beautifies, frames, trims, redacts or lifts the subject of an image and returns the new file, saved next to the original or in the folder given with `saving in`.
 
 ## URL actions
 
 | URL | Action |
 | --- | --- |
 | `ishare://capture/region` | Capture a region; also `window`, `screen` and `scrolling` |
+| `ishare://capture/web?url=example.com` | Capture a whole web page. Add `width=mobile`, `tablet` or a number of points, `format=pdf` for a PDF, and `banners=0` to keep cookie banners |
+| `ishare://capture/app?name=Safari` | Capture every window of an app by name or bundle identifier, or of the frontmost app without `name`. Add `sheet=1` for one contact sheet |
 | `ishare://record/start` | Start a recording; also `stop` and `toggle`. Add `gif=1` or `region=1` |
 | `ishare://upload?path=/Users/me/Pictures/a.png` | Upload a file; repeat `path` for up to 50 files |
 | `ishare://uploader/select?name=My%20Server` | Make an uploader the active one |

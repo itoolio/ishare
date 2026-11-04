@@ -19,6 +19,7 @@ final class AppState: ObservableObject {
             UploadBackgroundServices.start()
             InstantReplay.shared.activate()
             ScreenshotReplay.shared.activate()
+            UploadProgressHUD.shared.activate()
         }
     }
 
@@ -42,6 +43,12 @@ final class AppState: ObservableObject {
         KeyboardShortcuts.onKeyDown(for: .captureRegion) {
             Task { @MainActor in SelectionPrefetch.begin() }
         }
+        KeyboardShortcuts.onKeyDown(for: .captureLastRegion) {
+            Task { @MainActor in SelectionPrefetch.begin() }
+        }
+        KeyboardShortcuts.onKeyDown(for: .captureWindow) {
+            Task { @MainActor in SelectionPrefetch.begin(includingBackdrops: false) }
+        }
         onCapture(.captureRegion, .REGION)
         onCapture(.captureWindow, .WINDOW)
         onCapture(.captureScreen, .SCREEN)
@@ -59,6 +66,9 @@ final class AppState: ObservableObject {
         onRecord(.recordGif, gif: true)
         onRecord(.recordRegion, gif: false, region: true)
         onRecord(.recordRegionGif, gif: true, region: true)
+        KeyboardShortcuts.onKeyUp(for: .recordFollowingPointer) {
+            Task { @MainActor in CaptureSession.toggleFollowPointerRecording() }
+        }
         onRecord(.recordScreenForceUpload, gif: false, forceUpload: true)
         onRecord(.recordGifForceUpload, gif: true, forceUpload: true)
 

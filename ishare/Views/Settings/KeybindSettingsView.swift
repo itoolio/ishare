@@ -29,6 +29,7 @@ struct KeybindSettingsView: View {
                 ("Record Region:", .recordRegion),
                 ("Record GIF:", .recordGif),
                 ("Record Region as GIF:", .recordRegionGif),
+                ("Record Following the Pointer:", .recordFollowingPointer),
                 ("Add Recording Marker:", .addRecordingMarker),
                 ("Show or Hide Notes:", .toggleRecordingNotes),
                 ("Save Instant Replay:", .saveInstantReplay),

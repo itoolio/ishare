@@ -284,6 +284,24 @@ Uploaders that can delete files (HTTP uploaders with a `deletionURL`, S3, WebDAV
 
 The value must be between 1 and 3650. ishare checks on launch, every hour and after your Mac wakes, deletes uploads whose time is up and shows a summary notification. Failed deletions are retried with an increasing delay. Uploads you mark **Keep Forever** in the history are never deleted. Expired uploads stay in the history marked "Expired — deleted from server" unless you turn off **Settings → Uploaders → Auto-Delete → Keep expired uploads in history**. Only the Mac that made an upload deletes it, and uploads made before you turned auto-delete on are kept.
 
+## View counts
+
+HTTP uploaders whose host reports how often a file was opened, such as Zipline, can show the count in the history:
+
+```json
+"viewCount": {
+  "url": "https://your-zipline-host.com/api/user/files/{{files[0].id}}",
+  "path": "views"
+}
+```
+
+| Key | Required | Description |
+| --- | --- | --- |
+| `url` | yes | Built from the upload response with the same placeholders as `responseURL`, and stored with the upload. ishare requests it with the uploader's `headers`. |
+| `path` | no | Where the count is in the JSON answer, such as `views` (the default) or `file.stats[0].views`. |
+
+ishare refreshes counts when you open the history, at most every 10 minutes per upload.
+
 ## Local destinations
 
 Folder and Photos uploaders keep captures on your Mac instead of uploading them. They can be the default uploader, an extra destination or part of an upload preset. Create them in **Settings → Uploaders → Create**.

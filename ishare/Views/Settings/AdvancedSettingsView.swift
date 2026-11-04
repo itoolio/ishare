@@ -31,6 +31,9 @@ struct AdvancedSettingsView: View {
             }
             SharingSettingsSection()
             CommandLineToolSection()
+            if ScriptHooks.isAvailable {
+                ScriptHookSection()
+            }
             LocalCaptureCleanupSection()
             DiagnosticsSection()
             SettingsTransferSection()

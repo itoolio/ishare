@@ -71,7 +71,7 @@ extension Annotation {
 
 extension Annotation: Codable {
     private enum CodingKeys: String, CodingKey {
-        case shape, color, lineWidth, fontSize, filled, textBackground, arrowHead, doubleHeaded, dashed, spotlightShape, dimAmount, rotation, highlightStyle
+        case shape, color, lineWidth, fontSize, filled, textBackground, arrowHead, doubleHeaded, dashed, spotlightShape, dimAmount, rotation, highlightStyle, measureScale
     }
 
     init(from decoder: Decoder) throws {
@@ -91,6 +91,7 @@ extension Annotation: Codable {
         dimAmount = try container.decodeIfPresent(Double.self, forKey: .dimAmount) ?? dimAmount
         rotation = try container.decodeIfPresent(CGFloat.self, forKey: .rotation) ?? 0
         highlightStyle = try container.decodeIfPresent(HighlightStyle.self, forKey: .highlightStyle) ?? .marker
+        measureScale = try container.decodeIfPresent(CGFloat.self, forKey: .measureScale)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -112,6 +113,7 @@ extension Annotation: Codable {
         if highlightStyle != .marker {
             try container.encode(highlightStyle, forKey: .highlightStyle)
         }
+        try container.encodeIfPresent(measureScale, forKey: .measureScale)
     }
 }
 

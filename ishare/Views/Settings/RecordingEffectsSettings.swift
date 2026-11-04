@@ -7,6 +7,7 @@ struct RecordingEffectsSettings: View {
     var body: some View {
         Group {
             AutoZoomSettingsSection()
+            FollowPointerSettingsSection()
             WindowSpotlightSettingsSection()
             PointerEffectsSettingsSection()
             LiveDrawingSettingsSection()
@@ -65,6 +66,30 @@ private struct AutoZoomSettingsSection: View {
 
     static func seconds(_ value: Double) -> String {
         String(format: "%.1f s", value)
+    }
+}
+
+private struct FollowPointerSettingsSection: View {
+    @Default(.followPointerSize) private var size
+
+    var body: some View {
+        Section {
+            Picker("Recorded area".localized(), selection: $size) {
+                Text("1280 × 720").tag(FollowPointerSize.hd720)
+                Text("1920 × 1080").tag(FollowPointerSize.hd1080)
+                Text("Square".localized()).tag(FollowPointerSize.square)
+                Text("Portrait".localized()).tag(FollowPointerSize.portrait)
+            }
+        } header: {
+            Text("Follow the Pointer".localized())
+        } footer: {
+            Text(
+                "Record Following the Pointer records an area of this size, in points, that pans live as you move the pointer near its edges. Use it from the command palette or its shortcut."
+                    .localized()
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
     }
 }
 

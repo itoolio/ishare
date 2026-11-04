@@ -14,6 +14,7 @@ final class AudioLevelsProvider: ObservableObject {
 enum RecordingTarget {
     case picker
     case region(NSScreen, CGRect)
+    case followPointer(NSScreen, CGSize)
     case device(ExternalScreenDevice)
 }
 
@@ -146,6 +147,7 @@ final class ScreenRecorder: ObservableObject {
     private let captureEngine = CaptureEngine()
     private var overlayWindows: [NSWindow] = []
     private let inputOverlay = InputOverlayController()
+    private let liveCaptions = LiveCaptionController()
     private let webcamBubble = WebcamBubbleController()
     private let overlayRecorder = OverlayEventRecorder()
     private let pointerRecorder = PointerActivityRecorder()
@@ -160,10 +162,11 @@ final class ScreenRecorder: ObservableObject {
     private var audioPlan = RecordingAudioPlan.contentAudio
     private var appAudioRecorder: AppAudioRecorder?
     private var deviceRecorder: ExternalScreenRecorder?
+    private var pointerFollower: PointerFollower?
 
     private var captureOverlayWindowIDs: Set<CGWindowID> {
         RecordingCaptureExclusion.capturedOverlayIDs(
-            overlays: inputOverlay.windowIDs + drawing.windowIDs + [webcamBubble.windowID].compactMap(\.self),
+            overlays: inputOverlay.windowIDs + liveCaptions.windowIDs + drawing.windowIDs + [webcamBubble.windowID].compactMap(\.self),
             privateWindows: [RecordingNotesController.shared.windowID]
         )
     }
@@ -177,7 +180,7 @@ final class ScreenRecorder: ObservableObject {
     }
 
     private var showsSystemCursor: Bool {
-        RecordingDefaults[.recordPointer] && !PointerEffectSettings.current.rendersPointer
+        RecordingDefaults[.recordPointer] && (pointerFollower != nil || !PointerEffectSettings.current.rendersPointer)
     }
 
     init() {
@@ -209,6 +212,8 @@ final class ScreenRecorder: ObservableObject {
             startWithPicker(fileURL)
         case let .region(screen, rect):
             await startRegion(fileURL, screen: screen, rect: rect)
+        case let .followPointer(screen, size):
+            await startFollowingPointer(fileURL, screen: screen, size: size)
         case let .device(device):
             await startDevice(fileURL, device: device)
         }
@@ -310,6 +315,39 @@ final class ScreenRecorder: ObservableObject {
         }
     }
 
+    private func startFollowingPointer(_ fileURL: URL, screen: NSScreen, size: CGSize) async {
+        do {
+            let follower = PointerFollower(screen: screen, size: size, engine: captureEngine)
+            pointerFollower = follower
+            let area = RecordingArea.region(CGRect(origin: .zero, size: screen.frame.size), on: screen)
+            await showCaptureOverlays(areas: [area], bubbleArea: nil)
+            let content = try await ScreenshotEngine.shareableContent()
+            guard let display = ScreenshotEngine.display(for: screen, in: content) else { throw CaptureError.displayNotFound }
+            let overlayIDs = captureOverlayWindowIDs
+            let capturedOverlays = content.windows.filter { overlayIDs.contains($0.windowID) }
+            let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: capturedOverlays)
+            let scale = CGFloat(filter.pointPixelScale)
+            let rect = follower.rect
+            let configuration = makeConfiguration(pixelSize: CGSize(width: rect.width * scale, height: rect.height * scale))
+            configuration.sourceRect = rect
+            let hud = makeHUDWindow(near: CGRect(x: screen.visibleFrame.midX, y: screen.visibleFrame.minY + 80, width: 0, height: 0), on: screen)
+            hud.orderFrontRegardless()
+            overlayWindows = [hud]
+            isRunning = true
+            follower.start()
+            await prepareAudio(style: .display, screen: screen, content: content)
+            await run(configuration: configuration, filter: filter, fileURL: fileURL)
+        } catch {
+            NSLog("Follow-the-pointer recording failed: %@", error.localizedDescription)
+            pointerFollower?.stop()
+            pointerFollower = nil
+            removeOverlay()
+            hideCaptureOverlays()
+            isRunning = false
+            RecordingDefaults.end()
+        }
+    }
+
     private static func regionSource(_ rect: CGRect, on screen: NSScreen) -> OverlaySource {
         let bounds = screen.displayID.map(CGDisplayBounds) ?? CGRect(origin: .zero, size: screen.frame.size)
         let global = CGRect(x: bounds.minX + rect.minX, y: bounds.minY + rect.minY, width: rect.width, height: rect.height)
@@ -377,6 +415,7 @@ final class ScreenRecorder: ObservableObject {
             showsKeystrokes: RecordingDefaults[.showKeystrokes],
             shortcutsOnly: RecordingDefaults[.keystrokesShortcutsOnly]
         )
+        await liveCaptions.start(areas: areas)
         drawing.prepare(screens: Self.uniqueScreens(areas.map(\.screen)))
         hudModel.canDraw = drawing.isPrepared
         if RecordingDefaults[.showWebcam], let bubbleArea {
@@ -386,6 +425,7 @@ final class ScreenRecorder: ObservableObject {
 
     private func hideCaptureOverlays() {
         inputOverlay.stop()
+        liveCaptions.stop()
         webcamBubble.hide()
         drawing.tearDown()
         hudModel.canDraw = false
@@ -519,7 +559,10 @@ final class ScreenRecorder: ObservableObject {
         removeOverlay()
         limitMonitor.stop()
         drawing.endDrawing()
+        pointerFollower?.stop()
+        pointerFollower = nil
         let result = await captureEngine.stopCapture()
+        let webcamTrack = await webcamBubble.finishTrack()
         hideCaptureOverlays()
         RecordingNotesController.shared.recordingDidStop()
         let overlay = await overlayRecorder.stop()
@@ -528,7 +571,8 @@ final class ScreenRecorder: ObservableObject {
         appAudioRecorder = nil
         let finalPauses = pauses.closed(at: RecordingClock.now)
         sidecar = RecordingSidecar(
-            markers: markerLog.markers, overlay: overlay, effects: effects, recordingStart: captureEngine.startClock.time, appAudio: appAudio, pauses: finalPauses)
+            markers: markerLog.markers, overlay: overlay, effects: effects, recordingStart: captureEngine.startClock.time, appAudio: appAudio, pauses: finalPauses,
+            webcamTrack: webcamTrack)
         markerLog = RecordingMarkerLog()
         stopAudioMetering()
         isRunning = false

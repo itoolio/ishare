@@ -317,3 +317,21 @@ enum SyntheticVideo {
         memset(base, Int32(shade), bytes)
     }
 }
+
+struct SeparateTracksTests {
+    @Test func savesTheScreenTrackInAFolderNextToTheRecording() async throws {
+        let video = try await SyntheticVideo.make(size: CGSize(width: 64, height: 48), seconds: 1, frameRate: 10)
+        defer { try? FileManager.default.removeItem(at: video.deletingLastPathComponent()) }
+        let folder = try await SeparateTracksExporter.export(video, sidecar: .empty)
+        #expect(folder == video.deletingLastPathComponent().appending(path: "clip Tracks", directoryHint: .isDirectory))
+        let screen = folder.appending(path: "Screen.mov")
+        #expect(FileManager.default.fileExists(atPath: screen.path))
+        #expect(try await !AVURLAsset(url: screen).loadTracks(withMediaType: .video).isEmpty)
+    }
+
+    @Test func namesAudioTracksByWhatWasRecorded() {
+        #expect(SeparateTracksExporter.trackName(index: 0, count: 2, recordsMicrophone: true) == "System Audio")
+        #expect(SeparateTracksExporter.trackName(index: 1, count: 2, recordsMicrophone: true) == "Microphone")
+        #expect(SeparateTracksExporter.trackName(index: 2, count: 3, recordsMicrophone: true) == "Audio 3")
+    }
+}

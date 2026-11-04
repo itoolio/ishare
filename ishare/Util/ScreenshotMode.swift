@@ -443,7 +443,7 @@ struct UITestCanvas: View {
                     EditorView(document: document, onDone: { ScreenshotMode.closeTestWindow() }, onDiscard: { ScreenshotMode.closeTestWindow() }, onCopy: {})
                     EditorStateProbe(document: document)
                 }
-                .frame(width: 1100, height: 760)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         case .uploaders, .recording:
             SettingsView()
@@ -460,9 +460,11 @@ struct UITestCanvas: View {
 
 struct EditorStateProbe: View {
     @ObservedObject var document: EditorDocument
+    @Default(.editorShowsGrid) private var showsGrid
 
     private var summary: String {
         "annotations=\(document.annotations.count) undo=\(document.canUndo) redo=\(document.canRedo) tool=\(document.tool.rawValue)"
+            + " selected=\(document.selectedIDs.count) grid=\(showsGrid) kinds=\(document.annotations.map(\.kindName).joined(separator: ","))"
     }
 
     var body: some View {

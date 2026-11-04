@@ -63,6 +63,7 @@ private struct WebcamSettingsSection: View {
     @Default(.webcamSize) private var webcamSize
     @Default(.webcamCorner) private var webcamCorner
     @Default(.webcamDeviceID) private var webcamDeviceID
+    @Default(.webcamBackground) private var webcamBackground
     @State private var cameras: [AVCaptureDevice] = []
     @State private var authorization = AVCaptureDevice.authorizationStatus(for: .video)
 
@@ -89,6 +90,10 @@ private struct WebcamSettingsSection: View {
                 Picker("Position".localized(), selection: $webcamCorner) {
                     ForEach(WebcamCorner.allCases) { Text($0.title.localized()).tag($0) }
                 }
+                Picker("Background".localized(), selection: $webcamBackground) {
+                    ForEach(WebcamBackground.allCases) { Text($0.title).tag($0) }
+                }
+                .help("Blurs or removes what’s behind you on this Mac, using person segmentation.".localized())
             }
             if authorization == .denied || authorization == .restricted {
                 PermissionRow(title: "Camera", granted: false) {
@@ -152,10 +157,15 @@ private struct MicrophoneSettingsSection: View {
 private struct AfterRecordingSettingsSection: View {
     @Default(.trimBeforeSaving) private var trimBeforeSaving
     @Default(.gifMaxSize) private var gifMaxSize
+    @Default(.saveSeparateTracks) private var saveSeparateTracks
 
     var body: some View {
         Section("After Recording".localized()) {
             Toggle("Trim recordings before saving".localized(), isOn: $trimBeforeSaving)
+            Toggle("Also save separate tracks for editing".localized(), isOn: $saveSeparateTracks)
+                .help(
+                    "Saves the screen, each audio track and the webcam as separate files in a folder next to the recording, for Final Cut Pro, DaVinci Resolve or other editors."
+                        .localized())
             Picker("GIF size".localized(), selection: $gifMaxSize) {
                 ForEach(GIFMaxSize.allCases) { Text($0.title.localized()).tag($0) }
             }
@@ -166,6 +176,7 @@ private struct AfterRecordingSettingsSection: View {
 private struct CaptionsSettingsSection: View {
     @Default(.generateCaptions) private var generateCaptions
     @Default(.captionOutput) private var captionOutput
+    @Default(.liveCaptions) private var liveCaptions
     @State private var authorized = SpeechCaptioner.isAuthorized
 
     var body: some View {
@@ -183,6 +194,15 @@ private struct CaptionsSettingsSection: View {
                     ForEach(CaptionOutput.allCases) { Text($0.title.localized()).tag($0) }
                 }
             }
+            Toggle("Show live captions while recording".localized(), isOn: $liveCaptions)
+                .onChange(of: liveCaptions) { _, enabled in
+                    guard enabled else { return }
+                    Task { @MainActor in
+                        authorized = await SpeechCaptioner.requestAuthorization()
+                        if !authorized { liveCaptions = false }
+                    }
+                }
+                .help("Shows what you say at the bottom of full-screen and region recordings, recognized on this Mac.".localized())
             if !authorized, SFSpeechRecognizer.authorizationStatus() == .denied || SFSpeechRecognizer.authorizationStatus() == .restricted {
                 PermissionRow(title: "Speech Recognition", granted: false) {
                     SystemSettingsLink.open("Privacy_SpeechRecognition")

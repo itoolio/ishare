@@ -17,6 +17,19 @@
             <enumerator name="pause" code="rPau"/>
             <enumerator name="resume" code="rRes"/>
         </enumeration>
+        <enumeration name="image operation" code="iImo">
+            <enumerator name="beautify" code="eBea" description="Add the background, padding, corners and shadow from the beautify settings."/>
+            <enumerator name="device frame" code="eFrm" description="Place the image in a device frame."/>
+            <enumerator name="trim borders" code="eTrm" description="Remove uniform borders around the image."/>
+            <enumerator name="redact sensitive text" code="eRed" description="Pixelate email addresses, keys and other sensitive text."/>
+            <enumerator name="lift subject" code="eLft" description="Cut out the main subject on a transparent background."/>
+        </enumeration>
+        <enumeration name="device" code="iDvc">
+            <enumerator name="laptop" code="dLap"/>
+            <enumerator name="desktop display" code="dDis"/>
+            <enumerator name="phone" code="dPho"/>
+            <enumerator name="browser window" code="dBro"/>
+        </enumeration>
         <enumeration name="open target" code="iOtg">
             <enumerator name="history window" code="oHis"/>
             <enumerator name="settings window" code="oSet"/>
@@ -55,6 +68,23 @@
                 <cocoa key="upload"/>
             </parameter>
             <result type="text"/>
+        </command>
+        <command name="edit image" code="iShrEdit" description="Beautify, frame, trim, redact or lift the subject of an image and return the new file.">
+            <cocoa class="ScriptEditImageCommand"/>
+            <direct-parameter type="file" description="The image to edit."/>
+            <parameter name="applying" code="iOpr" type="image operation" description="What to do with the image.">
+                <cocoa key="operation"/>
+            </parameter>
+            <parameter name="in device" code="iDev" type="device" optional="yes" description="The frame for device frame, a laptop by default.">
+                <cocoa key="device"/>
+            </parameter>
+            <parameter name="dark" code="iDrk" type="boolean" optional="yes" description="Use the dark device frame.">
+                <cocoa key="dark"/>
+            </parameter>
+            <parameter name="saving in" code="iSvn" type="file" optional="yes" description="The folder for the new image, next to the original by default.">
+                <cocoa key="folder"/>
+            </parameter>
+            <result type="file" description="The edited image."/>
         </command>
         <command name="upload" code="iShrUpld" description="Upload files and return their links.">
             <cocoa class="ScriptUploadCommand"/>

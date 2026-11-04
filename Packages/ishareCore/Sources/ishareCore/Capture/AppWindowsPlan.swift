@@ -38,6 +38,14 @@ public enum AppWindowsPlan {
         .sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
     }
 
+    public static func match(_ query: String?, in apps: [AppWindowCandidate], frontmostPID: Int32?) -> AppWindowCandidate? {
+        guard let query = query?.trimmingCharacters(in: .whitespacesAndNewlines), !query.isEmpty else {
+            return apps.first { $0.ownerPID == frontmostPID } ?? apps.first
+        }
+        return apps.first { $0.appName.caseInsensitiveCompare(query) == .orderedSame || $0.bundleID?.caseInsensitiveCompare(query) == .orderedSame }
+            ?? apps.first { $0.appName.localizedCaseInsensitiveContains(query) }
+    }
+
     public static func contactSheetColumns(for count: Int) -> Int {
         guard count > 1 else { return 1 }
         return Int(Double(count).squareRoot().rounded(.up))

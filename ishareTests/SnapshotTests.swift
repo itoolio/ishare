@@ -1,5 +1,6 @@
 import AppKit
 import Defaults
+import ishareCore
 import SwiftUI
 import Testing
 @testable import ishare
@@ -12,6 +13,10 @@ struct SnapshotTests {
         case toast
         case editorToolbar
         case generalSettings
+        case screenshotReplay
+        case watchFolders
+        case featureTour
+        case uploadProgress
 
         @MainActor var size: CGSize {
             switch self {
@@ -19,6 +24,10 @@ struct SnapshotTests {
             case .toast: CGSize(width: ToastCardView.width + 24, height: 120)
             case .editorToolbar: CGSize(width: 1000, height: 600)
             case .generalSettings: CGSize(width: 620, height: 760)
+            case .screenshotReplay: CGSize(width: 680, height: 500)
+            case .watchFolders: CGSize(width: 620, height: 560)
+            case .featureTour: CGSize(width: 520, height: 400)
+            case .uploadProgress: CGSize(width: UploadProgressHUDLayout.size.width + 24, height: UploadProgressHUDLayout.size.height + 24)
             }
         }
 
@@ -38,8 +47,16 @@ struct SnapshotTests {
         Defaults.reset(
             .uploadHistory, .copyToClipboard, .openInFinder, .saveToDisk, .uploadMedia, .openEditorAfterCapture, .uploadType,
             .activeCustomUploader, .uploadDestination, .builtInShare, .menuRecordsGIF, .aussieMode, .toastTimeout, .menuBarIcon,
-            .copyImageToClipboard, .captureSound, .uploadCompleteSound, .historyLimit, .historyRetention, .savedCustomUploaders
+            .copyImageToClipboard, .captureSound, .uploadCompleteSound, .historyLimit, .historyRetention, .savedCustomUploaders,
+            .watchedFolders, .watchFolderUndoLog, .editorShowsGrid, .editorShowsRulers
         )
+    }
+
+    static func replayFrames(hue: Double, count: Int) -> [Data] {
+        (0 ..< count).compactMap { index in
+            ScreenshotMode.sampleImage(size: CGSize(width: 1280, height: 800), hue: hue + Double(index) * 0.02, title: "Frame \(index + 1)")
+                .flatMap(ReplayFrameCollector.jpeg)
+        }
     }
 
     func view(for subject: Subject) -> AnyView {
@@ -58,6 +75,26 @@ struct SnapshotTests {
             return AnyView(EditorView(document: document, onDone: {}, onDiscard: {}, onCopy: {}))
         case .generalSettings:
             return AnyView(GeneralSettingsView().appModel())
+        case .screenshotReplay:
+            let displays = [
+                ReplayDisplayFrames(displayID: 1, name: "Built-in Display", frames: Self.replayFrames(hue: 0.55, count: 4), ages: [8, 6, 4, 2]),
+                ReplayDisplayFrames(displayID: 2, name: "Studio Display", frames: Self.replayFrames(hue: 0.1, count: 4), ages: [8, 6, 4, 2]),
+            ]
+            return AnyView(ScreenshotReplayView(displays: displays, initial: 1) { _, _, _ in })
+        case .watchFolders:
+            Defaults[.watchedFolders] = [
+                WatchedFolder(
+                    path: "/Users/me/Desktop/Drop", filter: .images,
+                    actions: [WatchFolderAction(kind: .rename, template: "{{date}}-{{counter}}"), WatchFolderAction(kind: .upload)]),
+                WatchedFolder(path: "/Users/me/Movies/Exports", filter: .videos, isEnabled: false, actions: [WatchFolderAction(kind: .upload)]),
+            ]
+            return AnyView(Form { WatchFolderSettings() }.formStyle(.grouped))
+        case .featureTour:
+            return AnyView(FeatureTourView(stops: FeatureTour.stops, onTry: { _ in }, onClose: {}))
+        case .uploadProgress:
+            let model = UploadProgressHUDModel()
+            model.progress = 0.42
+            return AnyView(UploadProgressHUDView(model: model).padding(12))
         }
     }
 

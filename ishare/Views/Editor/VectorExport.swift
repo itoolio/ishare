@@ -323,7 +323,7 @@ enum SVGExporter {
             elements.append(
                 #"<line x1="\#(number(tick.0.x))" y1="\#(number(tick.0.y))" x2="\#(number(tick.1.x))" y2="\#(number(tick.1.y))" \#(paint)/>"#)
         }
-        let label = DimensionMeasure.label(from: start, to: end, pointScale: AnnotationRenderer.measurementPointScale)
+        let label = DimensionMeasure.label(from: start, to: end, pointScale: annotation.measureScale ?? AnnotationRenderer.measurementPointScale)
         let fontSize = max(11, annotation.fontSize * 0.5)
         let size = AnnotationRenderer.textSize(label, fontSize: fontSize)
         let padding = fontSize * 0.35

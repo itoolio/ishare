@@ -14,6 +14,7 @@ struct RecordingSidecar: Sendable {
     var recordingStart: Double?
     var appAudio: AppAudioClip?
     var pauses = RecordingPauseTimeline()
+    var webcamTrack: WebcamFrameRecorder.Clip?
 }
 
 @MainActor

@@ -54,6 +54,8 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
     private var finishedSegmentsSize: Int64 = 0
     private var outputFileType: AVFileType = .mp4
     private var videoCodec: AVVideoCodecType = .h264
+    private var activeConfiguration: SCStreamConfiguration?
+    private let sourceRectUpdate = Mutex<Bool>(false)
 
     var recordedFileSize: Int64 {
         if let recordingOutput, recordingOutput.recordedFileSize > 0 {
@@ -113,6 +115,7 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
 
                 let stream = SCStream(filter: filter, configuration: configuration, delegate: output)
                 self.stream = stream
+                activeConfiguration = configuration
                 self.fileURL = fileURL
 
                 try stream.addStreamOutput(output, type: .screen, sampleHandlerQueue: videoSampleBufferQueue)
@@ -126,6 +129,23 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
             } catch {
                 continuation.finish(throwing: error)
             }
+        }
+    }
+
+    func moveSourceRect(to rect: CGRect) {
+        guard let stream, let configuration = activeConfiguration else { return }
+        let isIdle = sourceRectUpdate.withLock { busy in
+            guard !busy else { return false }
+            busy = true
+            return true
+        }
+        guard isIdle else { return }
+        configuration.sourceRect = rect
+        stream.updateConfiguration(configuration) { [weak self] error in
+            if let error {
+                Log.capture.error("Moving the recorded area failed: \(error.localizedDescription, privacy: .public)")
+            }
+            self?.sourceRectUpdate.withLock { $0 = false }
         }
     }
 
@@ -183,6 +203,7 @@ final class CaptureEngine: NSObject, @unchecked Sendable, SCRecordingOutputDeleg
         let wasPaused = recordingOutput == nil
         let segments = segmentURLs
         stream = nil
+        activeConfiguration = nil
         fileURL = nil
         recordingOutput = nil
         segmentURLs = []

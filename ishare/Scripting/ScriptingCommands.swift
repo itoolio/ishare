@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ishareCore
 
 enum ScriptingCodes {
     static func fourCharCode(_ value: String) -> FourCharCode {
@@ -26,6 +27,27 @@ enum ScriptingCodes {
         case fourCharCode("rTog"): .toggle
         case fourCharCode("rPau"): .pause
         case fourCharCode("rRes"): .resume
+        default: nil
+        }
+    }
+
+    static func imageOperation(_ code: FourCharCode?) -> ImageOperation? {
+        switch code {
+        case fourCharCode("eBea"): .beautify
+        case fourCharCode("eFrm"): .frame
+        case fourCharCode("eTrm"): .trim
+        case fourCharCode("eRed"): .redact
+        case fourCharCode("eLft"): .liftSubject
+        default: nil
+        }
+    }
+
+    static func deviceFrame(_ code: FourCharCode?) -> DeviceFrame? {
+        switch code {
+        case nil, fourCharCode("dLap"): .laptop
+        case fourCharCode("dDis"): .display
+        case fourCharCode("dPho"): .phone
+        case fourCharCode("dBro"): .browser
         default: nil
         }
     }
@@ -83,6 +105,35 @@ final class ScriptCaptureCommand: AsyncScriptCommand, @unchecked Sendable {
                 return result.link ?? result.file ?? ""
             case let .failure(error):
                 command.fail(error.message)
+                return nil
+            }
+        }
+        return nil
+    }
+}
+
+@objc(ScriptEditImageCommand)
+final class ScriptEditImageCommand: AsyncScriptCommand, @unchecked Sendable {
+    override func performDefaultImplementation() -> Any? {
+        guard let file = directParameter as? URL else {
+            fail("Choose an image".localized())
+            return nil
+        }
+        guard let operation = ScriptingCodes.imageOperation(ScriptingCodes.code(of: evaluatedArguments?["operation"])) else {
+            fail("Unknown image operation".localized())
+            return nil
+        }
+        guard let device = ScriptingCodes.deviceFrame(ScriptingCodes.code(of: evaluatedArguments?["device"])) else {
+            fail("Unknown device".localized())
+            return nil
+        }
+        let dark = evaluatedArguments?["dark"] as? Bool ?? false
+        let folder = evaluatedArguments?["folder"] as? URL
+        runAsync { command in
+            do {
+                return try await ImageOperations.apply(operation, to: file, device: device, dark: dark, savingIn: folder)
+            } catch {
+                command.fail(error.localizedDescription)
                 return nil
             }
         }

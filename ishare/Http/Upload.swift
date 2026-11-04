@@ -266,6 +266,7 @@ enum UploadCoordinator {
             hash = await DuplicateUploads.hash(of: job.fileURL)
         }
         DuplicateUploads.remember(hash: hash, target: job.target, outcome: outcome)
+        ScriptHooks.runIfEnabled(.upload, file: job.localFileURL ?? job.fileURL, link: outcome.deliveredURL)
         WebhookDispatcher.uploadCompleted(
             outcome, fileURL: prepared.fileURL, uploaderName: job.target.displayName, savedBytes: outcome.savedBytes,
             waitsForAltText: AltText.isEnabled && MimeType.isImageOrVideo(prepared.fileURL)
@@ -337,6 +338,7 @@ enum UploadCoordinator {
             originalSize: outcome.savedBytes == nil ? nil : outcome.originalBytes,
             uploadedSize: outcome.savedBytes == nil ? nil : outcome.uploadedBytes
         )
+        item.viewCountUrl = outcome.viewCountURL
         if case let .custom(uploader) = target, item.canDeleteFromServer, item.remoteURL != nil {
             item.expiresAt = UploadExpiry.expiryDate(uploadedAt: now, days: uploader.effectiveAutoDeleteDays)
         }

@@ -143,19 +143,37 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private let url = FileManager.default.temporaryDirectory.appending(path: "ishare-webcam-\(UUID().uuidString).mov")
     private var writer: AVAssetWriter?
     private var input: AVAssetWriterInput?
+    private var adaptor: AVAssetWriterInputPixelBufferAdaptor?
+    private let processor = WebcamBackgroundProcessor(style: Defaults[.webcamBackground])
     private var startTime: Double?
     private var lastTime: CMTime = .invalid
     private var isStopped = false
+    private var attachedSession: AVCaptureSession?
+
+    func attach(to session: AVCaptureSession) -> Bool {
+        let output = makeOutput()
+        session.beginConfiguration()
+        defer { session.commitConfiguration() }
+        guard session.canAddOutput(output) else { return false }
+        session.addOutput(output)
+        attachedSession = session
+        return true
+    }
+
+    private func makeOutput() -> AVCaptureVideoDataOutput {
+        let output = AVCaptureVideoDataOutput()
+        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        output.alwaysDiscardsLateVideoFrames = true
+        output.setSampleBufferDelegate(self, queue: queue)
+        return output
+    }
 
     func start(deviceID: String?) async -> Bool {
         guard await CaptureDevices.requestAccess(for: .video),
             let device = CaptureDevices.camera(id: deviceID),
             let deviceInput = try? AVCaptureDeviceInput(device: device)
         else { return false }
-        let output = AVCaptureVideoDataOutput()
-        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-        output.alwaysDiscardsLateVideoFrames = true
-        output.setSampleBufferDelegate(self, queue: queue)
+        let output = makeOutput()
         let session = runner.session
         session.beginConfiguration()
         session.sessionPreset = .high
@@ -171,7 +189,9 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 
     func stop() async -> Clip? {
-        runner.stop()
+        if attachedSession == nil {
+            runner.stop()
+        }
         return await withCheckedContinuation { continuation in
             queue.async { [self] in
                 isStopped = true
@@ -194,6 +214,14 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
             prepareWriter(for: pixelBuffer, at: sampleBuffer.presentationTimeStamp)
         }
         guard let input, input.isReadyForMoreMediaData, writer?.status == .writing else { return }
+        if let processor, let adaptor, let pool = adaptor.pixelBufferPool {
+            var output: CVPixelBuffer?
+            CVPixelBufferPoolCreatePixelBuffer(nil, pool, &output)
+            if let output, processor.render(pixelBuffer, into: output), adaptor.append(output, withPresentationTime: sampleBuffer.presentationTimeStamp) {
+                lastTime = sampleBuffer.presentationTimeStamp
+            }
+            return
+        }
         if input.append(sampleBuffer) {
             lastTime = sampleBuffer.presentationTimeStamp
         }
@@ -215,9 +243,19 @@ final class WebcamFrameRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferD
         input.expectsMediaDataInRealTime = true
         guard writer.canAdd(input) else { return }
         writer.add(input)
+        if processor != nil {
+            adaptor = AVAssetWriterInputPixelBufferAdaptor(
+                assetWriterInput: input,
+                sourcePixelBufferAttributes: [
+                    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                    kCVPixelBufferWidthKey as String: Int(size.width),
+                    kCVPixelBufferHeightKey as String: Int(size.height),
+                ])
+        }
         guard writer.startWriting() else { return }
         writer.startSession(atSourceTime: time)
-        let hostTime = CMSyncConvertTime(time, from: runner.session.synchronizationClock ?? CMClockGetHostTimeClock(), to: CMClockGetHostTimeClock())
+        let clock = (attachedSession ?? runner.session).synchronizationClock ?? CMClockGetHostTimeClock()
+        let hostTime = CMSyncConvertTime(time, from: clock, to: CMClockGetHostTimeClock())
         startTime = hostTime.seconds
         self.writer = writer
         self.input = input

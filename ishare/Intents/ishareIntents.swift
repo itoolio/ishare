@@ -91,6 +91,7 @@ enum IntentError: LocalizedError {
     case cancelled
     case unreadableFile
     case recognitionFailed
+    case noAppWindows
 
     var errorDescription: String? {
         switch self {
@@ -98,6 +99,7 @@ enum IntentError: LocalizedError {
         case .cancelled: "The capture was cancelled"
         case .unreadableFile: "The file could not be read"
         case .recognitionFailed: "Text recognition failed"
+        case .noAppWindows: "No app with that name has open windows"
         }
     }
 }
@@ -174,21 +176,74 @@ struct CaptureWebPageIntent: AppIntent {
     @Parameter(title: "Phone Width", default: false)
     var phoneWidth: Bool
 
+    @Parameter(title: "Width in Points")
+    var width: Int?
+
+    @Parameter(title: "As PDF", default: false)
+    var asPDF: Bool
+
+    @Parameter(title: "Dismiss Cookie Banners", default: true)
+    var dismissesCookieBanners: Bool
+
     @Parameter(title: "Upload", default: false)
     var upload: Bool
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
         let options = CaptureOptions(forceUpload: upload, resultHandler: { _ in })
-        guard let fileURL = await WebPageCaptureFlow.capture(address, width: phoneWidth ? .mobile : .desktop, options: options) else {
+        let points = width.flatMap { WebPageCapturePlan.width(from: String($0)) } ?? (phoneWidth ? WebPageWidth.mobile.points : WebPageWidth.desktop.points)
+        let request = WebPageCaptureRequest(address: address, width: points, format: asPDF ? .pdf : .image, dismissesCookieBanners: dismissesCookieBanners)
+        guard let fileURL = await WebPageCaptureFlow.capture(request, options: options) else {
             throw IntentError.cancelled
         }
-        let result = IntentFile(fileURL: fileURL, filename: fileURL.lastPathComponent, type: ImageEncoder.contentType(for: Defaults[.captureFileType]))
+        let type = asPDF ? UTType.pdf : ImageEncoder.contentType(for: Defaults[.captureFileType])
+        let result = IntentFile(fileURL: fileURL, filename: fileURL.lastPathComponent, type: type)
         Task { @MainActor in
             await CaptureSession.finish(fileURL: fileURL, kind: .image, options: CaptureOptions(forceUpload: upload))
         }
         return .result(value: result)
     }
+}
+
+struct CaptureAppWindowsIntent: AppIntent {
+    static var title: LocalizedStringResource { "Capture App Windows with ishare" }
+    static var description: IntentDescription {
+        IntentDescription("Captures every open window of an app, or of the frontmost app when no name is given, and returns the images.")
+    }
+
+    @Parameter(title: "App Name or Bundle Identifier")
+    var app: String?
+
+    @Parameter(title: "One Contact Sheet", default: false)
+    var contactSheet: Bool
+
+    @Parameter(title: "Upload", default: false)
+    var upload: Bool
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ReturnsValue<[IntentFile]> {
+        guard let pid = await AppWindowsCapture.resolveApp(app) else {
+            throw IntentError.noAppWindows
+        }
+        let collected = IntentCapturedFiles()
+        await AppWindowsCapture.capture(
+            pid: pid, as: contactSheet ? .contactSheet : .separate, options: CaptureOptions(forceUpload: upload, resultHandler: { collected.urls.append($0) }))
+        guard !collected.urls.isEmpty else { throw IntentError.cancelled }
+        let type = ImageEncoder.contentType(for: Defaults[.captureFileType])
+        let files = collected.urls.map { IntentFile(fileURL: $0, filename: $0.lastPathComponent, type: type) }
+        let urls = collected.urls
+        Task { @MainActor in
+            for url in urls {
+                await CaptureSession.finish(fileURL: url, kind: .image, options: CaptureOptions(forceUpload: upload))
+            }
+        }
+        return .result(value: files)
+    }
+}
+
+@MainActor
+private final class IntentCapturedFiles {
+    var urls: [URL] = []
 }
 
 struct CaptureMenuIntent: AppIntent {

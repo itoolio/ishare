@@ -15,9 +15,9 @@ final class ReplayFrameCollector: NSObject, SCStreamOutput, SCStreamDelegate, Se
     let displayID: CGDirectDisplayID
     private let ring: Mutex<FrameRing<Data>>
 
-    init(displayID: CGDirectDisplayID, seconds: Double) {
+    init(displayID: CGDirectDisplayID, seconds: Double, maximumBytes: Int = maximumBytes) {
         self.displayID = displayID
-        ring = Mutex(FrameRing(maximumAge: seconds, maximumBytes: Self.maximumBytes))
+        ring = Mutex(FrameRing(maximumAge: seconds, maximumBytes: maximumBytes))
     }
 
     var frames: [FrameRing<Data>.Entry] {
@@ -51,8 +51,8 @@ final class ScreenshotReplay: ObservableObject {
     static let framesPerSecond = 2.0
 
     @Published private(set) var isRunning = false
-    private var stream: SCStream?
-    private var collector: ReplayFrameCollector?
+    private var streams: [SCStream] = []
+    private var collectors: [ReplayFrameCollector] = []
     private var conditions = InstantReplayConditions()
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
 
@@ -82,38 +82,44 @@ final class ScreenshotReplay: ObservableObject {
     }
 
     private func start() async {
-        guard let content = try? await ScreenshotEngine.shareableContent(),
-            let display = content.displays.first(where: { $0.displayID == CGMainDisplayID() }) ?? content.displays.first
-        else { return }
-        let filter = SCContentFilter(display: display, excludingApplications: ScreenshotEngine.excludedApplications(in: content), exceptingWindows: [])
-        let scale = CGFloat(filter.pointPixelScale)
-        let configuration = SCStreamConfiguration()
-        configuration.width = Int(CGFloat(display.width) * scale)
-        configuration.height = Int(CGFloat(display.height) * scale)
-        configuration.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(Self.framesPerSecond))
-        configuration.queueDepth = 3
-        configuration.showsCursor = false
-        let collector = ReplayFrameCollector(displayID: display.displayID, seconds: Double(Defaults[.screenshotReplaySeconds]))
-        let stream = SCStream(filter: filter, configuration: configuration, delegate: collector)
-        do {
-            try stream.addStreamOutput(collector, type: .screen, sampleHandlerQueue: collector.queue)
-            try await stream.startCapture()
-            self.stream = stream
-            self.collector = collector
-            isRunning = true
-            Log.capture.info("Screenshot replay started")
-        } catch {
-            Log.capture.error("Screenshot replay couldn't start: \(error.localizedDescription, privacy: .public)")
+        guard let content = try? await ScreenshotEngine.shareableContent(), !content.displays.isEmpty else { return }
+        let excluded = ScreenshotEngine.excludedApplications(in: content)
+        let budget = ReplayFrameCollector.maximumBytes / content.displays.count
+        for display in content.displays {
+            let filter = SCContentFilter(display: display, excludingApplications: excluded, exceptingWindows: [])
+            let scale = CGFloat(filter.pointPixelScale)
+            let configuration = SCStreamConfiguration()
+            configuration.width = Int(CGFloat(display.width) * scale)
+            configuration.height = Int(CGFloat(display.height) * scale)
+            configuration.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(Self.framesPerSecond))
+            configuration.queueDepth = 3
+            configuration.showsCursor = false
+            let collector = ReplayFrameCollector(displayID: display.displayID, seconds: Double(Defaults[.screenshotReplaySeconds]), maximumBytes: budget)
+            let stream = SCStream(filter: filter, configuration: configuration, delegate: collector)
+            do {
+                try stream.addStreamOutput(collector, type: .screen, sampleHandlerQueue: collector.queue)
+                try await stream.startCapture()
+                streams.append(stream)
+                collectors.append(collector)
+            } catch {
+                Log.capture.error("Screenshot replay couldn't start on display \(display.displayID): \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        isRunning = !streams.isEmpty
+        if isRunning {
+            Log.capture.info("Screenshot replay started on \(self.streams.count) displays")
         }
     }
 
     private func stop() async {
-        let active = stream
-        stream = nil
-        collector?.clear()
-        collector = nil
+        let active = streams
+        streams = []
+        collectors.forEach { $0.clear() }
+        collectors = []
         isRunning = false
-        try? await active?.stopCapture()
+        for stream in active {
+            try? await stream.stopCapture()
+        }
     }
 
     private func startMonitoring() {
@@ -143,26 +149,39 @@ final class ScreenshotReplay: ObservableObject {
     }
 
     func open() {
-        guard let collector, !collector.frames.isEmpty else {
+        let now = ProcessInfo.processInfo.systemUptime
+        let displays = collectors.compactMap { collector -> ReplayDisplayFrames? in
+            let frames = collector.frames
+            guard !frames.isEmpty else { return nil }
+            return ReplayDisplayFrames(
+                displayID: collector.displayID, name: NSScreen.screen(for: collector.displayID)?.localizedName ?? "Display".localized(),
+                frames: frames.map(\.frame), ages: frames.map { now - $0.time })
+        }
+        guard !displays.isEmpty else {
             BezelNotification.show(messageText: "Turn on Screenshot Replay in Capture settings first".localized(), icon: ToastIcon)
             return
         }
-        let frames = collector.frames
-        ScreenshotReplayWindow.show(
-            frames: frames.map(\.frame), displayID: collector.displayID,
-            age: { index in
-                ProcessInfo.processInfo.systemUptime - frames[index].time
-            })
+        let preferred = NSScreen.underMouse?.displayID
+        ScreenshotReplayWindow.show(displays: displays, initial: displays.first { $0.displayID == preferred }?.displayID ?? displays[0].displayID)
     }
+}
+
+struct ReplayDisplayFrames: Identifiable {
+    let displayID: CGDirectDisplayID
+    let name: String
+    let frames: [Data]
+    let ages: [Double]
+
+    var id: CGDirectDisplayID { displayID }
 }
 
 @MainActor
 enum ScreenshotReplayWindow {
     private static var window: NSWindow?
 
-    static func show(frames: [Data], displayID: CGDirectDisplayID, age: @escaping (Int) -> Double) {
+    static func show(displays: [ReplayDisplayFrames], initial: CGDirectDisplayID) {
         Self.window?.close()
-        let view = ScreenshotReplayView(frames: frames, age: age) { data, wholeFrame in
+        let view = ScreenshotReplayView(displays: displays, initial: initial) { data, displayID, wholeFrame in
             Self.window?.close()
             Self.window = nil
             Task { @MainActor in await capture(data, displayID: displayID, wholeFrame: wholeFrame) }
@@ -196,38 +215,52 @@ enum ScreenshotReplayWindow {
 }
 
 struct ScreenshotReplayView: View {
-    let frames: [Data]
-    let age: (Int) -> Double
-    let choose: (Data, Bool) -> Void
+    let displays: [ReplayDisplayFrames]
+    let choose: (Data, CGDirectDisplayID, Bool) -> Void
+    @State private var displayID: CGDirectDisplayID
     @State private var index: Double
 
-    init(frames: [Data], age: @escaping (Int) -> Double, choose: @escaping (Data, Bool) -> Void) {
-        self.frames = frames
-        self.age = age
+    init(displays: [ReplayDisplayFrames], initial: CGDirectDisplayID, choose: @escaping (Data, CGDirectDisplayID, Bool) -> Void) {
+        self.displays = displays
         self.choose = choose
-        _index = State(initialValue: Double(max(0, frames.count - 1)))
+        _displayID = State(initialValue: initial)
+        let count = displays.first { $0.displayID == initial }?.frames.count ?? 1
+        _index = State(initialValue: Double(max(0, count - 1)))
     }
 
-    private var selected: Int { min(max(0, Int(index.rounded())), frames.count - 1) }
+    private var current: ReplayDisplayFrames {
+        displays.first { $0.displayID == displayID } ?? displays[0]
+    }
+
+    private var selected: Int { min(max(0, Int(index.rounded())), current.frames.count - 1) }
 
     var body: some View {
         VStack(spacing: 12) {
-            if let image = NSImage(data: frames[selected]) {
+            if displays.count > 1 {
+                Picker("Display".localized(), selection: $displayID) {
+                    ForEach(displays) { Text($0.name).tag($0.displayID) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: displayID) { _, _ in index = Double(max(0, current.frames.count - 1)) }
+                .accessibilityIdentifier("replay.display")
+            }
+            if let image = NSImage(data: current.frames[selected]) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .accessibilityLabel(String(format: "Frame from %.0f seconds ago".localized(), age(selected)))
+                    .accessibilityLabel(String(format: "Frame from %.0f seconds ago".localized(), current.ages[selected]))
             }
             HStack {
-                Text(String(format: "%.0f s ago".localized(), age(selected)))
+                Text(String(format: "%.0f s ago".localized(), current.ages[selected]))
                     .monospacedDigit()
                     .frame(width: 80, alignment: .leading)
-                Slider(value: $index, in: 0 ... Double(max(1, frames.count - 1)), step: 1)
+                Slider(value: $index, in: 0 ... Double(max(1, current.frames.count - 1)), step: 1)
             }
             HStack {
                 Spacer()
-                Button("Use Whole Screen".localized()) { choose(frames[selected], true) }
-                Button("Select Area…".localized()) { choose(frames[selected], false) }
+                Button("Use Whole Screen".localized()) { choose(current.frames[selected], displayID, true) }
+                Button("Select Area…".localized()) { choose(current.frames[selected], displayID, false) }
                     .keyboardShortcut(.defaultAction)
             }
         }

@@ -114,6 +114,10 @@ extension AppCommand {
                 id: "capture.replay", title: "Screenshot Replay…", keywords: ["replay", "rewind", "missed", "past", "moment"], symbol: "clock.arrow.circlepath",
                 perform: afterDismissing { ScreenshotReplay.shared.open() }),
             AppCommand(
+                id: "capture.otherSpace", title: "Capture from Another Space…", keywords: ["space", "desktop", "full screen", "mission control", "hidden window"],
+                symbol: "rectangle.3.group",
+                perform: afterDismissing { await OtherSpaceCapture.prompt() }),
+            AppCommand(
                 id: "capture.appWindows", title: "Capture App Windows…", keywords: ["windows", "app", "contact sheet", "all windows"],
                 symbol: "macwindow.on.rectangle",
                 perform: afterDismissing { await AppWindowsCapture.prompt() }),
@@ -188,6 +192,10 @@ extension AppCommand {
                 id: "record.region", title: "Record Region", keywords: ["video", "area"], symbol: "rectangle.dashed.badge.record",
                 perform: afterDismissing { CaptureSession.toggleRecording(region: true) }),
             AppCommand(
+                id: "record.follow", title: "Record Following the Pointer", keywords: ["video", "pan", "camera", "track", "cursor"],
+                symbol: "cursorarrow.motionlines",
+                perform: afterDismissing { CaptureSession.toggleFollowPointerRecording() }),
+            AppCommand(
                 id: "record.gif", title: "Record GIF", keywords: ["animation", "video"], symbol: "photo.stack",
                 perform: afterDismissing { CaptureSession.toggleRecording(gif: true) }),
             AppCommand(
@@ -246,6 +254,10 @@ extension AppCommand {
             AppCommand(
                 id: "upload.clipboard", title: "Upload Clipboard", keywords: ["pasteboard", "paste"], symbol: "doc.on.clipboard",
                 perform: afterDismissing { await AppState.uploadPasteboard() }),
+            AppCommand(id: "watch.undo", title: "Undo Last Watch Folder Steps", keywords: ["watch folder", "restore", "undo", "rename"], symbol: "arrow.uturn.backward") {
+                MenuController.shared.dismiss()
+                WatchFolderUndo.undoLast()
+            },
             AppCommand(id: "history.open", title: "Open History Window", keywords: ["uploads", "recent", "links"], symbol: "square.grid.2x2") {
                 MenuController.shared.dismiss()
                 openHistoryWindow(uploadHistory: Defaults[.uploadHistory])
@@ -313,6 +325,10 @@ extension AppCommand {
 
     @MainActor private static func appCommands() -> [AppCommand] {
         [
+            AppCommand(id: "app.tour", title: "Feature Tour", keywords: ["whats new", "new features", "tour", "help"], symbol: "sparkles") {
+                MenuController.shared.dismiss()
+                FeatureTour.show()
+            },
             AppCommand(id: "app.about", title: "About ishare", keywords: ["version", "credits"], symbol: "info.circle") {
                 MenuController.shared.showAboutPanel()
             },
