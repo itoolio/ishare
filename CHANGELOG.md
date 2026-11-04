@@ -1,3 +1,34 @@
+## [5.8.0](https://github.com/itoolio/ishare/compare/v5.7.0...v5.8.0) (2026-11-04)
+
+### Features
+
+* add Raycast commands for web pages, app windows, all displays, capture again, replay and MCP ([d4e8610](https://github.com/itoolio/ishare/commit/d4e8610ce1257d73cb51087a6aae430493f7911f))
+* capture again with the same settings as the last capture ([ab5e3bb](https://github.com/itoolio/ishare/commit/ab5e3bb60e8ed27c3af487a05c5b5e43ce4ad7ca))
+* capture every display in one image in its real arrangement ([a483f3e](https://github.com/itoolio/ishare/commit/a483f3ed5b3bacf677ff20b50c1b82181e8514f6))
+* capture windows together with their sheets, popovers and attached windows ([5a9736a](https://github.com/itoolio/ishare/commit/5a9736a321c4cbfe2dcc59491860fcb0af3ef715))
+* count down with a chime before recordings start ([33f68f1](https://github.com/itoolio/ishare/commit/33f68f11e754bfee973c76f359c77366d45d3049))
+* export from the editor with one-click presets ([9442e31](https://github.com/itoolio/ishare/commit/9442e31a96c16b538706fbba0b87e08851e891c0))
+* group history by the app or project a capture came from ([3e1bb38](https://github.com/itoolio/ishare/commit/3e1bb385df4fe7e006c814ac6a162ddf066e1e30))
+* highlight the pointer with a halo, spotlight or magnifier in recordings ([a885cd8](https://github.com/itoolio/ishare/commit/a885cd8d5067cb1af6d1f4855284594b2e8d9580))
+* **i18n:** translate the 5.8 strings into every language ([06e9922](https://github.com/itoolio/ishare/commit/06e9922b503a6ee372b490bef6aeecd649ea9295))
+* jump straight to matching settings from the search and highlight them ([25a4f7f](https://github.com/itoolio/ishare/commit/25a4f7f99292833c62c9107121c82502d9e5a314))
+* keep notification banners out of recordings ([381d833](https://github.com/itoolio/ishare/commit/381d833b653accbcf7b87a3cd56409e1f2cad81b))
+* lay out the webcam side by side or full screen at markers ([66642ab](https://github.com/itoolio/ishare/commit/66642abce9cd72c9dc415a187fab2b32c39d5168))
+* let apps on this Mac use ishare through a local HTTP API with a token ([b302151](https://github.com/itoolio/ishare/commit/b3021513e2288c3837b343a1e43505ba2ed1db5f))
+* pick the uploader when dropping files on the menu bar icon ([6e8ea1a](https://github.com/itoolio/ishare/commit/6e8ea1a64a5da523848ce7c1d81a6e85f7d086ba))
+* place annotations from a typed description ([3eeb3a0](https://github.com/itoolio/ishare/commit/3eeb3a084998e9ed3623446e73b908d6f44e39f8))
+* remember the editor's tool, color and zoom per kind of image ([a8d30b7](https://github.com/itoolio/ishare/commit/a8d30b7efd09af17b720ba79f21a220b7ac6986b))
+* rename uploads and set Keep Forever or expiry for many at once ([bcb5eac](https://github.com/itoolio/ishare/commit/bcb5eac0730fa23919d386150f990ba1b37d0b9a))
+* review blurred and pixelated areas before copying or exporting ([0cf3724](https://github.com/itoolio/ishare/commit/0cf372469ba322317a0e666d74b6842076031e07))
+* run watch folder steps from the command line ([1883d0c](https://github.com/itoolio/ishare/commit/1883d0cd6936b39fb8b6c8f701f62fc3a52509a0))
+* select whole device pixels and remove or replace window shadows afterwards ([b3d383d](https://github.com/itoolio/ishare/commit/b3d383db827d4c6ad3be5a9a9972cc169aa92b31))
+* send an app's captures to its own uploader with redaction and the editor ([bb35ab5](https://github.com/itoolio/ishare/commit/bb35ab5069aea5da1fed0184c89f18763dbe4ff4))
+* show capture results in a small HUD next to the pointer ([8ee7723](https://github.com/itoolio/ishare/commit/8ee77236f85c012770326c70e134621fab5bfa22))
+* show host, size, views and expiry when hovering a recent upload ([8a08197](https://github.com/itoolio/ishare/commit/8a08197d53aeee2cee9b716cb4b7ff6f0bcc2d5f))
+* show how much space captures and uploads use, with cleanup suggestions ([2ad483d](https://github.com/itoolio/ishare/commit/2ad483dfae74fd9eb4d56c57765d42c42caabe3d))
+* step through the cuts in the trim window to preview them ([84808b2](https://github.com/itoolio/ishare/commit/84808b29572deb35863dab5b1ab87125c32ccffb))
+* upload whole folders as one zip from Finder, the menu bar icon and the CLI ([17068fd](https://github.com/itoolio/ishare/commit/17068fdd6c6642cccbf00f77e60c854e08042933))
+
 ## [5.7.0](https://github.com/itoolio/ishare/compare/v5.6.0...v5.7.0) (2026-11-04)
 
 ### Features
