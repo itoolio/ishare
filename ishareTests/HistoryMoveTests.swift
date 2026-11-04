@@ -279,6 +279,7 @@ struct FolderArchiveTests {
     }
 }
 
+@MainActor
 struct RecentUploadFactsTests {
     @Test func listsHostSizeViewsAndExpiry() {
         var item = HistoryItem(fileUrl: "https://files.example.com/a.png", date: Date())
