@@ -13,7 +13,7 @@ struct WatchFolderUndoTests {
         var log = WatchFolderUndoLog()
         log.record(WatchFolderRun(date: Date(), moves: []))
         #expect(log.runs.isEmpty)
-        for index in 0..<25 {
+        for index in 0 ..< 25 {
             log.record(WatchFolderRun(date: Date(), moves: [WatchFolderMove(from: "/w/\(index)", to: "/x/\(index)")]))
         }
         #expect(log.runs.count == WatchFolderUndoLog.limit)

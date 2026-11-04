@@ -55,7 +55,7 @@ public enum Ruler {
         let firstIndex = Int((low / minor).rounded(.up))
         let lastIndex = Int((high / minor).rounded(.down))
         guard firstIndex <= lastIndex else { return [] }
-        return (firstIndex...lastIndex).map { index in
+        return (firstIndex ... lastIndex).map { index in
             let value = CGFloat(index) * minor
             let isMajor = abs((value / major).rounded() * major - value) < minor / 2
             return RulerTick(position: value, isMajor: isMajor, label: isMajor ? String(Int(value.rounded())) : nil)

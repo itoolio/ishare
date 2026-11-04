@@ -163,7 +163,9 @@ private struct AfterRecordingSettingsSection: View {
         Section("After Recording".localized()) {
             Toggle("Trim recordings before saving".localized(), isOn: $trimBeforeSaving)
             Toggle("Also save separate tracks for editing".localized(), isOn: $saveSeparateTracks)
-                .help("Saves the screen, each audio track and the webcam as separate files in a folder next to the recording, for Final Cut Pro, DaVinci Resolve or other editors.".localized())
+                .help(
+                    "Saves the screen, each audio track and the webcam as separate files in a folder next to the recording, for Final Cut Pro, DaVinci Resolve or other editors."
+                        .localized())
             Picker("GIF size".localized(), selection: $gifMaxSize) {
                 ForEach(GIFMaxSize.allCases) { Text($0.title.localized()).tag($0) }
             }

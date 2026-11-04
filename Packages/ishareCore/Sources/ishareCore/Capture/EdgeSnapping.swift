@@ -46,8 +46,8 @@ public struct SnapEdges: Equatable, Sendable {
         for rect in rects {
             let clipped = rect.intersection(bounds)
             guard !clipped.isNull, clipped.width >= Self.minimumRectSide, clipped.height >= Self.minimumRectSide else { continue }
-            let rows = clipped.minY...clipped.maxY
-            let columns = clipped.minX...clipped.maxX
+            let rows = clipped.minY ... clipped.maxY
+            let columns = clipped.minX ... clipped.maxX
             for x in [rect.minX, rect.maxX] where x > bounds.minX && x < bounds.maxX {
                 vertical.append(SnapEdge(position: x, span: rows))
             }

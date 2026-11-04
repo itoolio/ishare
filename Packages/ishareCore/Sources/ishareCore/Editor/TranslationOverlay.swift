@@ -38,8 +38,8 @@ public enum TranslationOverlay {
         guard minX <= maxX, minY <= maxY else { return nil }
         let inner = rect.integral
         var reds: [UInt8] = [], greens: [UInt8] = [], blues: [UInt8] = []
-        for y in minY...maxY {
-            for x in minX...maxX where !inner.contains(CGPoint(x: CGFloat(x) + 0.5, y: CGFloat(y) + 0.5)) {
+        for y in minY ... maxY {
+            for x in minX ... maxX where !inner.contains(CGPoint(x: CGFloat(x) + 0.5, y: CGFloat(y) + 0.5)) {
                 let pixel = pixels.pixel(x: x, y: y)
                 reds.append(pixel.0)
                 greens.append(pixel.1)

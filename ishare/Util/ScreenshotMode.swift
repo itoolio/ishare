@@ -443,7 +443,7 @@ struct UITestCanvas: View {
                     EditorView(document: document, onDone: { ScreenshotMode.closeTestWindow() }, onDiscard: { ScreenshotMode.closeTestWindow() }, onCopy: {})
                     EditorStateProbe(document: document)
                 }
-                .frame(width: 1100, height: 760)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         case .uploaders, .recording:
             SettingsView()

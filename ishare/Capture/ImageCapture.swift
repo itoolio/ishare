@@ -174,7 +174,8 @@ enum ImageCaptureFlow {
     private static func frozenLastRegion(_ rect: CGRect, displayID: CGDirectDisplayID, content: SCShareableContent) async -> CapturedImage? {
         guard let backdrops = await SelectionPrefetch.take(), let frame = backdrops[displayID], let screen = NSScreen.screen(for: displayID) else { return nil }
         let source = frontmostSource(in: content)
-        let raw = CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps ? PrivacyFilter.redactBackdrops([displayID: frame], content: content)[displayID] ?? frame : frame
+        let raw =
+            CaptureSettings.current(for: source.bundleIdentifier).blursPrivateApps ? PrivacyFilter.redactBackdrops([displayID: frame], content: content)[displayID] ?? frame : frame
         let scale = CGFloat(raw.width) / max(1, screen.frame.width)
         guard let cropped = ScreenshotEngine.crop(raw, toPoints: rect, scale: scale) else { return nil }
         let geometry = PrivacyFilter.geometry(displayID: displayID, region: rect, image: cropped)
