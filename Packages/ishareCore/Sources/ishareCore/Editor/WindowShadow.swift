@@ -41,8 +41,8 @@ public enum WindowShadow {
 
     public static func opaqueBounds(in pixels: RGBAPixels, threshold: UInt8 = opaqueAlpha) -> CGRect? {
         var minX = pixels.width, minY = pixels.height, maxX = -1, maxY = -1
-        for y in 0..<pixels.height {
-            for x in 0..<pixels.width where pixels.pixel(x: x, y: y).3 >= threshold {
+        for y in 0 ..< pixels.height {
+            for x in 0 ..< pixels.width where pixels.pixel(x: x, y: y).3 >= threshold {
                 minX = min(minX, x)
                 maxX = max(maxX, x)
                 minY = min(minY, y)

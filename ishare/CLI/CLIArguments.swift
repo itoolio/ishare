@@ -232,7 +232,9 @@ enum CLICommandOption {
 extension CLICommand {
     func accepts(_ option: CLICommandOption) -> Bool {
         switch (self, option) {
-        case (.upload, .uploader), (.runWatchFolder, .uploader), (.upload, .reuse), (.capture, .upload), (.captureApp, .upload), (.captureApp, .sheet), (.history, .limit), (.record, .preset): true
+        case (.upload, .uploader), (.runWatchFolder, .uploader), (.upload, .reuse), (.capture, .upload), (.captureApp, .upload), (.captureApp, .sheet), (.history, .limit),
+            (.record, .preset):
+            true
         default: false
         }
     }

@@ -634,8 +634,12 @@ struct LocalAPIRouterTests {
     @Test func refusesMissingTokensAndUnknownTools() async throws {
         let server = CommandLineServer(mailbox: nil, actions: actions)
         #expect(status(await LocalAPIRouter.reply(to: try request("GET /v1/list_uploaders HTTP/1.1\r\n\r\n"), token: "secret", server: server)) == "HTTP/1.1 401")
-        #expect(status(await LocalAPIRouter.reply(to: try request("GET /v1/teleport HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n"), token: "secret", server: server)) == "HTTP/1.1 404")
-        #expect(status(await LocalAPIRouter.reply(to: try request("GET /v1/capture HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n"), token: "secret", server: server)) == "HTTP/1.1 400")
+        #expect(
+            status(await LocalAPIRouter.reply(to: try request("GET /v1/teleport HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n"), token: "secret", server: server))
+                == "HTTP/1.1 404")
+        #expect(
+            status(await LocalAPIRouter.reply(to: try request("GET /v1/capture HTTP/1.1\r\nAuthorization: Bearer secret\r\n\r\n"), token: "secret", server: server))
+                == "HTTP/1.1 400")
         #expect(actions.calls.isEmpty)
     }
 }
@@ -646,7 +650,7 @@ struct LocalAPISocketTests {
         server.start(port: 0)
         defer { server.stop() }
         var port: UInt16?
-        for _ in 0..<50 where port == nil || port == 0 {
+        for _ in 0 ..< 50 where port == nil || port == 0 {
             try await Task.sleep(for: .milliseconds(20))
             port = server.boundPort
         }

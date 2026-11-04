@@ -27,7 +27,9 @@ public struct ParsedAnnotationCommand: Equatable, Sendable {
 }
 
 public enum AnnotationCommand {
-    static let fillerWords: Set<String> = ["a", "an", "the", "to", "at", "on", "around", "over", "add", "draw", "put", "please", "button", "label", "field", "text", "word", "of", "with", "and"]
+    static let fillerWords: Set<String> = [
+        "a", "an", "the", "to", "at", "on", "around", "over", "add", "draw", "put", "please", "button", "label", "field", "text", "word", "of", "with", "and",
+    ]
 
     public static func parse(_ text: String) -> ParsedAnnotationCommand? {
         let lowered = text.lowercased()
@@ -66,7 +68,7 @@ public enum AnnotationCommand {
 
     public static func parseModelReply(_ reply: String, labelCount: Int) -> (AnnotationCommandKind, Int)? {
         guard let match = reply.firstMatch(of: /([a-z]+)\s*\|\s*(\d+)/), let kind = AnnotationCommandKind(rawValue: String(match.1)),
-            let index = Int(match.2), (0..<labelCount).contains(index)
+            let index = Int(match.2), (0 ..< labelCount).contains(index)
         else { return nil }
         return (kind, index)
     }

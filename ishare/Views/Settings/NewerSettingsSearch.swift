@@ -10,8 +10,10 @@ enum NewerSettingsSearch {
     static let exportPresets = SettingsSearchEntry("Editor Export Presets", pane: .capture, keywords: ["Slack", "Docs", "JPEG", "Export"], anchor: "capture.exportPresets")
     static let followPointer = SettingsSearchEntry("Follow the Pointer", pane: .recording, keywords: ["Pan", "Recorded area"], anchor: "recording.followPointer")
     static let pointerHighlight = SettingsSearchEntry("Pointer highlight", pane: .recording, keywords: ["Halo", "Spotlight", "Magnifier"], anchor: "recording.pointerHighlight")
-    static let webcamLayout = SettingsSearchEntry("Layout", pane: .recording, keywords: ["Webcam", "Side by side", "Full screen", "Background", "Blur"], anchor: "recording.webcamLayout")
-    static let liveCaptions = SettingsSearchEntry("Show live captions while recording", pane: .recording, keywords: ["Captions", "Subtitles", "Speech"], anchor: "recording.liveCaptions")
+    static let webcamLayout = SettingsSearchEntry(
+        "Layout", pane: .recording, keywords: ["Webcam", "Side by side", "Full screen", "Background", "Blur"], anchor: "recording.webcamLayout")
+    static let liveCaptions = SettingsSearchEntry(
+        "Show live captions while recording", pane: .recording, keywords: ["Captions", "Subtitles", "Speech"], anchor: "recording.liveCaptions")
     static let separateTracks = SettingsSearchEntry(
         "Also save separate tracks for editing", pane: .recording, keywords: ["Final Cut", "DaVinci", "Tracks"], anchor: "recording.separateTracks")
     static let countdown = SettingsSearchEntry("Count down before recording", pane: .recording, keywords: ["Countdown", "Chime"], anchor: "recording.countdown")

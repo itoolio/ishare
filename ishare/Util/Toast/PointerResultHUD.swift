@@ -58,7 +58,8 @@ final class PointerResultHUD {
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.isReleasedWhenClosed = false
-        panel.contentView = NSHostingView(rootView: PointerResultHUDView(model: model, act: { [weak self] action in self?.perform(action) }, hover: { [weak self] in self?.hovered($0) }))
+        panel.contentView = NSHostingView(
+            rootView: PointerResultHUDView(model: model, act: { [weak self] action in self?.perform(action) }, hover: { [weak self] in self?.hovered($0) }))
         panel.orderFrontRegardless()
         self.panel = panel
     }

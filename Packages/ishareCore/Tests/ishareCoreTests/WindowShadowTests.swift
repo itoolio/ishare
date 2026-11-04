@@ -5,8 +5,8 @@ import Testing
 struct WindowShadowTests {
     func pixels(width: Int, height: Int, opaque: CGRect) -> RGBAPixels {
         var bytes = [UInt8](repeating: 0, count: width * height * 4)
-        for y in 0..<height {
-            for x in 0..<width {
+        for y in 0 ..< height {
+            for x in 0 ..< width {
                 let inside = opaque.contains(CGPoint(x: CGFloat(x) + 0.5, y: CGFloat(y) + 0.5))
                 bytes[(y * width + x) * 4 + 3] = inside ? 255 : 60
             }

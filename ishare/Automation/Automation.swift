@@ -194,9 +194,10 @@ final class LiveAutomationActions: AutomationActions {
 
     func runWatchFolder(on file: URL, folder name: String?) async -> Result<CLICaptureResult, AutomationError> {
         let folders = Defaults[.watchedFolders]
-        let folder = name.map { name in
-            folders.first { $0.displayName.caseInsensitiveCompare(name) == .orderedSame || $0.path == (name as NSString).expandingTildeInPath }
-        } ?? folders.first
+        let folder =
+            name.map { name in
+                folders.first { $0.displayName.caseInsensitiveCompare(name) == .orderedSame || $0.path == (name as NSString).expandingTildeInPath }
+            } ?? folders.first
         guard let folder else {
             return .failure(.failed(name.map { String(format: "No watch folder named “%@”".localized(), $0) } ?? "Add a watch folder in Settings first".localized()))
         }

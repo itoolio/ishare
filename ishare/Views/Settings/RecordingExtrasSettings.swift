@@ -188,7 +188,8 @@ private struct AfterRecordingSettingsSection: View {
             Toggle("Also save separate tracks for editing".localized(), isOn: $saveSeparateTracks)
                 .help(
                     "Saves the screen, each audio track and the webcam as separate files in a folder next to the recording, for Final Cut Pro, DaVinci Resolve or other editors."
-                        .localized())
+                        .localized()
+                )
                 .settingsEntry(NewerSettingsSearch.separateTracks)
             Picker("GIF size".localized(), selection: $gifMaxSize) {
                 ForEach(GIFMaxSize.allCases) { Text($0.title.localized()).tag($0) }
@@ -266,7 +267,10 @@ struct AudioSourceSettingsRows: View {
         }
         .accessibilityIdentifier("settings.recording.audioSource")
         Toggle("Keep notification banners out of recordings".localized(), isOn: $hidesNotifications)
-            .help("Notification banners and alerts from other apps don’t appear in full-screen and region recordings. Choose Selected apps above to also leave out their sounds.".localized())
+            .help(
+                "Notification banners and alerts from other apps don’t appear in full-screen and region recordings. Choose Selected apps above to also leave out their sounds."
+                    .localized()
+            )
             .settingsEntry(NewerSettingsSearch.notifications)
         if audioSource == .selectedApps {
             LabeledContent("Apps".localized()) {

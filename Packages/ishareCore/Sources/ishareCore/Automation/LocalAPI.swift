@@ -69,6 +69,6 @@ public struct LocalAPIRequest: Equatable, Sendable {
     }
 
     public static func makeToken() -> String {
-        (0..<32).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
+        (0 ..< 32).map { _ in String(format: "%02x", UInt8.random(in: 0 ... 255)) }.joined()
     }
 }

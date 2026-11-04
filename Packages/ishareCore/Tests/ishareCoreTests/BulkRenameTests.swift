@@ -6,7 +6,7 @@ struct BulkRenameTests {
     let date = Date(timeIntervalSince1970: 1_800_000_000)
 
     @Test func numbersAndFillsPlaceholders() {
-        let names = (1...12).map { "shot\($0).png" }
+        let names = (1 ... 12).map { "shot\($0).png" }
         let titles = BulkRename.titles(template: "Onboarding {{n}}", originals: names, date: date)
         #expect(titles.first == "Onboarding 01")
         #expect(titles.last == "Onboarding 12")

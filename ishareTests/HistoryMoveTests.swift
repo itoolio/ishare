@@ -257,7 +257,8 @@ struct WebcamLayoutCompositionTests {
         let composed = OverlayImageRenderer().compose(screen: screen, webcam: webcam, time: 1, timeline: OverlayTimeline(), layout: layout)
         let context = CIContext()
         var pixel = [UInt8](repeating: 0, count: 4)
-        context.render(composed, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 395, y: 100, width: 1, height: 1), format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+        context.render(
+            composed, toBitmap: &pixel, rowBytes: 4, bounds: CGRect(x: 395, y: 100, width: 1, height: 1), format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
         #expect(pixel[0] > 200 && pixel[2] < 50)
     }
 }
@@ -371,7 +372,7 @@ struct HistoryGroupingSectionTests {
 struct HistoryBulkEditTests {
     @Test func keepsAndExpiresManyUploadsAtOnce() {
         let id = UUID()
-        let items = (0..<3).map { HistoryItem(fileUrl: "https://x/\($0).png", deletionUrl: "https://x/d/\($0)", uploaderId: id, date: Date(timeIntervalSince1970: Double($0))) }
+        let items = (0 ..< 3).map { HistoryItem(fileUrl: "https://x/\($0).png", deletionUrl: "https://x/d/\($0)", uploaderId: id, date: Date(timeIntervalSince1970: Double($0))) }
         Defaults[.uploadHistory] = items
         HistoryBulkEdit.setKeepForever(Array(items.prefix(2)), true)
         #expect(Defaults[.uploadHistory].map(\.keepForever) == [true, true, nil])

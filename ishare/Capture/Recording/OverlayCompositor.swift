@@ -136,34 +136,44 @@ final class OverlayImageRenderer: @unchecked Sendable {
         case .none:
             return image
         case .halo:
-            let halo = CIFilter(name: "CIRadialGradient", parameters: [
-                "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius * 0.55, "inputRadius1": radius,
-                "inputColor0": CIColor(red: 1, green: 0.85, blue: 0.1, alpha: 0.45 * opacity), "inputColor1": CIColor(red: 1, green: 0.85, blue: 0.1, alpha: 0),
-            ])?.outputImage?.cropped(to: CGRect(x: tip.x - radius, y: tip.y - radius, width: radius * 2, height: radius * 2))
+            let halo = CIFilter(
+                name: "CIRadialGradient",
+                parameters: [
+                    "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius * 0.55, "inputRadius1": radius,
+                    "inputColor0": CIColor(red: 1, green: 0.85, blue: 0.1, alpha: 0.45 * opacity), "inputColor1": CIColor(red: 1, green: 0.85, blue: 0.1, alpha: 0),
+                ])?.outputImage?.cropped(to: CGRect(x: tip.x - radius, y: tip.y - radius, width: radius * 2, height: radius * 2))
             return halo.map { $0.composited(over: image) } ?? image
         case .spotlight:
-            let mask = CIFilter(name: "CIRadialGradient", parameters: [
-                "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius * 0.85, "inputRadius1": radius,
-                "inputColor0": CIColor(red: 1, green: 1, blue: 1, alpha: 1), "inputColor1": CIColor(red: 0, green: 0, blue: 0, alpha: 1),
-            ])?.outputImage?.cropped(to: extent)
+            let mask = CIFilter(
+                name: "CIRadialGradient",
+                parameters: [
+                    "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius * 0.85, "inputRadius1": radius,
+                    "inputColor0": CIColor(red: 1, green: 1, blue: 1, alpha: 1), "inputColor1": CIColor(red: 0, green: 0, blue: 0, alpha: 1),
+                ])?.outputImage?.cropped(to: extent)
             let dimming = PointerHighlight.spotlightDimming * CGFloat(opacity)
-            let dimmed = image.applyingFilter("CIColorMatrix", parameters: [
-                "inputRVector": CIVector(x: 1 - dimming, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: 1 - dimming, z: 0, w: 0),
-                "inputBVector": CIVector(x: 0, y: 0, z: 1 - dimming, w: 0),
-            ])
+            let dimmed = image.applyingFilter(
+                "CIColorMatrix",
+                parameters: [
+                    "inputRVector": CIVector(x: 1 - dimming, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: 1 - dimming, z: 0, w: 0),
+                    "inputBVector": CIVector(x: 0, y: 0, z: 1 - dimming, w: 0),
+                ])
             guard let mask else { return image }
             return image.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: dimmed, kCIInputMaskImageKey: mask])
         case .magnifier:
             let lens = CGRect(x: tip.x - radius, y: tip.y - radius, width: radius * 2, height: radius * 2)
             let magnified = image.clampedToExtent()
-                .transformed(by: CGAffineTransform(translationX: -tip.x, y: -tip.y)
-                    .concatenating(CGAffineTransform(scaleX: PointerHighlight.magnification, y: PointerHighlight.magnification))
-                    .concatenating(CGAffineTransform(translationX: tip.x, y: tip.y)))
+                .transformed(
+                    by: CGAffineTransform(translationX: -tip.x, y: -tip.y)
+                        .concatenating(CGAffineTransform(scaleX: PointerHighlight.magnification, y: PointerHighlight.magnification))
+                        .concatenating(CGAffineTransform(translationX: tip.x, y: tip.y))
+                )
                 .cropped(to: lens)
-            let circle = CIFilter(name: "CIRadialGradient", parameters: [
-                "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius - 1, "inputRadius1": radius,
-                "inputColor0": CIColor(red: 1, green: 1, blue: 1, alpha: opacity), "inputColor1": CIColor(red: 0, green: 0, blue: 0, alpha: 0),
-            ])?.outputImage?.cropped(to: lens)
+            let circle = CIFilter(
+                name: "CIRadialGradient",
+                parameters: [
+                    "inputCenter": CIVector(cgPoint: tip), "inputRadius0": radius - 1, "inputRadius1": radius,
+                    "inputColor0": CIColor(red: 1, green: 1, blue: 1, alpha: opacity), "inputColor1": CIColor(red: 0, green: 0, blue: 0, alpha: 0),
+                ])?.outputImage?.cropped(to: lens)
             guard let circle else { return image }
             let masked = magnified.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: CIImage.empty().cropped(to: lens), kCIInputMaskImageKey: circle])
             let border = ring(diameter: lens.width, scale: scale).transformed(by: CGAffineTransform(translationX: lens.minX, y: lens.minY))
@@ -260,7 +270,8 @@ final class OverlayImageRenderer: @unchecked Sendable {
 
     private func placed(_ screen: CIImage, in rect: CGRect, videoSize: CGSize) -> CIImage {
         let extent = CGRect(origin: .zero, size: videoSize)
-        let scaled = screen
+        let scaled =
+            screen
             .transformed(by: CGAffineTransform(scaleX: rect.width / videoSize.width, y: rect.height / videoSize.height))
             .transformed(by: CGAffineTransform(translationX: rect.minX, y: rect.minY))
         return scaled.composited(over: CIImage(color: CIColor(red: 0.08, green: 0.08, blue: 0.1)).cropped(to: extent))
@@ -270,13 +281,15 @@ final class OverlayImageRenderer: @unchecked Sendable {
         let extent = webcam.extent
         guard extent.width > 0, extent.height > 0, frame.width > 0, frame.height > 0 else { return CIImage.empty() }
         let scale = max(frame.width / extent.width, frame.height / extent.height)
-        let mirrored = webcam
+        let mirrored =
+            webcam
             .transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
             .transformed(by: CGAffineTransform(scaleX: -scale, y: scale))
             .transformed(by: CGAffineTransform(translationX: extent.width * scale, y: 0))
         let width = extent.width * scale
         let height = extent.height * scale
-        return mirrored
+        return
+            mirrored
             .cropped(to: CGRect(x: (width - frame.width) / 2, y: (height - frame.height) / 2, width: frame.width, height: frame.height))
             .transformed(by: CGAffineTransform(translationX: frame.minX - (width - frame.width) / 2, y: frame.minY - (height - frame.height) / 2))
     }
