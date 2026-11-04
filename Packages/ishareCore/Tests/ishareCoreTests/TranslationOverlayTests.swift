@@ -19,10 +19,10 @@ struct TranslationOverlayTests {
     @Test func samplesTheColorAroundTheText() {
         let width = 20, height = 20
         var bytes = [UInt8](repeating: 0, count: width * height * 4)
-        for y in 0..<height {
-            for x in 0..<width {
+        for y in 0 ..< height {
+            for x in 0 ..< width {
                 let index = (y * width + x) * 4
-                let inside = (6..<14).contains(x) && (6..<14).contains(y)
+                let inside = (6 ..< 14).contains(x) && (6 ..< 14).contains(y)
                 bytes[index] = inside ? 0 : 255
                 bytes[index + 1] = inside ? 0 : 128
                 bytes[index + 2] = inside ? 0 : 0

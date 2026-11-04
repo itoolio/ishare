@@ -37,7 +37,7 @@ public struct WebPageCaptureRequest: Equatable, Hashable, Sendable {
 }
 
 public enum WebPageCapturePlan {
-    public static let widthRange: ClosedRange<CGFloat> = 320...3840
+    public static let widthRange: ClosedRange<CGFloat> = 320 ... 3840
 
     public static func width(from parameter: String?) -> CGFloat? {
         guard let parameter = parameter?.trimmingCharacters(in: .whitespaces).lowercased(), !parameter.isEmpty else { return WebPageWidth.desktop.points }

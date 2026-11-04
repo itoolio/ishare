@@ -19,12 +19,14 @@ struct MCPServer: Sendable {
         case "initialize":
             let requested = params["protocolVersion"] as? String
             let version = requested.flatMap { Self.fallbackVersions.contains($0) ? $0 : nil } ?? Self.protocolVersion
-            return Self.result(id, [
-                "protocolVersion": version,
-                "capabilities": ["tools": ["listChanged": false]],
-                "serverInfo": ["name": "ishare", "version": self.version],
-                "instructions": "Take screenshots, capture app windows, upload files and read the upload history of ishare on this Mac.",
-            ])
+            return Self.result(
+                id,
+                [
+                    "protocolVersion": version,
+                    "capabilities": ["tools": ["listChanged": false]],
+                    "serverInfo": ["name": "ishare", "version": self.version],
+                    "instructions": "Take screenshots, capture app windows, upload files and read the upload history of ishare on this Mac.",
+                ])
         case "ping":
             return Self.result(id, [:])
         case "tools/list":

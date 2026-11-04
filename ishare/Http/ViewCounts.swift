@@ -21,7 +21,7 @@ enum ViewCounts {
                 request.setValue(value, forHTTPHeaderField: name)
             }
             let count: Int?
-            if let (data, response) = try? await URLSession.shared.data(for: request), (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? false {
+            if let (data, response) = try? await URLSession.shared.data(for: request), (response as? HTTPURLResponse).map({ (200 ..< 300).contains($0.statusCode) }) ?? false {
                 count = ViewCountParser.count(in: data, path: uploader?.viewCount?.path ?? "views")
             } else {
                 count = nil

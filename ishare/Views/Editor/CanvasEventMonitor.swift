@@ -56,7 +56,8 @@ struct CanvasEventMonitor: NSViewRepresentable {
             item.setData(data, forType: NSPasteboard.PasteboardType(UTType.ishareAnnotations.identifier))
             let draggingItem = NSDraggingItem(pasteboardWriter: item)
             let location = convert(event.locationInWindow, from: nil)
-            draggingItem.setDraggingFrame(CGRect(x: location.x - preview.size.width / 2, y: location.y - preview.size.height / 2, width: preview.size.width, height: preview.size.height), contents: preview)
+            draggingItem.setDraggingFrame(
+                CGRect(x: location.x - preview.size.width / 2, y: location.y - preview.size.height / 2, width: preview.size.width, height: preview.size.height), contents: preview)
             onDragEnd = onEnd
             beginDraggingSession(with: [draggingItem], event: event, source: self)
         }

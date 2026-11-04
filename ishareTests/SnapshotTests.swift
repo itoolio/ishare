@@ -53,7 +53,7 @@ struct SnapshotTests {
     }
 
     static func replayFrames(hue: Double, count: Int) -> [Data] {
-        (0..<count).compactMap { index in
+        (0 ..< count).compactMap { index in
             ScreenshotMode.sampleImage(size: CGSize(width: 1280, height: 800), hue: hue + Double(index) * 0.02, title: "Frame \(index + 1)")
                 .flatMap(ReplayFrameCollector.jpeg)
         }
@@ -83,7 +83,9 @@ struct SnapshotTests {
             return AnyView(ScreenshotReplayView(displays: displays, initial: 1) { _, _, _ in })
         case .watchFolders:
             Defaults[.watchedFolders] = [
-                WatchedFolder(path: "/Users/me/Desktop/Drop", filter: .images, actions: [WatchFolderAction(kind: .rename, template: "{{date}}-{{counter}}"), WatchFolderAction(kind: .upload)]),
+                WatchedFolder(
+                    path: "/Users/me/Desktop/Drop", filter: .images,
+                    actions: [WatchFolderAction(kind: .rename, template: "{{date}}-{{counter}}"), WatchFolderAction(kind: .upload)]),
                 WatchedFolder(path: "/Users/me/Movies/Exports", filter: .videos, isEnabled: false, actions: [WatchFolderAction(kind: .upload)]),
             ]
             return AnyView(Form { WatchFolderSettings() }.formStyle(.grouped).appModel())

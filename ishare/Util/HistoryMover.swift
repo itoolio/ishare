@@ -48,7 +48,8 @@ enum HistoryMover {
         }
         let alert = NSAlert()
         alert.messageText = String(format: "Move %d uploads to %@?".localized(), movable.count, target.displayName)
-        alert.informativeText = "ishare uploads each file again and replaces its link in your history. Links you already shared keep pointing to the old host unless you delete them there.".localized()
+        alert.informativeText =
+            "ishare uploads each file again and replaces its link in your history. Links you already shared keep pointing to the old host unless you delete them there.".localized()
         let deletesOld = NSButton(checkboxWithTitle: "Delete them from the old host afterwards".localized(), target: nil, action: nil)
         deletesOld.state = .off
         deletesOld.isEnabled = movable.contains(where: \.canDeleteFromServer)

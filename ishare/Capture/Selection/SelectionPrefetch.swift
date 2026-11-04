@@ -22,7 +22,8 @@ enum SelectionPrefetch {
         startedAt = ProcessInfo.processInfo.systemUptime
         let content = Task { @MainActor in try? await ScreenshotEngine.shareableContent() }
         contentTask = content
-        task = includingBackdrops && isWanted
+        task =
+            includingBackdrops && isWanted
             ? Task { @MainActor in
                 guard let content = await content.value else { return [:] }
                 return await ScreenshotEngine.backdrops(for: content)
